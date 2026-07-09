@@ -8,7 +8,7 @@ import { NewMarketButton } from '@/components/groups/NewMarketButton';
 import { GroupMarketSections } from '@/components/groups/GroupMarketSections';
 import { Mention } from '@/components/ui/Mention';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
-import { BarChartIcon, SettingsIcon } from '@/components/ui/icons';
+import { BarChartIcon, SettingsIcon, InfoIcon } from '@/components/ui/icons';
 import { formatTokens } from '@/lib/formatNumber';
 
 function addMonths(iso: string, months: number): string {
@@ -30,6 +30,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const isOwner = group!.owner_id === user?.id;
 
   const { data: membership } = await supabase
     .from('memberships')
@@ -115,8 +116,8 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
             <Link href={`/groups/${groupId}/leaderboard`} className={iconLinkClass} aria-label="Leaderboard">
               <BarChartIcon className="h-4 w-4" />
             </Link>
-            <Link href={`/groups/${groupId}/settings`} className={iconLinkClass} aria-label="Settings">
-              <SettingsIcon className="h-4 w-4" />
+            <Link href={`/groups/${groupId}/settings`} className={iconLinkClass} aria-label={isOwner ? 'Settings' : 'Group info'}>
+              {isOwner ? <SettingsIcon className="h-4 w-4" /> : <InfoIcon className="h-4 w-4" />}
             </Link>
             <NewMarketButton groupId={groupId} bettingEnabled={settings?.betting_enabled ?? false} />
           </div>
