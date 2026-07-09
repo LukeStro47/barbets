@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { notFoundIfEmpty } from '@/lib/errors';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -38,6 +39,13 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
   return (
     <main className="mx-auto max-w-lg space-y-6 px-5 py-8">
       <PageHeader title="Group settings" backHref={`/groups/${groupId}`} backLabel={group!.name} />
+
+      <Link
+        href="/how-it-works"
+        className="block rounded-2xl border border-espresso-100 bg-paper-white px-5 py-3.5 text-sm font-semibold text-espresso-700 transition-colors hover:bg-espresso-50"
+      >
+        How it works →
+      </Link>
 
       <Card className="space-y-2">
         <h2 className="font-semibold text-espresso-800">Your nickname</h2>

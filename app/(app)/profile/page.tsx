@@ -11,6 +11,7 @@ import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { Button } from '@/components/ui/Button';
 import { Mention } from '@/components/ui/Mention';
 import { OptionLabel } from '@/components/markets/OptionLabel';
+import { formatTokens } from '@/lib/formatNumber';
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -74,8 +75,10 @@ export default async function ProfilePage() {
                     <Mention nickname={m.nickname} className="text-xs text-espresso-400" />
                   </div>
                   <span className="text-right text-sm text-espresso-500">
-                    <span className="font-display font-bold text-espresso-900">{m.balance}</span> tokens
-                    {stakedByGroup.get(m.group_id) ? <span className="block text-xs">({stakedByGroup.get(m.group_id)} staked, private to you)</span> : null}
+                    <span className="font-display font-bold text-espresso-900">{formatTokens(m.balance)}</span> tokens
+                    {stakedByGroup.get(m.group_id) ? (
+                      <span className="block text-xs">({formatTokens(stakedByGroup.get(m.group_id)!)} staked, private to you)</span>
+                    ) : null}
                   </span>
                 </Link>
               </li>

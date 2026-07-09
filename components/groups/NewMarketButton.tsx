@@ -4,6 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { PlusIcon } from '@/components/ui/icons';
+
+const iconButtonClass =
+  'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-espresso-900 text-paper-white shadow-[0_1px_2px_rgba(44,31,23,0.15),0_4px_10px_rgba(44,31,23,0.1)] transition-colors hover:bg-espresso-950 active:scale-[0.92]';
 
 export function NewMarketButton({ groupId, bettingEnabled }: { groupId: string; bettingEnabled: boolean }) {
   const [showModal, setShowModal] = useState(false);
@@ -11,9 +15,9 @@ export function NewMarketButton({ groupId, bettingEnabled }: { groupId: string; 
   if (!bettingEnabled) {
     return (
       <>
-        <Button size="sm" variant="muted" onClick={() => setShowModal(true)}>
-          New market
-        </Button>
+        <button type="button" aria-label="New market" onClick={() => setShowModal(true)} className={iconButtonClass}>
+          <PlusIcon className="h-4 w-4" />
+        </button>
         {showModal && (
           <Modal onClose={() => setShowModal(false)}>
             <p className="font-display font-bold text-espresso-900">Betting is turned off</p>
@@ -30,8 +34,8 @@ export function NewMarketButton({ groupId, bettingEnabled }: { groupId: string; 
   }
 
   return (
-    <Link href={`/groups/${groupId}/markets/new`}>
-      <Button size="sm">New market</Button>
+    <Link href={`/groups/${groupId}/markets/new`} aria-label="New market" className={iconButtonClass}>
+      <PlusIcon className="h-4 w-4" />
     </Link>
   );
 }

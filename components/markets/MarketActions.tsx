@@ -11,6 +11,7 @@ import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import type { Market, MarketOption } from '@/lib/actions/markets';
 import type { ActionResult } from '@/lib/errors';
+import { formatTokens } from '@/lib/formatNumber';
 
 const inputClasses =
   'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-espresso-900 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
@@ -219,7 +220,7 @@ export function MarketActions({
                 tokens
               </span>
             </div>
-            <p className="text-xs text-espresso-400">Your balance: {balance} tokens</p>
+            <p className="text-xs text-espresso-400">Your balance: {formatTokens(balance)} tokens</p>
           </div>
 
           <Button

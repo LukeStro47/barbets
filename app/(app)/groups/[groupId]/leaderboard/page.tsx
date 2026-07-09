@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Mention } from '@/components/ui/Mention';
+import { formatTokens } from '@/lib/formatNumber';
 
 function medal(rank: number): string {
   return rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : `${rank + 1}.`;
@@ -76,7 +77,7 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ gr
               {m.balance === 0 && <span title="Broke">🏚️</span>}
               {m.status === 'dormant' && <span className="text-xs text-espresso-400">(sitting out)</span>}
             </div>
-            <span className="font-display font-bold text-espresso-900">{m.balance}</span>
+            <span className="font-display font-bold text-espresso-900">{formatTokens(m.balance)}</span>
           </div>
         ))}
       </Card>

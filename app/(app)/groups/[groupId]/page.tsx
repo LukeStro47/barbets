@@ -1,12 +1,15 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/server';
 import { notFoundIfEmpty } from '@/lib/errors';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { MarketCard, type MarketCardData } from '@/components/markets/MarketCard';
+import { type MarketCardData } from '@/components/markets/MarketCard';
 import { SeasonBanner } from '@/components/groups/SeasonBanner';
 import { NewMarketButton } from '@/components/groups/NewMarketButton';
+import { GroupMarketSections } from '@/components/groups/GroupMarketSections';
 import { Mention } from '@/components/ui/Mention';
+import { CountdownTimer } from '@/components/ui/CountdownTimer';
+import { BarChartIcon, SettingsIcon } from '@/components/ui/icons';
+import { formatTokens } from '@/lib/formatNumber';
 
 function addMonths(iso: string, months: number): string {
   const d = new Date(iso);
@@ -14,16 +17,8 @@ function addMonths(iso: string, months: number): string {
   return d.toISOString();
 }
 
-function NavPill({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <Link
-      href={href}
-      className="rounded-full border border-espresso-200 bg-paper-white px-3.5 py-1.5 text-sm font-semibold text-espresso-700 transition-colors hover:border-honey-500 hover:bg-honey-50 hover:text-honey-800"
-    >
-      {children}
-    </Link>
-  );
-}
+const iconLinkClass =
+  'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-espresso-50 text-espresso-500 transition-colors hover:bg-espresso-100 hover:text-espresso-700 active:scale-[0.92]';
 
 export default async function GroupFeedPage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
@@ -109,82 +104,72 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
       : null;
 
   return (
-    <main className="mx-auto max-w-lg space-y-6 px-5 py-8">
-      <PageHeader
-        title={group!.name}
-        backHref="/groups?all=1"
-        backLabel="All groups"
-        action={<NewMarketButton groupId={groupId} bettingEnabled={settings?.betting_enabled ?? false} />}
-      />
-
-      <div className="flex items-center justify-between rounded-2xl bg-espresso-900 px-5 py-4 text-paper-white">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-honey-400">Your balance</p>
-          <p className="font-display text-3xl font-bold">{membership?.balance ?? 0}</p>
+    <main className="mx-auto max-w-lg px-5 py-[22px]">
+      <div className="flex flex-col gap-1.5">
+        <Link href="/groups?all=1" className="text-sm font-medium text-espresso-400 hover:text-espresso-600">
+          ← All groups
+        </Link>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="min-w-0 font-display text-[29px] font-bold tracking-[-0.02em] text-espresso-950">{group!.name}</h1>
+          <div className="flex shrink-0 items-center gap-2">
+            <Link href={`/groups/${groupId}/leaderboard`} className={iconLinkClass} aria-label="Leaderboard">
+              <BarChartIcon className="h-4 w-4" />
+            </Link>
+            <Link href={`/groups/${groupId}/settings`} className={iconLinkClass} aria-label="Settings">
+              <SettingsIcon className="h-4 w-4" />
+            </Link>
+            <NewMarketButton groupId={groupId} bettingEnabled={settings?.betting_enabled ?? false} />
+          </div>
         </div>
-        <div className="text-right text-sm text-espresso-200">
-          <p>Invite code: {group!.invite_code}</p>
-          {membership?.nickname && (
-            <p className="text-xs text-espresso-300">
-              Playing as <Mention nickname={membership.nickname} />
-            </p>
-          )}
-        </div>
+        {season && season.status !== 'intermission' && (
+          <p className="text-[13px] font-medium text-espresso-400">
+            Season {season.number}
+            {endsAt && (
+              <>
+                {' '}
+                · <CountdownTimer target={endsAt} prefix="Ends in" />
+              </>
+            )}
+          </p>
+        )}
       </div>
 
-      <nav className="flex flex-wrap justify-center gap-2">
-        <NavPill href={`/groups/${groupId}/leaderboard`}>Leaderboard</NavPill>
-        <NavPill href={`/groups/${groupId}/settings`}>Settings</NavPill>
-        <NavPill href="/how-it-works">How it Works</NavPill>
-      </nav>
+      <div className="mt-[18px] flex flex-col gap-[18px] pb-10">
+        <div className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-espresso-900 to-espresso-700 p-[22px]">
+          <Image
+            src="/barbets-coin.png"
+            alt=""
+            width={96}
+            height={96}
+            className="pointer-events-none absolute -top-4 -right-4 rotate-[-10deg] opacity-[0.14]"
+          />
+          <p className="relative text-[11px] font-bold tracking-[0.12em] text-honey-400 uppercase">Your balance</p>
+          <p className="relative mt-1.5 font-display text-[40px] font-bold tracking-[-0.01em] text-paper-white">
+            {formatTokens(membership?.balance ?? 0)}
+          </p>
+          <div className="relative mt-4 flex items-end justify-between border-t border-white/10 pt-3.5">
+            <div>
+              <p className="text-[10px] font-semibold tracking-[0.1em] text-espresso-300 uppercase">Invite code</p>
+              <p className="mt-0.5 text-sm font-semibold text-honey-200">{group!.invite_code}</p>
+            </div>
+            {membership?.nickname && (
+              <p className="text-sm text-espresso-200">
+                Playing as <Mention nickname={membership.nickname} />
+              </p>
+            )}
+          </div>
+        </div>
 
-      {season && <SeasonBanner groupId={groupId} season={{ ...season, endsAt }} />}
+        {season && <SeasonBanner groupId={groupId} season={{ ...season, endsAt }} />}
 
-      {buckets.pending_sponsor.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="font-display font-bold text-espresso-800">Awaiting endorsement</h2>
-          {buckets.pending_sponsor.map((m) => (
-            <MarketCard key={m.id} market={m} />
-          ))}
-        </section>
-      )}
-
-      <section className="space-y-3">
-        <h2 className="font-display font-bold text-espresso-800">Open</h2>
-        {buckets.open.length === 0 ? (
-          <EmptyState icon="🎲" title="Nothing open right now" subtitle="Start a market to get the pool going." />
-        ) : (
-          buckets.open.map((m) => <MarketCard key={m.id} market={m} />)
-        )}
-      </section>
-
-      {buckets.awaiting_resolution.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="font-display font-bold text-espresso-800">Awaiting resolution</h2>
-          {buckets.awaiting_resolution.map((m) => (
-            <MarketCard key={m.id} market={m} />
-          ))}
-        </section>
-      )}
-
-      {buckets.challenged.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="font-display font-bold text-espresso-800">Challenged</h2>
-          {buckets.challenged.map((m) => (
-            <MarketCard key={m.id} market={m} />
-          ))}
-        </section>
-      )}
-
-      {buckets.revealed.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="font-display font-bold text-espresso-800">Resolved markets</h2>
-          {buckets.revealed.slice(0, 5).map((m) => (
-            <MarketCard key={m.id} market={m} />
-          ))}
-        </section>
-      )}
-
+        <GroupMarketSections
+          pendingSponsor={buckets.pending_sponsor}
+          open={buckets.open}
+          awaitingResolution={buckets.awaiting_resolution}
+          challenged={buckets.challenged}
+          revealed={buckets.revealed}
+        />
+      </div>
     </main>
   );
 }

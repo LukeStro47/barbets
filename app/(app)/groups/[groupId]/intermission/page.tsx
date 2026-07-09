@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { OptInButton, StartSeasonButton } from '@/components/groups/IntermissionActions';
 import { Mention } from '@/components/ui/Mention';
+import { formatTokens } from '@/lib/formatNumber';
 
 export default async function IntermissionPage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
@@ -54,7 +55,7 @@ export default async function IntermissionPage({ params }: { params: Promise<{ g
           <p className="mt-2 font-display text-3xl font-bold">
             🏆 <Mention nickname={lastResult.snapshot.champion.nickname} />
           </p>
-          <p className="mt-1 text-espresso-200">Finished with {lastResult.snapshot.champion.balance} tokens</p>
+          <p className="mt-1 text-espresso-200">Finished with {formatTokens(lastResult.snapshot.champion.balance)} tokens</p>
         </div>
       )}
 

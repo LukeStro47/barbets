@@ -157,9 +157,11 @@ Current copy (edit in `supabase/functions/send-push/index.ts`, then `supabase fu
 
 ## Deployment
 
-- **Database**: edit/add a file in `supabase/migrations/`, then `npx supabase db push` (applies directly to the linked hosted project — there's no local Docker instance in this setup).
-- **Edge Function**: `npx supabase functions deploy send-push --no-verify-jwt` after editing `supabase/functions/send-push/index.ts`.
-- **App**: `npx vercel --prod`, aliased to `mybarbets.com`. Vercel and Supabase CLI logins are both stored on-disk globally on this machine (not tied to any particular terminal/Claude session), so any new session can run these commands without re-authenticating.
+- **Source**: [github.com/LukeStro47/barbets](https://github.com/LukeStro47/barbets), `main` branch. The Vercel project is Git-connected, so a push to `main` alone triggers a production deploy — `npx vercel --prod` is no longer the deploy step (still useful for a one-off preview deploy from a dirty working tree).
+- **Database**: edit/add a file in `supabase/migrations/`, then `npx supabase db push` (applies directly to the linked hosted project — there's no local Docker instance in this setup). Not tied to the Vercel Git deploy; run it yourself whenever a migration lands.
+- **Edge Function**: `npx supabase functions deploy send-push --no-verify-jwt` after editing `supabase/functions/send-push/index.ts`. Also not deployed automatically by the Vercel Git integration.
+- Production env vars (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`) live in the Vercel project settings, not in `.env.local` — Git-triggered builds run on Vercel's servers and never see the local file.
+- Vercel and Supabase CLI logins are both stored on-disk globally on this machine (not tied to any particular terminal/Claude session), so any new session can run these commands without re-authenticating.
 - Useful one-offs: `npx tsc --noEmit` (typecheck), `npx next build` (production build), `npm test` (full suite).
 
 ## Copy conventions

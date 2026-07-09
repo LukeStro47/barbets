@@ -3,6 +3,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Mention } from '@/components/ui/Mention';
+import { formatTokens } from '@/lib/formatNumber';
 
 export default async function HallOfFamePage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
@@ -35,7 +36,7 @@ export default async function HallOfFamePage({ params }: { params: Promise<{ gro
                 <div className="rounded-xl bg-honey-50 px-4 py-3 text-center">
                   <p className="text-xs font-semibold uppercase tracking-wide text-honey-700">Champion</p>
                   <p className="font-display text-lg font-bold text-honey-900">
-                    🏆 <Mention nickname={r.snapshot.champion.nickname} /> with {r.snapshot.champion.balance}
+                    🏆 <Mention nickname={r.snapshot.champion.nickname} /> with {formatTokens(r.snapshot.champion.balance)}
                   </p>
                 </div>
               )}
@@ -45,7 +46,7 @@ export default async function HallOfFamePage({ params }: { params: Promise<{ gro
                   <div>
                     <p className="font-semibold text-espresso-700">Biggest win</p>
                     <p className="text-espresso-500">
-                      <Mention nickname={r.snapshot.biggest_single_win.nickname} /> +{r.snapshot.biggest_single_win.amount}
+                      <Mention nickname={r.snapshot.biggest_single_win.nickname} /> +{formatTokens(r.snapshot.biggest_single_win.amount)}
                     </p>
                   </div>
                 )}
@@ -53,7 +54,7 @@ export default async function HallOfFamePage({ params }: { params: Promise<{ gro
                   <div>
                     <p className="font-semibold text-espresso-700">Worst beat</p>
                     <p className="text-espresso-500">
-                      <Mention nickname={r.snapshot.worst_beat.nickname} /> −{r.snapshot.worst_beat.amount}
+                      <Mention nickname={r.snapshot.worst_beat.nickname} /> −{formatTokens(r.snapshot.worst_beat.amount)}
                     </p>
                   </div>
                 )}

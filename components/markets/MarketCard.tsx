@@ -1,9 +1,13 @@
+import type { ComponentType } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
+import { Badge, TONE_CLASSES } from '@/components/ui/Badge';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { OddsBar, OddsBarMulti } from '@/components/markets/OddsBar';
+import { OptionLabel } from '@/components/markets/OptionLabel';
+import { ChevronRightIcon, FlagIcon, TargetIcon, ClockIcon, AlertTriangleIcon, CheckCircleIcon } from '@/components/ui/icons';
 import { STATUS_LABEL, STATUS_TONE, type MarketStatus } from '@/lib/marketStatus';
+import { cn } from '@/lib/cn';
 
 export interface MarketCardData {
   id: string;
@@ -74,5 +78,97 @@ export function MarketCard({ market }: { market: MarketCardData }) {
         )}
       </Card>
     </Link>
+  );
+}
+
+const STATUS_ROW_ICON: Record<MarketStatus, ComponentType<{ className?: string }>> = {
+  pending_sponsor: FlagIcon,
+  open: TargetIcon,
+  closed: ClockIcon,
+  proposed: ClockIcon,
+  disputed: AlertTriangleIcon,
+  resolved: CheckCircleIcon,
+  voided: CheckCircleIcon,
+};
+
+function MarketRowMeta({ market }: { market: MarketCardData }) {
+  const isMultipleChoice = market.marketType === 'multiple_choice';
+  const [sideA, sideB] = market.marketType === 'yes_no' ? ['yes', 'no'] : ['over', 'under'];
+
+  if (market.status === 'open') {
+    return (
+      <p className="mt-0.5 text-xs text-espresso-400">
+        {market.openBetCount ?? 0} bets · <CountdownTimer target={market.closesAt} />
+      </p>
+    );
+  }
+
+  if (['closed', 'proposed', 'disputed'].includes(market.status)) {
+    if (isMultipleChoice) {
+      const top = [...(market.optionOdds ?? [])].sort((a, b) => b.percent - a.percent)[0];
+      if (!top) return null;
+      return (
+        <p className="mt-0.5 text-xs text-espresso-400">
+          <OptionLabel label={top.label} /> leading · {top.percent}%
+        </p>
+      );
+    }
+    const oddsA = market.odds?.find((o) => o.side === sideA);
+    const oddsB = market.odds?.find((o) => o.side === sideB);
+    if (!oddsA || !oddsB) return null;
+    return (
+      <p className="mt-0.5 text-xs text-espresso-400">
+        {sideA.toUpperCase()} {oddsA.percent}% · {sideB.toUpperCase()} {oddsB.percent}%
+      </p>
+    );
+  }
+
+  if (market.status === 'resolved' || market.status === 'voided') {
+    if (market.outcome === 'void') {
+      return <p className="mt-0.5 text-xs text-espresso-400">Voided, everyone refunded</p>;
+    }
+    return (
+      <p className="mt-0.5 text-xs text-espresso-400">
+        Outcome: {isMultipleChoice ? <OptionLabel label={market.outcomeLabel ?? ''} /> : market.outcome?.toUpperCase()}
+      </p>
+    );
+  }
+
+  return null;
+}
+
+function MarketRow({ market, isLast }: { market: MarketCardData; isLast: boolean }) {
+  const isRevealed = market.status === 'resolved' || market.status === 'voided';
+  const href = `/groups/${market.groupId}/markets/${market.id}${isRevealed ? '/reveal' : ''}`;
+  const Icon = STATUS_ROW_ICON[market.status];
+
+  return (
+    <Link
+      href={href}
+      className={cn(
+        'flex items-center gap-3 px-[18px] py-[14px] transition-colors hover:bg-espresso-50/25',
+        !isLast && 'border-b border-espresso-50'
+      )}
+    >
+      <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px]', TONE_CLASSES[STATUS_TONE[market.status]])}>
+        <Icon className="h-4 w-4" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <p className="font-display text-[15px] font-semibold leading-[1.3] text-espresso-900">{market.title}</p>
+        <MarketRowMeta market={market} />
+      </span>
+      <ChevronRightIcon className="h-3.5 w-2 shrink-0 text-espresso-200" />
+    </Link>
+  );
+}
+
+/** The 1b redesign's grouped-list variant: one rounded container per status bucket, each market a row inside it instead of its own card. */
+export function MarketRowList({ markets }: { markets: MarketCardData[] }) {
+  return (
+    <div className="overflow-hidden rounded-[22px] border border-espresso-100 bg-paper-white">
+      {markets.map((m, i) => (
+        <MarketRow key={m.id} market={m} isLast={i === markets.length - 1} />
+      ))}
+    </div>
   );
 }
