@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+
+  /* Paper — warm off-white background, the canvas everywhere. */
+  --color-paper: #faf6ef;
+  --color-paper-dim: #f3ecdf; /* card/section contrast against paper */
+  --color-paper-white: #fffdf9; /* cards that need to pop off paper */
+
+  /* Espresso — deep warm brown, text + primary buttons + a muted ramp for borders/secondary text. */
+  --color-espresso-950: #1c130d;
+  --color-espresso-900: #2c1f17;
+  --color-espresso-800: #3b2a20; /* base: body text, primary button fill */
+  --color-espresso-700: #4a3629;
+  --color-espresso-600: #5c4335;
+  --color-espresso-500: #705441;
+  --color-espresso-400: #8c6f5c;
+  --color-espresso-300: #ab9078;
+  --color-espresso-200: #cbb6a2; /* borders */
+  --color-espresso-100: #e4d8cc; /* dividers */
+  --color-espresso-50: #f2eae1; /* subtle tinted backgrounds */
+
+  /* Honey — warm golden amber accent: CTAs, odds bars, highlights. */
+  --color-honey-900: #7a4f0f;
+  --color-honey-800: #925e13;
+  --color-honey-700: #ac6f18;
+  --color-honey-600: #c7841f;
+  --color-honey-500: #e8a33d; /* base accent */
+  --color-honey-400: #edb35c;
+  --color-honey-300: #f1c480;
+  --color-honey-200: #f6d8a8;
+  --color-honey-100: #fae7cb;
+  --color-honey-50: #fdf3e6;
+
+  /* Muted warm success/danger that sit naturally in this palette. */
+  --color-success-700: #4f6b41;
+  --color-success-500: #6b8f5a;
+  --color-success-100: #e9f0e3;
+  --color-danger-700: #96392a;
+  --color-danger-500: #c1503d;
+  --color-danger-100: #f7e6e1;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-espresso-800);
+  }
+}
