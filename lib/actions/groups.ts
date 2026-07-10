@@ -82,6 +82,9 @@ export interface GroupSettings {
   timezone: string;
   betting_enabled: boolean;
   accepting_members: boolean;
+  distribute_payout: boolean;
+  creator_payout_pct: number;
+  endorser_payout_pct: number;
 }
 
 export async function updateGroupSettings(
@@ -93,6 +96,9 @@ export async function updateGroupSettings(
     timezone: string;
     bettingEnabled: boolean;
     acceptingMembers: boolean;
+    distributePayout: boolean;
+    creatorPayoutPct: number;
+    endorserPayoutPct: number;
   }
 ): Promise<ActionResult<GroupSettings>> {
   const supabase = await createClient();
@@ -105,6 +111,9 @@ export async function updateGroupSettings(
       p_timezone: input.timezone,
       p_betting_enabled: input.bettingEnabled,
       p_accepting_members: input.acceptingMembers,
+      p_distribute_payout: input.distributePayout,
+      p_creator_payout_pct: input.creatorPayoutPct,
+      p_endorser_payout_pct: input.endorserPayoutPct,
     })
   );
   if (result.error) return result;

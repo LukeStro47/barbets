@@ -4,7 +4,8 @@ import { notFoundIfEmpty } from '@/lib/errors';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import {
-  EditSettingsForm,
+  OwnerSettingsPanel,
+  ReadOnlySettings,
   RegenerateCodeButton,
   RemoveMemberButton,
   EndSeasonButton,
@@ -38,7 +39,7 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
 
   return (
     <main className="mx-auto max-w-lg space-y-6 px-5 py-8">
-      <PageHeader title="Group settings" backHref={`/groups/${groupId}`} backLabel={group!.name} />
+      <PageHeader title={isOwner ? 'Group settings' : 'Group info'} backHref={`/groups/${groupId}`} backLabel={group!.name} />
 
       <Link
         href="/how-it-works"
@@ -83,11 +84,21 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
         </ul>
       </Card>
 
-      {isOwner && (
-        <Card>
-          <h2 className="mb-3 font-semibold text-espresso-800">Betting & token settings</h2>
-          <EditSettingsForm groupId={groupId} settings={settings as GroupSettings} />
-        </Card>
+      {isOwner ? (
+        settings && (
+          <Card>
+            <h2 className="mb-3 font-semibold text-espresso-800">Betting & token settings</h2>
+            <OwnerSettingsPanel groupId={groupId} settings={settings as GroupSettings} hasActiveSeason={!!activeSeason} />
+          </Card>
+        )
+      ) : (
+        settings && (
+          <Card>
+            <h2 className="mb-1 font-semibold text-espresso-800">Group settings</h2>
+            <p className="mb-2 text-xs text-espresso-400">Set by the group owner.</p>
+            <ReadOnlySettings settings={settings as GroupSettings} hasActiveSeason={!!activeSeason} />
+          </Card>
+        )
       )}
 
       {isOwner && activeSeason && (

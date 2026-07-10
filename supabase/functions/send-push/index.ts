@@ -57,6 +57,16 @@ async function buildContent(event: NotificationEvent, isSubject: boolean): Promi
     };
   }
 
+  if (event.event_type === 'member_joined') {
+    const { data: group } = await admin.from('groups').select('name').eq('id', event.group_id).single();
+    const { data: member } = await admin.from('memberships').select('nickname').eq('group_id', event.group_id).eq('user_id', event.actor_id).single();
+    return {
+      title: group!.name,
+      body: member ? `@${member.nickname} just joined your group.` : 'Someone just joined your group.',
+      url: `/groups/${event.group_id}/settings`,
+    };
+  }
+
   if (!event.market_id) return null;
   const { market, group } = await marketAndGroup(event.market_id);
   const url = `/groups/${event.group_id}/markets/${event.market_id}`;

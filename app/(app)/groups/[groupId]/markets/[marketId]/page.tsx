@@ -56,17 +56,22 @@ export default async function MarketDetailPage({
   const marketOptions = options as MarketOption[] | null;
 
   let openBetCount: number | null = null;
+  let openBetVolume: number | null = null;
   let odds: { side: string; pool_amount: number; pool_percent: number; bet_count: number }[] | null = null;
-  let optionOdds: { option_id: string; label: string; pool_percent: number }[] | null = null;
+  let optionOdds: { option_id: string; label: string; pool_amount: number; pool_percent: number }[] | null = null;
   let proposal: { proposer_id: string; proposed_outcome: string | null; proposed_option_id: string | null; justification: string | null; proposed_at: string } | null = null;
   let challenge: { challenger_id: string; created_at: string } | null = null;
   let myBets: { side: string | null; option_id: string | null; amount: number }[] = [];
   let myVote: { outcome: string | null; voted_option_id: string | null } | null = null;
 
   if (marketRow.status === 'open') {
-    const { data } = await supabase.rpc('get_open_bet_count', { p_market_id: marketId });
-    openBetCount = data as number;
-    const { data: bets } = await supabase.from('bets').select('side, option_id, amount').eq('market_id', marketId).eq('user_id', user!.id);
+    const [{ data: countData }, { data: volumeData }, { data: bets }] = await Promise.all([
+      supabase.rpc('get_open_bet_count', { p_market_id: marketId }),
+      supabase.rpc('get_open_bet_volume', { p_market_id: marketId }),
+      supabase.from('bets').select('side, option_id, amount').eq('market_id', marketId).eq('user_id', user!.id),
+    ]);
+    openBetCount = countData as number;
+    openBetVolume = volumeData as number;
     myBets = bets ?? [];
   }
   if (['closed', 'proposed', 'disputed'].includes(marketRow.status)) {
@@ -101,6 +106,11 @@ export default async function MarketDetailPage({
   const [sideA, sideB] = marketRow.market_type === 'yes_no' ? ['yes', 'no'] : ['over', 'under'];
   const oddsA = odds?.find((o) => o.side === sideA);
   const oddsB = odds?.find((o) => o.side === sideB);
+  const closedVolume = odds
+    ? odds.reduce((sum, o) => sum + o.pool_amount, 0)
+    : optionOdds
+      ? optionOdds.reduce((sum, o) => sum + o.pool_amount, 0)
+      : null;
   const proposedOptionLabel = proposal?.proposed_option_id
     ? marketOptions?.find((o) => o.id === proposal!.proposed_option_id)?.label
     : null;
@@ -175,7 +185,7 @@ export default async function MarketDetailPage({
 
         {marketRow.status === 'open' && (
           <div className="flex items-center justify-between">
-            {openBetCount !== null && <SealedCount count={openBetCount} />}
+            {openBetCount !== null && <SealedCount count={openBetCount} volume={openBetVolume ?? undefined} />}
             <span className="text-sm font-medium text-espresso-500">
               <CountdownTimer target={marketRow.closes_at} clickable />
             </span>
@@ -209,6 +219,10 @@ export default async function MarketDetailPage({
 
         {isMultipleChoice && optionOdds && optionOdds.length > 0 && (
           <OddsBarMulti options={optionOdds.map((o) => ({ id: o.option_id, label: o.label, percent: o.pool_percent }))} />
+        )}
+
+        {closedVolume !== null && closedVolume > 0 && (
+          <p className="text-xs font-medium text-espresso-400">{closedVolume} tokens wagered</p>
         )}
 
         {proposal && (

@@ -105,6 +105,61 @@ describe('notification event emission', () => {
   });
 });
 
+describe('member_joined notifies only the group owner', () => {
+  let users: Record<string, TestUser>;
+  let group: GroupRow;
+
+  beforeAll(async () => {
+    users = await createTestUsers('mjn', ['owner', 'a']);
+    group = await setupGroup(users.owner, [users.a]);
+    await subscribe(users.owner);
+  });
+
+  afterAll(async () => {
+    await cleanupTestUsers(users);
+  });
+
+  test('a genuinely new member joining emits member_joined, recipients = owner only', async () => {
+    const joiner = await createTestUsers('mjn', ['b']);
+    try {
+      const { error: joinErr } = await joiner.b.client.rpc('join_group', { p_invite_code: group.invite_code, p_nickname: joiner.b.tag });
+      expect(joinErr).toBeNull();
+
+      const event = await latestEvent('member_joined', group.id);
+      expect(event.actor_id).toBe(joiner.b.id);
+      expect(event.market_id).toBeNull();
+
+      const recipients = await recipientIds(event.id);
+      expect(recipients).toEqual([users.owner.id]);
+    } finally {
+      await cleanupTestUsers(joiner);
+    }
+  });
+
+  test('a dormant member reactivating (rejoin) does not emit another member_joined event', async () => {
+    // `a` leaves (goes dormant), then rejoins — this is a reactivation, not
+    // a new membership, so join_group() should not fire a second event.
+    await users.a.client.rpc('leave_group', { p_group_id: group.id });
+
+    const { count: before } = await adminClient
+      .from('notification_events')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_type', 'member_joined')
+      .eq('group_id', group.id);
+
+    const { error: rejoinErr } = await users.a.client.rpc('join_group', { p_invite_code: group.invite_code, p_nickname: users.a.tag });
+    expect(rejoinErr).toBeNull();
+
+    const { count: after } = await adminClient
+      .from('notification_events')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_type', 'member_joined')
+      .eq('group_id', group.id);
+
+    expect(after).toBe(before);
+  });
+});
+
 describe('season_ended notifications reach dormant members too', () => {
   let users: Record<string, TestUser>;
   let group: GroupRow;

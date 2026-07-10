@@ -86,7 +86,7 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ gr
         <Card className="space-y-2">
           <h2 className="font-display font-bold text-espresso-800">🔥 Most impressive bet</h2>
           <p className="text-xs text-espresso-400">
-            The biggest underdog win so far — the settled bet with the highest payout multiple (what you won divided
+            The biggest underdog win so far, the settled bet with the highest payout multiple (what you won divided
             by what you staked) in this group's history.
           </p>
           <Link

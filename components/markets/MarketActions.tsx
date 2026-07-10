@@ -73,7 +73,12 @@ export function MarketActions({
   const isMultipleChoice = market.market_type === 'multiple_choice';
   const [betSide, setBetSide] = useState<'yes' | 'no' | 'over' | 'under'>(market.market_type === 'yes_no' ? 'yes' : 'over');
   const [betOptionId, setBetOptionId] = useState<string | null>(null);
-  const [betAmount, setBetAmount] = useState(Math.min(balance, 10));
+  // A string, not a number: keeping the field's default of 10 as a
+  // placeholder rather than a real value means an empty input stays
+  // genuinely empty (no forced "0" flashing back in after a backspace on
+  // mobile numeric keypads, which was hard to clear past).
+  const [betAmount, setBetAmount] = useState('');
+  const betAmountNum = betAmount === '' ? 0 : Number(betAmount);
   const [justification, setJustification] = useState('');
   const [proposeOutcome, setProposeOutcome] = useState<string | null>(null);
   const [voteChoice, setVoteChoice] = useState<string | null>(myVote?.voted_option_id ?? myVote?.outcome ?? null);
@@ -213,7 +218,8 @@ export function MarketActions({
                 min={1}
                 max={balance}
                 value={betAmount}
-                onChange={(e) => setBetAmount(Number(e.target.value))}
+                onChange={(e) => setBetAmount(e.target.value)}
+                placeholder={String(Math.min(balance, 10))}
                 className={`${inputClasses} pr-20`}
               />
               <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-espresso-400">
@@ -224,9 +230,11 @@ export function MarketActions({
           </div>
 
           <Button
-            disabled={isPending || betAmount < 1 || betAmount > balance || (isMultipleChoice && !betOptionId)}
+            disabled={isPending || betAmountNum < 1 || betAmountNum > balance || (isMultipleChoice && !betOptionId)}
             onClick={() =>
-              run(() => placeBet(groupId, market.id, betAmount, isMultipleChoice ? { optionId: betOptionId! } : { side: betSide }))
+              run(() =>
+                placeBet(groupId, market.id, betAmountNum, isMultipleChoice ? { optionId: betOptionId! } : { side: betSide })
+              )
             }
             className="w-full"
             variant="accent"
