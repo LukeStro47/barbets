@@ -3,7 +3,6 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { sponsorMarket } from '@/lib/actions/markets';
-import { placeBet } from '@/lib/actions/bets';
 import { proposeResolution, challengeResolution, castVote, finalizeMarket } from '@/lib/actions/resolution';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -11,7 +10,6 @@ import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import type { Market, MarketOption } from '@/lib/actions/markets';
 import type { ActionResult } from '@/lib/errors';
-import { formatTokens } from '@/lib/formatNumber';
 
 const inputClasses =
   'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-espresso-900 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
@@ -47,7 +45,6 @@ interface Props {
   market: Market;
   isCreator: boolean;
   isSponsor: boolean;
-  balance: number;
   proposal: Proposal | null;
   challenge: Challenge | null;
   myVote: { outcome: string | null; voted_option_id: string | null } | null;
@@ -56,29 +53,11 @@ interface Props {
   options: MarketOption[] | null;
 }
 
-export function MarketActions({
-  groupId,
-  market,
-  isCreator,
-  balance,
-  proposal,
-  challenge,
-  myVote,
-  currentUserId,
-  options,
-}: Props) {
+export function MarketActions({ groupId, market, isCreator, proposal, challenge, myVote, currentUserId, options }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const isMultipleChoice = market.market_type === 'multiple_choice';
-  const [betSide, setBetSide] = useState<'yes' | 'no' | 'over' | 'under'>(market.market_type === 'yes_no' ? 'yes' : 'over');
-  const [betOptionId, setBetOptionId] = useState<string | null>(null);
-  // A string, not a number: keeping the field's default of 10 as a
-  // placeholder rather than a real value means an empty input stays
-  // genuinely empty (no forced "0" flashing back in after a backspace on
-  // mobile numeric keypads, which was hard to clear past).
-  const [betAmount, setBetAmount] = useState('');
-  const betAmountNum = betAmount === '' ? 0 : Number(betAmount);
   const [justification, setJustification] = useState('');
   const [proposeOutcome, setProposeOutcome] = useState<string | null>(null);
   const [voteChoice, setVoteChoice] = useState<string | null>(myVote?.voted_option_id ?? myVote?.outcome ?? null);
@@ -160,86 +139,6 @@ export function MarketActions({
           </p>
           <Button disabled={isPending} onClick={() => run(() => sponsorMarket(market.id))} className="w-full">
             Endorse this market
-          </Button>
-        </Card>
-      )}
-
-      {market.status === 'open' && (
-        <Card className="space-y-3">
-          <p className="text-sm font-semibold text-espresso-700">Place your bet</p>
-          {isMultipleChoice ? (
-            <div className="flex flex-col gap-2">
-              {(options ?? []).map((o) => (
-                <button
-                  key={o.id}
-                  type="button"
-                  onClick={() => setBetOptionId(o.id)}
-                  className={`rounded-xl border px-4 py-2 text-left text-sm font-bold ${
-                    betOptionId === o.id ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-500'
-                  }`}
-                >
-                  <OptionLabel label={o.label} />
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setBetSide(sides[0])}
-                className={`flex-1 rounded-full border py-2 text-sm font-bold uppercase ${
-                  betSide === sides[0] ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-500'
-                }`}
-              >
-                {sides[0]}
-              </button>
-              {market.market_type === 'over_under' && (
-                <span className="shrink-0 rounded-full bg-espresso-100 px-3 py-1 text-xs font-bold text-espresso-600">
-                  {market.line}
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={() => setBetSide(sides[1])}
-                className={`flex-1 rounded-full border py-2 text-sm font-bold uppercase ${
-                  betSide === sides[1] ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-500'
-                }`}
-              >
-                {sides[1]}
-              </button>
-            </div>
-          )}
-
-          <div className="space-y-1.5 border-t border-espresso-100 pt-3">
-            <label className="block text-xs font-semibold uppercase tracking-wide text-espresso-400">Your bet</label>
-            <div className="relative">
-              <input
-                type="number"
-                min={1}
-                max={balance}
-                value={betAmount}
-                onChange={(e) => setBetAmount(e.target.value)}
-                placeholder={String(Math.min(balance, 10))}
-                className={`${inputClasses} pr-20`}
-              />
-              <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-espresso-400">
-                tokens
-              </span>
-            </div>
-            <p className="text-xs text-espresso-400">Your balance: {formatTokens(balance)} tokens</p>
-          </div>
-
-          <Button
-            disabled={isPending || betAmountNum < 1 || betAmountNum > balance || (isMultipleChoice && !betOptionId)}
-            onClick={() =>
-              run(() =>
-                placeBet(groupId, market.id, betAmountNum, isMultipleChoice ? { optionId: betOptionId! } : { side: betSide })
-              )
-            }
-            className="w-full"
-            variant="accent"
-          >
-            Place bet
           </Button>
         </Card>
       )}

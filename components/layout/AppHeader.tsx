@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Logo } from '@/components/ui/Logo';
 import { createClient } from '@/lib/supabase/server';
-import { getWaitingOnYou, totalCount } from '@/lib/waitingOnYou';
+import { getWaitingOnYou, badgeCount } from '@/lib/waitingOnYou';
 
 export async function AppHeader() {
   const supabase = await createClient();
@@ -14,7 +14,7 @@ export async function AppHeader() {
     : { count: 0 };
   const hasGroups = (membershipCount ?? 0) > 0;
 
-  const waitingCount = user && hasGroups ? totalCount(await getWaitingOnYou(supabase, user.id)) : 0;
+  const waitingCount = user && hasGroups ? badgeCount(await getWaitingOnYou(supabase, user.id)) : 0;
 
   return (
     <header className="sticky top-0 z-10 border-b border-espresso-100 bg-paper-white/95 backdrop-blur">

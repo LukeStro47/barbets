@@ -55,7 +55,7 @@ export function CountdownTimer({
   if (now === null) return null;
 
   const remaining = new Date(target).getTime() - now;
-  const label = remaining <= 0 ? 'closed' : `${prefix} ${formatRemaining(remaining)}`;
+  const label = remaining <= 0 ? 'closed' : [prefix, formatRemaining(remaining)].filter(Boolean).join(' ');
 
   if (!clickable) return <span>{label}</span>;
 

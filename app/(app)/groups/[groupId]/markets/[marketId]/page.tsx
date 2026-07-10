@@ -4,10 +4,12 @@ import { notFoundIfEmpty } from '@/lib/errors';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
-import { SealedCount } from '@/components/markets/SealedCount';
+import { StatStrip, StatTile } from '@/components/markets/StatStrip';
 import { OddsBar, OddsBarMulti } from '@/components/markets/OddsBar';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { MarketActions } from '@/components/markets/MarketActions';
+import { PlaceBetCard } from '@/components/markets/PlaceBetCard';
+import { MyBetsCard } from '@/components/markets/MyBetsCard';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { Mention } from '@/components/ui/Mention';
 import { STATUS_LABEL, STATUS_TONE } from '@/lib/marketStatus';
@@ -116,6 +118,18 @@ export default async function MarketDetailPage({
     : null;
   const optionLabelById = (id: string) => marketOptions?.find((o) => o.id === id)?.label ?? '?';
 
+  const statTiles: React.ReactNode[] = [];
+  if (marketRow.market_type === 'over_under') {
+    statTiles.push(<StatTile key="line" label="Line" value={marketRow.line} accent />);
+  }
+  if (marketRow.status === 'open') {
+    statTiles.push(<StatTile key="closes" label="Closes in" value={<CountdownTimer target={marketRow.closes_at} prefix="" clickable />} />);
+    if (openBetCount !== null) statTiles.push(<StatTile key="bets" label={openBetCount === 1 ? 'Bet placed' : 'Bets placed'} value={openBetCount} />);
+    if (openBetVolume !== null && openBetVolume > 0) statTiles.push(<StatTile key="wagered" label="Wagered" value={openBetVolume} />);
+  } else if (closedVolume !== null && closedVolume > 0) {
+    statTiles.push(<StatTile key="wagered" label="Wagered" value={closedVolume} />);
+  }
+
   return (
     <main className="mx-auto max-w-lg space-y-6 px-5 py-8">
       <PageHeader
@@ -125,38 +139,42 @@ export default async function MarketDetailPage({
         action={<Badge tone={STATUS_TONE[marketRow.status]}>{STATUS_LABEL[marketRow.status]}</Badge>}
       />
 
-      <Card className="space-y-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">Resolution criteria</p>
-          <p className="mt-0.5 text-espresso-600">{marketRow.description}</p>
-        </div>
-        {marketRow.market_type === 'over_under' && (
-          <div className="inline-flex items-center gap-1.5 rounded-xl bg-honey-50 px-3 py-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wide text-honey-700">Line</span>
-            <span className="font-display text-lg font-bold text-honey-800">{marketRow.line}</span>
-          </div>
-        )}
+      {statTiles.length > 0 && <StatStrip>{statTiles}</StatStrip>}
 
-        <div className="space-y-0.5 text-xs text-espresso-400">
-          <p>
-            Started by <Mention nickname={creator?.nickname ?? ''} />
-          </p>
-          {sponsor && (
-            <p>
-              Endorsed by <Mention nickname={sponsor.nickname ?? ''} />
-            </p>
-          )}
-          {subjects.length > 0 && (
-            <p>
-              Hidden from{' '}
-              {subjects.map((s, i) => (
-                <span key={i}>
-                  {i > 0 && ', '}
-                  <Mention nickname={s.nickname ?? ''} />
-                </span>
-              ))}
-            </p>
-          )}
+      {marketRow.status === 'open' && <PlaceBetCard groupId={groupId} market={marketRow} balance={balance} options={marketOptions} />}
+
+      {marketRow.status === 'open' && <MyBetsCard bets={myBets} optionLabelById={optionLabelById} />}
+
+      <Card className="space-y-3">
+        <div className="space-y-2">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">Resolution criteria</p>
+            <p className="mt-0.5 text-espresso-600">{marketRow.description}</p>
+          </div>
+
+          <div className="flex flex-wrap gap-1.5">
+            <span className="inline-flex items-center gap-1 rounded-full bg-espresso-50 px-2.5 py-1 text-xs font-medium text-espresso-600">
+              <span className="text-espresso-400">Started by</span>
+              <Mention nickname={creator?.nickname ?? ''} />
+            </span>
+            {sponsor && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-espresso-50 px-2.5 py-1 text-xs font-medium text-espresso-600">
+                <span className="text-espresso-400">Endorsed by</span>
+                <Mention nickname={sponsor.nickname ?? ''} />
+              </span>
+            )}
+            {subjects.length > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-espresso-50 px-2.5 py-1 text-xs font-medium text-espresso-600">
+                <span className="text-espresso-400">Hidden from</span>
+                {subjects.map((s, i) => (
+                  <span key={i}>
+                    {i > 0 && ', '}
+                    <Mention nickname={s.nickname ?? ''} />
+                  </span>
+                ))}
+              </span>
+            )}
+          </div>
         </div>
 
         {marketRow.status === 'pending_sponsor' && (
@@ -183,46 +201,16 @@ export default async function MarketDetailPage({
           </div>
         )}
 
-        {marketRow.status === 'open' && (
-          <div className="flex items-center justify-between">
-            {openBetCount !== null && <SealedCount count={openBetCount} volume={openBetVolume ?? undefined} />}
-            <span className="text-sm font-medium text-espresso-500">
-              <CountdownTimer target={marketRow.closes_at} clickable />
-            </span>
-          </div>
-        )}
-
-        {marketRow.status === 'open' && myBets.length > 0 && (
-          <div className="rounded-xl bg-honey-50 p-3 text-sm">
-            <p className="font-semibold text-honey-800">Your bets on this market</p>
-            <ul className="mt-1 space-y-0.5 text-honey-700">
-              {myBets.map((b, i) => (
-                <li key={i}>
-                  {b.amount} on <OptionLabel label={(b.option_id ? optionLabelById(b.option_id) : b.side ?? '').toUpperCase()} />
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
         {marketRow.closed_at && marketRow.closed_at < marketRow.closes_at && (
           <p className="text-xs font-semibold text-espresso-400">Closed early by proposal</p>
         )}
 
         {!isMultipleChoice && oddsA && oddsB && (
-          <OddsBar
-            left={{ label: sideA.toUpperCase(), percent: oddsA.pool_percent }}
-            right={{ label: sideB.toUpperCase(), percent: oddsB.pool_percent }}
-            center={marketRow.market_type === 'over_under' ? marketRow.line ?? undefined : undefined}
-          />
+          <OddsBar left={{ label: sideA.toUpperCase(), percent: oddsA.pool_percent }} right={{ label: sideB.toUpperCase(), percent: oddsB.pool_percent }} />
         )}
 
         {isMultipleChoice && optionOdds && optionOdds.length > 0 && (
           <OddsBarMulti options={optionOdds.map((o) => ({ id: o.option_id, label: o.label, percent: o.pool_percent }))} />
-        )}
-
-        {closedVolume !== null && closedVolume > 0 && (
-          <p className="text-xs font-medium text-espresso-400">{closedVolume} tokens wagered</p>
         )}
 
         {proposal && (
@@ -240,7 +228,6 @@ export default async function MarketDetailPage({
         market={marketRow}
         isCreator={marketRow.creator_id === user?.id}
         isSponsor={marketRow.sponsor_id === user?.id}
-        balance={balance}
         proposal={proposal}
         challenge={challenge}
         myVote={myVote}

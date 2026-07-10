@@ -43,3 +43,15 @@ export async function getWaitingOnYou(supabase: SupabaseClient, userId: string):
 export function totalCount(w: WaitingOnYou): number {
   return w.needsEndorsement.length + w.awaitingResolution.length + w.awaitingVote.length;
 }
+
+/**
+ * The header's nav badge, a narrower count than totalCount(). Closed markets
+ * awaiting resolution stay listed on the /inbox page (anyone eligible can
+ * propose one), but they aren't a personal to-do the way an unendorsed
+ * market or an uncast vote is, so they don't inflate the badge — otherwise
+ * it never clears until someone else gets around to proposing, which reads
+ * as a notification that never goes away no matter what you do.
+ */
+export function badgeCount(w: WaitingOnYou): number {
+  return w.needsEndorsement.length + w.awaitingVote.length;
+}
