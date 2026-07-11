@@ -53,7 +53,7 @@ describe('ledger conservation', () => {
       p_justification: null,
       p_actual_value: null,
     });
-    await backdate('resolution_proposals', 'market_id', market.id, 'proposed_at', 25);
+    await backdate('resolution_proposals', 'market_id', market.id, 'proposed_at', 9);
     await adminClient.rpc('finalize_market', { p_market_id: market.id });
 
     for (const u of [users.a, users.b]) {

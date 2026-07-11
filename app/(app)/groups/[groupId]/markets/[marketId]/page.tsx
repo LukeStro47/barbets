@@ -35,13 +35,15 @@ export default async function MarketDetailPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: membership }, { data: subjectRows }, { data: options }] = await Promise.all([
+  const [{ data: membership }, { data: subjectRows }, { data: options }, { data: group }] = await Promise.all([
     supabase.from('memberships').select('balance').eq('group_id', groupId).eq('user_id', user!.id).single(),
     supabase.from('market_subjects').select('user_id').eq('market_id', marketId),
     isMultipleChoice
       ? supabase.from('market_options').select('id, market_id, label, sort_order').eq('market_id', marketId).order('sort_order')
       : Promise.resolve({ data: null }),
+    supabase.from('groups').select('owner_id').eq('id', groupId).single(),
   ]);
+  const isOwner = group?.owner_id === user?.id;
 
   const subjectUserIds = (subjectRows ?? []).map((s) => s.user_id);
   const namedUserIds = [marketRow.creator_id, ...(marketRow.sponsor_id ? [marketRow.sponsor_id] : []), ...subjectUserIds];
@@ -228,6 +230,7 @@ export default async function MarketDetailPage({
         market={marketRow}
         isCreator={marketRow.creator_id === user?.id}
         isSponsor={marketRow.sponsor_id === user?.id}
+        isOwner={isOwner}
         proposal={proposal}
         challenge={challenge}
         myVote={myVote}

@@ -87,6 +87,8 @@ async function buildContent(event: NotificationEvent, isSubject: boolean): Promi
       return isSubject
         ? { title: group.name, body: 'A market about you has just resolved...', url: revealUrl }
         : { title: group.name, body: `A market has resolved: "${market.title}"`, url: revealUrl };
+    case 'market_voided':
+      return { title: group.name, body: `The owner voided a market and refunded everyone: "${market.title}"`, url: revealUrl };
     case 'impressive_bet': {
       const { data: bet } = await admin
         .from('bets')

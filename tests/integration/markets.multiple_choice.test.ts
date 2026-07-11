@@ -94,7 +94,7 @@ describe('multiple choice markets', () => {
       p_actual_value: null,
       p_option_id: options[0].id,
     });
-    await backdate('resolution_proposals', 'market_id', market.id, 'proposed_at', 25);
+    await backdate('resolution_proposals', 'market_id', market.id, 'proposed_at', 9);
     const { data: finalized, error: finalizeErr } = await adminClient.rpc('finalize_market', { p_market_id: market.id });
     expect(finalizeErr).toBeNull();
     const resolved = Array.isArray(finalized) ? finalized[0] : finalized;
@@ -129,7 +129,7 @@ describe('multiple choice markets', () => {
       p_actual_value: null,
       p_option_id: options[2].id, // nobody bet on C
     });
-    await backdate('resolution_proposals', 'market_id', market.id, 'proposed_at', 25);
+    await backdate('resolution_proposals', 'market_id', market.id, 'proposed_at', 9);
     const { data: finalized } = await adminClient.rpc('finalize_market', { p_market_id: market.id });
     const resolved = Array.isArray(finalized) ? finalized[0] : finalized;
     expect(resolved.status).toBe('resolved');
@@ -161,7 +161,7 @@ describe('multiple choice markets', () => {
       p_actual_value: null,
       p_option_id: options[1].id, // B wins
     });
-    await backdate('resolution_proposals', 'market_id', market.id, 'proposed_at', 25);
+    await backdate('resolution_proposals', 'market_id', market.id, 'proposed_at', 9);
     await adminClient.rpc('finalize_market', { p_market_id: market.id });
 
     const bets = await getBets(market.id);
@@ -315,7 +315,7 @@ describe('multiple choice markets', () => {
         p_actual_value: null,
         p_option_id: options[0].id,
       });
-      await backdate('resolution_proposals', 'market_id', market.id, 'proposed_at', 25);
+      await backdate('resolution_proposals', 'market_id', market.id, 'proposed_at', 9);
       await adminClient.rpc('finalize_market', { p_market_id: market.id });
 
       // visible at reveal

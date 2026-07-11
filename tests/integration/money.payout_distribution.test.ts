@@ -28,7 +28,7 @@ async function resolveAndFinalize(proposer: TestUser, market: MarketRow, outcome
     p_actual_value: null,
   });
   if (proposeErr) throw new Error(`propose_resolution: ${proposeErr.message}`);
-  await backdate('resolution_proposals', 'market_id', market.id, 'proposed_at', 25);
+  await backdate('resolution_proposals', 'market_id', market.id, 'proposed_at', 9);
   const { data, error } = await adminClient.rpc('finalize_market', { p_market_id: market.id });
   if (error) throw new Error(`finalize_market: ${error.message}`);
   return Array.isArray(data) ? data[0] : data;
@@ -171,7 +171,7 @@ describe('bonus_pool never gets orphaned', () => {
       p_actual_value: null,
     });
     expect(proposeErr).toBeNull();
-    await backdate('resolution_proposals', 'market_id', recipient.id, 'proposed_at', 25);
+    await backdate('resolution_proposals', 'market_id', recipient.id, 'proposed_at', 9);
     const { data, error } = await adminClient.rpc('finalize_market', { p_market_id: recipient.id });
     expect(error).toBeNull();
     const resolvedRecipient = Array.isArray(data) ? data[0] : data;

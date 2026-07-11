@@ -93,7 +93,7 @@ describe('early close via early resolution proposal', () => {
 
     // closes_at is still an hour away, but the proposal is already 25h old —
     // finalize must succeed anchored off proposed_at, not wait for closes_at.
-    await backdate('resolution_proposals', 'market_id', market.id, 'proposed_at', 25);
+    await backdate('resolution_proposals', 'market_id', market.id, 'proposed_at', 9);
     const { data: finalized, error } = await adminClient.rpc('finalize_market', { p_market_id: market.id });
     expect(error).toBeNull();
     const row = Array.isArray(finalized) ? finalized[0] : finalized;

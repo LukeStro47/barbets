@@ -86,3 +86,13 @@ export async function finalizeMarket(groupId: string, marketId: string): Promise
   revalidatePath(`/groups/${groupId}/markets/${marketId}/reveal`);
   return result;
 }
+
+/** Owner-only kill switch: refunds every stake and voids the market outright, at any stage before it's already settled. */
+export async function voidMarket(groupId: string, marketId: string): Promise<ActionResult<Market>> {
+  const supabase = await createClient();
+  const result = await runRpc<Market>(await supabase.rpc('void_market_by_owner', { p_market_id: marketId }));
+  if (result.error) return result;
+  revalidatePath(`/groups/${groupId}/markets/${marketId}`);
+  revalidatePath(`/groups/${groupId}/markets/${marketId}/reveal`);
+  return result;
+}

@@ -7,7 +7,7 @@ import { LifecycleSlideshow } from '@/components/ui/LifecycleSlideshow';
 const lifecycle = [
   { icon: '🔒', label: 'Open', body: 'Bets are sealed. Nobody sees who bet what, not even you, for anyone else.' },
   { icon: '📊', label: 'Closed', body: 'Odds appear as a percentage split. Individual bets stay hidden.' },
-  { icon: '🗳️', label: 'Proposed', body: 'Someone says what happened. 24 hours to challenge it.' },
+  { icon: '🗳️', label: 'Proposed', body: 'Someone says what happened. 8 hours to challenge it.' },
   { icon: '⚖️', label: 'Challenged', body: 'Someone disagreed. The group votes by secret ballot instead.' },
   { icon: '🏁', label: 'Resolved', body: 'Winners split the losing pool. Every bet becomes visible.' },
 ];
@@ -36,12 +36,12 @@ const sections = [
   {
     icon: '⚖️',
     title: 'Resolution is decided by the group',
-    body: "Once a market closes, any eligible member proposes what happened. Nobody disagrees within 24 hours, it stands. Someone challenges it, the group votes by secret ballot, revealed once voting ends. Nobody votes, or the vote ties with the original proposal among the leaders, the proposal still stands rather than voiding. A tie that doesn't include the proposal voids, so challenging only pays off if the group actually rallies behind a different answer.",
+    body: "Once a market closes, any eligible member proposes what happened. Nobody disagrees within 8 hours, it stands. Someone challenges it, the group votes by secret ballot, revealed once voting ends. Nobody votes, or the vote ties with the original proposal among the leaders, the proposal still stands rather than voiding. A tie that doesn't include the proposal voids, so challenging only pays off if the group actually rallies behind a different answer.",
   },
   {
     icon: '⏱️',
     title: 'You can propose the outcome early',
-    body: "If the real-world outcome is already known before a market's closing time, any eligible member can propose it right away instead of waiting. This locks betting for everyone immediately and starts the normal 24-hour challenge window. If you think the event genuinely hasn't happened yet, vote VOID rather than picking a side.",
+    body: "If the real-world outcome is already known before a market's closing time, any eligible member can propose it right away instead of waiting. This locks betting for everyone immediately and starts the normal 8-hour challenge window. If you think the event genuinely hasn't happened yet, vote VOID rather than picking a side.",
   },
   {
     icon: '👤',

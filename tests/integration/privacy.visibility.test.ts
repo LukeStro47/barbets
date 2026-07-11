@@ -87,7 +87,7 @@ describe('market visibility (the core privacy invariant)', () => {
 
     await users.sponsor.client.rpc('cast_vote', { p_market_id: market.id, p_outcome: 'yes' });
     await users.owner.client.rpc('cast_vote', { p_market_id: market.id, p_outcome: 'yes' });
-    await backdate('challenges', 'market_id', market.id, 'created_at', 49);
+    await backdate('challenges', 'market_id', market.id, 'created_at', 9);
     await adminClient.rpc('finalize_market', { p_market_id: market.id });
 
     // full reveal now

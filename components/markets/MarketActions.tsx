@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { sponsorMarket } from '@/lib/actions/markets';
-import { proposeResolution, challengeResolution, castVote, finalizeMarket } from '@/lib/actions/resolution';
+import { proposeResolution, challengeResolution, castVote, finalizeMarket, voidMarket } from '@/lib/actions/resolution';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
@@ -45,6 +45,7 @@ interface Props {
   market: Market;
   isCreator: boolean;
   isSponsor: boolean;
+  isOwner: boolean;
   proposal: Proposal | null;
   challenge: Challenge | null;
   myVote: { outcome: string | null; voted_option_id: string | null } | null;
@@ -53,7 +54,7 @@ interface Props {
   options: MarketOption[] | null;
 }
 
-export function MarketActions({ groupId, market, isCreator, proposal, challenge, myVote, currentUserId, options }: Props) {
+export function MarketActions({ groupId, market, isCreator, isOwner, proposal, challenge, myVote, currentUserId, options }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -62,9 +63,10 @@ export function MarketActions({ groupId, market, isCreator, proposal, challenge,
   const [proposeOutcome, setProposeOutcome] = useState<string | null>(null);
   const [voteChoice, setVoteChoice] = useState<string | null>(myVote?.voted_option_id ?? myVote?.outcome ?? null);
   const [showEarlyPropose, setShowEarlyPropose] = useState(false);
+  const [confirmingVoid, setConfirmingVoid] = useState(false);
 
-  const challengeWindowElapsed = useElapsed(proposal ? new Date(new Date(proposal.proposed_at).getTime() + 24 * 3_600_000).toISOString() : null);
-  const voteWindowElapsed = useElapsed(challenge ? new Date(new Date(challenge.created_at).getTime() + 24 * 3_600_000).toISOString() : null);
+  const challengeWindowElapsed = useElapsed(proposal ? new Date(new Date(proposal.proposed_at).getTime() + 8 * 3_600_000).toISOString() : null);
+  const voteWindowElapsed = useElapsed(challenge ? new Date(new Date(challenge.created_at).getTime() + 8 * 3_600_000).toISOString() : null);
 
   function run(fn: () => Promise<ActionResult<unknown>>) {
     setError(null);
@@ -161,7 +163,7 @@ export function MarketActions({ groupId, market, isCreator, proposal, challenge,
       {market.status === 'proposed' && proposal && (
         <Card className="space-y-3">
           <p className="text-sm text-espresso-600">
-            <CountdownTimer target={new Date(new Date(proposal.proposed_at).getTime() + 24 * 3_600_000).toISOString()} prefix="Challenge window closes in" />
+            <CountdownTimer target={new Date(new Date(proposal.proposed_at).getTime() + 8 * 3_600_000).toISOString()} prefix="Challenge window closes in" />
           </p>
           {iAmProposer ? (
             <p className="text-xs text-espresso-400">You proposed this outcome, so you can't challenge it yourself.</p>
@@ -192,7 +194,7 @@ export function MarketActions({ groupId, market, isCreator, proposal, challenge,
               Ballots reveal once voting closes, early if everyone's voted. You can change your vote until then.
             </p>
             <p className="text-sm text-espresso-600">
-              <CountdownTimer target={new Date(new Date(challenge.created_at).getTime() + 24 * 3_600_000).toISOString()} prefix="Voting closes in" />
+              <CountdownTimer target={new Date(new Date(challenge.created_at).getTime() + 8 * 3_600_000).toISOString()} prefix="Voting closes in" />
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -226,6 +228,39 @@ export function MarketActions({ groupId, market, isCreator, proposal, challenge,
             >
               Finalize now
             </button>
+          )}
+        </Card>
+      )}
+
+      {isOwner && (
+        <Card className="space-y-2 border border-danger-200">
+          <p className="text-sm font-semibold text-danger-700">Owner controls</p>
+          {!confirmingVoid ? (
+            <>
+              <p className="text-xs text-espresso-500">Cancel this market and refund every stake. This can't be undone.</p>
+              <Button variant="outline" className="w-full" onClick={() => setConfirmingVoid(true)}>
+                Void this market
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className="text-xs font-semibold text-danger-700">
+                Every bet on this market gets refunded in full and it closes for good. Everyone gets notified.
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setConfirmingVoid(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  className="flex-1"
+                  disabled={isPending}
+                  onClick={() => run(() => voidMarket(groupId, market.id))}
+                >
+                  Confirm void
+                </Button>
+              </div>
+            </>
           )}
         </Card>
       )}

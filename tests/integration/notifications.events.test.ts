@@ -95,7 +95,7 @@ describe('notification event emission', () => {
     await sleep(3000);
     await adminClient.rpc('expire_stale');
     await users.a.client.rpc('propose_resolution', { p_market_id: market.id, p_outcome: 'yes', p_justification: null, p_actual_value: null });
-    await backdate('resolution_proposals', 'market_id', market.id, 'proposed_at', 25);
+    await backdate('resolution_proposals', 'market_id', market.id, 'proposed_at', 9);
     await adminClient.rpc('finalize_market', { p_market_id: market.id });
 
     const event = await latestEvent('market_resolved', group.id);

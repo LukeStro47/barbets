@@ -88,7 +88,16 @@ export function GroupMarketSections({
 
       {showResolvedGroup && revealed.length > 0 && (
         <Section label="Resolved markets">
-          <MarketRowList markets={revealed.slice(0, 5)} />
+          <MarketRowList markets={filter === 'all' ? revealed.slice(0, 5) : revealed} />
+          {filter === 'all' && revealed.length > 5 && (
+            <button
+              type="button"
+              onClick={() => setFilter('resolved')}
+              className="text-center text-xs font-medium text-espresso-400 underline"
+            >
+              See all {revealed.length} resolved markets
+            </button>
+          )}
         </Section>
       )}
 

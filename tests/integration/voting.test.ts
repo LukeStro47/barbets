@@ -71,7 +71,7 @@ describe('voting: full turnout and explicit VOID', () => {
     const { data: stillDisputed } = await adminClient.from('markets').select('status').eq('id', market.id).single();
     expect(stillDisputed!.status).toBe('disputed');
 
-    await backdate('challenges', 'market_id', market.id, 'created_at', 25);
+    await backdate('challenges', 'market_id', market.id, 'created_at', 9);
     const { data: finalized } = await adminClient.rpc('finalize_market', { p_market_id: market.id });
     const row = Array.isArray(finalized) ? finalized[0] : finalized;
     expect(row.status).toBe('resolved');
@@ -86,7 +86,7 @@ describe('voting: full turnout and explicit VOID', () => {
     await users.owner.client.rpc('cast_vote', { p_market_id: market.id, p_outcome: 'no' });
     await users.a.client.rpc('cast_vote', { p_market_id: market.id, p_outcome: 'void' });
 
-    await backdate('challenges', 'market_id', market.id, 'created_at', 25);
+    await backdate('challenges', 'market_id', market.id, 'created_at', 9);
     const { data: finalized } = await adminClient.rpc('finalize_market', { p_market_id: market.id });
     const row = Array.isArray(finalized) ? finalized[0] : finalized;
     expect(row.status).toBe('voided');
@@ -96,7 +96,7 @@ describe('voting: full turnout and explicit VOID', () => {
   test('zero turnout resolves to the proposed outcome instead of voiding', async () => {
     const market = await toDisputed(users.owner, users.a, group.id);
 
-    await backdate('challenges', 'market_id', market.id, 'created_at', 25);
+    await backdate('challenges', 'market_id', market.id, 'created_at', 9);
     const { data: finalized } = await adminClient.rpc('finalize_market', { p_market_id: market.id });
     const row = Array.isArray(finalized) ? finalized[0] : finalized;
     expect(row.status).toBe('resolved');

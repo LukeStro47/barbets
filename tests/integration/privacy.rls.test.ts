@@ -118,7 +118,7 @@ describe('row-level security on bets/ledger/push_subscriptions/votes', () => {
     });
 
     test('after finalize, all ballots are revealed to everyone', async () => {
-      await backdate('challenges', 'market_id', market.id, 'created_at', 49);
+      await backdate('challenges', 'market_id', market.id, 'created_at', 9);
       await adminClient.rpc('finalize_market', { p_market_id: market.id });
 
       const { data: revealed } = await users.b.client.from('votes').select('voter_id, outcome').eq('market_id', market.id);

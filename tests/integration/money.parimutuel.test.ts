@@ -11,7 +11,7 @@ async function resolveAndFinalize(proposer: TestUser, market: MarketRow, outcome
     p_justification: null,
     p_actual_value: null,
   });
-  await backdate('resolution_proposals', 'market_id', market.id, 'proposed_at', 25);
+  await backdate('resolution_proposals', 'market_id', market.id, 'proposed_at', 9);
   const { data, error } = await adminClient.rpc('finalize_market', { p_market_id: market.id });
   if (error) throw new Error(`finalize_market: ${error.message}`);
   return Array.isArray(data) ? data[0] : data;
