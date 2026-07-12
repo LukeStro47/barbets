@@ -15,7 +15,7 @@ export function BonusPoolTile({ amount }: { amount: number }) {
         onClick={() => setShowInfo(true)}
         className="flex shrink-0 flex-col items-center gap-0.5 rounded-xl bg-espresso-50 px-4 py-2 text-center"
       >
-        <span className="text-[10px] font-bold uppercase tracking-wide text-espresso-400">Bonus pool</span>
+        <span className="text-[10px] font-bold uppercase tracking-wide text-espresso-400">Bonus</span>
         <span className="font-display text-lg font-bold leading-tight text-espresso-800">{amount}</span>
       </button>
       {showInfo && (

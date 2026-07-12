@@ -130,10 +130,10 @@ export default async function MarketDetailPage({
   }
   if (marketRow.status === 'open') {
     statTiles.push(<StatTile key="closes" label="Closes in" value={<CountdownTimer target={marketRow.closes_at} prefix="" clickable />} />);
-    if (openBetCount !== null) statTiles.push(<StatTile key="bets" label={openBetCount === 1 ? 'Bet placed' : 'Bets placed'} value={openBetCount} />);
-    if (openBetVolume !== null && openBetVolume > 0) statTiles.push(<StatTile key="volume" label="Bet volume" value={openBetVolume} />);
+    if (openBetCount !== null) statTiles.push(<StatTile key="bets" label="Bets" value={openBetCount} />);
+    if (openBetVolume !== null && openBetVolume > 0) statTiles.push(<StatTile key="volume" label="Volume" value={openBetVolume} />);
   } else if (closedVolume !== null && closedVolume > 0) {
-    statTiles.push(<StatTile key="volume" label="Bet volume" value={closedVolume} />);
+    statTiles.push(<StatTile key="volume" label="Volume" value={closedVolume} />);
   }
   if (marketRow.bonus_pool > 0) {
     statTiles.push(<BonusPoolTile key="bonus" amount={marketRow.bonus_pool} />);
