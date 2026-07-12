@@ -1,4 +1,4 @@
-import { OddsBar, OddsBarMulti, type OddsOption } from '@/components/markets/OddsBar';
+import { RevealTicket, type TicketOddsEntry } from '@/components/markets/RevealTicket';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { Mention } from '@/components/ui/Mention';
 import { Card } from '@/components/ui/Card';
@@ -25,6 +25,8 @@ function BreakdownRow({ label, amount }: { label: React.ReactNode; amount: numbe
 }
 
 export function RevealSummary({
+  groupName,
+  question,
   headline,
   actualValue,
   marketType,
@@ -35,7 +37,13 @@ export function RevealSummary({
   payoutBreakdown,
   creatorNickname,
   sponsorNickname,
+  resolvedAtIso,
+  justification,
+  hiddenFrom,
 }: {
+  groupName: string;
+  /** The market's title, shown on the ticket itself since it has to be self-contained once shared outside the app. */
+  question: string;
   /** Precomputed by the caller: 'VOIDED', a bet_side in caps, or the winning option's label. */
   headline: string;
   actualValue: number | null;
@@ -45,12 +53,17 @@ export function RevealSummary({
   bets: RevealBet[];
   /** yes_no/over_under only. */
   odds?: { side: string; percent: number }[];
-  /** multiple_choice only. */
-  optionOdds?: OddsOption[];
+  /** multiple_choice only. isWinner precomputed by the caller against outcome_option_id. */
+  optionOdds?: { id: string; label: string; percent: number; isWinner: boolean }[];
   /** Only set when nobody predicted the outcome and the group has distribute_payout on. */
   payoutBreakdown?: PayoutBreakdown | null;
   creatorNickname?: string;
   sponsorNickname?: string;
+  resolvedAtIso: string;
+  /** The winning resolution proposal's justification, if one was given. */
+  justification?: string | null;
+  /** Subject nicknames — safe to reveal now that the market's resolved. */
+  hiddenFrom: string[];
 }) {
   const [sideA, sideB] = marketType === 'yes_no' ? ['yes', 'no'] : ['over', 'under'];
   const oddsA = odds?.find((o) => o.side === sideA);
@@ -65,29 +78,46 @@ export function RevealSummary({
   const universalLoss = !voided && bets.length > 0 && bets.every((b) => !b.isWinner);
   const refundish = voided || universalLoss;
 
+  const ticketOdds: TicketOddsEntry[] =
+    marketType === 'multiple_choice'
+      ? [...(optionOdds ?? [])].sort((a, b) => b.percent - a.percent).map((o) => ({ label: o.label, percent: o.percent, isWinner: o.isWinner }))
+      : oddsA && oddsB
+        ? [
+            { label: sideA.toUpperCase(), percent: oddsA.percent },
+            { label: sideB.toUpperCase(), percent: oddsB.percent },
+          ]
+        : [];
+
+  const winnerPercent = voided
+    ? null
+    : marketType === 'multiple_choice'
+      ? (optionOdds?.find((o) => o.isWinner)?.percent ?? null)
+      : (odds?.find((o) => o.side === headline.toLowerCase())?.percent ?? null);
+
+  const detailLine =
+    marketType === 'over_under' && actualValue !== null ? `Actual number: ${actualValue}.` : (justification?.trim() || null);
+
+  const callers = sorted
+    .filter((b) => b.isWinner)
+    .slice(0, 3)
+    .map((b) => ({ nickname: b.nickname, amount: b.amount, payout: b.payout ?? 0 }));
+
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl bg-espresso-900 px-6 py-8 text-center text-paper-white">
-        <p className="text-sm font-medium uppercase tracking-widest text-honey-400">The reveal</p>
-        <p className="mt-2 font-display text-4xl font-bold">
-          <OptionLabel label={headline} />
-        </p>
-        {actualValue !== null && <p className="mt-1 text-espresso-200">Actual number: {actualValue}</p>}
-        {marketType !== 'multiple_choice' && oddsA && oddsB && (
-          <div className="mx-auto mt-6 max-w-xs text-left">
-            <OddsBar
-              left={{ label: sideA.toUpperCase(), percent: oddsA.percent }}
-              right={{ label: sideB.toUpperCase(), percent: oddsB.percent }}
-              center={marketType === 'over_under' ? line ?? undefined : undefined}
-            />
-          </div>
-        )}
-        {marketType === 'multiple_choice' && optionOdds && optionOdds.length > 0 && (
-          <div className="mx-auto mt-6 max-w-xs text-left">
-            <OddsBarMulti options={optionOdds} />
-          </div>
-        )}
-      </div>
+      <RevealTicket
+        groupName={groupName}
+        question={question}
+        resolvedAtIso={resolvedAtIso}
+        headline={headline}
+        isVoid={voided}
+        isMultipleChoice={marketType === 'multiple_choice'}
+        detailLine={detailLine}
+        line={marketType === 'over_under' ? (line ?? undefined) : undefined}
+        odds={ticketOdds}
+        winnerPercent={winnerPercent}
+        callers={callers}
+        hiddenFrom={hiddenFrom}
+      />
 
       {payoutBreakdown && (
         <Card className="space-y-2">
@@ -109,45 +139,48 @@ export function RevealSummary({
       )}
 
       <div className="space-y-2">
-        <h2 className="font-display font-bold text-espresso-800">Who bet what</h2>
+        <div className="mx-0.5 flex items-baseline justify-between">
+          <h2 className="text-[13px] font-extrabold tracking-[0.06em] text-espresso-400 uppercase">Full ledger</h2>
+          {bets.length > 0 && <span className="text-xs text-espresso-400">{bets.length} bet{bets.length === 1 ? '' : 's'}</span>}
+        </div>
         {sorted.length === 0 && <p className="text-sm text-espresso-400">Nobody bet on this one.</p>}
-        {sorted.map((b, i) => {
-          const won = !refundish && b.isWinner;
-          const lost = !refundish && !b.isWinner;
-          const winnings = won ? (b.payout ?? 0) - b.amount : 0;
+        {sorted.length > 0 && (
+          <ul className="overflow-hidden rounded-[20px] border border-espresso-100 bg-paper-white">
+            {sorted.map((b, i) => {
+              const won = !refundish && b.isWinner;
+              const lost = !refundish && !b.isWinner;
+              const winnings = won ? (b.payout ?? 0) - b.amount : 0;
 
-          return (
-            <div key={i} className="flex items-center justify-between rounded-xl border border-espresso-100 bg-paper-white px-4 py-3">
-              <div>
-                <p>
-                  <Mention nickname={b.nickname} className="font-semibold text-espresso-800" />
-                </p>
-                <p className="text-sm text-espresso-400">
-                  bet {b.amount} on <OptionLabel label={b.choiceLabel.toUpperCase()} />
-                </p>
-              </div>
-              <div className="text-right">
-                {refundish && (
-                  <p className="font-display font-bold text-espresso-500">
-                    {b.payout === b.amount
-                      ? `↩ refunded ${b.payout}`
-                      : b.payout && b.payout > 0
-                        ? `↩ ${b.payout} back`
-                        : 'nothing back'}
-                  </p>
-                )}
-                {won && (
-                  <>
-                    <p className="font-display font-bold text-honey-600">+{winnings} won</p>
-                    <p className="text-xs text-espresso-400">{b.payout} back total</p>
-                  </>
-                )}
-                {lost && <p className="font-display font-bold text-espresso-300">−{b.amount} lost</p>}
-              </div>
-            </div>
-          );
-        })}
+              return (
+                <li
+                  key={i}
+                  className={`flex items-center justify-between gap-2.5 px-4 py-3 ${i > 0 ? 'border-t border-espresso-100' : ''}`}
+                >
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${won ? 'bg-success-500' : 'bg-espresso-200'}`} />
+                    <div className="min-w-0">
+                      <Mention nickname={b.nickname} className="text-[14.5px] font-bold text-espresso-800" />
+                      <p className="truncate text-[12.5px] text-espresso-400">
+                        Bet {b.amount} on <OptionLabel label={b.choiceLabel.toUpperCase()} />
+                      </p>
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right text-[14.5px] font-extrabold">
+                    {refundish && (
+                      <span className="text-espresso-500">
+                        {b.payout === b.amount ? `↩ refunded ${b.payout}` : b.payout && b.payout > 0 ? `↩ ${b.payout} back` : 'nothing back'}
+                      </span>
+                    )}
+                    {won && <span className="text-success-700">+{winnings} won</span>}
+                    {lost && <span className="font-bold text-espresso-300">−{b.amount} lost</span>}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
     </div>
   );
 }
+
