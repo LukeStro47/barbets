@@ -4,6 +4,15 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { runRpc, type ActionResult } from '@/lib/errors';
 
+export interface PayoutBreakdown {
+  creator_cut: number;
+  endorser_cut: number;
+  /** Exactly one of these three is ever non-zero — which fallback fired when nobody predicted the outcome. */
+  other_markets_cut: number;
+  refunded_to_bettors: number;
+  settled_to_owner: number;
+}
+
 export interface Market {
   id: string;
   group_id: string;
@@ -22,6 +31,10 @@ export interface Market {
   closed_at: string | null;
   resolved_at: string | null;
   created_at: string;
+  /** Money redistributed in from another market's universal-loss split, waiting to be absorbed into this market's own pool at finalize time. */
+  bonus_pool: number;
+  /** Only set when a universal-loss market resolved with distribute_payout on — see finalize_market(). */
+  payout_breakdown: PayoutBreakdown | null;
 }
 
 export interface MarketOption {

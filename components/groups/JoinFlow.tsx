@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { joinGroup } from '@/lib/actions/groups';
 import { Button } from '@/components/ui/Button';
@@ -61,6 +62,9 @@ export function JoinFlow({
             Join {groupName}
           </Button>
         </Card>
+        <Link href="/groups" className="inline-block text-sm font-medium text-espresso-400 hover:text-espresso-700">
+          Not looking to join this group? Go to your groups →
+        </Link>
         {showBlockedModal && blockedReason && (
           <Modal onClose={() => setShowBlockedModal(false)}>
             <p className="font-display font-bold text-espresso-900">{BLOCKED_COPY[blockedReason].title}</p>

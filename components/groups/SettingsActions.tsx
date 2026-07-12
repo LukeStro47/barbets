@@ -27,7 +27,6 @@ export function EditSettingsForm({
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [seasonsEnabled, setSeasonsEnabled] = useState(settings.seasons_enabled);
   const [seasonLength, setSeasonLength] = useState<SeasonLength>(settings.season_length ?? 'manual');
@@ -40,7 +39,6 @@ export function EditSettingsForm({
 
   function handleSubmit(formData: FormData) {
     setError(null);
-    setSuccess(false);
     startTransition(async () => {
       const result = await updateGroupSettings(groupId, {
         seedAmount: Number(formData.get('seedAmount')),
@@ -56,8 +54,8 @@ export function EditSettingsForm({
       if (result.error) {
         setError(result.error);
       } else {
-        setSuccess(true);
         router.refresh();
+        onDone?.();
       }
     });
   }
@@ -65,7 +63,6 @@ export function EditSettingsForm({
   return (
     <form action={handleSubmit} className="space-y-4">
       {error && <p className="text-sm text-danger-700">{error}</p>}
-      {success && <p className="text-sm text-honey-700">Saved. See the note below each field for when it takes effect.</p>}
 
       <div className="flex items-center justify-between rounded-xl bg-honey-50 px-4 py-3">
         <div>

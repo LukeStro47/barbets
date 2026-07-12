@@ -5,9 +5,11 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { StatStrip, StatTile } from '@/components/markets/StatStrip';
+import { BonusPoolTile } from '@/components/markets/BonusPoolTile';
 import { OddsBar, OddsBarMulti } from '@/components/markets/OddsBar';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { MarketActions } from '@/components/markets/MarketActions';
+import { ProposeResolutionCard } from '@/components/markets/ProposeResolutionCard';
 import { PlaceBetCard } from '@/components/markets/PlaceBetCard';
 import { MyBetsCard } from '@/components/markets/MyBetsCard';
 import { OptionLabel } from '@/components/markets/OptionLabel';
@@ -68,15 +70,17 @@ export default async function MarketDetailPage({
   let myBets: { side: string | null; option_id: string | null; amount: number }[] = [];
   let myVote: { outcome: string | null; voted_option_id: string | null } | null = null;
 
+  if (marketRow.status !== 'pending_sponsor') {
+    const { data: bets } = await supabase.from('bets').select('side, option_id, amount').eq('market_id', marketId).eq('user_id', user!.id);
+    myBets = bets ?? [];
+  }
   if (marketRow.status === 'open') {
-    const [{ data: countData }, { data: volumeData }, { data: bets }] = await Promise.all([
+    const [{ data: countData }, { data: volumeData }] = await Promise.all([
       supabase.rpc('get_open_bet_count', { p_market_id: marketId }),
       supabase.rpc('get_open_bet_volume', { p_market_id: marketId }),
-      supabase.from('bets').select('side, option_id, amount').eq('market_id', marketId).eq('user_id', user!.id),
     ]);
     openBetCount = countData as number;
     openBetVolume = volumeData as number;
-    myBets = bets ?? [];
   }
   if (['closed', 'proposed', 'disputed'].includes(marketRow.status)) {
     if (isMultipleChoice) {
@@ -127,9 +131,12 @@ export default async function MarketDetailPage({
   if (marketRow.status === 'open') {
     statTiles.push(<StatTile key="closes" label="Closes in" value={<CountdownTimer target={marketRow.closes_at} prefix="" clickable />} />);
     if (openBetCount !== null) statTiles.push(<StatTile key="bets" label={openBetCount === 1 ? 'Bet placed' : 'Bets placed'} value={openBetCount} />);
-    if (openBetVolume !== null && openBetVolume > 0) statTiles.push(<StatTile key="wagered" label="Wagered" value={openBetVolume} />);
+    if (openBetVolume !== null && openBetVolume > 0) statTiles.push(<StatTile key="volume" label="Bet volume" value={openBetVolume} />);
   } else if (closedVolume !== null && closedVolume > 0) {
-    statTiles.push(<StatTile key="wagered" label="Wagered" value={closedVolume} />);
+    statTiles.push(<StatTile key="volume" label="Bet volume" value={closedVolume} />);
+  }
+  if (marketRow.bonus_pool > 0) {
+    statTiles.push(<BonusPoolTile key="bonus" amount={marketRow.bonus_pool} />);
   }
 
   return (
@@ -145,7 +152,7 @@ export default async function MarketDetailPage({
 
       {marketRow.status === 'open' && <PlaceBetCard groupId={groupId} market={marketRow} balance={balance} options={marketOptions} />}
 
-      {marketRow.status === 'open' && <MyBetsCard bets={myBets} optionLabelById={optionLabelById} />}
+      {marketRow.status !== 'pending_sponsor' && <MyBetsCard bets={myBets} optionLabelById={optionLabelById} />}
 
       <Card className="space-y-3">
         <div className="space-y-2">
@@ -222,6 +229,10 @@ export default async function MarketDetailPage({
             </p>
             {proposal.justification && <p className="mt-1">{proposal.justification}</p>}
           </div>
+        )}
+
+        {(marketRow.status === 'open' || marketRow.status === 'closed') && (
+          <ProposeResolutionCard groupId={groupId} market={marketRow} options={marketOptions} />
         )}
       </Card>
 

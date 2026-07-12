@@ -86,6 +86,14 @@ describe('distribute_payout: zero-winner-pool reward split (opt-in setting)', ()
     expect(await balance(group.id, users.owner.id)).toBe(ownerBefore + 30); // 20% of 150
     expect(await balance(group.id, users.sponsor.id)).toBe(sponsorBefore + 15); // 10% of 150
 
+    expect(resolved.payout_breakdown).toEqual({
+      creator_cut: 30,
+      endorser_cut: 15,
+      other_markets_cut: 105,
+      refunded_to_bettors: 0,
+      settled_to_owner: 0,
+    });
+
     const betsA = await getBets(marketA.id);
     expect(betsA.every((b) => b.payout === 0 && b.settled_at !== null)).toBe(true);
 
@@ -128,6 +136,14 @@ describe('distribute_payout: zero-winner-pool reward split (opt-in setting)', ()
     const bets = await getBets(market.id);
     expect(bets.find((b) => b.user_id === users.a.id)!.payout).toBe(70);
     expect(bets.find((b) => b.user_id === users.b.id)!.payout).toBe(210);
+
+    expect(resolved.payout_breakdown).toEqual({
+      creator_cut: 100,
+      endorser_cut: 20,
+      other_markets_cut: 0,
+      refunded_to_bettors: 280,
+      settled_to_owner: 0,
+    });
   });
 });
 

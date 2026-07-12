@@ -82,6 +82,9 @@ export default async function RevealPage({ params }: { params: Promise<{ groupId
         }))}
         odds={(odds ?? []).map((o: any) => ({ side: o.side, percent: o.pool_percent }))}
         optionOdds={(optionOdds ?? []).map((o: any) => ({ id: o.option_id, label: o.label, percent: o.pool_percent }))}
+        payoutBreakdown={marketRow.payout_breakdown}
+        creatorNickname={creator?.nickname ?? undefined}
+        sponsorNickname={sponsor?.nickname ?? undefined}
       />
     </main>
   );

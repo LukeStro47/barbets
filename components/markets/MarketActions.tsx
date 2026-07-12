@@ -3,16 +3,13 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { sponsorMarket } from '@/lib/actions/markets';
-import { proposeResolution, challengeResolution, castVote, finalizeMarket, voidMarket } from '@/lib/actions/resolution';
+import { challengeResolution, castVote, finalizeMarket, voidMarket } from '@/lib/actions/resolution';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import type { Market, MarketOption } from '@/lib/actions/markets';
 import type { ActionResult } from '@/lib/errors';
-
-const inputClasses =
-  'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-espresso-900 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
 
 /** True once `target` has passed — used to gate the manual "check now" fallback until the real timer would actually let it succeed. */
 function useElapsed(target: string | null): boolean {
@@ -59,10 +56,7 @@ export function MarketActions({ groupId, market, isCreator, isOwner, proposal, c
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const isMultipleChoice = market.market_type === 'multiple_choice';
-  const [justification, setJustification] = useState('');
-  const [proposeOutcome, setProposeOutcome] = useState<string | null>(null);
   const [voteChoice, setVoteChoice] = useState<string | null>(myVote?.voted_option_id ?? myVote?.outcome ?? null);
-  const [showEarlyPropose, setShowEarlyPropose] = useState(false);
   const [confirmingVoid, setConfirmingVoid] = useState(false);
 
   const challengeWindowElapsed = useElapsed(proposal ? new Date(new Date(proposal.proposed_at).getTime() + 8 * 3_600_000).toISOString() : null);
@@ -93,43 +87,6 @@ export function MarketActions({ groupId, market, isCreator, isOwner, proposal, c
       : ({ outcome: value as 'yes' | 'no' | 'over' | 'under' | 'void' } as const);
   }
 
-  function renderProposeCard(warning?: string) {
-    return (
-      <Card className="space-y-3">
-        <p className="text-sm font-semibold text-espresso-700">Propose what happened</p>
-        {warning && <p className="text-xs font-semibold text-danger-700">{warning}</p>}
-        <div className="flex flex-wrap gap-2">
-          {choiceLabels.map((c) => (
-            <button
-              key={c.value}
-              type="button"
-              onClick={() => setProposeOutcome(c.value)}
-              className={`rounded-full border px-4 py-1.5 text-sm font-semibold uppercase ${
-                proposeOutcome === c.value ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-600'
-              }`}
-            >
-              <OptionLabel label={c.label} />
-            </button>
-          ))}
-        </div>
-        <textarea
-          value={justification}
-          onChange={(e) => setJustification(e.target.value)}
-          placeholder="Short justification (optional, but helps everyone trust the call)"
-          rows={2}
-          className={inputClasses}
-        />
-        <Button
-          disabled={isPending || !proposeOutcome}
-          onClick={() => proposeOutcome && run(() => proposeResolution(groupId, market.id, proposalChoiceFor(proposeOutcome), justification || undefined))}
-          className="w-full"
-        >
-          Submit proposal
-        </Button>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-3">
       {error && <p className="text-sm text-danger-700">{error}</p>}
@@ -144,21 +101,6 @@ export function MarketActions({ groupId, market, isCreator, isOwner, proposal, c
           </Button>
         </Card>
       )}
-
-      {market.status === 'open' &&
-        (!showEarlyPropose ? (
-          <button
-            type="button"
-            onClick={() => setShowEarlyPropose(true)}
-            className="w-full text-center text-xs text-espresso-400 underline"
-          >
-            Already decided? Propose the outcome
-          </button>
-        ) : (
-          renderProposeCard('Proposing now locks betting for everyone immediately.')
-        ))}
-
-      {market.status === 'closed' && renderProposeCard()}
 
       {market.status === 'proposed' && proposal && (
         <Card className="space-y-3">
