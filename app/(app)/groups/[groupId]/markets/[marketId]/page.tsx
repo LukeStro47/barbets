@@ -150,7 +150,9 @@ export default async function MarketDetailPage({
 
       {statTiles.length > 0 && <StatStrip>{statTiles}</StatStrip>}
 
-      {marketRow.status === 'open' && <PlaceBetCard groupId={groupId} market={marketRow} balance={balance} options={marketOptions} />}
+      {marketRow.status === 'open' && (
+        <PlaceBetCard groupId={groupId} market={marketRow} balance={balance} options={marketOptions} existingBets={myBets} />
+      )}
 
       {marketRow.status !== 'pending_sponsor' && <MyBetsCard bets={myBets} optionLabelById={optionLabelById} />}
 

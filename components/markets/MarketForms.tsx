@@ -6,6 +6,7 @@ import { createMarket } from '@/lib/actions/markets';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { SubjectPicker, type MemberOption } from '@/components/markets/SubjectPicker';
+import { OptionLabel } from '@/components/markets/OptionLabel';
 import { TimezoneCaption } from '@/components/ui/TimezoneCaption';
 import { Mention } from '@/components/ui/Mention';
 
@@ -167,7 +168,7 @@ export function CreateMarketForm({
   const [subjects, setSubjects] = useState<MemberOption[]>([]);
   const [options, setOptions] = useState<OptionDraft[]>(() => [newOption(), newOption()]);
   const [minCloseTime] = useState(() => toLocalDatetimeInputValue(new Date(Date.now() + 60_000)));
-  const [defaultCloseTime] = useState(() => toLocalDatetimeInputValue(new Date(Date.now() + 24 * 3_600_000)));
+  const [defaultCloseTime] = useState(() => toLocalDatetimeInputValue(new Date(Date.now() + 30 * 60_000)));
   const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
 
   function submitMarket(formData: FormData) {
@@ -208,12 +209,7 @@ export function CreateMarketForm({
       }
     }
 
-    if (marketType === 'over_under' && Number.isInteger(Number(formData.get('line')))) {
-      setPendingFormData(formData);
-      return;
-    }
-
-    submitMarket(formData);
+    setPendingFormData(formData);
   }
 
   return (
@@ -318,32 +314,125 @@ export function CreateMarketForm({
       </p>
 
       {pendingFormData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-espresso-950/40 px-5">
-          <div className="w-full max-w-sm space-y-3 rounded-2xl bg-paper-white p-5 shadow-xl">
-            <p className="font-display font-bold text-espresso-900">Use a whole number for the line?</p>
-            <p className="text-sm text-espresso-500">
-              A whole number can land on an exact tie, which the group would have to resolve as VOID. A half (like
-              3.5) avoids that entirely. Sure you want a whole number?
-            </p>
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" className="flex-1" onClick={() => setPendingFormData(null)}>
-                Let me fix it
-              </Button>
-              <Button
-                type="button"
-                className="flex-1"
-                onClick={() => {
-                  const formData = pendingFormData;
-                  setPendingFormData(null);
-                  if (formData) submitMarket(formData);
-                }}
-              >
-                Use it anyway
-              </Button>
-            </div>
-          </div>
-        </div>
+        <ReviewMarketModal
+          formData={pendingFormData}
+          marketType={marketType}
+          subjects={subjects}
+          options={options}
+          timezone={timezone}
+          onEdit={() => setPendingFormData(null)}
+          onConfirm={() => {
+            const formData = pendingFormData;
+            setPendingFormData(null);
+            submitMarket(formData);
+          }}
+        />
       )}
     </form>
+  );
+}
+
+function ReviewMarketModal({
+  formData,
+  marketType,
+  subjects,
+  options,
+  timezone,
+  onEdit,
+  onConfirm,
+}: {
+  formData: FormData;
+  marketType: 'yes_no' | 'over_under' | 'multiple_choice';
+  subjects: MemberOption[];
+  options: OptionDraft[];
+  timezone: string;
+  onEdit: () => void;
+  onConfirm: () => void;
+}) {
+  const title = String(formData.get('title'));
+  const description = String(formData.get('description'));
+  const closesAtLocal = String(formData.get('closesAt'));
+  const closesAtDate = new Date(closesAtLocal);
+  const line = marketType === 'over_under' ? Number(formData.get('line')) : null;
+  const lineIsWholeNumber = line !== null && Number.isInteger(line);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-espresso-950/40 px-5">
+      <div className="w-full max-w-sm space-y-4 rounded-2xl bg-paper-white p-5 shadow-xl">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">Review your market</p>
+          <p className="mt-1 font-display text-lg font-bold text-espresso-900">{title}</p>
+        </div>
+
+        <div className="space-y-2 text-sm">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">Resolution criteria</p>
+            <p className="text-espresso-700">{description}</p>
+          </div>
+
+          {marketType === 'over_under' && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">Line</p>
+              <p className="text-espresso-700">{line}</p>
+              {lineIsWholeNumber && (
+                <p className="mt-1 rounded-lg bg-honey-50 px-2.5 py-1.5 text-xs text-honey-800">
+                  A whole number can land on an exact tie, which the group would have to resolve as VOID. A half
+                  (like 3.5) avoids that entirely.
+                </p>
+              )}
+            </div>
+          )}
+
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">Betting closes</p>
+            <p className="text-espresso-700">
+              {closesAtDate.toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+            </p>
+            <TimezoneCaption groupTimezone={timezone} />
+          </div>
+
+          {marketType === 'multiple_choice' ? (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">Options</p>
+              <ul className="mt-1 space-y-1">
+                {options.map((o) => (
+                  <li key={o.key} className="text-espresso-700">
+                    <OptionLabel label={o.label.trim()} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">About</p>
+              <p className="text-espresso-700">
+                {subjects.length === 0 ? (
+                  'Nobody, this market is not about anyone in particular.'
+                ) : (
+                  <>
+                    Hidden from{' '}
+                    {subjects.map((s, i) => (
+                      <span key={s.userId}>
+                        {i > 0 && ', '}
+                        <Mention nickname={s.nickname} />
+                      </span>
+                    ))}
+                  </>
+                )}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" className="flex-1" onClick={onEdit}>
+            Edit
+          </Button>
+          <Button type="button" className="flex-1" onClick={onConfirm}>
+            Create market
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }

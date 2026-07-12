@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { placeBet } from '@/lib/actions/bets';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { Modal } from '@/components/ui/Modal';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import type { Market, MarketOption } from '@/lib/actions/markets';
 import { formatTokens } from '@/lib/formatNumber';
@@ -12,21 +13,31 @@ import { formatTokens } from '@/lib/formatNumber';
 const inputClasses =
   'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-espresso-900 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
 
+interface ExistingBet {
+  side: string | null;
+  option_id: string | null;
+  amount: number;
+}
+
 /** The single most important action on an open market's page, so it renders as the very first card, above even the resolution criteria. */
 export function PlaceBetCard({
   groupId,
   market,
   balance,
   options,
+  existingBets = [],
 }: {
   groupId: string;
   market: Market;
   balance: number;
   options: MarketOption[] | null;
+  /** Your own already-placed bets on this market, used to warn before an easy-to-fat-finger repeat bet. */
+  existingBets?: ExistingBet[];
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [confirmingRepeat, setConfirmingRepeat] = useState(false);
   const isMultipleChoice = market.market_type === 'multiple_choice';
   const sides = market.market_type === 'yes_no' ? (['yes', 'no'] as const) : (['over', 'under'] as const);
   const [betSide, setBetSide] = useState<'yes' | 'no' | 'over' | 'under'>(sides[0]);
@@ -38,6 +49,8 @@ export function PlaceBetCard({
   const [betAmount, setBetAmount] = useState('');
   const betAmountNum = betAmount === '' ? 0 : Number(betAmount);
 
+  const existingTotal = existingBets.reduce((sum, b) => sum + b.amount, 0);
+
   function submit() {
     setError(null);
     startTransition(async () => {
@@ -48,6 +61,14 @@ export function PlaceBetCard({
         router.refresh();
       }
     });
+  }
+
+  function handlePlaceBet() {
+    if (existingBets.length > 0) {
+      setConfirmingRepeat(true);
+      return;
+    }
+    submit();
   }
 
   return (
@@ -114,12 +135,43 @@ export function PlaceBetCard({
 
       <Button
         disabled={isPending || betAmountNum < 1 || betAmountNum > balance || (isMultipleChoice && !betOptionId)}
-        onClick={submit}
+        onClick={handlePlaceBet}
         className="w-full"
         variant="accent"
       >
         Place bet
       </Button>
+
+      {confirmingRepeat && (
+        <Modal onClose={() => setConfirmingRepeat(false)}>
+          <p className="font-display font-bold text-espresso-900">You already have a bet here</p>
+          <p className="text-sm text-espresso-600">
+            You've already staked {formatTokens(existingTotal)} tokens on this market
+            {existingBets.length > 1 ? ` across ${existingBets.length} bets` : ''}. This adds a separate{' '}
+            {formatTokens(betAmountNum)}-token bet on{' '}
+            <OptionLabel
+              label={(isMultipleChoice ? options?.find((o) => o.id === betOptionId)?.label ?? '' : betSide).toUpperCase()}
+            />
+            . It doesn't replace what you already bet. Continue?
+          </p>
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={() => setConfirmingRepeat(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="accent"
+              className="flex-1"
+              disabled={isPending}
+              onClick={() => {
+                setConfirmingRepeat(false);
+                submit();
+              }}
+            >
+              Place bet
+            </Button>
+          </div>
+        </Modal>
+      )}
     </Card>
   );
 }
