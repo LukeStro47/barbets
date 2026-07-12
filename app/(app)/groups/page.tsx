@@ -12,7 +12,7 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
   const supabase = await createClient();
   const { data: groups } = await supabase
     .from('groups')
-    .select('id, name, invite_code, memberships(count)')
+    .select('id, name, invite_code, memberships(status)')
     .order('created_at', { ascending: false });
 
   // With exactly one group, skip straight to it — the hub is still reachable
@@ -37,21 +37,24 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
         <EmptyState title="No groups yet" subtitle="Start one, or join with a friend's invite code below." />
       ) : (
         <ul className="space-y-3">
-          {(groups ?? []).map((g: any) => (
-            <li key={g.id}>
-              <Link href={`/groups/${g.id}`}>
-                <Card className="flex items-center justify-between transition-shadow hover:shadow-md">
-                  <div>
-                    <p className="font-display font-bold text-espresso-900">{g.name}</p>
-                    <p className="text-sm text-espresso-400">
-                      {g.memberships?.[0]?.count ?? 0} member{g.memberships?.[0]?.count === 1 ? '' : 's'} · {g.invite_code}
-                    </p>
-                  </div>
-                  <span className="text-espresso-300">→</span>
-                </Card>
-              </Link>
-            </li>
-          ))}
+          {(groups ?? []).map((g: any) => {
+            const memberCount = (g.memberships ?? []).filter((m: { status: string }) => m.status === 'active').length;
+            return (
+              <li key={g.id}>
+                <Link href={`/groups/${g.id}`}>
+                  <Card className="flex items-center justify-between transition-shadow hover:shadow-md">
+                    <div>
+                      <p className="font-display font-bold text-espresso-900">{g.name}</p>
+                      <p className="text-sm text-espresso-400">
+                        {memberCount} member{memberCount === 1 ? '' : 's'} · {g.invite_code}
+                      </p>
+                    </div>
+                    <span className="text-espresso-300">→</span>
+                  </Card>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
 
