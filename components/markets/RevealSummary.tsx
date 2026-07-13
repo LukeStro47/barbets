@@ -1,8 +1,10 @@
 import { RevealTicket, type TicketOddsEntry } from '@/components/markets/RevealTicket';
 import { OptionLabel } from '@/components/markets/OptionLabel';
+import { ReactionBar } from '@/components/markets/ReactionBar';
 import { Mention } from '@/components/ui/Mention';
 import { Card } from '@/components/ui/Card';
 import type { PayoutBreakdown } from '@/lib/actions/markets';
+import type { ReactionEmoji } from '@/lib/actions/reactions';
 
 export interface RevealBet {
   nickname: string;
@@ -40,6 +42,10 @@ export function RevealSummary({
   resolvedAtIso,
   justification,
   hiddenFrom,
+  groupId,
+  marketId,
+  reactionCounts,
+  myReaction,
 }: {
   groupName: string;
   /** The market's title, shown on the ticket itself since it has to be self-contained once shared outside the app. */
@@ -64,6 +70,10 @@ export function RevealSummary({
   justification?: string | null;
   /** Subject nicknames — safe to reveal now that the market's resolved. */
   hiddenFrom: string[];
+  groupId: string;
+  marketId: string;
+  reactionCounts: Partial<Record<ReactionEmoji, number>>;
+  myReaction: ReactionEmoji | null;
 }) {
   const [sideA, sideB] = marketType === 'yes_no' ? ['yes', 'no'] : ['over', 'under'];
   const oddsA = odds?.find((o) => o.side === sideA);
@@ -118,6 +128,8 @@ export function RevealSummary({
         callers={callers}
         hiddenFrom={hiddenFrom}
       />
+
+      <ReactionBar groupId={groupId} marketId={marketId} counts={reactionCounts} myReaction={myReaction} />
 
       {payoutBreakdown && (
         <Card className="space-y-2">

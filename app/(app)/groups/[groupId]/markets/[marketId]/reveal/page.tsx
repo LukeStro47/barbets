@@ -7,10 +7,15 @@ import { RevealSummary } from '@/components/markets/RevealSummary';
 import { Mention } from '@/components/ui/Mention';
 import { STATUS_LABEL, STATUS_TONE } from '@/lib/marketStatus';
 import type { Market, MarketOption } from '@/lib/actions/markets';
+import type { ReactionEmoji } from '@/lib/actions/reactions';
 
 export default async function RevealPage({ params }: { params: Promise<{ groupId: string; marketId: string }> }) {
   const { groupId, marketId } = await params;
   const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const { data: market } = await supabase.from('visible_markets').select('*').eq('id', marketId).single();
   const marketRow = notFoundIfEmpty<Market>(market);
@@ -20,7 +25,7 @@ export default async function RevealPage({ params }: { params: Promise<{ groupId
     redirect(`/groups/${groupId}/markets/${marketId}`);
   }
 
-  const [{ data: bets }, { data: odds }, { data: optionOdds }, { data: options }, { data: group }, { data: subjectRows }, { data: proposal }] =
+  const [{ data: bets }, { data: odds }, { data: optionOdds }, { data: options }, { data: group }, { data: subjectRows }, { data: proposal }, { data: reactionRows }] =
     await Promise.all([
       supabase.from('bets').select('user_id, side, option_id, amount, payout').eq('market_id', marketId),
       isMultipleChoice ? Promise.resolve({ data: null }) : supabase.rpc('get_closed_odds', { p_market_id: marketId }),
@@ -33,7 +38,14 @@ export default async function RevealPage({ params }: { params: Promise<{ groupId
       marketRow.status === 'resolved'
         ? supabase.from('resolution_proposals').select('justification').eq('market_id', marketId).maybeSingle()
         : Promise.resolve({ data: null }),
+      supabase.from('market_reactions').select('user_id, emoji').eq('market_id', marketId),
     ]);
+
+  const reactionCounts = new Map<string, number>();
+  for (const r of reactionRows ?? []) {
+    reactionCounts.set(r.emoji, (reactionCounts.get(r.emoji) ?? 0) + 1);
+  }
+  const myReaction = (reactionRows ?? []).find((r) => r.user_id === user?.id)?.emoji ?? null;
 
   const marketOptions = options as MarketOption[] | null;
   const optionLabelById = (id: string) => marketOptions?.find((o) => o.id === id)?.label ?? '?';
@@ -96,6 +108,10 @@ export default async function RevealPage({ params }: { params: Promise<{ groupId
         resolvedAtIso={marketRow.resolved_at ?? marketRow.created_at}
         justification={proposal?.justification ?? null}
         hiddenFrom={hiddenFrom}
+        groupId={groupId}
+        marketId={marketId}
+        reactionCounts={Object.fromEntries(reactionCounts)}
+        myReaction={myReaction as ReactionEmoji | null}
       />
       <p className="text-center text-xs text-espresso-400">
         Started by <Mention nickname={creator?.nickname ?? ''} />
