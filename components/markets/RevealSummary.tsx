@@ -171,7 +171,12 @@ export function RevealSummary({
                         {b.payout === b.amount ? `↩ refunded ${b.payout}` : b.payout && b.payout > 0 ? `↩ ${b.payout} back` : 'nothing back'}
                       </span>
                     )}
-                    {won && <span className="text-success-700">+{winnings} won</span>}
+                    {won && (
+                      <>
+                        <p className="text-success-700">+{winnings} won</p>
+                        <p className="text-[11px] font-semibold text-espresso-400">{b.payout} back total</p>
+                      </>
+                    )}
                     {lost && <span className="font-bold text-espresso-300">−{b.amount} lost</span>}
                   </div>
                 </li>
