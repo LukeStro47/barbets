@@ -3,7 +3,6 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { reactToMarket, type ReactionEmoji } from '@/lib/actions/reactions';
-import { Card } from '@/components/ui/Card';
 
 const REACTIONS: { emoji: ReactionEmoji; glyph: string }[] = [
   { emoji: 'fire', glyph: '🔥' },
@@ -22,15 +21,18 @@ interface Props {
   myReaction: ReactionEmoji | null;
 }
 
+/** Corner pill on the reveal ticket: shows whichever reactions already have votes, plus a "+" that opens a popover with all six choices. */
 export function ReactionBar({ groupId, marketId, counts, myReaction }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [mine, setMine] = useState(myReaction);
   const [localCounts, setLocalCounts] = useState(counts);
+  const [open, setOpen] = useState(false);
 
   function tap(emoji: ReactionEmoji) {
     setError(null);
+    setOpen(false);
     const previous = mine;
     const next = previous === emoji ? null : emoji;
 
@@ -55,29 +57,48 @@ export function ReactionBar({ groupId, marketId, counts, myReaction }: Props) {
     });
   }
 
+  const active = REACTIONS.filter((r) => (localCounts[r.emoji] ?? 0) > 0);
+
   return (
-    <Card className="space-y-2">
-      {error && <p className="text-sm text-danger-700">{error}</p>}
-      <div className="flex flex-wrap justify-center gap-2">
-        {REACTIONS.map(({ emoji, glyph }) => {
-          const count = localCounts[emoji] ?? 0;
-          const active = mine === emoji;
-          return (
-            <button
-              key={emoji}
-              type="button"
-              disabled={isPending}
-              onClick={() => tap(emoji)}
-              className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold ${
-                active ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-500'
-              }`}
-            >
-              <span>{glyph}</span>
-              {count > 0 && <span>{count}</span>}
-            </button>
-          );
-        })}
-      </div>
-    </Card>
+    <div className="absolute top-5 right-5 z-20">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        disabled={isPending}
+        className="flex items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 text-[12.5px] font-bold text-paper-white ring-1 ring-white/15 backdrop-blur"
+      >
+        {active.map((r) => (
+          <span key={r.emoji} className="flex items-center gap-0.5">
+            <span>{r.glyph}</span>
+            <span className="text-[10.5px] text-paper-white/80">{localCounts[r.emoji]}</span>
+          </span>
+        ))}
+        <span>+</span>
+      </button>
+
+      {open && (
+        <>
+          {/* Click-outside-to-close backdrop, purely for dismissal — not part of the ticket's own visual design. */}
+          <button type="button" aria-label="Close reaction picker" onClick={() => setOpen(false)} className="fixed inset-0 z-10 cursor-default" />
+          <div className="absolute top-full right-0 z-20 mt-2 flex gap-1 rounded-2xl bg-paper-white p-1.5 shadow-lg ring-1 ring-espresso-200/60">
+            {REACTIONS.map(({ emoji, glyph }) => (
+              <button
+                key={emoji}
+                type="button"
+                disabled={isPending}
+                onClick={() => tap(emoji)}
+                className={`flex h-9 w-9 items-center justify-center rounded-full text-lg ${
+                  mine === emoji ? 'bg-honey-100 ring-2 ring-honey-400' : 'hover:bg-espresso-50'
+                }`}
+              >
+                {glyph}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {error && <p className="absolute top-full right-0 z-20 mt-2 w-40 text-right text-[11px] text-danger-300">{error}</p>}
+    </div>
   );
 }

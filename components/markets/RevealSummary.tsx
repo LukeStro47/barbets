@@ -1,6 +1,5 @@
 import { RevealTicket, type TicketOddsEntry } from '@/components/markets/RevealTicket';
 import { OptionLabel } from '@/components/markets/OptionLabel';
-import { ReactionBar } from '@/components/markets/ReactionBar';
 import { Mention } from '@/components/ui/Mention';
 import { Card } from '@/components/ui/Card';
 import type { PayoutBreakdown } from '@/lib/actions/markets';
@@ -127,9 +126,11 @@ export function RevealSummary({
         winnerPercent={winnerPercent}
         callers={callers}
         hiddenFrom={hiddenFrom}
+        groupId={groupId}
+        marketId={marketId}
+        reactionCounts={reactionCounts}
+        myReaction={myReaction}
       />
-
-      <ReactionBar groupId={groupId} marketId={marketId} counts={reactionCounts} myReaction={myReaction} />
 
       {payoutBreakdown && (
         <Card className="space-y-2">

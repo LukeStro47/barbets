@@ -5,8 +5,10 @@ import { toBlob } from 'html-to-image';
 import { cn } from '@/lib/cn';
 import { formatTokens } from '@/lib/formatNumber';
 import { OptionLabel } from '@/components/markets/OptionLabel';
+import { ReactionBar } from '@/components/markets/ReactionBar';
 import { Button } from '@/components/ui/Button';
 import { CheckIcon, DownloadIcon, LinkIcon, ShareIcon } from '@/components/ui/icons';
+import type { ReactionEmoji } from '@/lib/actions/reactions';
 
 export interface TicketCaller {
   nickname: string;
@@ -41,6 +43,10 @@ export interface RevealTicketProps {
   callers: TicketCaller[];
   /** Subject names, already formatted with a leading @ (e.g. "@marcus") since this renders as plain text, not <Mention>. */
   hiddenFrom: string[];
+  groupId: string;
+  marketId: string;
+  reactionCounts: Partial<Record<ReactionEmoji, number>>;
+  myReaction: ReactionEmoji | null;
 }
 
 /** The shareable "betting slip" reveal card, plus the share actions bound to it. One component because the ref they both need has to live in the same tree. */
@@ -57,6 +63,10 @@ export function RevealTicket({
   winnerPercent,
   callers,
   hiddenFrom,
+  groupId,
+  marketId,
+  reactionCounts,
+  myReaction,
 }: RevealTicketProps) {
   const ticketRef = useRef<HTMLDivElement>(null);
   const [blob, setBlob] = useState<Blob | null>(null);
@@ -132,10 +142,11 @@ export function RevealTicket({
 
   return (
     <div>
-      <div
-        ref={ticketRef}
-        className="relative overflow-visible rounded-[28px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 text-paper-white shadow-lg shadow-espresso-950/25"
-      >
+      <div className="relative">
+        <div
+          ref={ticketRef}
+          className="relative overflow-visible rounded-[28px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 text-paper-white shadow-lg shadow-espresso-950/25"
+        >
         <div className="px-6 pt-6 pb-[18px]">
           <div className="mb-4 flex items-center gap-[7px]">
             {/* A plain <img>, not next/image, so html-to-image captures the exact same-origin asset with no optimization endpoint in the way. */}
@@ -258,6 +269,9 @@ export function RevealTicket({
             <span className="text-[10.5px] tracking-[0.02em] text-paper-white/30">mybarbets.com</span>
           </div>
         </div>
+        </div>
+
+        <ReactionBar groupId={groupId} marketId={marketId} counts={reactionCounts} myReaction={myReaction} />
       </div>
 
       <div className="mt-3.5 flex gap-2">
