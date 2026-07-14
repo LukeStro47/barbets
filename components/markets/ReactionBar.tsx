@@ -65,15 +65,15 @@ export function ReactionBar({ groupId, marketId, counts, myReaction }: Props) {
         type="button"
         onClick={() => setOpen((o) => !o)}
         disabled={isPending}
-        className="flex items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 text-[12.5px] font-bold text-paper-white ring-1 ring-white/15 backdrop-blur"
+        className="flex items-center gap-2 rounded-full bg-black/30 px-3 py-1.5 text-[15px] font-bold text-paper-white ring-1 ring-white/15 backdrop-blur"
       >
         {active.map((r) => (
-          <span key={r.emoji} className="flex items-center gap-0.5">
-            <span>{r.glyph}</span>
-            <span className="text-[10.5px] text-paper-white/80">{localCounts[r.emoji]}</span>
+          <span key={r.emoji} className="flex items-center gap-1">
+            <span className="text-lg">{r.glyph}</span>
+            <span className="text-[12.5px] text-paper-white/80">{localCounts[r.emoji]}</span>
           </span>
         ))}
-        <span>+</span>
+        <span className="text-lg leading-none">+</span>
       </button>
 
       {open && (
@@ -87,7 +87,7 @@ export function ReactionBar({ groupId, marketId, counts, myReaction }: Props) {
                 type="button"
                 disabled={isPending}
                 onClick={() => tap(emoji)}
-                className={`flex h-9 w-9 items-center justify-center rounded-full text-lg ${
+                className={`flex h-11 w-11 items-center justify-center rounded-full text-2xl ${
                   mine === emoji ? 'bg-honey-100 ring-2 ring-honey-400' : 'hover:bg-espresso-50'
                 }`}
               >
