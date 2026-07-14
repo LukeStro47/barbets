@@ -55,3 +55,31 @@ export function totalCount(w: WaitingOnYou): number {
 export function badgeCount(w: WaitingOnYou): number {
   return w.needsEndorsement.length + w.awaitingVote.length;
 }
+
+export interface WaitingOnYouGroup {
+  groupId: string;
+  groupName: string;
+  needsEndorsement: WaitingOnYouMarket[];
+  awaitingResolution: WaitingOnYouMarket[];
+  awaitingVote: WaitingOnYouMarket[];
+}
+
+/** Reshapes the flat, cross-group buckets into one entry per group, so the inbox can be broken up by group instead of reading as one undifferentiated pile for anyone in more than one. */
+export function groupByGroup(w: WaitingOnYou): WaitingOnYouGroup[] {
+  const byGroup = new Map<string, WaitingOnYouGroup>();
+
+  function add(m: WaitingOnYouMarket, key: 'needsEndorsement' | 'awaitingResolution' | 'awaitingVote') {
+    let g = byGroup.get(m.group_id);
+    if (!g) {
+      g = { groupId: m.group_id, groupName: m.groups?.name ?? 'Group', needsEndorsement: [], awaitingResolution: [], awaitingVote: [] };
+      byGroup.set(m.group_id, g);
+    }
+    g[key].push(m);
+  }
+
+  w.awaitingVote.forEach((m) => add(m, 'awaitingVote'));
+  w.awaitingResolution.forEach((m) => add(m, 'awaitingResolution'));
+  w.needsEndorsement.forEach((m) => add(m, 'needsEndorsement'));
+
+  return Array.from(byGroup.values()).sort((a, b) => a.groupName.localeCompare(b.groupName));
+}

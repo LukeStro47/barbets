@@ -126,18 +126,85 @@ describe('delete_group', () => {
     expect(error?.message).toMatch(/forbidden/);
   });
 
-  test('owner deleting the group cascades away memberships and markets', async () => {
+  test('owner deleting the group voids open markets immediately but only schedules removal 5 days out', async () => {
     const market = await createMarket(users.owner, group.id, { closesInMs: 60000 });
+    await users.a.client.rpc('sponsor_market', { p_market_id: market.id });
+    await users.a.client.rpc('place_bet', { p_market_id: market.id, p_side: 'yes', p_amount: 100 });
 
-    const { error } = await users.owner.client.rpc('delete_group', { p_group_id: group.id });
+    const { data, error } = await users.owner.client.rpc('delete_group', { p_group_id: group.id });
     expect(error).toBeNull();
+    const updated = Array.isArray(data) ? data[0] : data;
+    expect(updated.deletion_scheduled_at).not.toBeNull();
+    const daysOut = (new Date(updated.deletion_scheduled_at).getTime() - Date.now()) / 86_400_000;
+    expect(daysOut).toBeGreaterThan(4.9);
+    expect(daysOut).toBeLessThan(5.1);
 
-    const { data: groupRow } = await adminClient.from('groups').select('id').eq('id', group.id).maybeSingle();
-    expect(groupRow).toBeNull();
+    // Nothing is actually gone yet — the group stays fully readable during the grace period.
+    const { data: groupRow } = await adminClient.from('groups').select('id, deletion_scheduled_at').eq('id', group.id).maybeSingle();
+    expect(groupRow).not.toBeNull();
+    expect(groupRow!.deletion_scheduled_at).not.toBeNull();
     const { data: memberRows } = await adminClient.from('memberships').select('id').eq('group_id', group.id);
-    expect(memberRows).toEqual([]);
-    const { data: marketRow } = await adminClient.from('markets').select('id').eq('id', market.id).maybeSingle();
-    expect(marketRow).toBeNull();
+    expect(memberRows!.length).toBe(2);
+
+    // The open market was force-voided and refunded immediately, not left dangling.
+    const { data: marketRow } = await adminClient.from('markets').select('status, outcome').eq('id', market.id).single();
+    expect(marketRow!.status).toBe('voided');
+    expect(marketRow!.outcome).toBe('void');
+    const { data: bet } = await adminClient.from('bets').select('payout, settled_at').eq('market_id', market.id).single();
+    expect(bet!.settled_at).not.toBeNull();
+    expect(bet!.payout).toBe(100);
+
+    // A bet attempt after deletion is scheduled fails cleanly, same as any other closed market.
+    const { error: betErr } = await users.a.client.rpc('place_bet', { p_market_id: market.id, p_side: 'no', p_amount: 50 });
+    expect(betErr?.message).toMatch(/invalid_operation/);
+  });
+
+  test('cannot schedule deletion twice, and new markets/members are blocked meanwhile', async () => {
+    const { error: reDeleteErr } = await users.owner.client.rpc('delete_group', { p_group_id: group.id });
+    expect(reDeleteErr?.message).toMatch(/invalid_operation/);
+    expect(reDeleteErr?.message).toMatch(/already scheduled/);
+
+    const { error: marketErr } = await users.owner.client.rpc('create_market', {
+      p_group_id: group.id,
+      p_title: 'Should be blocked',
+      p_description: 'blocked',
+      p_market_type: 'yes_no',
+      p_closes_at: new Date(Date.now() + 60000).toISOString(),
+    });
+    expect(marketErr?.message).toMatch(/invalid_operation/);
+    expect(marketErr?.message).toMatch(/scheduled for deletion/);
+
+    const stranger = await createTestUsers('delgnew', ['x']);
+    try {
+      const { error: joinErr } = await stranger.x.client.rpc('join_group', { p_invite_code: group.invite_code, p_nickname: 'strangerx' });
+      expect(joinErr?.message).toMatch(/invalid_operation/);
+      expect(joinErr?.message).toMatch(/scheduled for deletion/);
+    } finally {
+      await cleanupTestUsers(stranger);
+    }
+  });
+
+  test('cancel_group_deletion: non-owner forbidden, no-op when nothing is scheduled, owner can undo', async () => {
+    const { error: nonOwnerErr } = await users.a.client.rpc('cancel_group_deletion', { p_group_id: group.id });
+    expect(nonOwnerErr?.message).toMatch(/forbidden/);
+
+    const { data, error } = await users.owner.client.rpc('cancel_group_deletion', { p_group_id: group.id });
+    expect(error).toBeNull();
+    const updated = Array.isArray(data) ? data[0] : data;
+    expect(updated.deletion_scheduled_at).toBeNull();
+
+    const { error: doubleCancelErr } = await users.owner.client.rpc('cancel_group_deletion', { p_group_id: group.id });
+    expect(doubleCancelErr?.message).toMatch(/invalid_operation/);
+
+    // Undoing the schedule un-blocks new markets again (already-voided markets stay voided, that part is final).
+    const { error: marketErr } = await users.owner.client.rpc('create_market', {
+      p_group_id: group.id,
+      p_title: 'Should work now',
+      p_description: 'unblocked',
+      p_market_type: 'yes_no',
+      p_closes_at: new Date(Date.now() + 60000).toISOString(),
+    });
+    expect(marketErr).toBeNull();
   });
 });
 

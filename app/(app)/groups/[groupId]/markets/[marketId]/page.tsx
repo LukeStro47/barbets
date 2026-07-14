@@ -48,6 +48,7 @@ export default async function MarketDetailPage({
   const isOwner = group?.owner_id === user?.id;
 
   const subjectUserIds = (subjectRows ?? []).map((s) => s.user_id);
+  const ownerIsSubject = !!group?.owner_id && subjectUserIds.includes(group.owner_id);
   const namedUserIds = [marketRow.creator_id, ...(marketRow.sponsor_id ? [marketRow.sponsor_id] : []), ...subjectUserIds];
   const { data: namedMembers } =
     namedUserIds.length > 0
@@ -64,7 +65,7 @@ export default async function MarketDetailPage({
   let openBetCount: number | null = null;
   let openBetVolume: number | null = null;
   let odds: { side: string; pool_amount: number; pool_percent: number; bet_count: number }[] | null = null;
-  let optionOdds: { option_id: string; label: string; pool_amount: number; pool_percent: number }[] | null = null;
+  let optionOdds: { option_id: string; label: string; pool_amount: number; pool_percent: number; bet_count: number }[] | null = null;
   let proposal: { proposer_id: string; proposed_outcome: string | null; proposed_option_id: string | null; justification: string | null; proposed_at: string } | null = null;
   let challenge: { challenger_id: string; created_at: string } | null = null;
   let myBets: { side: string | null; option_id: string | null; amount: number }[] = [];
@@ -119,6 +120,11 @@ export default async function MarketDetailPage({
     : optionOdds
       ? optionOdds.reduce((sum, o) => sum + o.pool_amount, 0)
       : null;
+  const closedBetCount = odds
+    ? odds.reduce((sum, o) => sum + o.bet_count, 0)
+    : optionOdds
+      ? optionOdds.reduce((sum, o) => sum + o.bet_count, 0)
+      : null;
   const proposedOptionLabel = proposal?.proposed_option_id
     ? marketOptions?.find((o) => o.id === proposal!.proposed_option_id)?.label
     : null;
@@ -132,8 +138,9 @@ export default async function MarketDetailPage({
     statTiles.push(<StatTile key="closes" label="Closes in" value={<CountdownTimer target={marketRow.closes_at} prefix="" clickable />} />);
     if (openBetCount !== null) statTiles.push(<StatTile key="bets" label="Bets" value={openBetCount} />);
     if (openBetVolume !== null && openBetVolume > 0) statTiles.push(<StatTile key="volume" label="Volume" value={openBetVolume} />);
-  } else if (closedVolume !== null && closedVolume > 0) {
-    statTiles.push(<StatTile key="volume" label="Volume" value={closedVolume} />);
+  } else {
+    if (closedBetCount !== null && closedBetCount > 0) statTiles.push(<StatTile key="bets" label="Bets" value={closedBetCount} />);
+    if (closedVolume !== null && closedVolume > 0) statTiles.push(<StatTile key="volume" label="Volume" value={closedVolume} />);
   }
   if (marketRow.bonus_pool > 0) {
     statTiles.push(<BonusPoolTile key="bonus" amount={marketRow.bonus_pool} />);
@@ -244,6 +251,7 @@ export default async function MarketDetailPage({
         isCreator={marketRow.creator_id === user?.id}
         isSponsor={marketRow.sponsor_id === user?.id}
         isOwner={isOwner}
+        ownerIsSubject={ownerIsSubject}
         proposal={proposal}
         challenge={challenge}
         myVote={myVote}

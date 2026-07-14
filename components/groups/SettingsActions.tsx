@@ -7,6 +7,7 @@ import { endSeason } from '@/lib/actions/seasons';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Switch } from '@/components/ui/Switch';
+import { Modal } from '@/components/ui/Modal';
 import { formatSeasonLength, type SeasonLength } from '@/lib/seasonLength';
 import { COMMON_TIMEZONES, friendlyTimezoneName } from '@/lib/timezone';
 import { Mention } from '@/components/ui/Mention';
@@ -32,6 +33,7 @@ export function EditSettingsForm({
   const [seasonLength, setSeasonLength] = useState<SeasonLength>(settings.season_length ?? 'manual');
   const [timezone, setTimezone] = useState(settings.timezone);
   const [bettingEnabled, setBettingEnabled] = useState(settings.betting_enabled);
+  const [confirmingBetting, setConfirmingBetting] = useState(false);
   const [acceptingMembers, setAcceptingMembers] = useState(settings.accepting_members);
   const [distributePayout, setDistributePayout] = useState(settings.distribute_payout);
   const [creatorPayoutPct, setCreatorPayoutPct] = useState(settings.creator_payout_pct);
@@ -66,15 +68,58 @@ export function EditSettingsForm({
 
       <div className="flex items-center justify-between rounded-xl bg-honey-50 px-4 py-3">
         <div>
-          <p className="text-sm font-semibold text-espresso-800">Betting</p>
+          <p className="text-sm font-semibold text-espresso-800">Accepting new members</p>
           <p className="text-xs text-espresso-500">
-            {bettingEnabled ? 'Members can create markets.' : 'Off by default. Turn on when your group is ready.'}
+            {acceptingMembers ? 'Anyone with the invite code can join.' : 'The invite code is live but joining is paused.'}
           </p>
         </div>
-        <Switch checked={bettingEnabled} onChange={() => setBettingEnabled((v) => !v)} />
+        <Switch checked={acceptingMembers} onChange={() => setAcceptingMembers((v) => !v)} />
       </div>
 
-      <div className="space-y-1.5">
+      <div className="flex items-center justify-between border-t border-espresso-100 pt-4">
+        <div>
+          <p className="text-sm font-semibold text-espresso-700">Betting</p>
+          <p className="text-xs text-espresso-400">
+            {bettingEnabled
+              ? "Members can create markets. Can't be turned back off here, end the season instead to pause things."
+              : 'Off by default. Turn on when your group is ready.'}
+          </p>
+        </div>
+        <Switch
+          checked={bettingEnabled}
+          onChange={() => {
+            if (!bettingEnabled) setConfirmingBetting(true);
+          }}
+          disabled={settings.betting_enabled}
+        />
+      </div>
+
+      {confirmingBetting && (
+        <Modal onClose={() => setConfirmingBetting(false)}>
+          <p className="font-display text-lg font-bold text-espresso-900">Turn betting on?</p>
+          <p className="text-sm text-espresso-600">
+            Once betting is on, it can't be turned back off from here. If you want to pause things later, end the
+            season instead, that voids any open markets and starts a fresh one when you're ready.
+          </p>
+          <div className="flex gap-2 pt-1">
+            <Button type="button" variant="outline" className="flex-1" onClick={() => setConfirmingBetting(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="flex-1"
+              onClick={() => {
+                setBettingEnabled(true);
+                setConfirmingBetting(false);
+              }}
+            >
+              Turn on betting
+            </Button>
+          </div>
+        </Modal>
+      )}
+
+      <div className="space-y-1.5 border-t border-espresso-100 pt-4">
         <label className="block text-sm font-semibold text-espresso-700">Token allocation</label>
         <input name="seedAmount" type="number" min={1} defaultValue={settings.seed_amount} required className={inputClasses} />
         <p className="text-xs text-espresso-400">
@@ -142,16 +187,6 @@ export function EditSettingsForm({
         <p className="text-xs text-espresso-400">Shown next to betting-closes times so everyone knows what zone you meant.</p>
       </div>
 
-      <div className="flex items-center justify-between border-t border-espresso-100 pt-4">
-        <div>
-          <p className="text-sm font-semibold text-espresso-700">Accepting new members</p>
-          <p className="text-xs text-espresso-400">
-            {acceptingMembers ? 'Anyone with the invite code can join.' : 'The invite code is live but joining is paused.'}
-          </p>
-        </div>
-        <Switch checked={acceptingMembers} onChange={() => setAcceptingMembers((v) => !v)} />
-      </div>
-
       <div className="space-y-2 border-t border-espresso-100 pt-4">
         <div className="flex items-center justify-between">
           <label className="text-sm font-semibold text-espresso-700">Seasons</label>
@@ -201,6 +236,10 @@ const readOnlyRowClasses = 'flex items-center justify-between gap-4 py-2';
 export function ReadOnlySettings({ settings, hasActiveSeason }: { settings: GroupSettings; hasActiveSeason: boolean }) {
   return (
     <div className="divide-y divide-espresso-100 text-sm">
+      <div className={readOnlyRowClasses}>
+        <span className="text-espresso-500">Accepting new members</span>
+        <span className="font-semibold text-espresso-800">{settings.accepting_members ? 'Yes' : 'Paused'}</span>
+      </div>
       <div className={readOnlyRowClasses}>
         <span className="text-espresso-500">Betting</span>
         <span className="font-semibold text-espresso-800">{settings.betting_enabled ? 'Open' : 'Not open yet'}</span>
@@ -424,8 +463,9 @@ export function DeleteGroupButton({ groupId, groupName }: { groupId: string; gro
     <div className="space-y-2">
       {error && <p className="text-sm text-danger-700">{error}</p>}
       <p className="text-sm text-espresso-600">
-        This permanently deletes every market, bet, and balance in {groupName} for everyone. Type the group name to
-        confirm.
+        This immediately voids and refunds every open market in {groupName}, then permanently deletes the group
+        for everyone in 5 days. Everyone can still view it until then, and you can cancel any time before the 5
+        days are up. Type the group name to confirm.
       </p>
       <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={groupName} className={inputClasses} />
       <div className="flex gap-2">
@@ -449,12 +489,12 @@ export function DeleteGroupButton({ groupId, groupName }: { groupId: string; gro
               if (result.error) {
                 setError(result.error);
               } else {
-                router.push('/groups');
+                router.refresh();
               }
             })
           }
         >
-          Delete forever
+          Schedule deletion
         </Button>
       </div>
     </div>

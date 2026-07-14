@@ -12,7 +12,7 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
   const supabase = await createClient();
   const { data: groups } = await supabase
     .from('groups')
-    .select('id, name, invite_code, memberships(status)')
+    .select('id, name, invite_code, deletion_scheduled_at, memberships(status)')
     .order('created_at', { ascending: false });
 
   // With exactly one group, skip straight to it — the hub is still reachable
@@ -48,6 +48,9 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
                       <p className="text-sm text-espresso-400">
                         {memberCount} member{memberCount === 1 ? '' : 's'} · {g.invite_code}
                       </p>
+                      {g.deletion_scheduled_at && (
+                        <p className="mt-0.5 text-xs font-semibold text-danger-700">Being deleted</p>
+                      )}
                     </div>
                     <span className="text-espresso-300">→</span>
                   </Card>

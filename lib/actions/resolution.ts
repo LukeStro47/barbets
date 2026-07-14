@@ -96,3 +96,13 @@ export async function voidMarket(groupId: string, marketId: string): Promise<Act
   revalidatePath(`/groups/${groupId}/markets/${marketId}/reveal`);
   return result;
 }
+
+/** Fallback for the one case voidMarket can never cover: the group owner is @mentioned in this market, so they can't see it, let alone void it. Only the market's creator can call this, and only while the owner is actually a subject. */
+export async function voidMarketAsCreator(groupId: string, marketId: string): Promise<ActionResult<Market>> {
+  const supabase = await createClient();
+  const result = await runRpc<Market>(await supabase.rpc('void_market_by_creator', { p_market_id: marketId }));
+  if (result.error) return result;
+  revalidatePath(`/groups/${groupId}/markets/${marketId}`);
+  revalidatePath(`/groups/${groupId}/markets/${marketId}/reveal`);
+  return result;
+}

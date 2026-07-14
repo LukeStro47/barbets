@@ -15,14 +15,20 @@ import {
 import { CopyInviteLink } from '@/components/groups/CopyInviteLink';
 import { NicknameEditor } from '@/components/groups/NicknameEditor';
 import { LeaveGroupButton } from '@/components/groups/LeaveGroupButton';
+import { GroupDeletionBanner } from '@/components/groups/GroupDeletionBanner';
 import { Mention } from '@/components/ui/Mention';
+import { InfoIcon, ChevronRightIcon } from '@/components/ui/icons';
 import type { GroupSettings } from '@/lib/actions/groups';
 
 export default async function GroupSettingsPage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
   const supabase = await createClient();
 
-  const { data: group } = await supabase.from('groups').select('id, name, invite_code, owner_id').eq('id', groupId).single();
+  const { data: group } = await supabase
+    .from('groups')
+    .select('id, name, invite_code, owner_id, deletion_scheduled_at')
+    .eq('id', groupId)
+    .single();
   notFoundIfEmpty(group);
 
   const {
@@ -41,11 +47,22 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
     <main className="mx-auto max-w-lg space-y-6 px-5 py-8">
       <PageHeader title={isOwner ? 'Group settings' : 'Group info'} backHref={`/groups/${groupId}`} backLabel={group!.name} />
 
+      {group!.deletion_scheduled_at && (
+        <GroupDeletionBanner groupId={groupId} deletionScheduledAt={group!.deletion_scheduled_at} isOwner={isOwner} />
+      )}
+
       <Link
         href="/how-it-works"
-        className="block rounded-2xl border border-espresso-100 bg-paper-white px-5 py-3.5 text-sm font-semibold text-espresso-700 transition-colors hover:bg-espresso-50"
+        className="flex items-center gap-3 rounded-2xl border-2 border-honey-300 bg-honey-50 px-5 py-4 transition-colors hover:bg-honey-100"
       >
-        How it works →
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-honey-500 text-espresso-900">
+          <InfoIcon className="h-5 w-5" />
+        </span>
+        <span className="flex-1">
+          <p className="font-display font-bold text-espresso-900">How it works</p>
+          <p className="text-xs text-espresso-500">The house rules, in plain English.</p>
+        </span>
+        <ChevronRightIcon className="h-4 w-3 shrink-0 text-espresso-400" />
       </Link>
 
       <Card className="space-y-2">
@@ -123,10 +140,12 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
             />
           </div>
 
-          <div className="space-y-2 border-t border-espresso-100 pt-4">
-            <h3 className="text-sm font-semibold text-espresso-800">Delete group</h3>
-            <DeleteGroupButton groupId={groupId} groupName={group!.name} />
-          </div>
+          {!group!.deletion_scheduled_at && (
+            <div className="space-y-2 border-t border-espresso-100 pt-4">
+              <h3 className="text-sm font-semibold text-espresso-800">Delete group</h3>
+              <DeleteGroupButton groupId={groupId} groupName={group!.name} />
+            </div>
+          )}
         </Card>
       )}
 

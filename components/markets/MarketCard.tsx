@@ -22,6 +22,8 @@ export interface MarketCardData {
   /** multiple_choice resolved markets: the winning option's label (outcome stays null). */
   outcomeLabel?: string | null;
   openBetCount?: number;
+  /** Total bets across all sides/options, once betting has closed. */
+  closedBetCount?: number;
   odds?: { side: string; percent: number }[];
   optionOdds?: { id: string; label: string; percent: number }[];
   /** Shown as a small label above the title — only needed in cross-group contexts like the inbox feed. */
@@ -60,14 +62,20 @@ export function MarketCard({ market }: { market: MarketCardData }) {
           </div>
         )}
 
-        {['closed', 'proposed', 'disputed'].includes(market.status) &&
-          (isMultipleChoice ? (market.optionOdds?.length ?? 0) > 0 && <OddsBarMulti options={market.optionOdds!} /> : oddsA && oddsB && (
-            <OddsBar
-              left={{ label: sideA.toUpperCase(), percent: oddsA.percent }}
-              right={{ label: sideB.toUpperCase(), percent: oddsB.percent }}
-              center={market.marketType === 'over_under' ? market.line ?? undefined : undefined}
-            />
-          ))}
+        {['closed', 'proposed', 'disputed'].includes(market.status) && (
+          <>
+            {market.closedBetCount !== undefined && (
+              <p className="text-xs text-espresso-400">{market.closedBetCount} bets placed</p>
+            )}
+            {isMultipleChoice ? (market.optionOdds?.length ?? 0) > 0 && <OddsBarMulti options={market.optionOdds!} /> : oddsA && oddsB && (
+              <OddsBar
+                left={{ label: sideA.toUpperCase(), percent: oddsA.percent }}
+                right={{ label: sideB.toUpperCase(), percent: oddsB.percent }}
+                center={market.marketType === 'over_under' ? market.line ?? undefined : undefined}
+              />
+            )}
+          </>
+        )}
 
         {['resolved', 'voided'].includes(market.status) && (
           <p className="text-sm font-semibold text-espresso-600">
@@ -104,11 +112,13 @@ function MarketRowMeta({ market }: { market: MarketCardData }) {
   }
 
   if (['closed', 'proposed', 'disputed'].includes(market.status)) {
+    const betCountPrefix = market.closedBetCount !== undefined ? `${market.closedBetCount} bets · ` : '';
     if (isMultipleChoice) {
       const top = [...(market.optionOdds ?? [])].sort((a, b) => b.percent - a.percent)[0];
       if (!top) return null;
       return (
         <p className="mt-0.5 text-xs text-espresso-400">
+          {betCountPrefix}
           <OptionLabel label={top.label} /> leading · {top.percent}%
         </p>
       );
@@ -118,6 +128,7 @@ function MarketRowMeta({ market }: { market: MarketCardData }) {
     if (!oddsA || !oddsB) return null;
     return (
       <p className="mt-0.5 text-xs text-espresso-400">
+        {betCountPrefix}
         {sideA.toUpperCase()} {oddsA.percent}% · {sideB.toUpperCase()} {oddsB.percent}%
       </p>
     );

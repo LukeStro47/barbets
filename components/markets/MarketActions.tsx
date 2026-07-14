@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { sponsorMarket } from '@/lib/actions/markets';
-import { challengeResolution, castVote, finalizeMarket, voidMarket } from '@/lib/actions/resolution';
+import { challengeResolution, castVote, finalizeMarket, voidMarket, voidMarketAsCreator } from '@/lib/actions/resolution';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
@@ -43,6 +43,8 @@ interface Props {
   isCreator: boolean;
   isSponsor: boolean;
   isOwner: boolean;
+  /** True when the group owner is themself a subject of this market, so void_market_by_owner is unreachable for them. Only meaningful alongside isCreator. */
+  ownerIsSubject: boolean;
   proposal: Proposal | null;
   challenge: Challenge | null;
   myVote: { outcome: string | null; voted_option_id: string | null } | null;
@@ -51,13 +53,14 @@ interface Props {
   options: MarketOption[] | null;
 }
 
-export function MarketActions({ groupId, market, isCreator, isOwner, proposal, challenge, myVote, currentUserId, options }: Props) {
+export function MarketActions({ groupId, market, isCreator, isOwner, ownerIsSubject, proposal, challenge, myVote, currentUserId, options }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const isMultipleChoice = market.market_type === 'multiple_choice';
   const [voteChoice, setVoteChoice] = useState<string | null>(myVote?.voted_option_id ?? myVote?.outcome ?? null);
   const [confirmingVoid, setConfirmingVoid] = useState(false);
+  const [confirmingCreatorVoid, setConfirmingCreatorVoid] = useState(false);
 
   const challengeWindowElapsed = useElapsed(proposal ? new Date(new Date(proposal.proposed_at).getTime() + 8 * 3_600_000).toISOString() : null);
   const voteWindowElapsed = useElapsed(challenge ? new Date(new Date(challenge.created_at).getTime() + 8 * 3_600_000).toISOString() : null);
@@ -198,6 +201,43 @@ export function MarketActions({ groupId, market, isCreator, isOwner, proposal, c
                   className="flex-1"
                   disabled={isPending}
                   onClick={() => run(() => voidMarket(groupId, market.id))}
+                >
+                  Confirm void
+                </Button>
+              </div>
+            </>
+          )}
+        </Card>
+      )}
+
+      {isCreator && ownerIsSubject && (
+        <Card className="space-y-2 border border-danger-200">
+          <p className="text-sm font-semibold text-danger-700">Owner can't act on this one</p>
+          {!confirmingCreatorVoid ? (
+            <>
+              <p className="text-xs text-espresso-500">
+                The group owner is @mentioned in this market, so it's hidden from them and they can't void it
+                themselves. As the market's creator, you can void it in their place. Every bet gets refunded in
+                full and it closes for good.
+              </p>
+              <Button variant="outline" className="w-full" onClick={() => setConfirmingCreatorVoid(true)}>
+                Void this market
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className="text-xs font-semibold text-danger-700">
+                Every bet on this market gets refunded in full and it closes for good. Everyone gets notified.
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setConfirmingCreatorVoid(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  className="flex-1"
+                  disabled={isPending}
+                  onClick={() => run(() => voidMarketAsCreator(groupId, market.id))}
                 >
                   Confirm void
                 </Button>

@@ -234,7 +234,7 @@ export function CreateMarketForm({
 
         <div className="space-y-1.5">
           <label className="block text-sm font-semibold text-espresso-700">Market title</label>
-          <input
+          <textarea
             name="title"
             placeholder={
               marketType === 'multiple_choice'
@@ -244,7 +244,16 @@ export function CreateMarketForm({
                   : 'Will Jake finish the marathon?'
             }
             required
-            className={inputClasses}
+            rows={1}
+            onInput={(e) => {
+              const el = e.currentTarget;
+              el.style.height = 'auto';
+              el.style.height = `${el.scrollHeight}px`;
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.preventDefault();
+            }}
+            className={`${inputClasses} resize-none overflow-hidden`}
           />
         </div>
 

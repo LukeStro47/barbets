@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { notFoundIfEmpty } from '@/lib/errors';
 import { type MarketCardData } from '@/components/markets/MarketCard';
 import { SeasonBanner } from '@/components/groups/SeasonBanner';
+import { GroupDeletionBanner } from '@/components/groups/GroupDeletionBanner';
 import { NewMarketButton } from '@/components/groups/NewMarketButton';
 import { GroupMarketSections } from '@/components/groups/GroupMarketSections';
 import { Mention } from '@/components/ui/Mention';
@@ -24,7 +25,11 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
   const { groupId } = await params;
   const supabase = await createClient();
 
-  const { data: group } = await supabase.from('groups').select('id, name, invite_code, owner_id').eq('id', groupId).single();
+  const { data: group } = await supabase
+    .from('groups')
+    .select('id, name, invite_code, owner_id, deletion_scheduled_at')
+    .eq('id', groupId)
+    .single();
   notFoundIfEmpty(group);
 
   const {
@@ -84,10 +89,12 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
       const bucket = m.status === 'disputed' ? buckets.challenged : buckets.awaiting_resolution;
       if (m.market_type === 'multiple_choice') {
         const { data: optionOdds } = await supabase.rpc('get_closed_odds_options', { p_market_id: m.id });
-        bucket.push({ ...base, optionOdds: (optionOdds ?? []).map((o: any) => ({ id: o.option_id, label: o.label, percent: o.pool_percent })) });
+        const closedBetCount = (optionOdds ?? []).reduce((sum: number, o: any) => sum + o.bet_count, 0);
+        bucket.push({ ...base, closedBetCount, optionOdds: (optionOdds ?? []).map((o: any) => ({ id: o.option_id, label: o.label, percent: o.pool_percent })) });
       } else {
         const { data: odds } = await supabase.rpc('get_closed_odds', { p_market_id: m.id });
-        bucket.push({ ...base, odds: (odds ?? []).map((o: any) => ({ side: o.side, percent: o.pool_percent })) });
+        const closedBetCount = (odds ?? []).reduce((sum: number, o: any) => sum + o.bet_count, 0);
+        bucket.push({ ...base, closedBetCount, odds: (odds ?? []).map((o: any) => ({ side: o.side, percent: o.pool_percent })) });
       }
     } else {
       if (m.market_type === 'multiple_choice' && m.outcome_option_id) {
@@ -136,6 +143,10 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
       </div>
 
       <div className="mt-[18px] flex flex-col gap-[18px] pb-10">
+        {group!.deletion_scheduled_at && (
+          <GroupDeletionBanner groupId={groupId} deletionScheduledAt={group!.deletion_scheduled_at} isOwner={isOwner} />
+        )}
+
         <div className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-espresso-900 to-espresso-700 p-[22px]">
           <Image
             src="/barbets-coin.png"

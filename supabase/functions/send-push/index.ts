@@ -67,6 +67,24 @@ async function buildContent(event: NotificationEvent, isSubject: boolean): Promi
     };
   }
 
+  if (event.event_type === 'group_deletion_scheduled') {
+    const { data: group } = await admin.from('groups').select('name').eq('id', event.group_id).single();
+    return {
+      title: group!.name,
+      body: `The owner deleted ${group!.name}. Every open market was refunded, and the group itself is gone for good in 5 days unless they undo it.`,
+      url: `/groups/${event.group_id}/settings`,
+    };
+  }
+
+  if (event.event_type === 'group_deletion_canceled') {
+    const { data: group } = await admin.from('groups').select('name').eq('id', event.group_id).single();
+    return {
+      title: group!.name,
+      body: `False alarm, the owner canceled the deletion of ${group!.name}.`,
+      url: `/groups/${event.group_id}`,
+    };
+  }
+
   if (!event.market_id) return null;
   const { market, group } = await marketAndGroup(event.market_id);
   const url = `/groups/${event.group_id}/markets/${event.market_id}`;

@@ -27,8 +27,10 @@ export default async function LandingPage() {
             Start Betting
           </Button>
         </Link>
-        <Link href="/how-it-works" className="text-sm font-semibold text-espresso-500 hover:text-espresso-800">
-          How it works →
+        <Link href="/how-it-works" className="w-full">
+          <Button variant="outline" size="lg" className="w-full">
+            How it works
+          </Button>
         </Link>
         <Link href="/login" className="text-sm font-medium text-espresso-400 hover:text-espresso-700">
           Already have an account? Sign in

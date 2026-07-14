@@ -10,6 +10,7 @@ export interface Group {
   owner_id: string;
   invite_code: string;
   created_at: string;
+  deletion_scheduled_at: string | null;
 }
 
 export interface Membership {
@@ -133,11 +134,23 @@ export async function transferOwnership(groupId: string, newOwnerUserId: string)
   return result;
 }
 
-export async function deleteGroup(groupId: string): Promise<ActionResult<null>> {
+/** No longer deletes anything immediately — voids and refunds every open market, then schedules the actual removal 5 days out. */
+export async function deleteGroup(groupId: string): Promise<ActionResult<Group>> {
   const supabase = await createClient();
-  const result = await runRpc<null>(await supabase.rpc('delete_group', { p_group_id: groupId }));
+  const result = await runRpc<Group>(await supabase.rpc('delete_group', { p_group_id: groupId }));
   if (result.error) return result;
+  revalidatePath(`/groups/${groupId}`);
+  revalidatePath(`/groups/${groupId}/settings`);
   revalidatePath('/groups');
+  return result;
+}
+
+export async function cancelGroupDeletion(groupId: string): Promise<ActionResult<Group>> {
+  const supabase = await createClient();
+  const result = await runRpc<Group>(await supabase.rpc('cancel_group_deletion', { p_group_id: groupId }));
+  if (result.error) return result;
+  revalidatePath(`/groups/${groupId}`);
+  revalidatePath(`/groups/${groupId}/settings`);
   return result;
 }
 
