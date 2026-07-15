@@ -85,6 +85,15 @@ async function buildContent(event: NotificationEvent, isSubject: boolean): Promi
     };
   }
 
+  if (event.event_type === 'group_titles_updated') {
+    const { data: group } = await admin.from('groups').select('name').eq('id', event.group_id).single();
+    return {
+      title: group!.name,
+      body: 'The Hall of Fame titles just shuffled. See who holds what now.',
+      url: `/groups/${event.group_id}/hall-of-fame`,
+    };
+  }
+
   if (!event.market_id) return null;
   const { market, group } = await marketAndGroup(event.market_id);
   const url = `/groups/${event.group_id}/markets/${event.market_id}`;

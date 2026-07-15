@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Mention } from '@/components/ui/Mention';
 import { formatTokens } from '@/lib/formatNumber';
+import { titlesByUser, type GroupTitleRow } from '@/lib/titles';
 
 function medal(rank: number): string {
   return rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : `${rank + 1}.`;
@@ -23,18 +24,8 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ gr
     .neq('status', 'removed')
     .order('balance', { ascending: false });
 
-  const { data: impressiveBet } = (await supabase.rpc('get_most_impressive_bet', { p_group_id: groupId }).maybeSingle()) as {
-    data: {
-      bet_id: string;
-      user_id: string;
-      nickname: string;
-      market_id: string;
-      market_title: string;
-      amount: number;
-      payout: number;
-      multiple: number;
-    } | null;
-  };
+  const { data: titleRows } = await supabase.from('group_titles').select('title_key, user_id, stat_value').eq('group_id', groupId);
+  const badges = titlesByUser((titleRows ?? []) as GroupTitleRow[]);
 
   let allTime: Map<string, number> | null = null;
   if (settings?.seasons_enabled) {
@@ -73,7 +64,7 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ gr
           <div key={m.user_id} className="flex items-center justify-between py-2">
             <div className="flex items-center gap-3">
               <span className="w-6 text-center">{medal(i)}</span>
-              <Mention nickname={m.nickname} className="font-semibold text-espresso-800" />
+              <Mention nickname={m.nickname} titles={badges.get(m.user_id)} className="font-semibold text-espresso-800" />
               {m.balance === 0 && <span title="Broke">🏚️</span>}
               {m.status === 'dormant' && <span className="text-xs text-espresso-400">(sitting out)</span>}
             </div>
@@ -81,27 +72,6 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ gr
           </div>
         ))}
       </Card>
-
-      {impressiveBet && (
-        <Card className="space-y-2">
-          <h2 className="font-display font-bold text-espresso-800">🔥 Most impressive bet</h2>
-          <p className="text-xs text-espresso-400">
-            The biggest underdog win so far, the settled bet with the highest payout multiple (what you won divided
-            by what you staked) in this group's history.
-          </p>
-          <Link
-            href={`/groups/${groupId}/markets/${impressiveBet.market_id}/reveal`}
-            className="block rounded-xl border border-honey-200 bg-honey-50 px-3 py-2 hover:border-honey-400"
-          >
-            <p className="text-sm text-espresso-700">
-              <Mention nickname={impressiveBet.nickname} className="font-semibold text-espresso-900" /> turned{' '}
-              {impressiveBet.amount} into <span className="font-semibold text-honey-700">{impressiveBet.payout}</span>{' '}
-              ({impressiveBet.multiple}x) on
-            </p>
-            <p className="text-sm font-semibold text-espresso-800">"{impressiveBet.market_title}"</p>
-          </Link>
-        </Card>
-      )}
 
       {allTime && (
         <Card className="space-y-1">
@@ -114,7 +84,7 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ gr
                 <div key={userId} className="flex items-center justify-between py-2">
                   <div className="flex items-center gap-3">
                     <span className="w-6 text-center">{medal(i)}</span>
-                    <Mention nickname={m?.nickname ?? ''} className="font-semibold text-espresso-800" />
+                    <Mention nickname={m?.nickname ?? ''} titles={badges.get(userId)} className="font-semibold text-espresso-800" />
                   </div>
                   <span className={`font-display font-bold ${net >= 0 ? 'text-honey-600' : 'text-espresso-400'}`}>
                     {net >= 0 ? '+' : ''}
