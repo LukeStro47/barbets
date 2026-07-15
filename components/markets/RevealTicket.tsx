@@ -47,6 +47,8 @@ export interface RevealTicketProps {
   marketId: string;
   reactionCounts: Partial<Record<ReactionEmoji, number>>;
   myReaction: ReactionEmoji | null;
+  reactionNicknames: Partial<Record<ReactionEmoji, string[]>>;
+  myNickname: string;
 }
 
 /** The shareable "betting slip" reveal card, plus the share actions bound to it. One component because the ref they both need has to live in the same tree. */
@@ -67,6 +69,8 @@ export function RevealTicket({
   marketId,
   reactionCounts,
   myReaction,
+  reactionNicknames,
+  myNickname,
 }: RevealTicketProps) {
   const ticketRef = useRef<HTMLDivElement>(null);
   const [blob, setBlob] = useState<Blob | null>(null);
@@ -271,7 +275,14 @@ export function RevealTicket({
         </div>
         </div>
 
-        <ReactionBar groupId={groupId} marketId={marketId} counts={reactionCounts} myReaction={myReaction} />
+        <ReactionBar
+          groupId={groupId}
+          marketId={marketId}
+          counts={reactionCounts}
+          myReaction={myReaction}
+          nicknames={reactionNicknames}
+          myNickname={myNickname}
+        />
       </div>
 
       <div className="mt-3.5 flex gap-2">

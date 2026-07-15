@@ -56,12 +56,24 @@ export default async function RevealPage({ params }: { params: Promise<{ groupId
     ...(marketRow.sponsor_id ? [marketRow.sponsor_id] : []),
     ...(bets ?? []).map((b) => b.user_id),
     ...subjectUserIds,
+    ...(reactionRows ?? []).map((r) => r.user_id),
+    ...(user ? [user.id] : []),
   ];
   const { data: namedMembers } =
     namedUserIds.length > 0
       ? await supabase.from('memberships').select('user_id, nickname').eq('group_id', groupId).in('user_id', namedUserIds)
       : { data: [] };
   const nicknameByUserId = new Map((namedMembers ?? []).map((m) => [m.user_id, m.nickname]));
+
+  const reactionNicknames = new Map<string, string[]>();
+  for (const r of reactionRows ?? []) {
+    const nickname = nicknameByUserId.get(r.user_id);
+    if (!nickname) continue;
+    const list = reactionNicknames.get(r.emoji) ?? [];
+    list.push(nickname);
+    reactionNicknames.set(r.emoji, list);
+  }
+  const myNickname = user ? (nicknameByUserId.get(user.id) ?? '') : '';
   const creator = { nickname: nicknameByUserId.get(marketRow.creator_id) };
   const sponsor = marketRow.sponsor_id ? { nickname: nicknameByUserId.get(marketRow.sponsor_id) } : null;
   const hiddenFrom = subjectUserIds.map((userId) => `@${nicknameByUserId.get(userId) ?? '?'}`);
@@ -112,6 +124,8 @@ export default async function RevealPage({ params }: { params: Promise<{ groupId
         marketId={marketId}
         reactionCounts={Object.fromEntries(reactionCounts)}
         myReaction={myReaction as ReactionEmoji | null}
+        reactionNicknames={Object.fromEntries(reactionNicknames)}
+        myNickname={myNickname}
       />
       <p className="text-center text-xs text-espresso-400">
         Started by <Mention nickname={creator?.nickname ?? ''} />

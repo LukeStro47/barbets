@@ -45,6 +45,8 @@ export function RevealSummary({
   marketId,
   reactionCounts,
   myReaction,
+  reactionNicknames,
+  myNickname,
 }: {
   groupName: string;
   /** The market's title, shown on the ticket itself since it has to be self-contained once shared outside the app. */
@@ -73,6 +75,10 @@ export function RevealSummary({
   marketId: string;
   reactionCounts: Partial<Record<ReactionEmoji, number>>;
   myReaction: ReactionEmoji | null;
+  /** Nicknames of everyone who picked each reaction, for the breakdown popover. */
+  reactionNicknames: Partial<Record<ReactionEmoji, string[]>>;
+  /** The current viewer's own nickname, so an optimistic tap can add/remove them from the breakdown locally. */
+  myNickname: string;
 }) {
   const [sideA, sideB] = marketType === 'yes_no' ? ['yes', 'no'] : ['over', 'under'];
   const oddsA = odds?.find((o) => o.side === sideA);
@@ -130,6 +136,8 @@ export function RevealSummary({
         marketId={marketId}
         reactionCounts={reactionCounts}
         myReaction={myReaction}
+        reactionNicknames={reactionNicknames}
+        myNickname={myNickname}
       />
 
       {payoutBreakdown && (
