@@ -36,7 +36,7 @@ export default async function RevealPage({ params }: { params: Promise<{ groupId
       supabase.from('groups').select('name').eq('id', groupId).single(),
       supabase.from('market_subjects').select('user_id').eq('market_id', marketId),
       marketRow.status === 'resolved'
-        ? supabase.from('resolution_proposals').select('justification').eq('market_id', marketId).maybeSingle()
+        ? supabase.from('resolution_proposals').select('justification, photo_path').eq('market_id', marketId).maybeSingle()
         : Promise.resolve({ data: null }),
       supabase.from('market_reactions').select('user_id, emoji').eq('market_id', marketId),
     ]);
@@ -119,6 +119,7 @@ export default async function RevealPage({ params }: { params: Promise<{ groupId
         sponsorNickname={sponsor?.nickname ?? undefined}
         resolvedAtIso={marketRow.resolved_at ?? marketRow.created_at}
         justification={proposal?.justification ?? null}
+        hasProof={!!proposal?.photo_path}
         hiddenFrom={hiddenFrom}
         groupId={groupId}
         marketId={marketId}

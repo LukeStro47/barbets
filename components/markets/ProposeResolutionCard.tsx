@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { proposeResolution } from '@/lib/actions/resolution';
+import { compressImage } from '@/lib/compressImage';
 import { Button } from '@/components/ui/Button';
 import { OptionLabel } from '@/components/markets/OptionLabel';
+import { CameraIcon } from '@/components/ui/icons';
 import type { Market, MarketOption } from '@/lib/actions/markets';
 
 const inputClasses =
@@ -19,6 +21,40 @@ export function ProposeResolutionCard({ groupId, market, options }: { groupId: s
   const [proposeOutcome, setProposeOutcome] = useState<string | null>(null);
   const [justification, setJustification] = useState('');
   const [expanded, setExpanded] = useState(market.status !== 'open');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (photoPreview) URL.revokeObjectURL(photoPreview);
+    };
+  }, [photoPreview]);
+
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setError(null);
+    setPhotoBusy(true);
+    try {
+      const compressed = await compressImage(file);
+      if (photoPreview) URL.revokeObjectURL(photoPreview);
+      setPhotoFile(compressed);
+      setPhotoPreview(URL.createObjectURL(compressed));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not process that photo.');
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
+  function removePhoto() {
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoFile(null);
+    setPhotoPreview(null);
+  }
 
   const sides = market.market_type === 'yes_no' ? (['yes', 'no'] as const) : (['over', 'under'] as const);
   const choiceLabels: { value: string; label: string }[] = isMultipleChoice
@@ -35,7 +71,19 @@ export function ProposeResolutionCard({ groupId, market, options }: { groupId: s
     if (!proposeOutcome) return;
     setError(null);
     startTransition(async () => {
-      const result = await proposeResolution(groupId, market.id, proposalChoiceFor(proposeOutcome), justification || undefined);
+      let photo: FormData | undefined;
+      if (photoFile) {
+        photo = new FormData();
+        photo.append('photo', photoFile);
+      }
+      const result = await proposeResolution(
+        groupId,
+        market.id,
+        proposalChoiceFor(proposeOutcome),
+        justification || undefined,
+        undefined,
+        photo
+      );
       if (result.error) {
         setError(result.error);
       } else {
@@ -80,7 +128,29 @@ export function ProposeResolutionCard({ groupId, market, options }: { groupId: s
         rows={2}
         className={inputClasses}
       />
-      <Button disabled={isPending || !proposeOutcome} onClick={submit} className="w-full">
+
+      <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoChange} className="hidden" />
+      {photoPreview ? (
+        <div className="flex items-center gap-3">
+          <img src={photoPreview} alt="Proof preview" className="h-16 w-16 rounded-lg object-cover" />
+          <Button type="button" variant="outline" size="sm" onClick={removePhoto}>
+            Remove photo
+          </Button>
+        </div>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          disabled={photoBusy}
+          onClick={() => fileInputRef.current?.click()}
+          className="inline-flex w-full items-center justify-center gap-2"
+        >
+          <CameraIcon className="h-4 w-4" />
+          {photoBusy ? 'Processing…' : 'Attach a proof photo (optional)'}
+        </Button>
+      )}
+
+      <Button disabled={isPending || photoBusy || !proposeOutcome} onClick={submit} className="w-full">
         Submit proposal
       </Button>
     </div>

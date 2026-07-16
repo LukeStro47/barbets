@@ -10,6 +10,7 @@ import { OddsBar, OddsBarMulti } from '@/components/markets/OddsBar';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { MarketActions } from '@/components/markets/MarketActions';
 import { ProposeResolutionCard } from '@/components/markets/ProposeResolutionCard';
+import { ResolutionProofButton } from '@/components/markets/ResolutionProofButton';
 import { PlaceBetCard } from '@/components/markets/PlaceBetCard';
 import { MyBetsCard } from '@/components/markets/MyBetsCard';
 import { OptionLabel } from '@/components/markets/OptionLabel';
@@ -66,7 +67,14 @@ export default async function MarketDetailPage({
   let openBetVolume: number | null = null;
   let odds: { side: string; pool_amount: number; pool_percent: number; bet_count: number }[] | null = null;
   let optionOdds: { option_id: string; label: string; pool_amount: number; pool_percent: number; bet_count: number }[] | null = null;
-  let proposal: { proposer_id: string; proposed_outcome: string | null; proposed_option_id: string | null; justification: string | null; proposed_at: string } | null = null;
+  let proposal: {
+    proposer_id: string;
+    proposed_outcome: string | null;
+    proposed_option_id: string | null;
+    justification: string | null;
+    proposed_at: string;
+    photo_path: string | null;
+  } | null = null;
   let challenge: { challenger_id: string; created_at: string } | null = null;
   let myBets: { side: string | null; option_id: string | null; amount: number }[] = [];
   let myVote: { outcome: string | null; voted_option_id: string | null } | null = null;
@@ -95,7 +103,7 @@ export default async function MarketDetailPage({
   if (['proposed', 'disputed'].includes(marketRow.status)) {
     const { data } = await supabase
       .from('resolution_proposals')
-      .select('proposer_id, proposed_outcome, proposed_option_id, justification, proposed_at')
+      .select('proposer_id, proposed_outcome, proposed_option_id, justification, proposed_at, photo_path')
       .eq('market_id', marketId)
       .single();
     proposal = data;
@@ -232,8 +240,13 @@ export default async function MarketDetailPage({
         )}
 
         {proposal && (
-          <div className="rounded-xl bg-espresso-50 p-3 text-sm text-espresso-600">
-            <p className="font-semibold text-espresso-800">
+          <div className="relative rounded-xl bg-espresso-50 p-3 text-sm text-espresso-600">
+            {proposal.photo_path && (
+              <div className="absolute top-2 right-2">
+                <ResolutionProofButton marketId={marketId} variant="icon" />
+              </div>
+            )}
+            <p className={`font-semibold text-espresso-800 ${proposal.photo_path ? 'pr-8' : ''}`}>
               Proposed: <OptionLabel label={(proposedOptionLabel ?? proposal.proposed_outcome ?? '').toUpperCase()} />
             </p>
             {proposal.justification && <p className="mt-1">{proposal.justification}</p>}

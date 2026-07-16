@@ -6,6 +6,7 @@ import { cn } from '@/lib/cn';
 import { formatTokens } from '@/lib/formatNumber';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { ReactionBar } from '@/components/markets/ReactionBar';
+import { ResolutionProofButton } from '@/components/markets/ResolutionProofButton';
 import { Button } from '@/components/ui/Button';
 import { CheckIcon, DownloadIcon, LinkIcon, ShareIcon } from '@/components/ui/icons';
 import type { ReactionEmoji } from '@/lib/actions/reactions';
@@ -49,6 +50,8 @@ export interface RevealTicketProps {
   myReaction: ReactionEmoji | null;
   reactionNicknames: Partial<Record<ReactionEmoji, string[]>>;
   myNickname: string;
+  /** Whether the winning resolution proposal has a proof photo attached — only known ahead of time by the caller (server-fetched), since the photo itself is never fetched until someone taps the button. */
+  hasProof: boolean;
 }
 
 /** The shareable "betting slip" reveal card, plus the share actions bound to it. One component because the ref they both need has to live in the same tree. */
@@ -71,6 +74,7 @@ export function RevealTicket({
   myReaction,
   reactionNicknames,
   myNickname,
+  hasProof,
 }: RevealTicketProps) {
   const ticketRef = useRef<HTMLDivElement>(null);
   const [blob, setBlob] = useState<Blob | null>(null);
@@ -285,9 +289,9 @@ export function RevealTicket({
         />
       </div>
 
-      <div className="mt-3.5 flex gap-2">
+      <div className="mt-3.5 flex flex-wrap gap-2">
         {canShareFiles ? (
-          <Button onClick={handleShare} disabled={capturing} variant="accent" className="inline-flex w-full items-center justify-center gap-2">
+          <Button onClick={handleShare} disabled={capturing} variant="accent" className="inline-flex flex-1 items-center justify-center gap-2">
             <ShareIcon className="h-4 w-4" />
             {capturing ? 'Preparing…' : 'Share'}
           </Button>
@@ -303,6 +307,7 @@ export function RevealTicket({
             </Button>
           </>
         )}
+        {hasProof && <ResolutionProofButton marketId={marketId} variant="action" />}
       </div>
     </div>
   );
