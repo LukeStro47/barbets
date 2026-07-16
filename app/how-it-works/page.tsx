@@ -31,7 +31,7 @@ const sections = [
   {
     icon: '🔀',
     title: 'Three market types',
-    body: 'Yes/No. Over/Under, against a line. Multiple Choice: one pool split across 2 to 10 named options instead of two sides, e.g. "who\'s first to leave the party?" You can hedge across more than one option. Whichever type, the pool works the same way: bet on the loser and your stake splits among whoever bet on the winner.',
+    body: `Yes/No. Over/Under, against a line. Multiple Choice: one pool split across 2 to 10 named options instead of two sides, e.g. "who's first to leave the party?" You can hedge across more than one option, unless your group's owner turns that off in settings. Whichever type, the pool works the same way: bet on the loser and your stake splits among whoever bet on the winner.`,
   },
   {
     icon: '⚖️',

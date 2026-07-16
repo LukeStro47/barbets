@@ -86,6 +86,7 @@ export interface GroupSettings {
   distribute_payout: boolean;
   creator_payout_pct: number;
   endorser_payout_pct: number;
+  allow_hedged_bets: boolean;
 }
 
 export async function updateGroupSettings(
@@ -100,6 +101,7 @@ export async function updateGroupSettings(
     distributePayout: boolean;
     creatorPayoutPct: number;
     endorserPayoutPct: number;
+    allowHedgedBets: boolean;
   }
 ): Promise<ActionResult<GroupSettings>> {
   const supabase = await createClient();
@@ -115,6 +117,7 @@ export async function updateGroupSettings(
       p_distribute_payout: input.distributePayout,
       p_creator_payout_pct: input.creatorPayoutPct,
       p_endorser_payout_pct: input.endorserPayoutPct,
+      p_allow_hedged_bets: input.allowHedgedBets,
     })
   );
   if (result.error) return result;

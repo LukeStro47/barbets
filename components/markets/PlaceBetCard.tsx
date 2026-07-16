@@ -26,6 +26,7 @@ export function PlaceBetCard({
   balance,
   options,
   existingBets = [],
+  allowHedgedBets = true,
 }: {
   groupId: string;
   market: Market;
@@ -33,6 +34,8 @@ export function PlaceBetCard({
   options: MarketOption[] | null;
   /** Your own already-placed bets on this market, used to warn before an easy-to-fat-finger repeat bet. */
   existingBets?: ExistingBet[];
+  /** When false, the group has hedging turned off: a bet on a side/option that differs from any existing bet here is blocked client-side (the real gate is in place_bet() itself). */
+  allowHedgedBets?: boolean;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +53,8 @@ export function PlaceBetCard({
   const betAmountNum = betAmount === '' ? 0 : Number(betAmount);
 
   const existingTotal = existingBets.reduce((sum, b) => sum + b.amount, 0);
+  const conflictsWithExisting = existingBets.some((b) => (isMultipleChoice ? b.option_id !== betOptionId : b.side !== betSide));
+  const blockedByHedgeSetting = !allowHedgedBets && conflictsWithExisting;
 
   function submit() {
     setError(null);
@@ -64,6 +69,7 @@ export function PlaceBetCard({
   }
 
   function handlePlaceBet() {
+    if (blockedByHedgeSetting) return;
     if (existingBets.length > 0) {
       setConfirmingRepeat(true);
       return;
@@ -75,6 +81,12 @@ export function PlaceBetCard({
     <Card className="space-y-3">
       <p className="text-sm font-semibold text-espresso-700">Place your bet</p>
       {error && <p className="text-sm text-danger-700">{error}</p>}
+      {blockedByHedgeSetting && (
+        <p className="text-sm text-danger-700">
+          This group only allows one side per market, and you already have a bet on the other side. You can still add
+          to your existing bet.
+        </p>
+      )}
 
       {isMultipleChoice ? (
         <div className="flex flex-col gap-2">
@@ -134,7 +146,9 @@ export function PlaceBetCard({
       </div>
 
       <Button
-        disabled={isPending || betAmountNum < 1 || betAmountNum > balance || (isMultipleChoice && !betOptionId)}
+        disabled={
+          isPending || betAmountNum < 1 || betAmountNum > balance || (isMultipleChoice && !betOptionId) || blockedByHedgeSetting
+        }
         onClick={handlePlaceBet}
         className="w-full"
         variant="accent"

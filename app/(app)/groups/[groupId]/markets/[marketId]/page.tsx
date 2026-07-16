@@ -40,19 +40,21 @@ export default async function MarketDetailPage({
   } = await supabase.auth.getUser();
   const isCreator = marketRow.creator_id === user?.id;
 
-  const [{ data: membership }, { data: subjectRows }, { data: options }, { data: group }, { data: clarificationRows }] = await Promise.all([
-    supabase.from('memberships').select('balance').eq('group_id', groupId).eq('user_id', user!.id).single(),
-    supabase.from('market_subjects').select('user_id').eq('market_id', marketId),
-    isMultipleChoice
-      ? supabase.from('market_options').select('id, market_id, label, sort_order').eq('market_id', marketId).order('sort_order')
-      : Promise.resolve({ data: null }),
-    supabase.from('groups').select('owner_id').eq('id', groupId).single(),
-    supabase
-      .from('resolution_clarifications')
-      .select('id, requester_id, question, created_at')
-      .eq('market_id', marketId)
-      .order('created_at'),
-  ]);
+  const [{ data: membership }, { data: subjectRows }, { data: options }, { data: group }, { data: clarificationRows }, { data: groupSettings }] =
+    await Promise.all([
+      supabase.from('memberships').select('balance').eq('group_id', groupId).eq('user_id', user!.id).single(),
+      supabase.from('market_subjects').select('user_id').eq('market_id', marketId),
+      isMultipleChoice
+        ? supabase.from('market_options').select('id, market_id, label, sort_order').eq('market_id', marketId).order('sort_order')
+        : Promise.resolve({ data: null }),
+      supabase.from('groups').select('owner_id').eq('id', groupId).single(),
+      supabase
+        .from('resolution_clarifications')
+        .select('id, requester_id, question, created_at')
+        .eq('market_id', marketId)
+        .order('created_at'),
+      supabase.from('group_settings').select('allow_hedged_bets').eq('group_id', groupId).single(),
+    ]);
   const isOwner = group?.owner_id === user?.id;
 
   const subjectUserIds = (subjectRows ?? []).map((s) => s.user_id);
@@ -196,7 +198,14 @@ export default async function MarketDetailPage({
       {statTiles.length > 0 && <StatStrip>{statTiles}</StatStrip>}
 
       {marketRow.status === 'open' && (
-        <PlaceBetCard groupId={groupId} market={marketRow} balance={balance} options={marketOptions} existingBets={myBets} />
+        <PlaceBetCard
+          groupId={groupId}
+          market={marketRow}
+          balance={balance}
+          options={marketOptions}
+          existingBets={myBets}
+          allowHedgedBets={groupSettings?.allow_hedged_bets ?? true}
+        />
       )}
 
       {marketRow.status !== 'pending_sponsor' && <MyBetsCard bets={myBets} optionLabelById={optionLabelById} />}

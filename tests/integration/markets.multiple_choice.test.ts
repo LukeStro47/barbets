@@ -178,6 +178,53 @@ describe('multiple choice markets', () => {
     expect(aWinningBet.payout! + aLosingBet.payout! - (aLosingBet.amount + aWinningBet.amount)).toBe(-25);
   });
 
+  test('hedging can be turned off per group: a bet on a different option is rejected, a top-up on the same option is not', async () => {
+    const settingsOff = {
+      p_group_id: group.id,
+      p_seed_amount: 10000,
+      p_seasons_enabled: false,
+      p_season_length: null,
+      p_timezone: 'UTC',
+      p_betting_enabled: true,
+      p_accepting_members: true,
+    };
+    const { error: offErr } = await users.owner.client.rpc('update_group_settings', { ...settingsOff, p_allow_hedged_bets: false });
+    expect(offErr).toBeNull();
+
+    try {
+      const market = await createMCMarket(users.owner, group.id, ['A', 'B']);
+      await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+      const options = await getOptions(market.id);
+
+      const { error: firstBet } = await users.a.client.rpc('place_bet', {
+        p_market_id: market.id,
+        p_side: null,
+        p_amount: 20,
+        p_option_id: options[0].id,
+      });
+      expect(firstBet).toBeNull();
+
+      const { error: differentOptionErr } = await users.a.client.rpc('place_bet', {
+        p_market_id: market.id,
+        p_side: null,
+        p_amount: 10,
+        p_option_id: options[1].id,
+      });
+      expect(differentOptionErr?.message).toMatch(/invalid_operation/);
+
+      const { error: topUpErr } = await users.a.client.rpc('place_bet', {
+        p_market_id: market.id,
+        p_side: null,
+        p_amount: 15,
+        p_option_id: options[0].id,
+      });
+      expect(topUpErr).toBeNull();
+    } finally {
+      const { error: onErr } = await users.owner.client.rpc('update_group_settings', { ...settingsOff, p_allow_hedged_bets: true });
+      expect(onErr).toBeNull();
+    }
+  });
+
   test('bets with mismatched side/option_id are rejected at the constraint level', async () => {
     const market = await createMCMarket(users.owner, group.id, ['A', 'B']);
     const options = await getOptions(market.id);

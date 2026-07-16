@@ -38,6 +38,7 @@ export function EditSettingsForm({
   const [distributePayout, setDistributePayout] = useState(settings.distribute_payout);
   const [creatorPayoutPct, setCreatorPayoutPct] = useState(settings.creator_payout_pct);
   const [endorserPayoutPct, setEndorserPayoutPct] = useState(settings.endorser_payout_pct);
+  const [allowHedgedBets, setAllowHedgedBets] = useState(settings.allow_hedged_bets);
 
   function handleSubmit(formData: FormData) {
     setError(null);
@@ -52,6 +53,7 @@ export function EditSettingsForm({
         distributePayout,
         creatorPayoutPct,
         endorserPayoutPct,
+        allowHedgedBets,
       });
       if (result.error) {
         setError(result.error);
@@ -172,6 +174,18 @@ export function EditSettingsForm({
         )}
       </div>
 
+      <div className="flex items-center justify-between border-t border-espresso-100 pt-4">
+        <div>
+          <p className="text-sm font-semibold text-espresso-700">Hedging</p>
+          <p className="text-xs text-espresso-400">
+            {allowHedgedBets
+              ? 'Members can bet on more than one side or option of the same market.'
+              : "Members can only hold a bet on one side per market. Adding more to that same side is still fine."}
+          </p>
+        </div>
+        <Switch checked={allowHedgedBets} onChange={() => setAllowHedgedBets((v) => !v)} />
+      </div>
+
       <div className="space-y-1.5 border-t border-espresso-100 pt-4">
         <label className="block text-sm font-semibold text-espresso-700">Time zone</label>
         <select value={timezone} onChange={(e) => setTimezone(e.target.value)} className={inputClasses}>
@@ -267,6 +281,10 @@ export function ReadOnlySettings({ settings, hasActiveSeason }: { settings: Grou
             ? `Creator ${settings.creator_payout_pct}%, endorser ${settings.endorser_payout_pct}%, rest to other markets`
             : 'Refunded to everyone'}
         </span>
+      </div>
+      <div className={readOnlyRowClasses}>
+        <span className="text-espresso-500">Hedging</span>
+        <span className="font-semibold text-espresso-800">{settings.allow_hedged_bets ? 'Allowed' : 'One side only'}</span>
       </div>
     </div>
   );
