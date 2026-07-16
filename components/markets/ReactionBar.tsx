@@ -3,15 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { reactToMarket, type ReactionEmoji } from '@/lib/actions/reactions';
-
-const REACTIONS: { emoji: ReactionEmoji; glyph: string }[] = [
-  { emoji: 'fire', glyph: '🔥' },
-  { emoji: 'laugh', glyph: '😂' },
-  { emoji: 'clown', glyph: '🤡' },
-  { emoji: 'salute', glyph: '🫡' },
-  { emoji: 'thumbs_up', glyph: '👍' },
-  { emoji: 'thumbs_down', glyph: '👎' },
-];
+import { REACTIONS } from '@/lib/reactions';
 
 interface Props {
   groupId: string;
@@ -25,10 +17,10 @@ interface Props {
 }
 
 /**
- * Corner facepile on the reveal ticket: one overlapping circle per reaction
- * that's actually been used, stacked like an avatar pile. Tapping it opens a
- * popover with the 6-emoji picker up top and a per-reaction "who picked
- * what" breakdown below.
+ * Corner facepile on the reveal ticket: one overlapping glyph per reaction
+ * that's actually been used, tightly stacked with no backing circle. Tapping
+ * it opens a popover with the 6-emoji picker up top and a per-reaction "who
+ * picked what" breakdown below.
  *
  * z-index stays below the sticky header's (z-10) on purpose — this used to
  * be z-20, which meant that once the ticket scrolled up far enough for the
@@ -86,7 +78,11 @@ export function ReactionBar({ groupId, marketId, counts, myReaction, nicknames, 
         onClick={() => setOpen((o) => !o)}
         disabled={isPending}
         aria-label="Reactions"
-        className="flex items-center rounded-full bg-black/30 py-1 pr-1 pl-2.5 ring-1 ring-white/15 backdrop-blur"
+        className={
+          active.length === 0
+            ? 'flex h-8 w-8 items-center justify-center rounded-full bg-black/30 ring-1 ring-white/15 backdrop-blur'
+            : 'flex items-center rounded-full bg-black/30 py-1 pr-2 pl-1 ring-1 ring-white/15 backdrop-blur'
+        }
       >
         {active.length === 0 ? (
           <span className="text-lg leading-none text-paper-white">+</span>
@@ -95,13 +91,13 @@ export function ReactionBar({ groupId, marketId, counts, myReaction, nicknames, 
             {active.map((r, i) => (
               <span
                 key={r.emoji}
-                className="-ml-2 flex h-7 w-7 items-center justify-center rounded-full bg-espresso-800 text-base ring-2 ring-espresso-900 first:ml-0"
+                className="-ml-2.5 flex h-7 w-7 items-center justify-center text-base first:ml-0"
                 style={{ zIndex: active.length - i }}
               >
                 {r.glyph}
               </span>
             ))}
-            <span className="ml-1.5 mr-0.5 text-base leading-none text-paper-white/70">+</span>
+            <span className="ml-1 text-base leading-none text-paper-white/70">+</span>
           </span>
         )}
       </button>

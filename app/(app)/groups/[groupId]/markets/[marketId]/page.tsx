@@ -9,6 +9,7 @@ import { BonusPoolTile } from '@/components/markets/BonusPoolTile';
 import { OddsBar, OddsBarMulti } from '@/components/markets/OddsBar';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { MarketActions } from '@/components/markets/MarketActions';
+import { ClarificationRequests, type Clarification } from '@/components/markets/ClarificationRequests';
 import { ProposeResolutionCard } from '@/components/markets/ProposeResolutionCard';
 import { ResolutionProofButton } from '@/components/markets/ResolutionProofButton';
 import { PlaceBetCard } from '@/components/markets/PlaceBetCard';
@@ -37,20 +38,32 @@ export default async function MarketDetailPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const isCreator = marketRow.creator_id === user?.id;
 
-  const [{ data: membership }, { data: subjectRows }, { data: options }, { data: group }] = await Promise.all([
+  const [{ data: membership }, { data: subjectRows }, { data: options }, { data: group }, { data: clarificationRows }] = await Promise.all([
     supabase.from('memberships').select('balance').eq('group_id', groupId).eq('user_id', user!.id).single(),
     supabase.from('market_subjects').select('user_id').eq('market_id', marketId),
     isMultipleChoice
       ? supabase.from('market_options').select('id, market_id, label, sort_order').eq('market_id', marketId).order('sort_order')
       : Promise.resolve({ data: null }),
     supabase.from('groups').select('owner_id').eq('id', groupId).single(),
+    supabase
+      .from('resolution_clarifications')
+      .select('id, requester_id, question, created_at')
+      .eq('market_id', marketId)
+      .order('created_at'),
   ]);
   const isOwner = group?.owner_id === user?.id;
 
   const subjectUserIds = (subjectRows ?? []).map((s) => s.user_id);
   const ownerIsSubject = !!group?.owner_id && subjectUserIds.includes(group.owner_id);
-  const namedUserIds = [marketRow.creator_id, ...(marketRow.sponsor_id ? [marketRow.sponsor_id] : []), ...subjectUserIds];
+  const clarifications = clarificationRows ?? [];
+  const namedUserIds = [
+    marketRow.creator_id,
+    ...(marketRow.sponsor_id ? [marketRow.sponsor_id] : []),
+    ...subjectUserIds,
+    ...clarifications.map((c) => c.requester_id),
+  ];
   const { data: namedMembers } =
     namedUserIds.length > 0
       ? await supabase.from('memberships').select('user_id, nickname').eq('group_id', groupId).in('user_id', namedUserIds)
@@ -59,6 +72,11 @@ export default async function MarketDetailPage({
   const creator = { nickname: nicknameByUserId.get(marketRow.creator_id) };
   const sponsor = marketRow.sponsor_id ? { nickname: nicknameByUserId.get(marketRow.sponsor_id) } : null;
   const subjects = subjectUserIds.map((userId) => ({ nickname: nicknameByUserId.get(userId) }));
+  const clarificationList: Clarification[] = clarifications.map((c) => ({
+    id: c.id,
+    nickname: nicknameByUserId.get(c.requester_id) ?? '',
+    question: c.question,
+  }));
 
   const balance = membership?.balance ?? 0;
   const marketOptions = options as MarketOption[] | null;
@@ -160,7 +178,19 @@ export default async function MarketDetailPage({
         title={marketRow.title}
         backHref={`/groups/${groupId}`}
         backLabel="Group"
-        action={<Badge tone={STATUS_TONE[marketRow.status]}>{STATUS_LABEL[marketRow.status]}</Badge>}
+        action={
+          <div className="flex items-center gap-1.5">
+            {isCreator && clarificationList.length > 0 && (
+              <span
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-danger-100 text-sm font-bold text-danger-700"
+                title="Needs clarification"
+              >
+                !
+              </span>
+            )}
+            <Badge tone={STATUS_TONE[marketRow.status]}>{STATUS_LABEL[marketRow.status]}</Badge>
+          </div>
+        }
       />
 
       {statTiles.length > 0 && <StatStrip>{statTiles}</StatStrip>}
@@ -171,9 +201,9 @@ export default async function MarketDetailPage({
 
       {marketRow.status !== 'pending_sponsor' && <MyBetsCard bets={myBets} optionLabelById={optionLabelById} />}
 
-      <Card className="space-y-3">
+      <Card className="relative space-y-3">
         <div className="space-y-2">
-          <div>
+          <div className="pr-8">
             <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">Resolution criteria</p>
             <p className="mt-0.5 text-espresso-600">{marketRow.description}</p>
           </div>
@@ -202,6 +232,15 @@ export default async function MarketDetailPage({
             )}
           </div>
         </div>
+
+        <ClarificationRequests
+          groupId={groupId}
+          marketId={marketId}
+          status={marketRow.status}
+          description={marketRow.description}
+          isCreator={isCreator}
+          clarifications={clarificationList}
+        />
 
         {marketRow.status === 'pending_sponsor' && (
           <div className="space-y-2">

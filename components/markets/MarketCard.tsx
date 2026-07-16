@@ -28,6 +28,34 @@ export interface MarketCardData {
   optionOdds?: { id: string; label: string; percent: number }[];
   /** Shown as a small label above the title — only needed in cross-group contexts like the inbox feed. */
   groupName?: string;
+  /** True when the viewer has something blocking on them specifically for this market (currently: an open clarification request they created the market for) — renders a small exclamation badge. */
+  needsAttention?: boolean;
+  /** Distinct reaction glyphs present on a resolved/voided market, in REACTIONS canonical order — renders a compact view-only facepile. Mutually exclusive with needsAttention in practice (only open markets can need attention; only resolved/voided ones can have reactions), so they share the same badge slot. */
+  reactionGlyphs?: string[];
+}
+
+function AttentionBadge() {
+  return (
+    <span
+      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-danger-100 text-xs font-bold text-danger-700"
+      title="Needs clarification"
+    >
+      !
+    </span>
+  );
+}
+
+/** Compact, view-only reaction facepile for market list rows/cards — same overlapping-glyph treatment as the interactive ReactionBar trigger, just smaller and non-clickable. */
+function ReactionFacepile({ glyphs }: { glyphs: string[] }) {
+  return (
+    <span className="flex shrink-0 items-center">
+      {glyphs.map((glyph, i) => (
+        <span key={i} className="-ml-1.5 flex h-5 w-5 items-center justify-center text-xs first:ml-0" style={{ zIndex: glyphs.length - i }}>
+          {glyph}
+        </span>
+      ))}
+    </span>
+  );
 }
 
 export function MarketCard({ market }: { market: MarketCardData }) {
@@ -46,7 +74,11 @@ export function MarketCard({ market }: { market: MarketCardData }) {
             {market.groupName && <p className="text-xs font-semibold uppercase tracking-wide text-honey-700">{market.groupName}</p>}
             <p className="font-display font-bold leading-snug text-espresso-900">{market.title}</p>
           </div>
-          <Badge tone={STATUS_TONE[market.status]}>{STATUS_LABEL[market.status]}</Badge>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {market.needsAttention && <AttentionBadge />}
+            {market.reactionGlyphs && market.reactionGlyphs.length > 0 && <ReactionFacepile glyphs={market.reactionGlyphs} />}
+            <Badge tone={STATUS_TONE[market.status]}>{STATUS_LABEL[market.status]}</Badge>
+          </div>
         </div>
 
         {market.status === 'pending_sponsor' && isMultipleChoice && (
@@ -168,6 +200,8 @@ function MarketRow({ market, isLast }: { market: MarketCardData; isLast: boolean
         <p className="font-display text-[15px] font-semibold leading-[1.3] text-espresso-900">{market.title}</p>
         <MarketRowMeta market={market} />
       </span>
+      {market.needsAttention && <AttentionBadge />}
+      {market.reactionGlyphs && market.reactionGlyphs.length > 0 && <ReactionFacepile glyphs={market.reactionGlyphs} />}
       <ChevronRightIcon className="h-3.5 w-2 shrink-0 text-espresso-200" />
     </Link>
   );

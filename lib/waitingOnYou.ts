@@ -4,7 +4,7 @@ export interface WaitingOnYouMarket {
   id: string;
   group_id: string;
   title: string;
-  status: 'pending_sponsor' | 'closed' | 'disputed';
+  status: 'pending_sponsor' | 'open' | 'closed' | 'disputed';
   market_type: 'yes_no' | 'over_under' | 'multiple_choice';
   closes_at: string;
   outcome: string | null;
@@ -16,6 +16,8 @@ export interface WaitingOnYou {
   needsEndorsement: WaitingOnYouMarket[];
   awaitingResolution: WaitingOnYouMarket[];
   awaitingVote: WaitingOnYouMarket[];
+  /** Markets you created that have at least one open clarification question waiting on you to update the criteria. */
+  needsClarificationResponse: WaitingOnYouMarket[];
 }
 
 /** Shared by the header's badge count and the /inbox page, so the two never disagree. */
@@ -33,15 +35,26 @@ export async function getWaitingOnYou(supabase: SupabaseClient, userId: string):
     disputedIds.length > 0 ? await supabase.from('votes').select('market_id').eq('voter_id', userId).in('market_id', disputedIds) : { data: [] };
   const votedOn = new Set((myVotes ?? []).map((v: any) => v.market_id));
 
+  // resolution_clarifications!inner acts as an inner join: only markets with
+  // at least one still-open clarification question come back (every row in
+  // that table is currently-pending by construction — answered ones are
+  // deleted, not flagged — so plain existence is the pending check).
+  const { data: clarificationMarkets } = await supabase
+    .from('visible_markets')
+    .select('id, group_id, title, status, market_type, closes_at, outcome, creator_id, groups(name), resolution_clarifications!inner(id)')
+    .eq('status', 'open')
+    .eq('creator_id', userId);
+
   return {
     needsEndorsement: all.filter((m) => m.status === 'pending_sponsor' && m.creator_id !== userId),
     awaitingResolution: all.filter((m) => m.status === 'closed'),
     awaitingVote: all.filter((m) => m.status === 'disputed' && !votedOn.has(m.id)),
+    needsClarificationResponse: (clarificationMarkets ?? []) as unknown as WaitingOnYouMarket[],
   };
 }
 
 export function totalCount(w: WaitingOnYou): number {
-  return w.needsEndorsement.length + w.awaitingResolution.length + w.awaitingVote.length;
+  return w.needsEndorsement.length + w.awaitingResolution.length + w.awaitingVote.length + w.needsClarificationResponse.length;
 }
 
 /**
@@ -51,9 +64,11 @@ export function totalCount(w: WaitingOnYou): number {
  * market or an uncast vote is, so they don't inflate the badge — otherwise
  * it never clears until someone else gets around to proposing, which reads
  * as a notification that never goes away no matter what you do.
+ * needsClarificationResponse counts too — it's exclusively yours to clear,
+ * same as the other two.
  */
 export function badgeCount(w: WaitingOnYou): number {
-  return w.needsEndorsement.length + w.awaitingVote.length;
+  return w.needsEndorsement.length + w.awaitingVote.length + w.needsClarificationResponse.length;
 }
 
 export interface WaitingOnYouGroup {
@@ -62,21 +77,30 @@ export interface WaitingOnYouGroup {
   needsEndorsement: WaitingOnYouMarket[];
   awaitingResolution: WaitingOnYouMarket[];
   awaitingVote: WaitingOnYouMarket[];
+  needsClarificationResponse: WaitingOnYouMarket[];
 }
 
 /** Reshapes the flat, cross-group buckets into one entry per group, so the inbox can be broken up by group instead of reading as one undifferentiated pile for anyone in more than one. */
 export function groupByGroup(w: WaitingOnYou): WaitingOnYouGroup[] {
   const byGroup = new Map<string, WaitingOnYouGroup>();
 
-  function add(m: WaitingOnYouMarket, key: 'needsEndorsement' | 'awaitingResolution' | 'awaitingVote') {
+  function add(m: WaitingOnYouMarket, key: 'needsEndorsement' | 'awaitingResolution' | 'awaitingVote' | 'needsClarificationResponse') {
     let g = byGroup.get(m.group_id);
     if (!g) {
-      g = { groupId: m.group_id, groupName: m.groups?.name ?? 'Group', needsEndorsement: [], awaitingResolution: [], awaitingVote: [] };
+      g = {
+        groupId: m.group_id,
+        groupName: m.groups?.name ?? 'Group',
+        needsEndorsement: [],
+        awaitingResolution: [],
+        awaitingVote: [],
+        needsClarificationResponse: [],
+      };
       byGroup.set(m.group_id, g);
     }
     g[key].push(m);
   }
 
+  w.needsClarificationResponse.forEach((m) => add(m, 'needsClarificationResponse'));
   w.awaitingVote.forEach((m) => add(m, 'awaitingVote'));
   w.awaitingResolution.forEach((m) => add(m, 'awaitingResolution'));
   w.needsEndorsement.forEach((m) => add(m, 'needsEndorsement'));

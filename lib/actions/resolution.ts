@@ -29,6 +29,14 @@ export interface Challenge {
   created_at: string;
 }
 
+export interface ClarificationRequest {
+  id: string;
+  market_id: string;
+  requester_id: string;
+  question: string;
+  created_at: string;
+}
+
 /** A proposal is either an outcome ('yes'/'no'/'over'/'under'/'void') or a specific option id (multiple_choice only — VOID still goes through `outcome`, never `optionId`). */
 export type ProposalChoice = { outcome: 'yes' | 'no' | 'over' | 'under' | 'void' } | { optionId: string };
 
@@ -95,6 +103,28 @@ export async function getResolutionProofUrl(marketId: string): Promise<ActionRes
     .createSignedUrl(proposal.photo_path, 60);
   if (error || !signed) return { error: 'Could not load the photo. Try again.' };
   return { data: signed.signedUrl };
+}
+
+/** Any non-creator member can ask while betting is open; the creator gets notified. See updateResolutionCriteria for the other half of the loop. */
+export async function requestClarification(groupId: string, marketId: string, question: string): Promise<ActionResult<ClarificationRequest>> {
+  const supabase = await createClient();
+  const result = await runRpc<ClarificationRequest>(
+    await supabase.rpc('request_clarification', { p_market_id: marketId, p_question: question })
+  );
+  if (result.error) return result;
+  revalidatePath(`/groups/${groupId}/markets/${marketId}`);
+  return result;
+}
+
+/** Creator-only, and only in response to an open clarification request (never a free edit) — clears every pending request on the market, not just the one that prompted it. Nothing lingers as history once addressed. */
+export async function updateResolutionCriteria(groupId: string, marketId: string, description: string): Promise<ActionResult<Market>> {
+  const supabase = await createClient();
+  const result = await runRpc<Market>(
+    await supabase.rpc('update_resolution_criteria', { p_market_id: marketId, p_description: description })
+  );
+  if (result.error) return result;
+  revalidatePath(`/groups/${groupId}/markets/${marketId}`);
+  return result;
 }
 
 export async function challengeResolution(groupId: string, marketId: string, reason?: string): Promise<ActionResult<Challenge>> {

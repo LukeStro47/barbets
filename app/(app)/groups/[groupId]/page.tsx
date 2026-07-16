@@ -11,6 +11,7 @@ import { Mention } from '@/components/ui/Mention';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { BarChartIcon, SettingsIcon, InfoIcon } from '@/components/ui/icons';
 import { formatTokens } from '@/lib/formatNumber';
+import { REACTIONS } from '@/lib/reactions';
 
 function addMonths(iso: string, months: number): string {
   const d = new Date(iso);
@@ -60,6 +61,28 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
     .eq('group_id', groupId)
     .order('created_at', { ascending: false });
 
+  // resolution_clarifications!inner narrows to markets the current user
+  // created that have at least one still-open clarification question —
+  // every row in that table is currently-pending by construction (answered
+  // ones are deleted, not flagged), so plain existence is the pending check.
+  const { data: needsClarificationRows } = await supabase
+    .from('markets')
+    .select('id, resolution_clarifications!inner(id)')
+    .eq('group_id', groupId)
+    .eq('creator_id', user!.id);
+  const needsClarificationMarketIds = new Set((needsClarificationRows ?? []).map((m) => m.id));
+
+  const revealedMarketIds = (markets ?? []).filter((m) => ['resolved', 'voided'].includes(m.status)).map((m) => m.id);
+  const { data: reactionRows } =
+    revealedMarketIds.length > 0
+      ? await supabase.from('market_reactions').select('market_id, emoji').in('market_id', revealedMarketIds)
+      : { data: [] };
+  const reactionEmojisByMarket = new Map<string, Set<string>>();
+  for (const r of reactionRows ?? []) {
+    if (!reactionEmojisByMarket.has(r.market_id)) reactionEmojisByMarket.set(r.market_id, new Set());
+    reactionEmojisByMarket.get(r.market_id)!.add(r.emoji);
+  }
+
   const buckets: Record<string, MarketCardData[]> = {
     pending_sponsor: [],
     open: [],
@@ -84,7 +107,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
       buckets.pending_sponsor.push(base);
     } else if (m.status === 'open') {
       const { data: count } = await supabase.rpc('get_open_bet_count', { p_market_id: m.id });
-      buckets.open.push({ ...base, openBetCount: count ?? 0 });
+      buckets.open.push({ ...base, openBetCount: count ?? 0, needsAttention: needsClarificationMarketIds.has(m.id) });
     } else if (['closed', 'proposed', 'disputed'].includes(m.status)) {
       const bucket = m.status === 'disputed' ? buckets.challenged : buckets.awaiting_resolution;
       if (m.market_type === 'multiple_choice') {
@@ -97,11 +120,13 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
         bucket.push({ ...base, closedBetCount, odds: (odds ?? []).map((o: any) => ({ side: o.side, percent: o.pool_percent })) });
       }
     } else {
+      const emojiSet = reactionEmojisByMarket.get(m.id);
+      const reactionGlyphs = emojiSet ? REACTIONS.filter((r) => emojiSet.has(r.emoji)).map((r) => r.glyph) : undefined;
       if (m.market_type === 'multiple_choice' && m.outcome_option_id) {
         const { data: option } = await supabase.from('market_options').select('label').eq('id', m.outcome_option_id).single();
-        buckets.revealed.push({ ...base, outcomeLabel: option?.label ?? null });
+        buckets.revealed.push({ ...base, outcomeLabel: option?.label ?? null, reactionGlyphs });
       } else {
-        buckets.revealed.push(base);
+        buckets.revealed.push({ ...base, reactionGlyphs });
       }
     }
   }

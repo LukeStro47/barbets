@@ -24,6 +24,17 @@ function GroupSection({ group }: { group: WaitingOnYouGroup }) {
         <span className="text-espresso-300">→</span>
       </Link>
 
+      {group.needsClarificationResponse.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-xs font-bold uppercase tracking-[0.08em] text-danger-700">Needs clarification</h3>
+          <div className="space-y-2">
+            {group.needsClarificationResponse.map((m) => (
+              <MarketCard key={m.id} market={toCard(m)} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {group.awaitingVote.length > 0 && (
         <div className="space-y-2">
           <h3 className="text-xs font-bold uppercase tracking-[0.08em] text-espresso-400">Awaiting your vote</h3>

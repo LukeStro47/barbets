@@ -116,6 +116,27 @@ async function buildContent(event: NotificationEvent, isSubject: boolean): Promi
         : { title: group.name, body: `A market has resolved: "${market.title}"`, url: revealUrl };
     case 'market_voided':
       return { title: group.name, body: `The owner voided a market and refunded everyone: "${market.title}"`, url: revealUrl };
+    case 'clarification_requested': {
+      const { data: latest } = await admin
+        .from('resolution_clarifications')
+        .select('requester_id')
+        .eq('market_id', event.market_id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const { data: requester } = latest
+        ? await admin.from('memberships').select('nickname').eq('group_id', event.group_id).eq('user_id', latest.requester_id).maybeSingle()
+        : { data: null };
+      return {
+        title: group.name,
+        body: requester
+          ? `@${requester.nickname} asked for clearer resolution criteria on "${market.title}"`
+          : `Someone asked for clearer resolution criteria on "${market.title}"`,
+        url,
+      };
+    }
+    case 'criteria_updated':
+      return { title: group.name, body: `Resolution criteria updated: "${market.title}"`, url };
     case 'impressive_bet': {
       const { data: bet } = await admin
         .from('bets')
