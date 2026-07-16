@@ -129,7 +129,7 @@ export function ProposeResolutionCard({ groupId, market, options }: { groupId: s
         className={inputClasses}
       />
 
-      <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoChange} className="hidden" />
+      <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
       {photoPreview ? (
         <div className="flex items-center gap-3">
           <img src={photoPreview} alt="Proof preview" className="h-16 w-16 rounded-lg object-cover" />
