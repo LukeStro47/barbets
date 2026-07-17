@@ -107,12 +107,8 @@ export function BetslipBar({
 
   return (
     <>
-      <div className="fixed inset-x-0 bottom-0 z-30 pb-[env(safe-area-inset-bottom)]">
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          className="w-full rounded-t-[20px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 px-5 py-4 text-left shadow-lg shadow-espresso-950/30"
-        >
+      <div className="fixed inset-x-0 bottom-0 z-30 rounded-t-[20px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 pb-[env(safe-area-inset-bottom)] shadow-lg shadow-espresso-950/30">
+        <button type="button" onClick={() => setIsOpen(true)} className="w-full px-5 py-4 text-left">
           <div className="mx-auto flex max-w-lg items-center justify-between">
             <div>
               <p className="text-base font-bold text-paper-white">{hasExisting ? 'Add to your bet' : 'Place a bet'}</p>
