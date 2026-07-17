@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { notFoundIfEmpty } from '@/lib/errors';
+import { cn } from '@/lib/cn';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
@@ -12,7 +13,7 @@ import { MarketActions } from '@/components/markets/MarketActions';
 import { ClarificationRequests, type Clarification } from '@/components/markets/ClarificationRequests';
 import { ProposeResolutionCard } from '@/components/markets/ProposeResolutionCard';
 import { ResolutionProofButton } from '@/components/markets/ResolutionProofButton';
-import { PlaceBetCard } from '@/components/markets/PlaceBetCard';
+import { BetslipBar } from '@/components/markets/BetslipBar';
 import { MyBetsCard } from '@/components/markets/MyBetsCard';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { Mention } from '@/components/ui/Mention';
@@ -53,7 +54,7 @@ export default async function MarketDetailPage({
         .select('id, requester_id, question, created_at')
         .eq('market_id', marketId)
         .order('created_at'),
-      supabase.from('group_settings').select('allow_hedged_bets').eq('group_id', groupId).single(),
+      supabase.from('group_settings').select('allow_hedged_bets, seed_amount').eq('group_id', groupId).single(),
     ]);
   const isOwner = group?.owner_id === user?.id;
 
@@ -175,7 +176,7 @@ export default async function MarketDetailPage({
   }
 
   return (
-    <main className="mx-auto max-w-lg space-y-6 px-5 py-8">
+    <main className={cn('mx-auto max-w-lg space-y-6 px-5 py-8', marketRow.status === 'open' && 'pb-32')}>
       <PageHeader
         title={marketRow.title}
         backHref={`/groups/${groupId}`}
@@ -196,17 +197,6 @@ export default async function MarketDetailPage({
       />
 
       {statTiles.length > 0 && <StatStrip>{statTiles}</StatStrip>}
-
-      {marketRow.status === 'open' && (
-        <PlaceBetCard
-          groupId={groupId}
-          market={marketRow}
-          balance={balance}
-          options={marketOptions}
-          existingBets={myBets}
-          allowHedgedBets={groupSettings?.allow_hedged_bets ?? true}
-        />
-      )}
 
       {marketRow.status !== 'pending_sponsor' && <MyBetsCard bets={myBets} optionLabelById={optionLabelById} />}
 
@@ -319,6 +309,20 @@ export default async function MarketDetailPage({
         currentUserId={user!.id}
         options={marketOptions}
       />
+
+      {marketRow.status === 'open' && (
+        <BetslipBar
+          groupId={groupId}
+          market={marketRow}
+          balance={balance}
+          options={marketOptions}
+          existingBets={myBets}
+          allowHedgedBets={groupSettings?.allow_hedged_bets ?? true}
+          seedAmount={groupSettings?.seed_amount ?? 1000}
+          betCount={openBetCount}
+          betVolume={openBetVolume}
+        />
+      )}
     </main>
   );
 }

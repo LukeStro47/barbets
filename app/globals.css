@@ -49,3 +49,32 @@
     color: var(--color-espresso-800);
   }
 }
+
+/* Bet-confirmed overlay: a honey checkmark popping in, then drawing its
+   stroke — the only animated flourish in the app, so it's kept out of
+   @theme and scoped to these two classes rather than a general-purpose
+   animation utility. */
+@keyframes bet-check-pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  65% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes bet-check-draw {
+  from { stroke-dashoffset: 28; }
+  to { stroke-dashoffset: 0; }
+}
+.animate-bet-check-circle { animation: bet-check-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-bet-check-mark {
+  stroke-dasharray: 28;
+  stroke-dashoffset: 28;
+  animation: bet-check-draw 0.35s ease-out 0.25s forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-bet-check-circle,
+  .animate-bet-check-mark {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    stroke-dashoffset: 0;
+  }
+}
