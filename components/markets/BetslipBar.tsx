@@ -107,6 +107,21 @@ export function BetslipBar({
 
   return (
     <>
+      {/* In-flow, invisible twin of the bar below — reserves exactly the bar's real rendered
+          height at the end of the page, instead of a guessed padding value that drifts out of
+          sync with the bar's actual size and leaves a visible gap above it. */}
+      <div aria-hidden="true" className="invisible pb-[env(safe-area-inset-bottom)]">
+        <div className="w-full px-5 py-4">
+          <div className="mx-auto flex max-w-lg items-center justify-between">
+            <div>
+              <p className="text-base font-bold">{hasExisting ? 'Add to your bet' : 'Place a bet'}</p>
+              <p className="text-xs">{subtitle}</p>
+            </div>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" />
+          </div>
+        </div>
+      </div>
+
       <div className="fixed inset-x-0 bottom-0 z-30 rounded-t-[20px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 pb-[env(safe-area-inset-bottom)] shadow-[0_-14px_28px_-10px_rgba(28,19,13,0.4)]">
         <button type="button" onClick={() => setIsOpen(true)} className="w-full px-5 py-4 text-left">
           <div className="mx-auto flex max-w-lg items-center justify-between">

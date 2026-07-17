@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { notFoundIfEmpty } from '@/lib/errors';
-import { cn } from '@/lib/cn';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
@@ -176,7 +175,7 @@ export default async function MarketDetailPage({
   }
 
   return (
-    <main className={cn('mx-auto max-w-lg space-y-6 px-5 py-8', marketRow.status === 'open' && 'pb-32')}>
+    <main className="mx-auto max-w-lg space-y-6 px-5 py-8">
       <PageHeader
         title={marketRow.title}
         backHref={`/groups/${groupId}`}
