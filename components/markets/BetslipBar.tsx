@@ -110,7 +110,7 @@ export function BetslipBar({
       {/* In-flow, invisible twin of the bar below — reserves exactly the bar's real rendered
           height at the end of the page, instead of a guessed padding value that drifts out of
           sync with the bar's actual size and leaves a visible gap above it. */}
-      <div aria-hidden="true" className="invisible pb-[env(safe-area-inset-bottom)]">
+      <div aria-hidden="true" className="invisible !m-0 pb-[env(safe-area-inset-bottom)]">
         <div className="w-full px-5 py-4">
           <div className="mx-auto flex max-w-lg items-center justify-between">
             <div>
@@ -122,7 +122,13 @@ export function BetslipBar({
         </div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 rounded-t-[20px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 pb-[env(safe-area-inset-bottom)] shadow-[0_-14px_28px_-10px_rgba(28,19,13,0.4)]">
+      {/* !m-0 on every top-level element here: the parent <main> uses space-y-*, which in
+          Tailwind v4 puts margin-bottom on every child except the literal last one — since
+          fixed-position elements still receive that margin even though they're out of normal
+          flow, a bottom-0 element's rendered box shifts up by exactly the margin, off the true
+          screen edge. Explicit here rather than relying on this being the last child, which
+          would silently break again if page.tsx's structure ever changes. */}
+      <div className="fixed inset-x-0 bottom-0 z-30 !m-0 rounded-t-[20px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 pb-[env(safe-area-inset-bottom)] shadow-[0_-14px_28px_-10px_rgba(28,19,13,0.4)]">
         <button type="button" onClick={() => setIsOpen(true)} className="w-full px-5 py-4 text-left">
           <div className="mx-auto flex max-w-lg items-center justify-between">
             <div>
@@ -138,11 +144,11 @@ export function BetslipBar({
         </button>
       </div>
 
-      {isOpen && <div className="fixed inset-0 z-40 bg-espresso-950/45" onClick={() => setIsOpen(false)} />}
+      {isOpen && <div className="fixed inset-0 z-40 !m-0 bg-espresso-950/45" onClick={() => setIsOpen(false)} />}
 
       <div
         className={cn(
-          'fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-[22px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 pb-[calc(env(safe-area-inset-bottom)+20px)] transition-transform duration-300 ease-out',
+          'fixed inset-x-0 bottom-0 z-50 !m-0 max-h-[85dvh] overflow-y-auto rounded-t-[22px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 pb-[calc(env(safe-area-inset-bottom)+20px)] transition-transform duration-300 ease-out',
           isOpen ? 'translate-y-0' : 'translate-y-full'
         )}
         aria-hidden={!isOpen}
