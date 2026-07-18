@@ -9,7 +9,7 @@ import { NewMarketButton } from '@/components/groups/NewMarketButton';
 import { GroupMarketSections } from '@/components/groups/GroupMarketSections';
 import { Mention } from '@/components/ui/Mention';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
-import { BarChartIcon, SettingsIcon, InfoIcon } from '@/components/ui/icons';
+import { BarChartIcon, SettingsIcon, InfoIcon, TicketIcon } from '@/components/ui/icons';
 import { formatTokens } from '@/lib/formatNumber';
 import { REACTIONS } from '@/lib/reactions';
 
@@ -145,6 +145,9 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
         <div className="flex items-center justify-between gap-3">
           <h1 className="min-w-0 font-display text-[29px] font-bold tracking-[-0.02em] text-espresso-950">{group!.name}</h1>
           <div className="flex shrink-0 items-center gap-2">
+            <Link href={`/groups/${groupId}/bets`} className={iconLinkClass} aria-label="My bets">
+              <TicketIcon className="h-4 w-4" />
+            </Link>
             <Link href={`/groups/${groupId}/leaderboard`} className={iconLinkClass} aria-label="Leaderboard">
               <BarChartIcon className="h-4 w-4" />
             </Link>
