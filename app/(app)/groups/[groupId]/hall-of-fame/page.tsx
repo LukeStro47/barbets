@@ -6,6 +6,12 @@ import { Mention } from '@/components/ui/Mention';
 import { formatTokens } from '@/lib/formatNumber';
 import { TITLE_ORDER, TITLE_META, type GroupTitleRow } from '@/lib/titles';
 
+/** "Aug 1, '26" — short enough to sit next to the season number without wrapping. */
+function formatSeasonDate(iso: string): string {
+  const d = new Date(iso);
+  return `${d.toLocaleDateString('en-US', { month: 'short' })} ${d.getDate()}, '${String(d.getFullYear()).slice(2)}`;
+}
+
 export default async function HallOfFamePage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
   const supabase = await createClient();
@@ -67,24 +73,39 @@ export default async function HallOfFamePage({ params }: { params: Promise<{ gro
         ) : (
           <div className="space-y-4">
             {(results ?? []).map((r: any, i: number) => (
-              <Card key={i} className="space-y-3">
+              <Card key={i}>
                 <div className="flex items-center justify-between">
                   <h3 className="font-display font-bold text-espresso-800">Season {r.seasons?.number}</h3>
                   <span className="text-xs text-espresso-400">
-                    {r.seasons?.started_at?.slice(0, 10)} – {r.seasons?.ended_at?.slice(0, 10)}
+                    {r.seasons?.started_at && formatSeasonDate(r.seasons.started_at)} –{' '}
+                    {r.seasons?.ended_at && formatSeasonDate(r.seasons.ended_at)}
                   </span>
                 </div>
 
                 {r.snapshot.champion && (
-                  <div className="rounded-xl bg-honey-50 px-4 py-3 text-center">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-honey-700">Champion</p>
-                    <p className="font-display text-lg font-bold text-honey-900">
-                      🏆 <Mention nickname={r.snapshot.champion.nickname} /> with {formatTokens(r.snapshot.champion.balance)}
-                    </p>
+                  <div className="mt-3.5 flex items-center gap-3.5 rounded-2xl bg-honey-50 px-4 py-3.5">
+                    <span className="flex h-12 w-12 shrink-0 -rotate-6 items-center justify-center rounded-full bg-honey-500 text-2xl shadow-[0_8px_16px_-6px_rgba(232,163,61,0.55)]">
+                      🏆
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-bold tracking-[0.1em] text-honey-700 uppercase">Champion</p>
+                      <p className="truncate font-display text-lg font-bold text-espresso-900">
+                        <Mention nickname={r.snapshot.champion.nickname} />
+                      </p>
+                      <p className="text-sm font-semibold text-honey-700">{formatTokens(r.snapshot.champion.balance)} tokens</p>
+                    </div>
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                {/* Perforated ticket-stub divider, same punch-hole trick RevealTicket uses between
+                    its header and odds sections, borrowed here to give the recap a "stub torn off
+                    a ticket" feel without pulling in the reveal ticket's full dark styling. */}
+                <div className="relative -mx-5 mt-4 border-t-2 border-dashed border-espresso-100">
+                  <span className="absolute top-1/2 -left-2.5 h-5 w-5 -translate-y-1/2 rounded-full bg-paper" />
+                  <span className="absolute top-1/2 -right-2.5 h-5 w-5 -translate-y-1/2 rounded-full bg-paper" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-4 text-sm">
                   {r.snapshot.biggest_single_win && (
                     <div>
                       <p className="font-semibold text-espresso-700">Biggest win</p>
