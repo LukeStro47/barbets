@@ -170,6 +170,7 @@ Reactions (`react_to_market`) are deliberately push-free — a resolved market's
 - iOS never fires `beforeinstallprompt`. `components/pwa/PushSetup.tsx` detects iOS + not-yet-installed and shows a Share → Add to Home Screen walkthrough instead of a broken permission prompt; this triggers automatically, nothing to configure.
 - There's no app-wide interrupt nudging people to subscribe (the old `PushReminderModal` was removed) — `PushSetup` lives permanently on `/profile` instead, the one place to opt in or out.
 - VAPID private key lives only as a Supabase Edge Function secret, never in Next.js env or the client bundle.
+- `components/pwa/BootSplash.tsx`: a full-screen `loading.mp4` overlay mounted once by the root layout, which doesn't remount on client-side navigation — so it plays on a real cold start (first load, PWA launch) and never reappears on in-app page transitions. Fades out on the video's `ended` event, or a 3s fallback timeout if autoplay is blocked. Skips playback entirely under `prefers-reduced-motion`, same posture as the `BetslipBar` confirmation checkmark.
 
 ## Testing
 
