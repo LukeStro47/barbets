@@ -5,9 +5,9 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { StatStrip, StatTile } from '@/components/markets/StatStrip';
+import { ClosesInStatTile } from '@/components/markets/ClosesInStatTile';
 import { BonusPoolTile } from '@/components/markets/BonusPoolTile';
 import { OddsBar, OddsBarMulti } from '@/components/markets/OddsBar';
-import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { MarketActions } from '@/components/markets/MarketActions';
 import { ClarificationRequests, type Clarification } from '@/components/markets/ClarificationRequests';
 import { ProposeResolutionCard } from '@/components/markets/ProposeResolutionCard';
@@ -17,6 +17,7 @@ import { MyBetsCard } from '@/components/markets/MyBetsCard';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { Mention } from '@/components/ui/Mention';
 import { STATUS_LABEL, STATUS_TONE } from '@/lib/marketStatus';
+import { formatTokens } from '@/lib/formatNumber';
 import type { Market, MarketOption } from '@/lib/actions/markets';
 
 export default async function MarketDetailPage({
@@ -163,12 +164,14 @@ export default async function MarketDetailPage({
     statTiles.push(<StatTile key="line" label="Line" value={marketRow.line} accent />);
   }
   if (marketRow.status === 'open') {
-    statTiles.push(<StatTile key="closes" label="Closes in" value={<CountdownTimer target={marketRow.closes_at} prefix="" clickable />} />);
+    statTiles.push(<ClosesInStatTile key="closes" closesAt={marketRow.closes_at} />);
     if (openBetCount !== null) statTiles.push(<StatTile key="bets" label="Bets" value={openBetCount} />);
-    if (openBetVolume !== null && openBetVolume > 0) statTiles.push(<StatTile key="volume" label="Volume" value={openBetVolume} />);
+    if (openBetVolume !== null && openBetVolume > 0)
+      statTiles.push(<StatTile key="volume" label="Volume" value={formatTokens(openBetVolume)} />);
   } else {
     if (closedBetCount !== null && closedBetCount > 0) statTiles.push(<StatTile key="bets" label="Bets" value={closedBetCount} />);
-    if (closedVolume !== null && closedVolume > 0) statTiles.push(<StatTile key="volume" label="Volume" value={closedVolume} />);
+    if (closedVolume !== null && closedVolume > 0)
+      statTiles.push(<StatTile key="volume" label="Volume" value={formatTokens(closedVolume)} />);
   }
   if (marketRow.bonus_pool > 0) {
     statTiles.push(<BonusPoolTile key="bonus" amount={marketRow.bonus_pool} />);
