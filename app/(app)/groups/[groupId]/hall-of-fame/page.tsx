@@ -84,7 +84,7 @@ export default async function HallOfFamePage({ params }: { params: Promise<{ gro
 
                 {r.snapshot.champion && (
                   <div className="mt-3.5 flex items-center gap-3.5 rounded-2xl bg-honey-50 px-4 py-3.5">
-                    <span className="flex h-12 w-12 shrink-0 -rotate-6 items-center justify-center rounded-full bg-honey-500 text-2xl shadow-[0_8px_16px_-6px_rgba(232,163,61,0.55)]">
+                    <span className="flex h-12 w-12 shrink-0 -rotate-6 items-center justify-center rounded-full border-2 border-honey-500 bg-espresso-900 text-2xl shadow-[0_8px_16px_-6px_rgba(232,163,61,0.55)]">
                       🏆
                     </span>
                     <div className="min-w-0">

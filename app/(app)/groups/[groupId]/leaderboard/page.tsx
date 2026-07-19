@@ -61,14 +61,23 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ gr
           {settings?.seasons_enabled ? 'This season' : 'Standings'}
         </h2>
         {(members ?? []).map((m: any, i: number) => (
-          <div key={m.user_id} className="flex items-center justify-between py-2">
+          <div
+            key={m.user_id}
+            className={`flex items-center justify-between rounded-xl px-2 py-2 ${i === 0 ? 'bg-honey-50' : ''}`}
+          >
             <div className="flex items-center gap-3">
-              <span className="w-6 text-center">{medal(i)}</span>
+              {i === 0 ? (
+                <span className="flex h-7 w-7 shrink-0 -rotate-6 items-center justify-center rounded-full border-2 border-honey-500 bg-espresso-900 text-sm shadow-[0_6px_12px_-4px_rgba(232,163,61,0.55)]">
+                  🥇
+                </span>
+              ) : (
+                <span className="w-6 text-center">{medal(i)}</span>
+              )}
               <Mention nickname={m.nickname} titles={badges.get(m.user_id)} className="font-semibold text-espresso-800" />
               {m.balance === 0 && <span title="Broke">🏚️</span>}
               {m.status === 'dormant' && <span className="text-xs text-espresso-400">(sitting out)</span>}
             </div>
-            <span className="font-display font-bold text-espresso-900">{formatTokens(m.balance)}</span>
+            <span className="font-display font-bold tabular-nums text-espresso-900">{formatTokens(m.balance)}</span>
           </div>
         ))}
       </Card>
@@ -86,7 +95,7 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ gr
                     <span className="w-6 text-center">{medal(i)}</span>
                     <Mention nickname={m?.nickname ?? ''} titles={badges.get(userId)} className="font-semibold text-espresso-800" />
                   </div>
-                  <span className={`font-display font-bold ${net >= 0 ? 'text-honey-600' : 'text-espresso-400'}`}>
+                  <span className={`font-display font-bold tabular-nums ${net >= 0 ? 'text-honey-600' : 'text-espresso-400'}`}>
                     {net >= 0 ? '+' : ''}
                     {net}
                   </span>

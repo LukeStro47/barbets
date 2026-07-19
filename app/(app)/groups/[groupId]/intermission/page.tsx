@@ -50,12 +50,26 @@ export default async function IntermissionPage({ params }: { params: Promise<{ g
       <PageHeader title={`Season ${season!.number - 1} is over`} backHref={`/groups/${groupId}`} backLabel="Group" />
 
       {lastResult?.snapshot.champion && (
-        <div className="rounded-3xl bg-espresso-900 px-6 py-8 text-center text-paper-white">
-          <p className="text-sm font-medium uppercase tracking-widest text-honey-400">Champion</p>
-          <p className="mt-2 font-display text-3xl font-bold">
-            🏆 <Mention nickname={lastResult.snapshot.champion.nickname} />
+        <div className="relative rounded-[28px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 px-6 pt-7 pb-6 text-center text-paper-white shadow-lg shadow-espresso-950/25">
+          <p className="text-[11.5px] font-bold tracking-[0.14em] text-honey-400 uppercase">Champion</p>
+          <span className="mx-auto mt-4 flex h-[72px] w-[72px] -rotate-6 items-center justify-center rounded-full border-[3px] border-honey-500 bg-espresso-950 text-[28px] shadow-[0_8px_18px_-6px_rgba(232,163,61,0.55)]">
+            🏆
+          </span>
+          <p className="mt-4 font-display text-2xl font-bold">
+            <Mention nickname={lastResult.snapshot.champion.nickname} />
           </p>
-          <p className="mt-1 text-espresso-200">Finished with {formatTokens(lastResult.snapshot.champion.balance)} tokens</p>
+
+          {/* Same perforated punch-hole divider as RevealTicket/the Hall of Fame recap —
+              this callout is effectively a mini reveal ticket for the season itself. */}
+          <div className="relative -mx-6 mt-5 border-t-2 border-dashed border-white/15">
+            <span className="absolute top-1/2 -left-2.5 h-5 w-5 -translate-y-1/2 rounded-full bg-paper" />
+            <span className="absolute top-1/2 -right-2.5 h-5 w-5 -translate-y-1/2 rounded-full bg-paper" />
+          </div>
+
+          <p className="mt-4 text-sm text-paper-white/70">
+            Finished with <span className="font-bold tabular-nums text-honey-300">{formatTokens(lastResult.snapshot.champion.balance)}</span>{' '}
+            tokens
+          </p>
         </div>
       )}
 
