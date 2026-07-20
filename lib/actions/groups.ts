@@ -27,7 +27,8 @@ export async function createGroup(input: {
   name: string;
   seedAmount: number;
   seasonsEnabled: boolean;
-  seasonLength: '1m' | '2m' | '3m' | 'manual' | null;
+  seasonLength: '1m' | '2m' | '3m' | 'manual' | 'custom' | null;
+  seasonCustomEndsAt?: string | null;
   nickname: string;
   timezone: string;
 }): Promise<ActionResult<Group>> {
@@ -40,6 +41,7 @@ export async function createGroup(input: {
       p_season_length: input.seasonLength,
       p_nickname: input.nickname,
       p_timezone: input.timezone,
+      p_season_custom_ends_at: input.seasonCustomEndsAt ?? null,
     })
   );
   if (result.error) return result;
@@ -79,7 +81,8 @@ export interface GroupSettings {
   group_id: string;
   seed_amount: number;
   seasons_enabled: boolean;
-  season_length: '1m' | '2m' | '3m' | 'manual' | null;
+  season_length: '1m' | '2m' | '3m' | 'manual' | 'custom' | null;
+  season_custom_ends_at: string | null;
   timezone: string;
   betting_enabled: boolean;
   accepting_members: boolean;
@@ -95,6 +98,7 @@ export async function updateGroupSettings(
     seedAmount: number;
     seasonsEnabled: boolean;
     seasonLength: GroupSettings['season_length'];
+    seasonCustomEndsAt?: string | null;
     timezone: string;
     bettingEnabled: boolean;
     acceptingMembers: boolean;
@@ -118,6 +122,7 @@ export async function updateGroupSettings(
       p_creator_payout_pct: input.creatorPayoutPct,
       p_endorser_payout_pct: input.endorserPayoutPct,
       p_allow_hedged_bets: input.allowHedgedBets,
+      p_season_custom_ends_at: input.seasonCustomEndsAt ?? null,
     })
   );
   if (result.error) return result;

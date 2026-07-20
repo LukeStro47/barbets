@@ -51,7 +51,7 @@ describe('season lifecycle', () => {
     expect(Array.isArray(results!.snapshot.final_balances)).toBe(true);
   });
 
-  test('start_season reseeds only opted-in members; everyone else goes dormant', async () => {
+  test('start_season reseeds currently-active members by default; only members who opt out go dormant', async () => {
     const { data: intermission } = await adminClient
       .from('seasons')
       .select('id')
@@ -60,9 +60,9 @@ describe('season lifecycle', () => {
       .single();
     expect(intermission).toBeTruthy();
 
-    await users.a.client.rpc('opt_in_season', { p_season_id: intermission!.id });
-    await users.b.client.rpc('opt_in_season', { p_season_id: intermission!.id });
-    // c deliberately does not opt in
+    // a and b are still 'active' from setup and do nothing — active members
+    // are included by default now, no explicit opt-in needed.
+    await users.c.client.rpc('opt_out_season', { p_season_id: intermission!.id });
 
     const { error: startErr } = await users.owner.client.rpc('start_season', { p_group_id: group.id });
     expect(startErr).toBeNull();
@@ -76,6 +76,17 @@ describe('season lifecycle', () => {
     expect(b.status).toBe('active');
     expect(b.balance).toBe(1000);
     expect(c.status).toBe('dormant');
+
+    // Every season starts with betting paused, even a season the owner just
+    // continued into — later tests in this block need to create markets.
+    const { data: activeSeason } = await adminClient
+      .from('seasons')
+      .select('id')
+      .eq('group_id', group.id)
+      .eq('status', 'active')
+      .single();
+    const { error: openErr } = await users.owner.client.rpc('open_season_betting', { p_season_id: activeSeason!.id });
+    expect(openErr).toBeNull();
   });
 
   test('a dormant member cannot bet, and cannot be a market subject', async () => {

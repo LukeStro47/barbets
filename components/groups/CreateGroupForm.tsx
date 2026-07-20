@@ -6,11 +6,17 @@ import { createGroup } from '@/lib/actions/groups';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Switch } from '@/components/ui/Switch';
-import { formatSeasonLength, type SeasonLength } from '@/lib/seasonLength';
+import { formatSeasonLength, SEASON_LENGTH_HINTS, type SeasonLength } from '@/lib/seasonLength';
 import { COMMON_TIMEZONES, friendlyTimezoneName } from '@/lib/timezone';
 
 const inputClasses =
   'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-espresso-900 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
+
+/** datetime-local wants "YYYY-MM-DDTHH:mm" in the browser's local time, not UTC. */
+function toLocalDatetimeInputValue(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
 
 function Field({ label, hint, children }: { label: string; hint: string; children: React.ReactNode }) {
   return (
@@ -28,6 +34,10 @@ export function CreateGroupForm() {
   const [isPending, startTransition] = useTransition();
   const [seasonsEnabled, setSeasonsEnabled] = useState(false);
   const [seasonLength, setSeasonLength] = useState<SeasonLength>('manual');
+  const [seasonCustomEndsAt, setSeasonCustomEndsAt] = useState(() =>
+    toLocalDatetimeInputValue(new Date(Date.now() + 24 * 60 * 60_000))
+  );
+  const [minSeasonEndsAt] = useState(() => toLocalDatetimeInputValue(new Date(Date.now() + 60_000)));
   // Starts at 'UTC' (matches server render) then snaps to the browser's own
   // zone once mounted — detecting it during the initial render would read
   // the server's time zone during SSR and mismatch on hydration.
@@ -48,6 +58,7 @@ export function CreateGroupForm() {
         seedAmount: Number(formData.get('seedAmount')),
         seasonsEnabled,
         seasonLength: seasonsEnabled ? seasonLength : null,
+        seasonCustomEndsAt: seasonsEnabled && seasonLength === 'custom' ? new Date(seasonCustomEndsAt).toISOString() : null,
         nickname: String(formData.get('nickname')).trim(),
         timezone,
       });
@@ -125,7 +136,7 @@ export function CreateGroupForm() {
           <div className="space-y-1.5 border-t border-espresso-100 pt-4">
             <label className="block font-semibold text-espresso-800">Season length</label>
             <div className="flex flex-wrap gap-2">
-              {(['1m', '2m', '3m', 'manual'] as SeasonLength[]).map((len) => (
+              {(['1m', '2m', '3m', 'manual', 'custom'] as SeasonLength[]).map((len) => (
                 <button
                   type="button"
                   key={len}
@@ -140,6 +151,18 @@ export function CreateGroupForm() {
                 </button>
               ))}
             </div>
+            <p className="text-xs text-espresso-400">{SEASON_LENGTH_HINTS[seasonLength]}</p>
+
+            {seasonLength === 'custom' && (
+              <input
+                type="datetime-local"
+                min={minSeasonEndsAt}
+                value={seasonCustomEndsAt}
+                onChange={(e) => setSeasonCustomEndsAt(e.target.value)}
+                required
+                className={`${inputClasses} mt-1`}
+              />
+            )}
           </div>
         )}
       </Card>

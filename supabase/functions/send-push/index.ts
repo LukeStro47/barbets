@@ -85,6 +85,24 @@ async function buildContent(event: NotificationEvent, isSubject: boolean): Promi
     };
   }
 
+  if (event.event_type === 'season_betting_opened') {
+    const { data: group } = await admin.from('groups').select('name').eq('id', event.group_id).single();
+    return {
+      title: group!.name,
+      body: 'Betting is open for this season. Time to start a market.',
+      url: `/groups/${event.group_id}`,
+    };
+  }
+
+  if (event.event_type === 'group_deletion_scheduled_inactivity') {
+    const { data: group } = await admin.from('groups').select('name').eq('id', event.group_id).single();
+    return {
+      title: group!.name,
+      body: `Nobody's started a new season in ${group!.name} for 30 days, so it'll be deleted for good in 5 days unless someone continues it.`,
+      url: `/groups/${event.group_id}/intermission`,
+    };
+  }
+
   if (event.event_type === 'group_titles_updated') {
     const { data: group } = await admin.from('groups').select('name').eq('id', event.group_id).single();
     return {

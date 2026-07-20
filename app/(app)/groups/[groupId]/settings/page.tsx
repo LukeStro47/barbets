@@ -16,6 +16,7 @@ import { CopyInviteLink } from '@/components/groups/CopyInviteLink';
 import { NicknameEditor } from '@/components/groups/NicknameEditor';
 import { LeaveGroupButton } from '@/components/groups/LeaveGroupButton';
 import { GroupDeletionBanner } from '@/components/groups/GroupDeletionBanner';
+import { SeasonNameEditor } from '@/components/groups/SeasonNameEditor';
 import { Mention } from '@/components/ui/Mention';
 import { InfoIcon, ChevronRightIcon } from '@/components/ui/icons';
 import type { GroupSettings } from '@/lib/actions/groups';
@@ -40,7 +41,7 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
     supabase.from('group_settings').select('*').eq('group_id', groupId).single(),
     supabase.from('memberships').select('user_id, status, nickname').eq('group_id', groupId).neq('status', 'removed'),
     supabase.from('memberships').select('nickname').eq('group_id', groupId).eq('user_id', user!.id).single(),
-    supabase.from('seasons').select('id').eq('group_id', groupId).eq('status', 'active').single(),
+    supabase.from('seasons').select('id, name, betting_open').eq('group_id', groupId).eq('status', 'active').single(),
   ]);
 
   return (
@@ -105,7 +106,12 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
         settings && (
           <Card>
             <h2 className="mb-3 font-semibold text-espresso-800">Betting & token settings</h2>
-            <OwnerSettingsPanel groupId={groupId} settings={settings as GroupSettings} hasActiveSeason={!!activeSeason} />
+            <OwnerSettingsPanel
+              groupId={groupId}
+              settings={settings as GroupSettings}
+              hasActiveSeason={!!activeSeason}
+              seasonBettingOpen={activeSeason?.betting_open}
+            />
           </Card>
         )
       ) : (
@@ -113,7 +119,7 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
           <Card>
             <h2 className="mb-1 font-semibold text-espresso-800">Group settings</h2>
             <p className="mb-2 text-xs text-espresso-400">Set by the group owner.</p>
-            <ReadOnlySettings settings={settings as GroupSettings} hasActiveSeason={!!activeSeason} />
+            <ReadOnlySettings settings={settings as GroupSettings} hasActiveSeason={!!activeSeason} seasonBettingOpen={activeSeason?.betting_open} />
           </Card>
         )
       )}
@@ -121,7 +127,11 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
       {isOwner && activeSeason && (
         <Card>
           <h2 className="mb-2 font-semibold text-espresso-800">Season controls</h2>
-          <p className="mb-3 text-sm text-espresso-500">Voids and refunds any open markets, then opens intermission.</p>
+          <SeasonNameEditor groupId={groupId} seasonId={activeSeason.id} currentName={activeSeason.name} className="mb-3" />
+          <p className="mb-3 text-sm text-espresso-500">
+            Voids and refunds any market that hasn't had a resolution proposed yet. A market already awaiting a vote
+            or challenge gets up to 8 more hours to finish before intermission opens.
+          </p>
           <EndSeasonButton groupId={groupId} />
         </Card>
       )}

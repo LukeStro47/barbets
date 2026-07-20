@@ -177,7 +177,7 @@ describe('season_ended notifications reach dormant members too', () => {
     await cleanupTestUsers(users);
   });
 
-  test('a member who does not opt in (and goes dormant) still receives the season_ended notification', async () => {
+  test('a member who opts out (and goes dormant) still receives the season_ended notification', async () => {
     const { error: endErr } = await users.owner.client.rpc('end_season', { p_group_id: group.id });
     expect(endErr).toBeNull();
 
@@ -185,8 +185,8 @@ describe('season_ended notifications reach dormant members too', () => {
     expect(event.actor_id).toBe(users.owner.id);
 
     const { data: intermission } = await adminClient.from('seasons').select('id').eq('group_id', group.id).eq('status', 'intermission').single();
-    await users.stays.client.rpc('opt_in_season', { p_season_id: intermission!.id });
-    // goesdormant deliberately does not opt in before start_season runs
+    // stays does nothing — currently-active members are included by default now.
+    await users.goesdormant.client.rpc('opt_out_season', { p_season_id: intermission!.id });
     await users.owner.client.rpc('start_season', { p_group_id: group.id });
 
     const { data: dormantMembership } = await adminClient

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Bricolage_Grotesque } from 'next/font/google';
 import './globals.css';
 import { RegisterServiceWorker } from '@/components/pwa/RegisterServiceWorker';
+import { BootSplash } from '@/components/pwa/BootSplash';
 
 const bricolage = Bricolage_Grotesque({
   subsets: ['latin'],
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="font-sans antialiased">
         {children}
         <RegisterServiceWorker />
+        <BootSplash />
       </body>
     </html>
   );

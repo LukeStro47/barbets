@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
@@ -12,19 +13,35 @@ function formatSeasonDate(iso: string): string {
   return `${d.toLocaleDateString('en-US', { month: 'short' })} ${d.getDate()}, '${String(d.getFullYear()).slice(2)}`;
 }
 
-export default async function HallOfFamePage({ params }: { params: Promise<{ groupId: string }> }) {
+const SEASON_HISTORY_PAGE_SIZE = 10;
+
+export default async function HallOfFamePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ groupId: string }>;
+  searchParams: Promise<{ page?: string }>;
+}) {
   const { groupId } = await params;
   const supabase = await createClient();
+  const { page: pageParam } = await searchParams;
+  const page = Math.max(1, Number(pageParam) || 1);
+  const from = (page - 1) * SEASON_HISTORY_PAGE_SIZE;
+  const to = from + SEASON_HISTORY_PAGE_SIZE; // fetch one extra to know whether a Next page exists
 
-  const [{ data: titleRows }, { data: members }, { data: results }] = await Promise.all([
+  const [{ data: titleRows }, { data: members }, { data: resultsPage }] = await Promise.all([
     supabase.from('group_titles').select('title_key, user_id, stat_value').eq('group_id', groupId),
     supabase.from('memberships').select('user_id, nickname').eq('group_id', groupId).neq('status', 'removed'),
     supabase
       .from('season_results')
-      .select('snapshot, seasons(number, started_at, ended_at)')
+      .select('snapshot, seasons(number, started_at, ended_at, name)')
       .eq('group_id', groupId)
-      .order('created_at', { ascending: false }),
+      .order('created_at', { ascending: false })
+      .range(from, to),
   ]);
+
+  const hasNextPage = (resultsPage ?? []).length > SEASON_HISTORY_PAGE_SIZE;
+  const results = (resultsPage ?? []).slice(0, SEASON_HISTORY_PAGE_SIZE);
 
   const nicknameByUserId = new Map((members ?? []).map((m) => [m.user_id, m.nickname]));
   const rowsByKey = new Map(((titleRows ?? []) as GroupTitleRow[]).map((r) => [r.title_key, r]));
@@ -68,14 +85,14 @@ export default async function HallOfFamePage({ params }: { params: Promise<{ gro
 
       <div>
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-espresso-400">Season history</h2>
-        {(results ?? []).length === 0 ? (
+        {(results ?? []).length === 0 && page === 1 ? (
           <EmptyState icon="🏆" title="No seasons in the books yet" subtitle="History shows up here once a season ends." />
         ) : (
           <div className="space-y-4">
             {(results ?? []).map((r: any, i: number) => (
               <Card key={i}>
                 <div className="flex items-center justify-between">
-                  <h3 className="font-display font-bold text-espresso-800">Season {r.seasons?.number}</h3>
+                  <h3 className="font-display font-bold text-espresso-800">{r.seasons?.name ?? `Season ${r.seasons?.number}`}</h3>
                   <span className="text-xs text-espresso-400">
                     {r.seasons?.started_at && formatSeasonDate(r.seasons.started_at)} –{' '}
                     {r.seasons?.ended_at && formatSeasonDate(r.seasons.ended_at)}
@@ -125,6 +142,23 @@ export default async function HallOfFamePage({ params }: { params: Promise<{ gro
                 </div>
               </Card>
             ))}
+          </div>
+        )}
+
+        {(page > 1 || hasNextPage) && (
+          <div className="mt-4 flex items-center justify-between text-sm font-semibold">
+            {page > 1 ? (
+              <Link href={`/groups/${groupId}/hall-of-fame?page=${page - 1}`} className="text-honey-700 hover:text-honey-800">
+                ← Newer
+              </Link>
+            ) : (
+              <span />
+            )}
+            {hasNextPage && (
+              <Link href={`/groups/${groupId}/hall-of-fame?page=${page + 1}`} className="text-honey-700 hover:text-honey-800">
+                Older →
+              </Link>
+            )}
           </div>
         )}
       </div>

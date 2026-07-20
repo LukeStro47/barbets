@@ -8,13 +8,19 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Switch } from '@/components/ui/Switch';
 import { Modal } from '@/components/ui/Modal';
-import { formatSeasonLength, type SeasonLength } from '@/lib/seasonLength';
+import { formatSeasonLength, SEASON_LENGTH_HINTS, type SeasonLength } from '@/lib/seasonLength';
 import { COMMON_TIMEZONES, friendlyTimezoneName } from '@/lib/timezone';
 import { Mention } from '@/components/ui/Mention';
 import type { GroupSettings } from '@/lib/actions/groups';
 
 const inputClasses =
   'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-espresso-900 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
+
+/** datetime-local wants "YYYY-MM-DDTHH:mm" in the browser's local time, not UTC. */
+function toLocalDatetimeInputValue(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
 
 export function EditSettingsForm({
   groupId,
@@ -31,6 +37,10 @@ export function EditSettingsForm({
   const [isPending, startTransition] = useTransition();
   const [seasonsEnabled, setSeasonsEnabled] = useState(settings.seasons_enabled);
   const [seasonLength, setSeasonLength] = useState<SeasonLength>(settings.season_length ?? 'manual');
+  const [seasonCustomEndsAt, setSeasonCustomEndsAt] = useState(() =>
+    toLocalDatetimeInputValue(settings.season_custom_ends_at ? new Date(settings.season_custom_ends_at) : new Date(Date.now() + 24 * 60 * 60_000))
+  );
+  const [minSeasonEndsAt] = useState(() => toLocalDatetimeInputValue(new Date(Date.now() + 60_000)));
   const [timezone, setTimezone] = useState(settings.timezone);
   const [bettingEnabled, setBettingEnabled] = useState(settings.betting_enabled);
   const [confirmingBetting, setConfirmingBetting] = useState(false);
@@ -47,6 +57,7 @@ export function EditSettingsForm({
         seedAmount: Number(formData.get('seedAmount')),
         seasonsEnabled,
         seasonLength: seasonsEnabled ? seasonLength : null,
+        seasonCustomEndsAt: seasonsEnabled && seasonLength === 'custom' ? new Date(seasonCustomEndsAt).toISOString() : null,
         timezone,
         bettingEnabled,
         acceptingMembers,
@@ -78,30 +89,39 @@ export function EditSettingsForm({
         <Switch checked={acceptingMembers} onChange={() => setAcceptingMembers((v) => !v)} />
       </div>
 
-      <div className="flex items-center justify-between border-t border-espresso-100 pt-4">
-        <div>
+      {seasonsEnabled ? (
+        <div className="border-t border-espresso-100 pt-4">
           <p className="text-sm font-semibold text-espresso-700">Betting</p>
           <p className="text-xs text-espresso-400">
-            {bettingEnabled
-              ? "Members can create markets. Can't be turned back off here, end the season instead to pause things."
-              : 'Off by default. Turn on when your group is ready.'}
+            Seasons have their own betting switch instead of this one, every season starts paused so you can review
+            who's playing first. Open it from the group page once a season is active.
           </p>
         </div>
-        <Switch
-          checked={bettingEnabled}
-          onChange={() => {
-            if (!bettingEnabled) setConfirmingBetting(true);
-          }}
-          disabled={settings.betting_enabled}
-        />
-      </div>
+      ) : (
+        <div className="flex items-center justify-between border-t border-espresso-100 pt-4">
+          <div>
+            <p className="text-sm font-semibold text-espresso-700">Betting</p>
+            <p className="text-xs text-espresso-400">
+              {bettingEnabled
+                ? "Members can create markets. Can't be turned back off here."
+                : 'Off by default. Turn on when your group is ready.'}
+            </p>
+          </div>
+          <Switch
+            checked={bettingEnabled}
+            onChange={() => {
+              if (!bettingEnabled) setConfirmingBetting(true);
+            }}
+            disabled={settings.betting_enabled}
+          />
+        </div>
+      )}
 
       {confirmingBetting && (
         <Modal onClose={() => setConfirmingBetting(false)}>
           <p className="font-display text-lg font-bold text-espresso-900">Turn betting on?</p>
           <p className="text-sm text-espresso-600">
-            Once betting is on, it can't be turned back off from here. If you want to pause things later, end the
-            season instead, that voids any open markets and starts a fresh one when you're ready.
+            Once betting is on, it can't be turned back off from here.
           </p>
           <div className="flex gap-2 pt-1">
             <Button type="button" variant="outline" className="flex-1" onClick={() => setConfirmingBetting(false)}>
@@ -209,20 +229,34 @@ export function EditSettingsForm({
         {settings.seasons_enabled && <p className="text-xs text-espresso-400">Seasons can't be turned off once enabled.</p>}
 
         {seasonsEnabled && (
-          <div className="flex flex-wrap gap-2 pt-1">
-            {(['1m', '2m', '3m', 'manual'] as SeasonLength[]).map((len) => (
-              <button
-                type="button"
-                key={len}
-                onClick={() => setSeasonLength(len)}
-                className={`rounded-full border px-3 py-1 text-sm font-semibold ${
-                  seasonLength === len ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-600'
-                }`}
-              >
-                {formatSeasonLength(len)}
-              </button>
-            ))}
-          </div>
+          <>
+            <div className="flex flex-wrap gap-2 pt-1">
+              {(['1m', '2m', '3m', 'manual', 'custom'] as SeasonLength[]).map((len) => (
+                <button
+                  type="button"
+                  key={len}
+                  onClick={() => setSeasonLength(len)}
+                  className={`rounded-full border px-3 py-1 text-sm font-semibold ${
+                    seasonLength === len ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-600'
+                  }`}
+                >
+                  {formatSeasonLength(len)}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-espresso-400">{SEASON_LENGTH_HINTS[seasonLength]}</p>
+
+            {seasonLength === 'custom' && (
+              <input
+                type="datetime-local"
+                min={minSeasonEndsAt}
+                value={seasonCustomEndsAt}
+                onChange={(e) => setSeasonCustomEndsAt(e.target.value)}
+                required
+                className={`${inputClasses} mt-1`}
+              />
+            )}
+          </>
         )}
       </div>
 
@@ -246,8 +280,26 @@ export function EditSettingsForm({
 
 const readOnlyRowClasses = 'flex items-center justify-between gap-4 py-2';
 
-/** Read-only view of the same settings the owner sees, used both for non-owners and as the owner's default (pre-Edit) view. */
-export function ReadOnlySettings({ settings, hasActiveSeason }: { settings: GroupSettings; hasActiveSeason: boolean }) {
+/** Read-only view of the same settings the owner sees, used both for non-owners and as the owner's default (pre-Edit) view. `seasonBettingOpen` is the current active season's own gate (null when there's no active season right now) — for a seasons-enabled group this replaces settings.betting_enabled, which stops being the real gate once seasons are on. */
+export function ReadOnlySettings({
+  settings,
+  hasActiveSeason,
+  seasonBettingOpen,
+}: {
+  settings: GroupSettings;
+  hasActiveSeason: boolean;
+  seasonBettingOpen?: boolean | null;
+}) {
+  const bettingLabel = settings.seasons_enabled
+    ? hasActiveSeason
+      ? seasonBettingOpen
+        ? 'Open'
+        : 'Not open yet'
+      : 'Paused (between seasons)'
+    : settings.betting_enabled
+      ? 'Open'
+      : 'Not open yet';
+
   return (
     <div className="divide-y divide-espresso-100 text-sm">
       <div className={readOnlyRowClasses}>
@@ -256,7 +308,7 @@ export function ReadOnlySettings({ settings, hasActiveSeason }: { settings: Grou
       </div>
       <div className={readOnlyRowClasses}>
         <span className="text-espresso-500">Betting</span>
-        <span className="font-semibold text-espresso-800">{settings.betting_enabled ? 'Open' : 'Not open yet'}</span>
+        <span className="font-semibold text-espresso-800">{bettingLabel}</span>
       </div>
       <div className={readOnlyRowClasses}>
         <span className="text-espresso-500">Token allocation</span>
@@ -295,17 +347,19 @@ export function OwnerSettingsPanel({
   groupId,
   settings,
   hasActiveSeason,
+  seasonBettingOpen,
 }: {
   groupId: string;
   settings: GroupSettings;
   hasActiveSeason: boolean;
+  seasonBettingOpen?: boolean | null;
 }) {
   const [isEditing, setIsEditing] = useState(false);
 
   if (!isEditing) {
     return (
       <div className="space-y-3">
-        <ReadOnlySettings settings={settings} hasActiveSeason={hasActiveSeason} />
+        <ReadOnlySettings settings={settings} hasActiveSeason={hasActiveSeason} seasonBettingOpen={seasonBettingOpen} />
         <Button variant="outline" className="w-full" onClick={() => setIsEditing(true)}>
           Edit settings
         </Button>

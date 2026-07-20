@@ -7,17 +7,12 @@ import { SeasonBanner } from '@/components/groups/SeasonBanner';
 import { GroupDeletionBanner } from '@/components/groups/GroupDeletionBanner';
 import { NewMarketButton } from '@/components/groups/NewMarketButton';
 import { GroupMarketSections } from '@/components/groups/GroupMarketSections';
+import { OpenSeasonBettingButton } from '@/components/groups/IntermissionActions';
 import { Mention } from '@/components/ui/Mention';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { BarChartIcon, SettingsIcon, InfoIcon, TicketIcon } from '@/components/ui/icons';
 import { formatTokens } from '@/lib/formatNumber';
 import { REACTIONS } from '@/lib/reactions';
-
-function addMonths(iso: string, months: number): string {
-  const d = new Date(iso);
-  d.setMonth(d.getMonth() + months);
-  return d.toISOString();
-}
 
 const iconLinkClass =
   'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-espresso-50 text-espresso-500 transition-colors hover:bg-espresso-100 hover:text-espresso-700 active:scale-[0.92]';
@@ -52,7 +47,13 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
     .single();
 
   const { data: season } = settings?.seasons_enabled
-    ? await supabase.from('seasons').select('number, status, started_at').eq('group_id', groupId).order('number', { ascending: false }).limit(1).single()
+    ? await supabase
+        .from('seasons')
+        .select('id, number, status, started_at, ends_at, betting_open, name')
+        .eq('group_id', groupId)
+        .order('number', { ascending: false })
+        .limit(1)
+        .single()
     : { data: null };
 
   const { data: markets } = await supabase
@@ -131,10 +132,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
     }
   }
 
-  const endsAt =
-    season && settings?.season_length && settings.season_length !== 'manual'
-      ? addMonths(season.started_at, Number(settings.season_length[0]))
-      : null;
+  const bettingEnabled = settings?.seasons_enabled ? (season?.betting_open ?? false) : (settings?.betting_enabled ?? false);
 
   return (
     <main className="mx-auto max-w-lg px-5 py-[22px]">
@@ -154,19 +152,22 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
             <Link href={`/groups/${groupId}/settings`} className={iconLinkClass} aria-label={isOwner ? 'Settings' : 'Group info'}>
               {isOwner ? <SettingsIcon className="h-4 w-4" /> : <InfoIcon className="h-4 w-4" />}
             </Link>
-            <NewMarketButton groupId={groupId} bettingEnabled={settings?.betting_enabled ?? false} />
+            <NewMarketButton groupId={groupId} bettingEnabled={bettingEnabled} />
           </div>
         </div>
         {season && season.status !== 'intermission' && (
           <p className="text-[13px] font-medium text-espresso-400">
-            Season {season.number}
-            {endsAt && (
+            {season.name ?? `Season ${season.number}`}
+            {season.ends_at && (
               <>
                 {' '}
-                · <CountdownTimer target={endsAt} prefix="Ends in" />
+                · <CountdownTimer target={season.ends_at} prefix="Ends in" />
               </>
             )}
           </p>
+        )}
+        {season && season.status === 'active' && !season.betting_open && isOwner && (
+          <OpenSeasonBettingButton groupId={groupId} seasonId={season.id} />
         )}
       </div>
 
@@ -200,7 +201,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
           </div>
         </div>
 
-        {season && <SeasonBanner groupId={groupId} season={{ ...season, endsAt }} />}
+        {season && <SeasonBanner groupId={groupId} season={{ number: season.number, status: season.status, endsAt: season.ends_at, name: season.name }} />}
 
         <GroupMarketSections
           pendingSponsor={buckets.pending_sponsor}

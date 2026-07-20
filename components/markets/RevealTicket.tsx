@@ -158,7 +158,7 @@ export function RevealTicket({
         <div className="px-6 pt-6 pb-[18px]">
           <div className="mb-4 flex items-center gap-[7px]">
             {/* A plain <img>, not next/image, so html-to-image captures the exact same-origin asset with no optimization endpoint in the way. */}
-            <img src="/barbets-coin.png" alt="" width={20} height={20} className="block" />
+            <img src="/barbets-mono-white.png" alt="" width={20} height={20} className="block" />
             <span className="text-[12.5px] font-extrabold tracking-[0.08em] text-honey-300 uppercase">Barbets</span>
           </div>
 
@@ -271,7 +271,7 @@ export function RevealTicket({
 
           <div className="mt-5 flex flex-col items-center gap-2 border-t border-white/10 pt-4">
             <div className="flex items-center gap-1.5">
-              <img src="/barbets-coin.png" alt="" width={15} height={15} />
+              <img src="/barbets-mono-white.png" alt="" width={15} height={15} />
               <span className="text-[11px] font-extrabold tracking-[0.07em] text-paper-white/55 uppercase">Barbets</span>
             </div>
             <span className="text-[10.5px] tracking-[0.02em] text-paper-white/30">mybarbets.com</span>
