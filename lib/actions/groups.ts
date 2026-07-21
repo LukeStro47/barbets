@@ -90,6 +90,8 @@ export interface GroupSettings {
   creator_payout_pct: number;
   endorser_payout_pct: number;
   allow_hedged_bets: boolean;
+  /** Shared by the challenge window (propose -> dispute) and the vote window (dispute -> finalize), in half-hour steps between 0.5 and 10. */
+  resolution_window_hours: number;
 }
 
 export async function updateGroupSettings(
@@ -106,6 +108,7 @@ export async function updateGroupSettings(
     creatorPayoutPct: number;
     endorserPayoutPct: number;
     allowHedgedBets: boolean;
+    resolutionWindowHours: number;
   }
 ): Promise<ActionResult<GroupSettings>> {
   const supabase = await createClient();
@@ -123,6 +126,7 @@ export async function updateGroupSettings(
       p_endorser_payout_pct: input.endorserPayoutPct,
       p_allow_hedged_bets: input.allowHedgedBets,
       p_season_custom_ends_at: input.seasonCustomEndsAt ?? null,
+      p_resolution_window_hours: input.resolutionWindowHours,
     })
   );
   if (result.error) return result;

@@ -7,6 +7,7 @@ import { OddsBar, OddsBarMulti } from '@/components/markets/OddsBar';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { ChevronRightIcon, FlagIcon, TargetIcon, ClockIcon, AlertTriangleIcon, CheckCircleIcon } from '@/components/ui/icons';
 import { STATUS_LABEL, STATUS_TONE, type MarketStatus } from '@/lib/marketStatus';
+import { formatLine } from '@/lib/units';
 import { cn } from '@/lib/cn';
 
 export interface MarketCardData {
@@ -19,6 +20,8 @@ export interface MarketCardData {
   outcome: string | null;
   /** over_under only. */
   line?: number | null;
+  /** over_under only, e.g. "$", "min", "pts". */
+  unit?: string | null;
   /** multiple_choice resolved markets: the winning option's label (outcome stays null). */
   outcomeLabel?: string | null;
   openBetCount?: number;
@@ -103,7 +106,7 @@ export function MarketCard({ market }: { market: MarketCardData }) {
               <OddsBar
                 left={{ label: sideA.toUpperCase(), percent: oddsA.percent }}
                 right={{ label: sideB.toUpperCase(), percent: oddsB.percent }}
-                center={market.marketType === 'over_under' ? market.line ?? undefined : undefined}
+                center={market.marketType === 'over_under' && market.line != null ? formatLine(market.line, market.unit) : undefined}
               />
             )}
           </>

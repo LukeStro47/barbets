@@ -4,6 +4,7 @@ import { Mention } from '@/components/ui/Mention';
 import { Card } from '@/components/ui/Card';
 import type { PayoutBreakdown } from '@/lib/actions/markets';
 import type { ReactionEmoji } from '@/lib/actions/reactions';
+import { formatLine } from '@/lib/units';
 
 export interface RevealBet {
   nickname: string;
@@ -32,6 +33,7 @@ export function RevealSummary({
   actualValue,
   marketType,
   line,
+  unit,
   bets,
   odds,
   optionOdds,
@@ -58,6 +60,8 @@ export function RevealSummary({
   marketType: 'yes_no' | 'over_under' | 'multiple_choice';
   /** over_under only. */
   line?: number | null;
+  /** over_under only, e.g. "$", "min", "pts". */
+  unit?: string | null;
   bets: RevealBet[];
   /** yes_no/over_under only. */
   odds?: { side: string; percent: number }[];
@@ -130,7 +134,7 @@ export function RevealSummary({
         isVoid={voided}
         isMultipleChoice={marketType === 'multiple_choice'}
         detailLine={detailLine}
-        line={marketType === 'over_under' ? (line ?? undefined) : undefined}
+        line={marketType === 'over_under' && line != null ? formatLine(line, unit) : undefined}
         odds={ticketOdds}
         winnerPercent={winnerPercent}
         callers={callers}
@@ -157,8 +161,7 @@ export function RevealSummary({
               amount={payoutBreakdown.endorser_cut}
             />
             <BreakdownRow label="Split into the group's other open markets" amount={payoutBreakdown.other_markets_cut} />
-            <BreakdownRow label="Refunded back to bettors" amount={payoutBreakdown.refunded_to_bettors} />
-            <BreakdownRow label="Settled to the group owner" amount={payoutBreakdown.settled_to_owner} />
+            <BreakdownRow label="Held for a future market in this group" amount={payoutBreakdown.held_in_group_pool} />
           </div>
         </Card>
       )}

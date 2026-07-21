@@ -51,7 +51,7 @@ const sections = [
   {
     icon: '🔄',
     title: 'Seasons, if your group wants them',
-    body: 'A group can run one continuous economy forever, or reset on a schedule. When a season ends, standings are archived to the Hall of Fame and everyone gets reseeded for the next one.',
+    body: 'A group can run one continuous economy forever, or reset on a schedule. When a season ends, standings are archived to the Awards and everyone gets reseeded for the next one.',
   },
   {
     icon: '🚪',

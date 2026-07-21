@@ -49,6 +49,7 @@ export function EditSettingsForm({
   const [creatorPayoutPct, setCreatorPayoutPct] = useState(settings.creator_payout_pct);
   const [endorserPayoutPct, setEndorserPayoutPct] = useState(settings.endorser_payout_pct);
   const [allowHedgedBets, setAllowHedgedBets] = useState(settings.allow_hedged_bets);
+  const [resolutionWindowHours, setResolutionWindowHours] = useState(settings.resolution_window_hours);
 
   function handleSubmit(formData: FormData) {
     setError(null);
@@ -65,6 +66,7 @@ export function EditSettingsForm({
         creatorPayoutPct,
         endorserPayoutPct,
         allowHedgedBets,
+        resolutionWindowHours,
       });
       if (result.error) {
         setError(result.error);
@@ -207,6 +209,28 @@ export function EditSettingsForm({
       </div>
 
       <div className="space-y-1.5 border-t border-espresso-100 pt-4">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-semibold text-espresso-700">Challenge/resolution window</label>
+          <span className="font-display text-sm font-bold text-honey-700">
+            {resolutionWindowHours} {resolutionWindowHours === 1 ? 'hour' : 'hours'}
+          </span>
+        </div>
+        <input
+          type="range"
+          min={0.5}
+          max={10}
+          step={0.5}
+          value={resolutionWindowHours}
+          onChange={(e) => setResolutionWindowHours(Number(e.target.value))}
+          className="w-full accent-honey-500"
+        />
+        <p className="text-xs text-espresso-400">
+          How long a proposed resolution can be challenged, and how long a challenged one stays open for voting. We
+          recommend at least 2 hours so people have a real chance to weigh in.
+        </p>
+      </div>
+
+      <div className="space-y-1.5 border-t border-espresso-100 pt-4">
         <label className="block text-sm font-semibold text-espresso-700">Time zone</label>
         <select value={timezone} onChange={(e) => setTimezone(e.target.value)} className={inputClasses}>
           {!(COMMON_TIMEZONES as readonly string[]).includes(timezone) && (
@@ -326,17 +350,27 @@ export function ReadOnlySettings({
             : 'Off'}
         </span>
       </div>
-      <div className={readOnlyRowClasses}>
+      <div className={`${readOnlyRowClasses} ${settings.distribute_payout ? 'items-start' : ''}`}>
         <span className="text-espresso-500">Payout on universal losses</span>
-        <span className="font-semibold text-espresso-800">
-          {settings.distribute_payout
-            ? `Creator ${settings.creator_payout_pct}%, endorser ${settings.endorser_payout_pct}%, rest to other markets`
-            : 'Refunded to everyone'}
-        </span>
+        {settings.distribute_payout ? (
+          <span className="text-right font-semibold text-espresso-800">
+            <span className="block">Creator {settings.creator_payout_pct}%</span>
+            <span className="block">Endorser {settings.endorser_payout_pct}%</span>
+            <span className="block">Rest to other markets</span>
+          </span>
+        ) : (
+          <span className="font-semibold text-espresso-800">Refunded to everyone</span>
+        )}
       </div>
       <div className={readOnlyRowClasses}>
         <span className="text-espresso-500">Hedging</span>
         <span className="font-semibold text-espresso-800">{settings.allow_hedged_bets ? 'Allowed' : 'One side only'}</span>
+      </div>
+      <div className={readOnlyRowClasses}>
+        <span className="text-espresso-500">Challenge/resolution window</span>
+        <span className="font-semibold text-espresso-800">
+          {settings.resolution_window_hours} {settings.resolution_window_hours === 1 ? 'hour' : 'hours'}
+        </span>
       </div>
     </div>
   );

@@ -57,6 +57,7 @@ export function BetslipBar({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [confirmed, setConfirmed] = useState<{ amount: number; label: string } | null>(null);
+  const [idleNudge, setIdleNudge] = useState(false);
 
   const betAmountNum = betAmount === '' ? 0 : Number(betAmount);
   const balanceAfter = Math.max(0, balance - betAmountNum);
@@ -84,6 +85,37 @@ export function BetslipBar({
     return () => {
       document.body.style.overflow = '';
       window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isOpen]);
+
+  // A gentle one-off bounce after 10s of nobody touching the page, just
+  // enough to draw the eye toward the bar — not a recurring nag. Resets on
+  // any interaction, and while the sheet itself is open there's nothing to
+  // nudge toward.
+  useEffect(() => {
+    if (isOpen) return;
+    let fired = false;
+    let timer: ReturnType<typeof setTimeout>;
+
+    function scheduleNudge() {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (!fired) {
+          fired = true;
+          setIdleNudge(true);
+        }
+      }, 10_000);
+    }
+
+    scheduleNudge();
+    window.addEventListener('pointerdown', scheduleNudge);
+    window.addEventListener('scroll', scheduleNudge, { passive: true });
+    window.addEventListener('keydown', scheduleNudge);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('pointerdown', scheduleNudge);
+      window.removeEventListener('scroll', scheduleNudge);
+      window.removeEventListener('keydown', scheduleNudge);
     };
   }, [isOpen]);
 
@@ -128,7 +160,13 @@ export function BetslipBar({
           flow, a bottom-0 element's rendered box shifts up by exactly the margin, off the true
           screen edge. Explicit here rather than relying on this being the last child, which
           would silently break again if page.tsx's structure ever changes. */}
-      <div className="fixed inset-x-0 bottom-0 z-30 !m-0 rounded-t-[20px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 pb-[env(safe-area-inset-bottom)] shadow-[0_-14px_28px_-10px_rgba(28,19,13,0.4)]">
+      <div
+        className={cn(
+          'fixed inset-x-0 bottom-0 z-30 !m-0 rounded-t-[20px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 pb-[env(safe-area-inset-bottom)] shadow-[0_-14px_28px_-10px_rgba(28,19,13,0.4)]',
+          idleNudge && 'animate-betslip-idle-bounce'
+        )}
+        onAnimationEnd={() => setIdleNudge(false)}
+      >
         <button type="button" onClick={() => setIsOpen(true)} className="w-full px-5 py-4 text-left">
           <div className="mx-auto flex max-w-lg items-center justify-between">
             <div>

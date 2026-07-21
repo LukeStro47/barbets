@@ -41,7 +41,7 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
     supabase.from('group_settings').select('*').eq('group_id', groupId).single(),
     supabase.from('memberships').select('user_id, status, nickname').eq('group_id', groupId).neq('status', 'removed'),
     supabase.from('memberships').select('nickname').eq('group_id', groupId).eq('user_id', user!.id).single(),
-    supabase.from('seasons').select('id, name, betting_open').eq('group_id', groupId).eq('status', 'active').single(),
+    supabase.from('seasons').select('id, number, name, betting_open').eq('group_id', groupId).eq('status', 'active').single(),
   ]);
 
   return (
@@ -127,10 +127,14 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
       {isOwner && activeSeason && (
         <Card>
           <h2 className="mb-2 font-semibold text-espresso-800">Season controls</h2>
-          <SeasonNameEditor groupId={groupId} seasonId={activeSeason.id} currentName={activeSeason.name} className="mb-3" />
+          <div className="mb-3 flex items-center gap-2">
+            <span className="text-sm font-semibold text-espresso-800">{activeSeason.name ?? `Season ${activeSeason.number}`}</span>
+            <SeasonNameEditor groupId={groupId} seasonId={activeSeason.id} currentName={activeSeason.name} />
+          </div>
           <p className="mb-3 text-sm text-espresso-500">
             Voids and refunds any market that hasn't had a resolution proposed yet. A market already awaiting a vote
-            or challenge gets up to 8 more hours to finish before intermission opens.
+            or challenge gets up to {(settings as GroupSettings)?.resolution_window_hours ?? 8} more hours to finish before
+            intermission opens.
           </p>
           <EndSeasonButton groupId={groupId} />
         </Card>

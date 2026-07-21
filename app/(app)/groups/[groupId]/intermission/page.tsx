@@ -82,7 +82,7 @@ export default async function IntermissionPage({ params }: { params: Promise<{ g
             <Mention nickname={lastResult.snapshot.champion.nickname} />
           </p>
 
-          {/* Same perforated punch-hole divider as RevealTicket/the Hall of Fame recap —
+          {/* Same perforated punch-hole divider as RevealTicket/the Awards recap —
               this callout is effectively a mini reveal ticket for the season itself. */}
           <div className="relative -mx-6 mt-5 border-t-2 border-dashed border-white/15">
             <span className="absolute top-1/2 -left-2.5 h-5 w-5 -translate-y-1/2 rounded-full bg-paper" />

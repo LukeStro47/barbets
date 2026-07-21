@@ -7,7 +7,7 @@ export interface TitleMeta {
   format: (value: number | null) => string;
 }
 
-/** Display order everywhere titles are listed (Hall of Fame, badge stacking). */
+/** Display order everywhere titles are listed (Awards, badge stacking). */
 export const TITLE_ORDER: TitleKey[] = ['oracle', 'ice_cold', 'bandwagon', 'cursed', 'on_fire', 'degenerate', 'whale', 'risk_taker'];
 
 export const TITLE_META: Record<TitleKey, TitleMeta> = {

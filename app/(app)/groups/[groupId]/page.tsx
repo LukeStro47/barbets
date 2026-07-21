@@ -58,7 +58,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
 
   const { data: markets } = await supabase
     .from('visible_markets')
-    .select('id, title, status, market_type, closes_at, outcome, outcome_option_id, line')
+    .select('id, title, status, market_type, closes_at, outcome, outcome_option_id, line, unit')
     .eq('group_id', groupId)
     .order('created_at', { ascending: false });
 
@@ -102,6 +102,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
       closesAt: m.closes_at,
       outcome: m.outcome,
       line: m.line,
+      unit: m.unit,
     };
 
     if (m.status === 'pending_sponsor') {
@@ -156,15 +157,15 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
           </div>
         </div>
         {season && season.status !== 'intermission' && (
-          <p className="text-[13px] font-medium text-espresso-400">
-            {season.name ?? `Season ${season.number}`}
+          <div className="flex items-center gap-2 text-[13px] font-medium text-espresso-400">
+            <span>{season.name ?? `Season ${season.number}`}</span>
             {season.ends_at && (
               <>
-                {' '}
-                · <CountdownTimer target={season.ends_at} prefix="Ends in" />
+                <span className="h-1 w-1 shrink-0 rounded-full bg-espresso-300" />
+                <CountdownTimer target={season.ends_at} prefix="Ends in" />
               </>
             )}
-          </p>
+          </div>
         )}
         {season && season.status === 'active' && !season.betting_open && isOwner && (
           <OpenSeasonBettingButton groupId={groupId} seasonId={season.id} />
@@ -178,7 +179,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
 
         <div className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-espresso-900 to-espresso-700 p-[22px]">
           <Image
-            src="/barbets-coin.png"
+            src="/barbets-mono-white.png"
             alt=""
             width={96}
             height={96}

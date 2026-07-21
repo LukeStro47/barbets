@@ -7,10 +7,9 @@ import { runRpc, type ActionResult } from '@/lib/errors';
 export interface PayoutBreakdown {
   creator_cut: number;
   endorser_cut: number;
-  /** Exactly one of these three is ever non-zero — which fallback fired when nobody predicted the outcome. */
+  /** Exactly one of these two is ever non-zero — which fallback fired when nobody predicted the outcome. The remainder never returns to this market's own bettors; it only ever moves forward. */
   other_markets_cut: number;
-  refunded_to_bettors: number;
-  settled_to_owner: number;
+  held_in_group_pool: number;
 }
 
 export interface Market {
@@ -21,6 +20,8 @@ export interface Market {
   description: string;
   market_type: 'yes_no' | 'over_under' | 'multiple_choice';
   line: number | null;
+  /** over_under only, e.g. "$", "min", "pts". */
+  unit: string | null;
   creator_id: string;
   sponsor_id: string | null;
   closes_at: string;
@@ -33,6 +34,8 @@ export interface Market {
   created_at: string;
   /** Money redistributed in from another market's universal-loss split, waiting to be absorbed into this market's own pool at finalize time. */
   bonus_pool: number;
+  /** The slice of bonus_pool this market was seeded with at creation from groups.pending_bonus_pool, if any — immutable after creation, purely for the "started with a carried-over bonus" UI note. */
+  carried_bonus_pool: number;
   /** Only set when a universal-loss market resolved with distribute_payout on — see finalize_market(). */
   payout_breakdown: PayoutBreakdown | null;
 }
@@ -51,6 +54,8 @@ export async function createMarket(input: {
   marketType: 'yes_no' | 'over_under' | 'multiple_choice';
   closesAt: string;
   line?: number | null;
+  /** over_under only, e.g. "$", "min", "pts". */
+  unit?: string | null;
   subjectUserIds?: string[];
   /** multiple_choice only — each entry is either plain text, or `@nickname` to attach that member as the option's subject. */
   options?: string[];
@@ -66,6 +71,7 @@ export async function createMarket(input: {
       p_line: input.line ?? null,
       p_subject_user_ids: input.subjectUserIds ?? [],
       p_options: input.options ?? null,
+      p_unit: input.unit ?? null,
     })
   );
   if (result.error) return result;

@@ -96,3 +96,17 @@
     border-color: var(--color-danger-500);
   }
 }
+
+/* BetslipBar's idle nudge: a small one-off bounce after 10s of no page
+   interaction, just enough to catch a peripheral glance toward the bottom
+   of the screen — not a repeating attention-grabber. */
+@keyframes betslip-idle-bounce {
+  0%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-10px); }
+  55% { transform: translateY(0); }
+  75% { transform: translateY(-4px); }
+}
+.animate-betslip-idle-bounce { animation: betslip-idle-bounce 0.7s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-betslip-idle-bounce { animation: none; }
+}

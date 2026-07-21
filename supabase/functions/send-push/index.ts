@@ -107,8 +107,8 @@ async function buildContent(event: NotificationEvent, isSubject: boolean): Promi
     const { data: group } = await admin.from('groups').select('name').eq('id', event.group_id).single();
     return {
       title: group!.name,
-      body: 'The Hall of Fame titles just shuffled. See who holds what now.',
-      url: `/groups/${event.group_id}/hall-of-fame`,
+      body: 'The Awards just shuffled. See who holds what now.',
+      url: `/groups/${event.group_id}/awards`,
     };
   }
 

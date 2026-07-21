@@ -48,9 +48,9 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ gr
         backHref={`/groups/${groupId}`}
         backLabel="Group"
         action={
-          <Link href={`/groups/${groupId}/hall-of-fame`}>
+          <Link href={`/groups/${groupId}/awards`}>
             <Button size="sm" variant="outline">
-              🏆 Hall of Fame
+              🏆 Awards
             </Button>
           </Link>
         }

@@ -18,6 +18,7 @@ import { OptionLabel } from '@/components/markets/OptionLabel';
 import { Mention } from '@/components/ui/Mention';
 import { STATUS_LABEL, STATUS_TONE } from '@/lib/marketStatus';
 import { formatTokens } from '@/lib/formatNumber';
+import { formatLine } from '@/lib/units';
 import type { Market, MarketOption } from '@/lib/actions/markets';
 
 export default async function MarketDetailPage({
@@ -161,7 +162,7 @@ export default async function MarketDetailPage({
 
   const statTiles: React.ReactNode[] = [];
   if (marketRow.market_type === 'over_under') {
-    statTiles.push(<StatTile key="line" label="Line" value={marketRow.line} accent />);
+    statTiles.push(<StatTile key="line" label="Line" value={formatLine(marketRow.line, marketRow.unit)} accent />);
   }
   if (marketRow.status === 'open') {
     statTiles.push(<ClosesInStatTile key="closes" closesAt={marketRow.closes_at} />);
@@ -199,6 +200,12 @@ export default async function MarketDetailPage({
       />
 
       {statTiles.length > 0 && <StatStrip>{statTiles}</StatStrip>}
+
+      {marketRow.carried_bonus_pool > 0 && (
+        <p className="text-xs text-espresso-400">
+          🎁 Started with {formatTokens(marketRow.carried_bonus_pool)} bonus tokens carried over from an earlier resolution.
+        </p>
+      )}
 
       {marketRow.status !== 'pending_sponsor' && <MyBetsCard bets={myBets} optionLabelById={optionLabelById} />}
 

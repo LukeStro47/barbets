@@ -100,6 +100,7 @@ export default async function RevealPage({ params }: { params: Promise<{ groupId
         actualValue={marketRow.actual_value}
         marketType={marketRow.market_type}
         line={marketRow.line}
+        unit={marketRow.unit}
         bets={(bets ?? []).map((b) => ({
           nickname: nicknameByUserId.get(b.user_id) ?? '?',
           choiceLabel: b.option_id ? optionLabelById(b.option_id) : b.side ?? '',

@@ -15,7 +15,7 @@ function formatSeasonDate(iso: string): string {
 
 const SEASON_HISTORY_PAGE_SIZE = 10;
 
-export default async function HallOfFamePage({
+export default async function AwardsPage({
   params,
   searchParams,
 }: {
@@ -49,7 +49,7 @@ export default async function HallOfFamePage({
   return (
     <main className="mx-auto max-w-lg space-y-6 px-5 py-8">
       <PageHeader
-        title="Hall of Fame"
+        title="Awards"
         subtitle="Who currently holds what, updated as the group plays."
         backHref={`/groups/${groupId}/leaderboard`}
         backLabel="Leaderboard"
@@ -148,14 +148,14 @@ export default async function HallOfFamePage({
         {(page > 1 || hasNextPage) && (
           <div className="mt-4 flex items-center justify-between text-sm font-semibold">
             {page > 1 ? (
-              <Link href={`/groups/${groupId}/hall-of-fame?page=${page - 1}`} className="text-honey-700 hover:text-honey-800">
+              <Link href={`/groups/${groupId}/awards?page=${page - 1}`} className="text-honey-700 hover:text-honey-800">
                 ← Newer
               </Link>
             ) : (
               <span />
             )}
             {hasNextPage && (
-              <Link href={`/groups/${groupId}/hall-of-fame?page=${page + 1}`} className="text-honey-700 hover:text-honey-800">
+              <Link href={`/groups/${groupId}/awards?page=${page + 1}`} className="text-honey-700 hover:text-honey-800">
                 Older →
               </Link>
             )}

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { toBlob } from 'html-to-image';
 import { cn } from '@/lib/cn';
-import { formatTokens } from '@/lib/formatNumber';
+import { formatTokens, formatPercent } from '@/lib/formatNumber';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { ReactionBar } from '@/components/markets/ReactionBar';
 import { ResolutionProofButton } from '@/components/markets/ResolutionProofButton';
@@ -52,6 +52,13 @@ export interface RevealTicketProps {
   myNickname: string;
   /** Whether the winning resolution proposal has a proof photo attached — only known ahead of time by the caller (server-fetched), since the photo itself is never fetched until someone taps the button. */
   hasProof: boolean;
+}
+
+/** The yes_no/over_under outcome badge is a fixed-size circle — a short word like "YES" or "NO" sits comfortably at the full size, but "UNDER"/"VOIDED" need a smaller size (and tighter tracking) to avoid crowding the edge of the circle. */
+function headlineBadgeTextClass(headline: string): string {
+  if (headline.length <= 3) return 'text-[20px] tracking-[0.02em]';
+  if (headline.length <= 5) return 'text-[16px] tracking-[0.01em]';
+  return 'text-[13px] tracking-normal';
 }
 
 /** The shareable "betting slip" reveal card, plus the share actions bound to it. One component because the ref they both need has to live in the same tree. */
@@ -170,10 +177,13 @@ export function RevealTicket({
           <div className={cn('flex items-center gap-3.5', isMultipleChoice && 'flex-col items-start gap-3')}>
             <div
               className={cn(
-                'bg-honey-500 font-extrabold tracking-[0.02em] text-espresso-950 uppercase',
+                'bg-honey-500 font-extrabold text-espresso-950 uppercase',
                 isMultipleChoice
-                  ? 'line-clamp-2 w-fit max-w-[240px] -rotate-3 rounded-[20px] px-[18px] py-[11px] text-center text-[15.5px] leading-[1.25]'
-                  : 'flex h-[74px] w-[74px] shrink-0 -rotate-6 items-center justify-center rounded-full border-[3px] border-espresso-950/20 text-[20px] shadow-[0_8px_18px_-6px_rgba(232,163,61,0.55)]'
+                  ? 'line-clamp-2 w-fit max-w-[240px] -rotate-3 rounded-[20px] px-[18px] py-[11px] text-center text-[15.5px] leading-[1.25] tracking-[0.02em]'
+                  : cn(
+                      'flex h-[74px] w-[74px] shrink-0 -rotate-6 items-center justify-center rounded-full border-[3px] border-espresso-950/20 px-1 text-center leading-[1.1] shadow-[0_8px_18px_-6px_rgba(232,163,61,0.55)]',
+                      headlineBadgeTextClass(headline)
+                    )
               )}
             >
               <OptionLabel label={headline} />
@@ -240,7 +250,9 @@ export function RevealTicket({
                   </div>
                 </>
               )}
-              {winnerPercent != null && <p className="mt-[9px] mb-5 text-[13px] text-paper-white/60">{100 - winnerPercent}% called it wrong.</p>}
+              {winnerPercent != null && (
+                <p className="mt-[9px] mb-5 text-[13px] text-paper-white/60">{formatPercent(100 - winnerPercent)}% called it wrong.</p>
+              )}
             </>
           )}
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createMarket } from '@/lib/actions/markets';
 import { Button } from '@/components/ui/Button';
@@ -9,6 +9,13 @@ import { SubjectPicker, type MemberOption } from '@/components/markets/SubjectPi
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { TimezoneCaption } from '@/components/ui/TimezoneCaption';
 import { Mention } from '@/components/ui/Mention';
+import {
+  OVER_UNDER_UNIT_PRESETS,
+  OVER_UNDER_CURRENCY_ALTERNATES,
+  OVER_UNDER_UNIT_MAX_LENGTH,
+  OVER_UNDER_UNIT_INLINE_MAX_LENGTH,
+  formatLine,
+} from '@/lib/units';
 
 const inputClasses =
   'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-espresso-900 placeholder:text-espresso-300 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
@@ -167,6 +174,21 @@ export function CreateMarketForm({
   const [marketType, setMarketType] = useState<'yes_no' | 'over_under' | 'multiple_choice'>('yes_no');
   const [subjects, setSubjects] = useState<MemberOption[]>([]);
   const [options, setOptions] = useState<OptionDraft[]>(() => [newOption(), newOption()]);
+  const [unit, setUnit] = useState('');
+  const [otherUnit, setOtherUnit] = useState(false);
+  const unitIsLong = unit.trim().length > OVER_UNDER_UNIT_INLINE_MAX_LENGTH;
+  const [showCurrencyAlternates, setShowCurrencyAlternates] = useState(false);
+  const currencyPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function startCurrencyPress() {
+    currencyPressTimer.current = setTimeout(() => setShowCurrencyAlternates(true), 450);
+  }
+  function endCurrencyPress() {
+    if (currencyPressTimer.current) {
+      clearTimeout(currencyPressTimer.current);
+      currencyPressTimer.current = null;
+    }
+  }
   const [minCloseTime] = useState(() => toLocalDatetimeInputValue(new Date(Date.now() + 60_000)));
   const [defaultCloseTime] = useState(() => toLocalDatetimeInputValue(new Date(Date.now() + 30 * 60_000)));
   const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
@@ -181,6 +203,7 @@ export function CreateMarketForm({
         marketType,
         closesAt: new Date(closesAtLocal).toISOString(),
         line: marketType === 'over_under' ? Number(formData.get('line')) : null,
+        unit: marketType === 'over_under' ? unit.trim() || null : null,
         subjectUserIds: marketType === 'multiple_choice' ? [] : subjects.map((s) => s.userId),
         options: marketType === 'multiple_choice' ? options.map((o) => o.label.trim()) : undefined,
       });
@@ -272,16 +295,86 @@ export function CreateMarketForm({
         </div>
 
         {marketType === 'over_under' && (
-          <div className="space-y-1.5">
-            <label className="block text-sm font-semibold text-espresso-700">The line</label>
-            <input
-              name="line"
-              type="number"
-              step="0.5"
-              placeholder="e.g. 5.5 (use a half to avoid a push)"
-              required
-              className={inputClasses}
-            />
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <label className="block text-sm font-semibold text-espresso-700">The line</label>
+              <div className="flex flex-wrap gap-2">
+                <input
+                  name="line"
+                  type="number"
+                  step="0.5"
+                  placeholder="5.5 (use a half to avoid a push)"
+                  required
+                  className={`${inputClasses} ${otherUnit && !unitIsLong ? 'min-w-0 flex-1' : 'w-full basis-full'}`}
+                />
+                {otherUnit && (
+                  <input
+                    value={unit}
+                    onChange={(e) => setUnit(e.target.value)}
+                    maxLength={OVER_UNDER_UNIT_MAX_LENGTH}
+                    placeholder="Unit"
+                    className={`${inputClasses} ${unitIsLong ? 'basis-full' : 'w-24 shrink-0'}`}
+                  />
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-sm font-semibold text-espresso-700">Unit (optional)</label>
+              <div className="flex flex-wrap gap-2">
+                {OVER_UNDER_UNIT_PRESETS.map((preset) => (
+                  <button
+                    type="button"
+                    key={preset}
+                    onPointerDown={preset === '$' ? startCurrencyPress : undefined}
+                    onPointerUp={preset === '$' ? endCurrencyPress : undefined}
+                    onPointerLeave={preset === '$' ? endCurrencyPress : undefined}
+                    onClick={() => {
+                      setUnit(preset);
+                      setOtherUnit(false);
+                    }}
+                    className={`rounded-full border px-3 py-1 text-sm font-semibold ${
+                      unit === preset && !otherUnit
+                        ? 'border-honey-500 bg-honey-50 text-honey-800'
+                        : 'border-espresso-200 text-espresso-600'
+                    }`}
+                  >
+                    {preset}
+                  </button>
+                ))}
+                {showCurrencyAlternates &&
+                  OVER_UNDER_CURRENCY_ALTERNATES.map((alt) => (
+                    <button
+                      type="button"
+                      key={alt}
+                      onClick={() => {
+                        setUnit(alt);
+                        setOtherUnit(false);
+                      }}
+                      className={`rounded-full border px-3 py-1 text-sm font-semibold ${
+                        unit === alt && !otherUnit
+                          ? 'border-honey-500 bg-honey-50 text-honey-800'
+                          : 'border-espresso-200 text-espresso-600'
+                      }`}
+                    >
+                      {alt}
+                    </button>
+                  ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOtherUnit(true);
+                    setUnit('');
+                  }}
+                  className={`rounded-full border px-3 py-1 text-sm font-semibold ${
+                    otherUnit ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-600'
+                  }`}
+                >
+                  Custom
+                </button>
+              </div>
+              {!showCurrencyAlternates && <p className="text-xs text-espresso-400">Hold $ for other currencies.</p>}
+            </div>
           </div>
         )}
 
@@ -328,6 +421,7 @@ export function CreateMarketForm({
           marketType={marketType}
           subjects={subjects}
           options={options}
+          unit={unit}
           timezone={timezone}
           onEdit={() => setPendingFormData(null)}
           onConfirm={() => {
@@ -346,6 +440,7 @@ function ReviewMarketModal({
   marketType,
   subjects,
   options,
+  unit,
   timezone,
   onEdit,
   onConfirm,
@@ -354,6 +449,7 @@ function ReviewMarketModal({
   marketType: 'yes_no' | 'over_under' | 'multiple_choice';
   subjects: MemberOption[];
   options: OptionDraft[];
+  unit: string;
   timezone: string;
   onEdit: () => void;
   onConfirm: () => void;
@@ -382,7 +478,7 @@ function ReviewMarketModal({
           {marketType === 'over_under' && (
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">Line</p>
-              <p className="text-espresso-700">{line}</p>
+              <p className="text-espresso-700">{formatLine(line, unit.trim() || null)}</p>
               {lineIsWholeNumber && (
                 <p className="mt-1 rounded-lg bg-honey-50 px-2.5 py-1.5 text-xs text-honey-800">
                   A whole number can land on an exact tie, which the group would have to resolve as VOID. A half
