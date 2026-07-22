@@ -27,6 +27,14 @@
             android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Without this, FCM falls back to the full app launcher icon for the status-bar
+             notification icon - a fully-opaque square that Android's forced monochrome masking
+             (API 21+) turns into a plain solid circle instead of a recognizable shape. This is the
+             same alpha-only silhouette asset as public/badge-mono.png (same purpose, PWA web push
+             badge), generated per-density into drawable-*dpi/ic_stat_notify.png. -->
+        <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat_notify" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_color" android:resource="@color/notification_icon_color" />
     </application>
 
     <!-- Permissions -->

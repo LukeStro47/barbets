@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Honey 500, the app's one accent color (see the honey scale in app/globals.css) - tints
+         the status-bar notification icon's background circle. -->
+    <color name="notification_icon_color">#E8A33D</color>
+</resources>

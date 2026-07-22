@@ -14,7 +14,7 @@ const sections = [
   },
   {
     title: "What we don't do",
-    body: "No ads, no ad tracking, no analytics or tracking SDKs of any kind, and we never sell or share your data with third parties for marketing. Barbets never involves real money — tokens have no cash value and can't be bought, sold, or withdrawn.",
+    body: "No ads, no ad tracking, no analytics or tracking SDKs of any kind, and we never sell or share your data with third parties for marketing. Barbets never involves real money. Tokens have no cash value and can't be bought, sold, or withdrawn.",
   },
   {
     title: 'Who processes your data',
@@ -22,7 +22,7 @@ const sections = [
   },
   {
     title: 'Privacy inside the app',
-    body: "Barbets' whole point is that a market can be about you without you being able to see it exists until it resolves. That privacy model governs what other members of your groups can see about you inside the app — it's separate from, and in addition to, this policy.",
+    body: "Barbets' whole point is that a market can be about you without you being able to see it exists until it resolves. That privacy model governs what other members of your groups can see about you inside the app, separate from and in addition to this policy.",
   },
   {
     title: 'Deleting your account',
