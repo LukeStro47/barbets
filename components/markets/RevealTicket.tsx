@@ -286,7 +286,7 @@ export function RevealTicket({
               <img src="/barbets-mono-white.png" alt="" width={15} height={15} />
               <span className="text-[11px] font-extrabold tracking-[0.07em] text-paper-white/55 uppercase">Barbets</span>
             </div>
-            <span className="text-[10.5px] tracking-[0.02em] text-paper-white/30">mybarbets.com</span>
+            <span className="text-[10.5px] tracking-[0.02em] text-paper-white/30">barbets.vercel.app</span>
           </div>
         </div>
         </div>

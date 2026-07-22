@@ -2,7 +2,7 @@
 
   Barbets is a multi-tenant, play-money prediction market platform for private friend groups. Each group runs its own sealed token economy — no real money ever changes hands. Members create markets ("Will Jake finish the marathon?"), bet tokens on the outcome, and settle up via a parimutuel payout once the group resolves what actually happened. The standout feature is that a market can be *about* someone (`@mentioned` as a "subject"), and that person cannot see the market exists — not in their feed, not in counts, not in notifications — until it resolves.
 
-Live at **https://mybarbets.com**. Installable as a PWA (Android + iOS) with real web push notifications.
+Live at **https://barbets.vercel.app**. Installable as a PWA (Android + iOS) with real web push notifications, and moving toward a native wrapper via Capacitor. `mybarbets.com` is a separate landing page pointing people at the real app, not the app itself.
 
 ## Tech stack
 

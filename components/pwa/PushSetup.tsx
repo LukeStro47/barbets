@@ -18,6 +18,15 @@ export function PushSetup() {
     );
   }
 
+  if (platform === 'native-unsupported') {
+    return (
+      <Card>
+        <p className="font-semibold text-espresso-800">Push notifications</p>
+        <p className="mt-1 text-sm text-espresso-500">Notifications for the app aren't set up yet, hang tight.</p>
+      </Card>
+    );
+  }
+
   if (platform === 'ios-needs-install') {
     return (
       <Card className="space-y-1">

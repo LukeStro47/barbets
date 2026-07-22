@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { savePushSubscription, removePushSubscription } from '@/lib/actions/push';
 import { setNotificationsEnabled } from '@/lib/actions/profile';
 
@@ -11,7 +12,7 @@ function urlBase64ToUint8Array(base64String: string): BufferSource {
   return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0))) as BufferSource;
 }
 
-export type PushPlatform = 'checking' | 'ios-needs-install' | 'unsupported' | 'ready';
+export type PushPlatform = 'checking' | 'ios-needs-install' | 'unsupported' | 'native-unsupported' | 'ready';
 
 /** Shared by the profile page's toggle and the app-open reminder modal, so both agree on what "subscribed" means. */
 export function usePushSubscription() {
@@ -22,6 +23,15 @@ export function usePushSubscription() {
   const [isPending, setPending] = useState(false);
 
   useEffect(() => {
+    // Inside the Capacitor shell there's no "add to home screen" to ask for (it's already a real
+    // app), but Web Push doesn't work there either — real notifications need APNs/FCM via a native
+    // plugin, which isn't wired up yet. Surface that plainly instead of either flow's copy, which
+    // would both be wrong here.
+    if (Capacitor.isNativePlatform()) {
+      setPlatform('native-unsupported');
+      return;
+    }
+
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
 
