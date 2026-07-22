@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { savePushSubscription, removePushSubscription } from '@/lib/actions/push';
+import { FirebaseMessaging } from '@capacitor-firebase/messaging';
+import { savePushSubscription, removePushSubscription, saveNativePushSubscription, removeNativePushSubscription } from '@/lib/actions/push';
 import { setNotificationsEnabled } from '@/lib/actions/profile';
 
 function urlBase64ToUint8Array(base64String: string): BufferSource {
@@ -12,7 +13,7 @@ function urlBase64ToUint8Array(base64String: string): BufferSource {
   return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0))) as BufferSource;
 }
 
-export type PushPlatform = 'checking' | 'ios-needs-install' | 'unsupported' | 'native-unsupported' | 'ready';
+export type PushPlatform = 'checking' | 'ios-needs-install' | 'unsupported' | 'ready';
 
 /** Shared by the profile page's toggle and the app-open reminder modal, so both agree on what "subscribed" means. */
 export function usePushSubscription() {
@@ -21,15 +22,34 @@ export function usePushSubscription() {
   const [permission, setPermission] = useState<NotificationPermission | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, setPending] = useState(false);
+  // The current FCM token, so unsubscribe() and the tokenReceived refresh listener know which row
+  // to touch — there's no "getCurrentSubscription()" native equivalent to re-derive it from later.
+  const nativeTokenRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // Inside the Capacitor shell there's no "add to home screen" to ask for (it's already a real
-    // app), but Web Push doesn't work there either — real notifications need APNs/FCM via a native
-    // plugin, which isn't wired up yet. Surface that plainly instead of either flow's copy, which
-    // would both be wrong here.
     if (Capacitor.isNativePlatform()) {
-      setPlatform('native-unsupported');
-      return;
+      setPlatform('ready');
+      FirebaseMessaging.checkPermissions().then(async ({ receive }) => {
+        setPermission(receive === 'granted' ? 'granted' : receive === 'denied' ? 'denied' : 'default');
+        if (receive !== 'granted') {
+          setSubscribed(false);
+          return;
+        }
+        // Same reasoning as the web path below: re-save on every mount so "on" always means the
+        // server actually has a row to send to, not just that the OS still remembers permission.
+        const { token } = await FirebaseMessaging.getToken();
+        nativeTokenRef.current = token;
+        const result = await saveNativePushSubscription(token, Capacitor.getPlatform() as 'android' | 'ios');
+        setSubscribed(!result.error);
+      });
+
+      const listener = FirebaseMessaging.addListener('tokenReceived', async ({ token }) => {
+        nativeTokenRef.current = token;
+        if (subscribed) await saveNativePushSubscription(token, Capacitor.getPlatform() as 'android' | 'ios');
+      });
+      return () => {
+        listener.then((l) => l.remove());
+      };
     }
 
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -60,12 +80,50 @@ export function usePushSubscription() {
       const result = await savePushSubscription({ endpoint: json.endpoint!, keys: { p256dh: json.keys!.p256dh, auth: json.keys!.auth } });
       setSubscribed(!result.error);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const subscribeNative = useCallback(async () => {
+    const { receive } = await FirebaseMessaging.requestPermissions();
+    setPermission(receive === 'granted' ? 'granted' : receive === 'denied' ? 'denied' : 'default');
+    if (receive !== 'granted') {
+      setError('Notifications were not allowed. You can change this in your device settings.');
+      return;
+    }
+
+    const { token } = await FirebaseMessaging.getToken();
+    nativeTokenRef.current = token;
+    const result = await saveNativePushSubscription(token, Capacitor.getPlatform() as 'android' | 'ios');
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    await setNotificationsEnabled(true);
+    setSubscribed(true);
+  }, []);
+
+  const unsubscribeNative = useCallback(async () => {
+    const token = nativeTokenRef.current ?? (await FirebaseMessaging.getToken()).token;
+    const result = await removeNativePushSubscription(token);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    await FirebaseMessaging.deleteToken();
+    nativeTokenRef.current = null;
+    await setNotificationsEnabled(false);
+    setSubscribed(false);
   }, []);
 
   const subscribe = useCallback(async () => {
     setError(null);
     setPending(true);
     try {
+      if (Capacitor.isNativePlatform()) {
+        await subscribeNative();
+        return;
+      }
+
       const reg = await navigator.serviceWorker.ready;
       const perm = await Notification.requestPermission();
       setPermission(perm);
@@ -95,12 +153,17 @@ export function usePushSubscription() {
     } finally {
       setPending(false);
     }
-  }, []);
+  }, [subscribeNative]);
 
   const unsubscribe = useCallback(async () => {
     setError(null);
     setPending(true);
     try {
+      if (Capacitor.isNativePlatform()) {
+        await unsubscribeNative();
+        return;
+      }
+
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
@@ -118,7 +181,7 @@ export function usePushSubscription() {
     } finally {
       setPending(false);
     }
-  }, []);
+  }, [unsubscribeNative]);
 
   return { platform, subscribed, permission, error, isPending, subscribe, unsubscribe };
 }

@@ -1,11 +1,13 @@
 'use client';
 
+import { Capacitor } from '@capacitor/core';
 import { usePushSubscription } from '@/components/pwa/usePushSubscription';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 
 export function PushSetup() {
   const { platform, subscribed, permission, error, isPending, subscribe, unsubscribe } = usePushSubscription();
+  const isNative = Capacitor.isNativePlatform();
 
   if (platform === 'checking') return null;
 
@@ -14,15 +16,6 @@ export function PushSetup() {
       <Card>
         <p className="font-semibold text-espresso-800">Push notifications</p>
         <p className="mt-1 text-sm text-espresso-500">Push notifications aren't supported in this browser.</p>
-      </Card>
-    );
-  }
-
-  if (platform === 'native-unsupported') {
-    return (
-      <Card>
-        <p className="font-semibold text-espresso-800">Push notifications</p>
-        <p className="mt-1 text-sm text-espresso-500">Notifications for the app aren't set up yet, hang tight.</p>
       </Card>
     );
   }
@@ -45,7 +38,9 @@ export function PushSetup() {
       {error && <p className="text-sm text-danger-700">{error}</p>}
       {permission === 'denied' ? (
         <p className="text-sm text-espresso-500">
-          Notifications are blocked for Barbets. Enable them in your browser's site settings, then reload.
+          {isNative
+            ? "Notifications are blocked for Barbets. Enable them in your device's app settings, then reopen the app."
+            : "Notifications are blocked for Barbets. Enable them in your browser's site settings, then reload."}
         </p>
       ) : subscribed ? (
         <div className="flex items-center justify-between">
