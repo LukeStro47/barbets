@@ -22,7 +22,7 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
 
   if (!group) {
     return (
-      <main className="flex min-h-dvh items-center justify-center bg-paper px-5 py-12">
+      <main className="flex min-h-dvh items-center justify-center bg-paper px-5 py-12 pt-[calc(env(safe-area-inset-top)+3rem)]">
         <InvalidInviteModal />
       </main>
     );

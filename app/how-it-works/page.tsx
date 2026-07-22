@@ -67,7 +67,7 @@ export default async function HowItWorksPage() {
   } = await supabase.auth.getUser();
 
   return (
-    <main className="mx-auto max-w-lg space-y-8 px-5 py-10">
+    <main className="mx-auto max-w-lg space-y-8 px-5 py-10 pt-[calc(env(safe-area-inset-top)+2.5rem)]">
       <div className="flex items-center justify-between">
         <BackButton fallbackHref={user ? '/groups' : '/'} />
         <Logo />

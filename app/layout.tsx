@@ -39,13 +39,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={bricolage.variable}>
-      {/* pt-[env(safe-area-inset-top)]: Android's enforced edge-to-edge (Android 15+ ignores any
-          app opt-out entirely from Android 16 on - see android/app/.../styles.xml) means there's
-          no reliable native way left to reserve status bar space, so every page's top content
-          gets pushed down here instead. Reads as 0 and is a no-op everywhere this isn't actually
-          needed (regular browsers, and the existing iOS PWA standalone mode, which already
-          reserves this space itself via appleWebApp.statusBarStyle). */}
-      <body className="pt-[env(safe-area-inset-top)] font-sans antialiased">
+      <body className="font-sans antialiased">
         {children}
         <RegisterServiceWorker />
         <BootSplash />

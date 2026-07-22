@@ -17,7 +17,12 @@ export async function AppHeader() {
   const waitingCount = user && hasGroups ? badgeCount(await getWaitingOnYou(supabase, user.id)) : 0;
 
   return (
-    <header className="sticky top-0 z-10 border-b border-espresso-100 bg-paper-white/95 backdrop-blur">
+    // pt-[env(safe-area-inset-top)] lives on the header itself, not a global body padding: this
+    // way the header's own background extends up into the status bar area (so the two read as one
+    // continuous bar instead of a body-colored gap sitting above a differently-colored header), and
+    // "sticky top-0" keeps meaning the same thing whether the header is in its initial flow
+    // position or stuck — nothing external is offsetting it, so there's no jump between the two.
+    <header className="sticky top-0 z-10 border-b border-espresso-100 bg-paper-white/95 pt-[env(safe-area-inset-top)] backdrop-blur">
       <div className="mx-auto flex max-w-lg items-center justify-between px-5 py-3.5">
         <Link href="/groups" className="flex items-center">
           <Logo />

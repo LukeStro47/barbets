@@ -12,7 +12,7 @@ export default async function LandingPage() {
   if (user) redirect('/groups');
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center bg-paper px-5 py-10 text-center">
+    <main className="flex min-h-dvh flex-col items-center justify-center bg-paper px-5 py-10 pt-[calc(env(safe-area-inset-top)+2.5rem)] text-center">
       <StackedLogo height={160} className="mb-8" />
       <h1 className="font-display text-4xl font-bold tracking-tight text-espresso-900">
         Prediction markets for your friend group.
