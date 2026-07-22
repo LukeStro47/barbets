@@ -13,6 +13,13 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- Only actually has any effect on a device running exactly Android 15 - Android 16+
+             hard-enforces edge-to-edge with no opt-out at all (see StatusBar.java's
+             shouldSetStatusBarColor in @capacitor/status-bar), so this alone can't be relied on.
+             The real fix is padding-top: env(safe-area-inset-top) on <body> in app/layout.tsx,
+             which works regardless of enforcement. Left here since it's free on the one Android
+             version where it still helps. -->
+        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
     </style>
 
 
