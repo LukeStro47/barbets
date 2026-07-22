@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 
-/** Same shape as a StatTile, but a real button — tapping it explains where the extra money came from, since "bonus pool" means nothing on sight. */
-export function BonusPoolTile({ amount }: { amount: number }) {
+/** Same shape as a StatTile, but a real button — tapping it explains where the extra money came from, since "bonus pool" means nothing on sight. The value carries the same dotted-underline treatment as ClosesInStatTile's countdown so it reads as tappable at a glance instead of just another static figure. */
+export function BonusPoolTile({ amount, carriedAmount }: { amount: number; carriedAmount?: number }) {
   const [showInfo, setShowInfo] = useState(false);
 
   return (
@@ -16,7 +16,9 @@ export function BonusPoolTile({ amount }: { amount: number }) {
         className="flex shrink-0 flex-col items-center gap-0.5 rounded-xl bg-espresso-50 px-4 py-2 text-center"
       >
         <span className="text-[10px] font-bold uppercase tracking-wide text-espresso-400">Bonus</span>
-        <span className="font-display text-lg font-bold leading-tight text-espresso-800">{amount}</span>
+        <span className="font-display text-lg font-bold leading-tight text-espresso-800 underline decoration-dotted decoration-espresso-300 underline-offset-2">
+          {amount}
+        </span>
       </button>
       {showInfo && (
         <Modal onClose={() => setShowInfo(false)}>
@@ -25,6 +27,7 @@ export function BonusPoolTile({ amount }: { amount: number }) {
             Another market in this group resolved and nobody predicted the outcome. Instead of just refunding
             everyone, the group has payout splitting turned on, so part of that pool got sent here. It'll be added
             to this market's own pool and split among the winners when this one resolves.
+            {carriedAmount ? ` 🎁 ${carriedAmount} of it carried over from an earlier resolution before this market was even created.` : ''}
           </p>
           <Button className="w-full" onClick={() => setShowInfo(false)}>
             Got it

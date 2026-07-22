@@ -154,6 +154,13 @@ export function BetslipBar({
         </div>
       </div>
 
+      {/* Static backing strip, pinned to the true screen edge, never animated: the idle-bounce
+          animation below translates the whole bar upward, and since the bar itself is what
+          carries the brown background, that translation would otherwise uncover bare page
+          background for the duration of the bounce. This sits behind it at the same color so
+          the bottom edge always reads as solid brown, bounce or not. */}
+      <div aria-hidden="true" className="fixed inset-x-0 bottom-0 z-20 !m-0 bg-espresso-900 pb-[calc(env(safe-area-inset-bottom)+20px)]" />
+
       {/* !m-0 on every top-level element here: the parent <main> uses space-y-*, which in
           Tailwind v4 puts margin-bottom on every child except the literal last one — since
           fixed-position elements still receive that margin even though they're out of normal

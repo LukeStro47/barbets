@@ -6,7 +6,7 @@ import { proposeResolution } from '@/lib/actions/resolution';
 import { compressImage } from '@/lib/compressImage';
 import { Button } from '@/components/ui/Button';
 import { OptionLabel } from '@/components/markets/OptionLabel';
-import { CameraIcon } from '@/components/ui/icons';
+import { CameraIcon, ImageIcon } from '@/components/ui/icons';
 import type { Market, MarketOption } from '@/lib/actions/markets';
 
 const inputClasses =
@@ -25,6 +25,7 @@ export function ProposeResolutionCard({ groupId, market, options }: { groupId: s
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     return () => {
@@ -130,6 +131,7 @@ export function ProposeResolutionCard({ groupId, market, options }: { groupId: s
       />
 
       <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
+      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoChange} className="hidden" />
       {photoPreview ? (
         <div className="flex items-center gap-3">
           <img src={photoPreview} alt="Proof preview" className="h-16 w-16 rounded-lg object-cover" />
@@ -138,16 +140,31 @@ export function ProposeResolutionCard({ groupId, market, options }: { groupId: s
           </Button>
         </div>
       ) : (
-        <Button
-          type="button"
-          variant="outline"
-          disabled={photoBusy}
-          onClick={() => fileInputRef.current?.click()}
-          className="inline-flex w-full items-center justify-center gap-2"
-        >
-          <CameraIcon className="h-4 w-4" />
-          {photoBusy ? 'Processing…' : 'Attach a proof photo (optional)'}
-        </Button>
+        <div className="space-y-1.5">
+          <p className="text-xs text-espresso-400">Proof photo (optional)</p>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={photoBusy}
+              onClick={() => cameraInputRef.current?.click()}
+              className="inline-flex flex-1 items-center justify-center gap-2"
+            >
+              <CameraIcon className="h-4 w-4" />
+              {photoBusy ? 'Processing…' : 'Take a photo'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={photoBusy}
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex flex-1 items-center justify-center gap-2"
+            >
+              <ImageIcon className="h-4 w-4" />
+              Choose photo
+            </Button>
+          </div>
+        </div>
       )}
 
       <Button disabled={isPending || photoBusy || !proposeOutcome} onClick={submit} className="w-full">

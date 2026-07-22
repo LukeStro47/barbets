@@ -175,7 +175,7 @@ export default async function MarketDetailPage({
       statTiles.push(<StatTile key="volume" label="Volume" value={formatTokens(closedVolume)} />);
   }
   if (marketRow.bonus_pool > 0) {
-    statTiles.push(<BonusPoolTile key="bonus" amount={marketRow.bonus_pool} />);
+    statTiles.push(<BonusPoolTile key="bonus" amount={marketRow.bonus_pool} carriedAmount={marketRow.carried_bonus_pool} />);
   }
 
   return (
@@ -200,12 +200,6 @@ export default async function MarketDetailPage({
       />
 
       {statTiles.length > 0 && <StatStrip>{statTiles}</StatStrip>}
-
-      {marketRow.carried_bonus_pool > 0 && (
-        <p className="text-xs text-espresso-400">
-          🎁 Started with {formatTokens(marketRow.carried_bonus_pool)} bonus tokens carried over from an earlier resolution.
-        </p>
-      )}
 
       {marketRow.status !== 'pending_sponsor' && <MyBetsCard bets={myBets} optionLabelById={optionLabelById} />}
 

@@ -196,7 +196,7 @@ export function RevealSummary({
                   <div className="shrink-0 text-right text-[14.5px] font-extrabold">
                     {refundish && (
                       <span className="text-espresso-500">
-                        {b.payout === b.amount ? `↩ refunded ${b.payout}` : b.payout && b.payout > 0 ? `↩ ${b.payout} back` : 'nothing back'}
+                        {b.payout === b.amount ? `↩ refunded ${b.payout}` : b.payout && b.payout > 0 ? `↩ ${b.payout} back` : '0 back'}
                       </span>
                     )}
                     {won && (
