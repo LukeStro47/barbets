@@ -45,3 +45,14 @@ https://barbets.vercel.app/privacy
 HEADS UP: CONTENT RATING QUESTIONNAIRE
 --------------------------------
 Play Console will ask about "simulated gambling" — answer honestly (yes, betting with play-money tokens). This will likely land the app at a Teen rating rather than Everyone. That's expected and not a blocker, just don't be surprised by it.
+
+
+RELEASE NOTES (this version, 500 char max)
+--------------------------------
+Barbets is here.
+
+- Create private prediction markets for your friend group
+- Bets stay sealed until odds go public
+- Parimutuel payouts, no bookmaker
+- Push notifications for markets that need you
+- No real money, ever
