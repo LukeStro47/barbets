@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { Capacitor } from '@capacitor/core';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { proposeResolution } from '@/lib/actions/resolution';
 import { compressImage } from '@/lib/compressImage';
 import { Button } from '@/components/ui/Button';
@@ -33,6 +35,13 @@ export function ProposeResolutionCard({ groupId, market, options }: { groupId: s
     };
   }, [photoPreview]);
 
+  async function applyPhotoFile(file: File) {
+    const compressed = await compressImage(file);
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoFile(compressed);
+    setPhotoPreview(URL.createObjectURL(compressed));
+  }
+
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -40,15 +49,43 @@ export function ProposeResolutionCard({ groupId, market, options }: { groupId: s
     setError(null);
     setPhotoBusy(true);
     try {
-      const compressed = await compressImage(file);
-      if (photoPreview) URL.revokeObjectURL(photoPreview);
-      setPhotoFile(compressed);
-      setPhotoPreview(URL.createObjectURL(compressed));
+      await applyPhotoFile(file);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not process that photo.');
     } finally {
       setPhotoBusy(false);
     }
+  }
+
+  /** Inside the native shell, the HTML file input's `capture` attribute is unreliable (on this
+   * device it just opened the gallery) — `@capacitor/camera` talks to the real native camera/
+   * gallery pickers instead. Falls back to the file inputs everywhere else (web, PWA). */
+  async function captureNativePhoto(source: CameraSource) {
+    setError(null);
+    setPhotoBusy(true);
+    try {
+      const photo = await Camera.getPhoto({ resultType: CameraResultType.Uri, source, quality: 90 });
+      if (!photo.webPath) throw new Error('No photo came back.');
+      const blob = await (await fetch(photo.webPath)).blob();
+      const file = new File([blob], `proof.${photo.format ?? 'jpeg'}`, { type: blob.type || `image/${photo.format ?? 'jpeg'}` });
+      await applyPhotoFile(file);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      // The plugin rejects on cancel too (e.g. "User cancelled photos app") - that's not a real error.
+      if (!/cancel/i.test(message)) setError(message);
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
+  function handleTakePhotoClick() {
+    if (Capacitor.isNativePlatform()) captureNativePhoto(CameraSource.Camera);
+    else cameraInputRef.current?.click();
+  }
+
+  function handleChoosePhotoClick() {
+    if (Capacitor.isNativePlatform()) captureNativePhoto(CameraSource.Photos);
+    else fileInputRef.current?.click();
   }
 
   function removePhoto() {
@@ -147,7 +184,7 @@ export function ProposeResolutionCard({ groupId, market, options }: { groupId: s
               type="button"
               variant="outline"
               disabled={photoBusy}
-              onClick={() => cameraInputRef.current?.click()}
+              onClick={handleTakePhotoClick}
               className="inline-flex flex-1 items-center justify-center gap-2"
             >
               <CameraIcon className="h-4 w-4" />
@@ -157,7 +194,7 @@ export function ProposeResolutionCard({ groupId, market, options }: { groupId: s
               type="button"
               variant="outline"
               disabled={photoBusy}
-              onClick={() => fileInputRef.current?.click()}
+              onClick={handleChoosePhotoClick}
               className="inline-flex flex-1 items-center justify-center gap-2"
             >
               <ImageIcon className="h-4 w-4" />

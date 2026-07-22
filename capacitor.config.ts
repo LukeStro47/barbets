@@ -12,6 +12,15 @@ const config: CapacitorConfig = {
     url: 'https://barbets.vercel.app',
     androidScheme: 'https',
   },
+  plugins: {
+    // Both platforms default to edge-to-edge (the WebView draws under the status bar with no
+    // browser chrome to reserve space for it, unlike standalone Safari/Chrome) — this matches the
+    // web/PWA behavior instead, which already deliberately reserves status bar space (see
+    // appleWebApp.statusBarStyle: 'default' in app/layout.tsx) rather than overlaying it.
+    StatusBar: {
+      overlaysWebView: false,
+    },
+  },
 };
 
 export default config;

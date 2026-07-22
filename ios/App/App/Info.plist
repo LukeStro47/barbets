@@ -47,5 +47,11 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Used to attach a proof photo when proposing how a market resolved.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Used to attach a proof photo when proposing how a market resolved.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Used to save a proof photo you've taken, if you choose to.</string>
 </dict>
 </plist>
