@@ -29,6 +29,11 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: '#3B2A20',
+  // Capacitor's native WebView renders edge-to-edge behind the status bar/notch by default, with
+  // no browser chrome to auto-inset content the way standalone Safari/Chrome already do — without
+  // viewport-fit=cover, the env(safe-area-inset-*) values BetslipBar and friends already lean on
+  // just read as 0 there, and content sits under the status bar / home indicator.
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
