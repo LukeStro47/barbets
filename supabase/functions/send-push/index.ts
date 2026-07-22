@@ -21,10 +21,22 @@ const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 // Capacitor/FCM (Android and, once its APNs key is uploaded to Firebase, iOS) - a separate secret
 // from the VAPID pair above since it's a whole different push service. Optional: a project that
 // hasn't set this up yet just skips native sends instead of failing every event.
-const FCM_SERVICE_ACCOUNT_JSON = Deno.env.get('FCM_SERVICE_ACCOUNT_JSON');
-const fcmServiceAccount: { client_email: string; private_key: string; project_id: string } | null = FCM_SERVICE_ACCOUNT_JSON
-  ? JSON.parse(FCM_SERVICE_ACCOUNT_JSON)
-  : null;
+//
+// Stored base64-encoded (FCM_SERVICE_ACCOUNT_JSON_B64), not as raw JSON: `supabase secrets set`
+// takes its value straight from a shell argument, and a Google service account key is nothing but
+// double-quote characters and embedded newlines — exactly what shell argument quoting mangles
+// first. Base64's alphabet (A-Za-z0-9+/=) can't collide with any shell metacharacter, so this class
+// of bug can't recur. Parsing is wrapped in try/catch, not just the base64 decode: this is
+// top-level module code, and this exact secret being silently malformed once already crashed the
+// whole function on every cold start — every push, web included, not just FCM — since a module
+// that throws during initialization never reaches Deno.serve() at all.
+const FCM_SERVICE_ACCOUNT_JSON_B64 = Deno.env.get('FCM_SERVICE_ACCOUNT_JSON_B64');
+let fcmServiceAccount: { client_email: string; private_key: string; project_id: string } | null = null;
+try {
+  if (FCM_SERVICE_ACCOUNT_JSON_B64) fcmServiceAccount = JSON.parse(atob(FCM_SERVICE_ACCOUNT_JSON_B64));
+} catch (err) {
+  console.error('FCM_SERVICE_ACCOUNT_JSON_B64 is set but not valid base64-encoded JSON - native push disabled', err);
+}
 
 let cachedFcmAccessToken: { token: string; expiresAt: number } | null = null;
 

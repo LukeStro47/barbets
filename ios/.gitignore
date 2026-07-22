@@ -11,3 +11,8 @@ capacitor-cordova-ios-plugins
 # Generated Config files
 App/App/capacitor.config.json
 App/App/config.xml
+
+# Firebase project config - environment-specific, same treatment as .env.local at the repo root
+# and android/app/google-services.json. Re-download from Firebase console > Project settings >
+# Your apps > iOS app if this is missing.
+App/App/GoogleService-Info.plist

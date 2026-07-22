@@ -1,0 +1,47 @@
+SHORT DESCRIPTION (80 char max)
+--------------------------------
+Private prediction markets for your friend group. No real money, ever.
+
+
+FULL DESCRIPTION (4000 char max)
+--------------------------------
+Barbets turns your friend group into its own private prediction market.
+
+Create a market about anything — will Jake actually run the marathon? Who's the first to leave the party? Will the group hit its fundraising goal? — and bet play-money tokens on how it turns out. No real money ever changes hands.
+
+WHAT MAKES BARBETS DIFFERENT
+
+- Markets can be about someone in your group, and that person can't see it exists — not in their feed, not in their notifications — until it resolves. No favorite-picking, no tipping your hand.
+- Bets stay sealed while a market is open. Nobody, not even you, can see who bet what until betting closes.
+- Payouts are parimutuel: everyone who bet on the losing side splits their stake among the winners, proportional to how much each person staked. No bookmaker, no house edge.
+- Resolution is decided by the group itself — someone proposes what happened, and if nobody challenges it within a set window, it stands. Disagree, and the group settles it by secret ballot.
+- Three market types: Yes/No, Over/Under against a line, and Multiple Choice with up to 10 options.
+- Seasons let your group reset the economy on a schedule, with standings archived to a Hall of Fame.
+- Real push notifications keep you in the loop on markets that need you.
+
+HOW IT WORKS
+
+Create a private group and invite your friends with a code. Everyone starts with the same token balance. Anyone can propose a market; a second member has to endorse it before it opens for betting. Once betting closes, odds become visible as a percentage split, and the group resolves what actually happened together.
+
+No real money, ever. Barbets tokens have no cash value and can never be bought, sold, or withdrawn — it's just a way to make your group chat's arguments and predictions actually mean something.
+
+
+SUGGESTED CATEGORY
+--------------------------------
+Entertainment (safest fit — avoids any gambling-adjacent category despite the betting mechanic, since no real money is ever involved)
+
+
+CONTACT EMAIL
+--------------------------------
+luke@pathwell.co
+
+
+PRIVACY POLICY URL
+--------------------------------
+https://barbets.vercel.app/privacy
+(or https://mybarbets.com/privacy — same page, both domains currently point at the same deployment)
+
+
+HEADS UP: CONTENT RATING QUESTIONNAIRE
+--------------------------------
+Play Console will ask about "simulated gambling" — answer honestly (yes, betting with play-money tokens). This will likely land the app at a Teen rating rather than Everyone. That's expected and not a blocker, just don't be surprised by it.

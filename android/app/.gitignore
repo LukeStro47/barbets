@@ -1,2 +1,6 @@
 /build/*
 !/build/.npmkeep
+
+# Firebase project config - environment-specific, same treatment as .env.local at the repo root.
+# Re-download from Firebase console > Project settings > Your apps > Android app if this is missing.
+google-services.json
