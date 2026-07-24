@@ -38,7 +38,7 @@ export async function AppHeader() {
               )}
             </Link>
           )}
-          <Link href="/groups" className="hover:text-espresso-900">
+          <Link href="/groups?all=1" className="hover:text-espresso-900">
             Groups
           </Link>
           <Link href="/profile" className="hover:text-espresso-900">

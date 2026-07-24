@@ -20,6 +20,11 @@ const config: CapacitorConfig = {
     StatusBar: {
       overlaysWebView: false,
     },
+    // Held manually (see components/pwa/BootSplash.tsx) so the native splash hands off
+    // directly into the web-side animated loader instead of hiding on its own timer.
+    SplashScreen: {
+      launchAutoHide: false,
+    },
   },
 };
 

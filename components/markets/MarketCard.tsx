@@ -17,6 +17,8 @@ export interface MarketCardData {
   status: MarketStatus;
   marketType: 'yes_no' | 'over_under' | 'multiple_choice';
   closesAt: string;
+  /** When betting actually closed (resolved/voided markets only) — used to order the resolved list. */
+  closedAt?: string | null;
   outcome: string | null;
   /** over_under only. */
   line?: number | null;
@@ -84,10 +86,17 @@ export function MarketCard({ market }: { market: MarketCardData }) {
           </div>
         </div>
 
-        {market.status === 'pending_sponsor' && isMultipleChoice && (
-          <span className="inline-block rounded-full bg-espresso-100 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-espresso-600">
-            Multiple choice
-          </span>
+        {market.status === 'pending_sponsor' && (
+          <div className="flex items-center justify-between text-sm text-espresso-500">
+            {isMultipleChoice ? (
+              <span className="inline-block rounded-full bg-espresso-100 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-espresso-600">
+                Multiple choice
+              </span>
+            ) : (
+              <span />
+            )}
+            <CountdownTimer target={market.closesAt} prefix="Betting closes" />
+          </div>
         )}
 
         {market.status === 'open' && (
@@ -137,6 +146,14 @@ const STATUS_ROW_ICON: Record<MarketStatus, ComponentType<{ className?: string }
 function MarketRowMeta({ market }: { market: MarketCardData }) {
   const isMultipleChoice = market.marketType === 'multiple_choice';
   const [sideA, sideB] = market.marketType === 'yes_no' ? ['yes', 'no'] : ['over', 'under'];
+
+  if (market.status === 'pending_sponsor') {
+    return (
+      <p className="mt-0.5 text-xs text-espresso-400">
+        <CountdownTimer target={market.closesAt} prefix="Betting closes" />
+      </p>
+    );
+  }
 
   if (market.status === 'open') {
     return (

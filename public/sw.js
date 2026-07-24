@@ -4,8 +4,8 @@
 // an already-placed bet would be actively misleading, so we'd rather show
 // nothing offline than something wrong), plus push notification handling.
 
-const CACHE_NAME = 'barbets-shell-v4';
-const SHELL_URLS = ['/', '/icon-192.png', '/icon-512.png', '/barbets-lockup-tall.png', '/badge-mono.png', '/loader.html'];
+const CACHE_NAME = 'barbets-shell-v5';
+const SHELL_URLS = ['/', '/icon-192.png', '/icon-512.png', '/barbets-lockup-tall.png', '/badge-mono.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

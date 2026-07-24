@@ -3,6 +3,7 @@ import { Bricolage_Grotesque } from 'next/font/google';
 import './globals.css';
 import { RegisterServiceWorker } from '@/components/pwa/RegisterServiceWorker';
 import { NativePushNavigation } from '@/components/pwa/NativePushNavigation';
+import { NativeBackButton } from '@/components/pwa/NativeBackButton';
 import { BootSplash } from '@/components/pwa/BootSplash';
 
 const bricolage = Bricolage_Grotesque({
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
         <RegisterServiceWorker />
         <NativePushNavigation />
+        <NativeBackButton />
         <BootSplash />
       </body>
     </html>

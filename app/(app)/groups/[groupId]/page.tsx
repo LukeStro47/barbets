@@ -40,6 +40,14 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
     .eq('user_id', user!.id)
     .single();
 
+  const { data: openBetRows } = await supabase
+    .from('bets')
+    .select('amount, markets!inner(group_id)')
+    .eq('user_id', user!.id)
+    .eq('markets.group_id', groupId)
+    .is('settled_at', null);
+  const pendingTokens = (openBetRows ?? []).reduce((sum, b) => sum + b.amount, 0);
+
   const { data: settings } = await supabase
     .from('group_settings')
     .select('seasons_enabled, season_length, betting_enabled')
@@ -58,7 +66,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
 
   const { data: markets } = await supabase
     .from('visible_markets')
-    .select('id, title, status, market_type, closes_at, outcome, outcome_option_id, line, unit')
+    .select('id, title, status, market_type, closes_at, closed_at, outcome, outcome_option_id, line, unit')
     .eq('group_id', groupId)
     .order('created_at', { ascending: false });
 
@@ -100,6 +108,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
       status: m.status,
       marketType: m.market_type,
       closesAt: m.closes_at,
+      closedAt: m.closed_at,
       outcome: m.outcome,
       line: m.line,
       unit: m.unit,
@@ -132,6 +141,10 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
       }
     }
   }
+
+  buckets.revealed.sort(
+    (a, b) => new Date(b.closedAt ?? 0).getTime() - new Date(a.closedAt ?? 0).getTime()
+  );
 
   const bettingEnabled = settings?.seasons_enabled ? (season?.betting_open ?? false) : (settings?.betting_enabled ?? false);
 
@@ -189,6 +202,11 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
           <p className="relative mt-1.5 font-display text-[40px] font-bold tracking-[-0.01em] text-paper-white">
             {formatTokens(membership?.balance ?? 0)}
           </p>
+          {pendingTokens > 0 && (
+            <p className="relative mt-0.5 text-xs font-medium text-honey-200/80">
+              {formatTokens(pendingTokens)} tokens in active bets
+            </p>
+          )}
           <div className="relative mt-4 flex items-end justify-between border-t border-white/10 pt-3.5">
             <div>
               <p className="text-[10px] font-semibold tracking-[0.1em] text-espresso-300 uppercase">Invite code</p>
