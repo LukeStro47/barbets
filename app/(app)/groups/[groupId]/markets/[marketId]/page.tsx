@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { StatStrip, StatTile } from '@/components/markets/StatStrip';
 import { ClosesInStatTile } from '@/components/markets/ClosesInStatTile';
+import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { BonusPoolTile } from '@/components/markets/BonusPoolTile';
 import { OddsBar, OddsBarMulti } from '@/components/markets/OddsBar';
 import { MarketActions } from '@/components/markets/MarketActions';
@@ -246,9 +247,12 @@ export default async function MarketDetailPage({
 
         {marketRow.status === 'pending_sponsor' && (
           <div className="space-y-2">
+            <p className="text-sm text-espresso-600">
+              <CountdownTimer target={marketRow.closes_at} prefix="Betting closes" />
+            </p>
             <p className="text-sm text-espresso-500">
-              Waiting for another member to endorse this market. It expires automatically 72 hours after creation if
-              nobody does.
+              Waiting for another member to endorse this market. It expires automatically if nobody does before
+              betting would close, or after 72 hours, whichever comes first.
             </p>
             {isMultipleChoice && marketOptions && (
               <div className="space-y-1.5">

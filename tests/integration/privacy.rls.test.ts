@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestUsers, cleanupTestUsers, backdate, adminClient, type TestUser } from './helpers/testUsers';
-import { setupGroup, createMarket, sleep, type GroupRow, type MarketRow } from './helpers/scenarios';
+import { setupGroup, createMarket, fastForwardCloseTime, sleep, type GroupRow, type MarketRow } from './helpers/scenarios';
 
 describe('row-level security on bets/ledger/push_subscriptions/votes', () => {
   let users: Record<string, TestUser>;
@@ -18,6 +18,7 @@ describe('row-level security on bets/ledger/push_subscriptions/votes', () => {
   test('while a market is open, a member sees only their own bet rows', async () => {
     const market = await createMarket(users.owner, group.id);
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 2000);
     await users.a.client.rpc('place_bet', { p_market_id: market.id, p_side: 'yes', p_amount: 15 });
     await users.b.client.rpc('place_bet', { p_market_id: market.id, p_side: 'no', p_amount: 25 });
 
@@ -82,6 +83,7 @@ describe('row-level security on bets/ledger/push_subscriptions/votes', () => {
     beforeAll(async () => {
       market = await createMarket(users.owner, group.id, { closesInMs: 1500 });
       await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+      await fastForwardCloseTime(market.id, 1500);
       await users.a.client.rpc('place_bet', { p_market_id: market.id, p_side: 'yes', p_amount: 10 });
       await sleep(2000);
       await adminClient.rpc('expire_stale');

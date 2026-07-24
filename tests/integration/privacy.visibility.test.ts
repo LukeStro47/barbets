@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestUsers, cleanupTestUsers, backdate, adminClient, type TestUser } from './helpers/testUsers';
-import { setupGroup, createMarket, sleep, type GroupRow } from './helpers/scenarios';
+import { setupGroup, createMarket, fastForwardCloseTime, sleep, type GroupRow } from './helpers/scenarios';
 
 describe('market visibility (the core privacy invariant)', () => {
   let users: Record<string, TestUser>;
@@ -19,6 +19,7 @@ describe('market visibility (the core privacy invariant)', () => {
   test('a market with two subjects is invisible to both subjects while open', async () => {
     const market = await createMarket(users.owner, group.id, { subjectIds: [users.subjB.id, users.subjC.id] });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 2000);
 
     for (const subject of [users.subjB, users.subjC]) {
       const { data } = await subject.client.from('visible_markets').select('id').eq('id', market.id);
@@ -49,6 +50,7 @@ describe('market visibility (the core privacy invariant)', () => {
       closesInMs: 1500,
     });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 1500);
     await users.bettor.client.rpc('place_bet', { p_market_id: market.id, p_side: 'yes', p_amount: 20 });
 
     await sleep(2000);

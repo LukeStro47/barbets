@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestUsers, cleanupTestUsers, backdate, adminClient, type TestUser } from './helpers/testUsers';
-import { setupGroup, createMarket, sleep, type GroupRow, type MarketRow } from './helpers/scenarios';
+import { setupGroup, createMarket, fastForwardCloseTime, sleep, type GroupRow, type MarketRow } from './helpers/scenarios';
 
 async function enableDistribute(owner: TestUser, groupId: string, creatorPct: number, endorserPct: number) {
   const { error } = await owner.client.rpc('update_group_settings', {
@@ -70,8 +70,10 @@ describe('distribute_payout: zero-winner-pool reward split (opt-in setting)', ()
 
     const marketA = await createMarket(users.owner, group.id, { closesInMs: 2000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: marketA.id });
+    await fastForwardCloseTime(marketA.id, 2000);
     const marketB = await createMarket(users.owner, group.id, { closesInMs: 120000 }); // stays open throughout
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: marketB.id });
+    await fastForwardCloseTime(marketB.id, 120000);
 
     const ownerBefore = await balance(group.id, users.owner.id);
     const sponsorBefore = await balance(group.id, users.sponsor.id);
@@ -118,6 +120,7 @@ describe('distribute_payout: zero-winner-pool reward split (opt-in setting)', ()
     // by this point, so this is genuinely the only market in the group.
     const market = await createMarket(users.owner, group.id, { closesInMs: 2000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 2000);
 
     const ownerBefore = await balance(group.id, users.owner.id);
     const sponsorBefore = await balance(group.id, users.sponsor.id);
@@ -172,8 +175,10 @@ describe('bonus_pool never gets orphaned', () => {
 
     const source = await createMarket(users.owner, group.id, { closesInMs: 2000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: source.id });
+    await fastForwardCloseTime(source.id, 2000);
     const recipient = await createMarket(users.owner, group.id, { closesInMs: 120000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: recipient.id });
+    await fastForwardCloseTime(recipient.id, 120000);
 
     await users.a.client.rpc('place_bet', { p_market_id: source.id, p_side: 'no', p_amount: 100 });
     await resolveAndFinalize(users.sponsor, source, 'yes'); // winning_pool = 0 -> sends its remainder to `recipient`
@@ -246,6 +251,7 @@ describe('pending_bonus_pool at season end', () => {
 
       const market = await createMarket(users.owner, group.id, { closesInMs: 2000 });
       await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+      await fastForwardCloseTime(market.id, 2000);
 
       const before: Record<string, number> = {};
       for (const key of ['owner', 'sponsor', 'a', 'b'] as const) {

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestUsers, cleanupTestUsers, adminClient, type TestUser } from './helpers/testUsers';
-import { setupGroup, createMarket, type GroupRow } from './helpers/scenarios';
+import { setupGroup, createMarket, fastForwardCloseTime, type GroupRow } from './helpers/scenarios';
 
 async function membershipRow(groupId: string, userId: string) {
   const { data, error } = await adminClient
@@ -47,6 +47,7 @@ describe('leave then rejoin', () => {
   test('leaving with an open bet, then the market resolves: the (dormant) balance receives the correct payout', async () => {
     const market = await createMarket(users.owner, group.id, { closesInMs: 2000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 2000);
 
     const leaverBefore = await membershipRow(group.id, users.leaver.id);
     await users.leaver.client.rpc('place_bet', { p_market_id: market.id, p_side: 'yes', p_amount: 100 });

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestUsers, cleanupTestUsers, adminClient, type TestUser } from './helpers/testUsers';
-import { setupGroup, createMarket, type GroupRow } from './helpers/scenarios';
+import { setupGroup, createMarket, fastForwardCloseTime, type GroupRow } from './helpers/scenarios';
 
 async function subscribe(user: TestUser) {
   const { error } = await user.client.from('push_subscriptions').insert({
@@ -48,6 +48,7 @@ describe('resolution criteria clarification requests', () => {
   test('the creator cannot request clarification on their own market', async () => {
     const market = await createMarket(users.creator, group.id, { closesInMs: 60_000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 60_000);
 
     const { error } = await users.creator.client.rpc('request_clarification', {
       p_market_id: market.id,
@@ -59,6 +60,7 @@ describe('resolution criteria clarification requests', () => {
   test("a subject gets not_found masking, same as every other market-acting function", async () => {
     const market = await createMarket(users.creator, group.id, { closesInMs: 60_000, subjectIds: [users.subject.id] });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 60_000);
 
     const { error } = await users.subject.client.rpc('request_clarification', {
       p_market_id: market.id,
@@ -77,6 +79,7 @@ describe('resolution criteria clarification requests', () => {
   test('a non-creator member can request clarification, and only the creator is notified', async () => {
     const market = await createMarket(users.creator, group.id, { closesInMs: 60_000, subjectIds: [users.subject.id] });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 60_000);
 
     const { data: row, error } = await users.asker.client.rpc('request_clarification', {
       p_market_id: market.id,
@@ -97,6 +100,7 @@ describe('resolution criteria clarification requests', () => {
   test('a non-creator cannot update the criteria', async () => {
     const market = await createMarket(users.creator, group.id, { closesInMs: 60_000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 60_000);
     await users.asker.client.rpc('request_clarification', { p_market_id: market.id, p_question: 'Unclear' });
 
     const { error } = await users.sponsor.client.rpc('update_resolution_criteria', {
@@ -109,6 +113,7 @@ describe('resolution criteria clarification requests', () => {
   test('the creator cannot update without a pending request', async () => {
     const market = await createMarket(users.creator, group.id, { closesInMs: 60_000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 60_000);
 
     const { error } = await users.creator.client.rpc('update_resolution_criteria', {
       p_market_id: market.id,
@@ -121,6 +126,7 @@ describe('resolution criteria clarification requests', () => {
   test('one update clears every pending request, notifies everyone but the creator (subject excluded), and a fresh request reopens the loop', async () => {
     const market = await createMarket(users.creator, group.id, { closesInMs: 60_000, subjectIds: [users.subject.id] });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 60_000);
 
     await users.asker.client.rpc('request_clarification', { p_market_id: market.id, p_question: 'First question' });
     await users.sponsor.client.rpc('request_clarification', { p_market_id: market.id, p_question: 'Second question' });

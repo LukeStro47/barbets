@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestUsers, cleanupTestUsers, adminClient, type TestUser } from './helpers/testUsers';
-import { setupGroup, createMarket, type GroupRow } from './helpers/scenarios';
+import { setupGroup, createMarket, fastForwardCloseTime, type GroupRow } from './helpers/scenarios';
 
 async function membershipRow(groupId: string, userId: string) {
   const { data, error } = await adminClient
@@ -33,6 +33,7 @@ describe('season lifecycle', () => {
   test('end_season voids open markets, refunds stakes, and snapshots results', async () => {
     const market = await createMarket(users.owner, group.id, { closesInMs: 60000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 60000);
     const before = await membershipRow(group.id, users.a.id);
     await users.a.client.rpc('place_bet', { p_market_id: market.id, p_side: 'yes', p_amount: 100 });
 
@@ -92,6 +93,7 @@ describe('season lifecycle', () => {
   test('a dormant member cannot bet, and cannot be a market subject', async () => {
     const market = await createMarket(users.owner, group.id, { closesInMs: 60000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 60000);
 
     const { error: betErr } = await users.c.client.rpc('place_bet', { p_market_id: market.id, p_side: 'yes', p_amount: 10 });
     expect(betErr?.message).toMatch(/invalid_operation/);
@@ -144,11 +146,13 @@ describe('member removal', () => {
       closesInMs: 60000,
     });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: marketAboutTarget.id });
+    await fastForwardCloseTime(marketAboutTarget.id, 60000);
     const otherBefore = await membershipRow(group.id, users.other.id);
     await users.other.client.rpc('place_bet', { p_market_id: marketAboutTarget.id, p_side: 'yes', p_amount: 80 });
 
     const marketTargetBetIn = await createMarket(users.owner, group.id, { closesInMs: 60000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: marketTargetBetIn.id });
+    await fastForwardCloseTime(marketTargetBetIn.id, 60000);
     const targetBefore = await membershipRow(group.id, users.target.id);
     await users.target.client.rpc('place_bet', { p_market_id: marketTargetBetIn.id, p_side: 'yes', p_amount: 60 });
     await users.other.client.rpc('place_bet', { p_market_id: marketTargetBetIn.id, p_side: 'no', p_amount: 40 });
@@ -243,11 +247,13 @@ describe('leave group (self-service)', () => {
   test('leaving voids markets you are a subject of, but your own open bets elsewhere stay in play and you go dormant (not removed)', async () => {
     const marketAboutLeaver = await createMarket(users.owner, group.id, { subjectIds: [users.leaver.id], closesInMs: 60000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: marketAboutLeaver.id });
+    await fastForwardCloseTime(marketAboutLeaver.id, 60000);
     const otherBefore = await membershipRow(group.id, users.other.id);
     await users.other.client.rpc('place_bet', { p_market_id: marketAboutLeaver.id, p_side: 'yes', p_amount: 70 });
 
     const marketLeaverBetIn = await createMarket(users.owner, group.id, { closesInMs: 60000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: marketLeaverBetIn.id });
+    await fastForwardCloseTime(marketLeaverBetIn.id, 60000);
     const leaverBefore = await membershipRow(group.id, users.leaver.id);
     await users.leaver.client.rpc('place_bet', { p_market_id: marketLeaverBetIn.id, p_side: 'yes', p_amount: 40 });
 

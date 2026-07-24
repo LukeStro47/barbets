@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestUsers, cleanupTestUsers, adminClient, backdate, type TestUser } from './helpers/testUsers';
-import { setupGroup, createMarket, sleep, type GroupRow } from './helpers/scenarios';
+import { setupGroup, createMarket, fastForwardCloseTime, sleep, type GroupRow } from './helpers/scenarios';
 
 async function subscribe(user: TestUser) {
   const { error } = await user.client.from('push_subscriptions').insert({
@@ -60,6 +60,7 @@ describe('notification event emission', () => {
   test('sponsor_market emits market_opened, excluding the endorser', async () => {
     const market = await createMarket(users.owner, group.id, { closesInMs: 60000 });
     await users.a.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 60000);
 
     const event = await latestEvent('market_opened', group.id);
     expect(event.market_id).toBe(market.id);
@@ -73,6 +74,7 @@ describe('notification event emission', () => {
   test('propose_resolution and challenge_resolution emit their events, excluding the acting user each time', async () => {
     const market = await createMarket(users.owner, group.id, { closesInMs: 2000 });
     await users.a.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 2000);
     await sleep(3000);
     await adminClient.rpc('expire_stale');
 
@@ -92,6 +94,7 @@ describe('notification event emission', () => {
   test('market_resolved recipients include the subject (the one exception to subject exclusion)', async () => {
     const market = await createMarket(users.owner, group.id, { subjectIds: [users.subject.id], closesInMs: 2000 });
     await users.a.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 2000);
     await sleep(3000);
     await adminClient.rpc('expire_stale');
     await users.a.client.rpc('propose_resolution', { p_market_id: market.id, p_outcome: 'yes', p_justification: null, p_actual_value: null });

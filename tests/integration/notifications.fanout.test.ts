@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestUsers, cleanupTestUsers, adminClient, type TestUser } from './helpers/testUsers';
-import { setupGroup, createMarket, type GroupRow, type MarketRow } from './helpers/scenarios';
+import { setupGroup, createMarket, fastForwardCloseTime, type GroupRow, type MarketRow } from './helpers/scenarios';
 
 async function subscribe(user: TestUser) {
   const { error } = await user.client.from('push_subscriptions').insert({
@@ -37,6 +37,7 @@ describe('push notification fan-out excludes subjects', () => {
 
     market = await createMarket(users.owner, group.id, { subjectIds: [users.subject.id] });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 2000);
   });
 
   afterAll(async () => {

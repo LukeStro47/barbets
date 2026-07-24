@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestUsers, cleanupTestUsers, backdate, adminClient, type TestUser } from './helpers/testUsers';
-import { setupGroup, createMarket, sleep, type GroupRow } from './helpers/scenarios';
+import { setupGroup, createMarket, fastForwardCloseTime, sleep, type GroupRow } from './helpers/scenarios';
 
 async function ledgerSum(membershipId: string): Promise<number> {
   const { data, error } = await adminClient.from('ledger').select('amount').eq('membership_id', membershipId);
@@ -42,6 +42,7 @@ describe('ledger conservation', () => {
   test('balance == sum(ledger) still holds after a bet is placed and settled', async () => {
     const market = await createMarket(users.owner, group.id, { closesInMs: 500 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 500);
     await users.a.client.rpc('place_bet', { p_market_id: market.id, p_side: 'yes', p_amount: 50 });
     await users.b.client.rpc('place_bet', { p_market_id: market.id, p_side: 'no', p_amount: 30 });
 
@@ -66,6 +67,7 @@ describe('ledger conservation', () => {
   test('a bet is capped only by your current balance, with no percentage limit', async () => {
     const market = await createMarket(users.owner, group.id, { closesInMs: 60000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 60000);
 
     const m = await membershipRow(group.id, users.a.id);
     const { error: overBalanceErr } = await users.a.client.rpc('place_bet', {
@@ -96,6 +98,7 @@ describe('ledger conservation', () => {
       await lowRoller.x.client.rpc('join_group', { p_invite_code: group.invite_code, p_nickname: 'lowr' });
       const market = await createMarket(users.owner, group.id, { closesInMs: 60000 });
       await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+      await fastForwardCloseTime(market.id, 60000);
 
       const m = await membershipRow(group.id, lowRoller.x.id);
       await adminClient.from('memberships').update({ balance: 3 }).eq('id', m.id);

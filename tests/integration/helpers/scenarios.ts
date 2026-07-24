@@ -1,4 +1,5 @@
 import type { TestUser } from './testUsers';
+import { adminClient } from './testUsers';
 
 export interface GroupRow {
   id: string;
@@ -85,12 +86,22 @@ export interface CreateMarketOptions {
   closesInMs?: number;
 }
 
+// sponsor_market() rejects endorsing a market with under 5 minutes left before closes_at
+// (supabase/migrations/20260724022042_pending_sponsor_deadline.sql) — every market created
+// here always gets a real closes_at with comfortable headroom above that, regardless of
+// opts.closesInMs, so sponsoring never races the gate. A test that wants the market to
+// actually close soon after sponsoring calls fastForwardCloseTime() right after its own
+// sponsor_market call, which backdates closes_at directly via the admin client to simulate
+// time having passed — same idea as this suite's existing backdate() helper, just for a
+// column sponsor_market itself won't let a normal RPC call set to something imminent.
+const SAFE_SPONSOR_WINDOW_MS = 6 * 60_000;
+
 export async function createMarket(
   creator: TestUser,
   groupId: string,
   opts: CreateMarketOptions = {}
 ): Promise<MarketRow> {
-  const closesAt = new Date(Date.now() + (opts.closesInMs ?? 2000)).toISOString();
+  const closesAt = new Date(Date.now() + Math.max(opts.closesInMs ?? 2000, SAFE_SPONSOR_WINDOW_MS)).toISOString();
   const { data, error } = await creator.client.rpc('create_market', {
     p_group_id: groupId,
     p_title: `Test market ${Date.now()}`,
@@ -102,6 +113,18 @@ export async function createMarket(
   });
   if (error || !data) throw new Error(`createMarket: ${error?.message}`);
   return (Array.isArray(data) ? data[0] : data) as MarketRow;
+}
+
+/** Backdates a sponsored market's closes_at to simulate it actually closing soon (or having
+    already closed) — call right after sponsor_market succeeds, passing the same closesInMs
+    the test originally wanted at creation. See the note on createMarket() above for why this
+    two-step dance exists instead of just passing a short closes_at up front. */
+export async function fastForwardCloseTime(marketId: string, closesInMs: number): Promise<void> {
+  const { error } = await adminClient
+    .from('markets')
+    .update({ closes_at: new Date(Date.now() + closesInMs).toISOString() })
+    .eq('id', marketId);
+  if (error) throw new Error(`fastForwardCloseTime: ${error.message}`);
 }
 
 export function sleep(ms: number): Promise<void> {

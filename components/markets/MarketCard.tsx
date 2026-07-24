@@ -17,8 +17,10 @@ export interface MarketCardData {
   status: MarketStatus;
   marketType: 'yes_no' | 'over_under' | 'multiple_choice';
   closesAt: string;
-  /** When betting actually closed (resolved/voided markets only) — used to order the resolved list. */
-  closedAt?: string | null;
+  /** pending_sponsor only: the sooner of 72h-since-creation or 5-minutes-before-closes_at — the actual deadline to endorse before it auto-voids. */
+  sponsorDeadline?: string;
+  /** When a market actually resolved (resolved/voided only) — used to order the resolved list. */
+  resolvedAt?: string | null;
   outcome: string | null;
   /** over_under only. */
   line?: number | null;
@@ -26,6 +28,8 @@ export interface MarketCardData {
   unit?: string | null;
   /** multiple_choice resolved markets: the winning option's label (outcome stays null). */
   outcomeLabel?: string | null;
+  /** proposed/disputed only: the resolution that's currently on the table. */
+  proposedOutcomeLabel?: string;
   openBetCount?: number;
   /** Total bets across all sides/options, once betting has closed. */
   closedBetCount?: number;
@@ -95,7 +99,7 @@ export function MarketCard({ market }: { market: MarketCardData }) {
             ) : (
               <span />
             )}
-            <CountdownTimer target={market.closesAt} prefix="Betting closes" />
+            <CountdownTimer target={market.sponsorDeadline ?? market.closesAt} prefix="Time to endorse" />
           </div>
         )}
 
@@ -110,6 +114,11 @@ export function MarketCard({ market }: { market: MarketCardData }) {
           <>
             {market.closedBetCount !== undefined && (
               <p className="text-xs text-espresso-400">{market.closedBetCount} bets placed</p>
+            )}
+            {market.proposedOutcomeLabel && (
+              <p className="text-sm font-semibold text-espresso-700">
+                Proposed: <OptionLabel label={market.proposedOutcomeLabel.toUpperCase()} />
+              </p>
             )}
             {isMultipleChoice ? (market.optionOdds?.length ?? 0) > 0 && <OddsBarMulti options={market.optionOdds!} /> : oddsA && oddsB && (
               <OddsBar
@@ -150,7 +159,7 @@ function MarketRowMeta({ market }: { market: MarketCardData }) {
   if (market.status === 'pending_sponsor') {
     return (
       <p className="mt-0.5 text-xs text-espresso-400">
-        <CountdownTimer target={market.closesAt} prefix="Betting closes" />
+        <CountdownTimer target={market.sponsorDeadline ?? market.closesAt} prefix="Time to endorse" />
       </p>
     );
   }
@@ -165,6 +174,13 @@ function MarketRowMeta({ market }: { market: MarketCardData }) {
 
   if (['closed', 'proposed', 'disputed'].includes(market.status)) {
     const betCountPrefix = market.closedBetCount !== undefined ? `${market.closedBetCount} bets · ` : '';
+    if (market.proposedOutcomeLabel) {
+      return (
+        <p className="mt-0.5 text-xs text-espresso-400">
+          {betCountPrefix}Proposed: <OptionLabel label={market.proposedOutcomeLabel.toUpperCase()} />
+        </p>
+      );
+    }
     if (isMultipleChoice) {
       const top = [...(market.optionOdds ?? [])].sort((a, b) => b.percent - a.percent)[0];
       if (!top) return null;

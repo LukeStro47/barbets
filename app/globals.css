@@ -159,3 +159,22 @@
   .animate-die-shadow { animation: none; opacity: 0.22; }
   .animate-dot-blink { animation: none; opacity: 1; }
 }
+
+/* PageTransition: a subtle directional slide-in on route change, so back/forward
+   navigation reads closer to a native push/pop instead of an abrupt content swap.
+   Only the incoming content animates (the outgoing page is already gone by the time
+   React re-renders), so this is a settle-in nudge rather than a full two-pane slide. */
+@keyframes page-in-from-right {
+  from { transform: translateX(28px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes page-in-from-left {
+  from { transform: translateX(-28px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.animate-page-in-from-right { animation: page-in-from-right 0.22s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-page-in-from-left { animation: page-in-from-left 0.22s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-page-in-from-right,
+  .animate-page-in-from-left { animation: none; }
+}

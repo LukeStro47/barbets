@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestUsers, cleanupTestUsers, adminClient, type TestUser } from './helpers/testUsers';
-import { setupGroup, createMarket, type GroupRow } from './helpers/scenarios';
+import { setupGroup, createMarket, fastForwardCloseTime, type GroupRow } from './helpers/scenarios';
 
 async function membershipRow(groupId: string, userId: string) {
   const { data, error } = await adminClient.from('memberships').select('*').eq('group_id', groupId).eq('user_id', userId).single();
@@ -37,6 +37,7 @@ describe('void_market_by_creator', () => {
   test('does not apply when the owner is not a subject, the normal owner kill switch should be used instead', async () => {
     const market = await createMarket(users.a, group.id, { closesInMs: 60000 });
     await users.b.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 60000);
 
     const { error } = await users.a.client.rpc('void_market_by_creator', { p_market_id: market.id });
     expect(error?.message).toMatch(/invalid_operation/);
@@ -45,6 +46,7 @@ describe('void_market_by_creator', () => {
   test('only the market\'s creator can use this fallback, even when the owner is a subject', async () => {
     const market = await createMarket(users.a, group.id, { subjectIds: [users.owner.id], closesInMs: 60000 });
     await users.b.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 60000);
 
     const { error } = await users.b.client.rpc('void_market_by_creator', { p_market_id: market.id });
     expect(error?.message).toMatch(/forbidden/);
@@ -53,6 +55,7 @@ describe('void_market_by_creator', () => {
   test('creator voids the market when the owner is a subject: refunds stakes exactly and emits market_voided', async () => {
     const market = await createMarket(users.a, group.id, { subjectIds: [users.owner.id], closesInMs: 60000 });
     await users.b.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 60000);
     await users.b.client.rpc('place_bet', { p_market_id: market.id, p_side: 'yes', p_amount: 150 });
 
     const bBefore = await membershipRow(group.id, users.b.id);
@@ -75,6 +78,7 @@ describe('void_market_by_creator', () => {
   test('cannot void a market that has already been settled', async () => {
     const market = await createMarket(users.a, group.id, { subjectIds: [users.owner.id], closesInMs: 60000 });
     await users.b.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 60000);
     await users.a.client.rpc('void_market_by_creator', { p_market_id: market.id });
 
     const { error } = await users.a.client.rpc('void_market_by_creator', { p_market_id: market.id });

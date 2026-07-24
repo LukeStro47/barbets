@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestUsers, cleanupTestUsers, backdate, adminClient, type TestUser } from './helpers/testUsers';
-import { setupGroup, createMarket, sleep, type GroupRow, type MarketRow } from './helpers/scenarios';
+import { setupGroup, createMarket, fastForwardCloseTime, sleep, type GroupRow, type MarketRow } from './helpers/scenarios';
 
 /** Drives a fresh yes_no market all the way to `resolved` via the unchallenged auto-finalize path (no vote needed). */
 async function createResolvedMarket(
@@ -11,6 +11,7 @@ async function createResolvedMarket(
 ): Promise<MarketRow> {
   const market = await createMarket(owner, groupId, { subjectIds: opts.subjectIds, closesInMs: 1500 });
   await sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+  await fastForwardCloseTime(market.id, 1500);
   await sleep(2000);
   await adminClient.rpc('expire_stale'); // -> closed
 
@@ -42,6 +43,7 @@ describe('market reactions', () => {
   test('reacting before a market resolves is rejected', async () => {
     const market = await createMarket(users.owner, group.id, { closesInMs: 60_000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 60_000);
 
     const { error } = await users.sponsor.client.rpc('react_to_market', { p_market_id: market.id, p_emoji: 'fire' });
     expect(error?.message).toMatch(/invalid_operation/);

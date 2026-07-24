@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestUsers, cleanupTestUsers, backdate, adminClient, type TestUser } from './helpers/testUsers';
-import { setupGroup, createMarket, type GroupRow } from './helpers/scenarios';
+import { setupGroup, createMarket, fastForwardCloseTime, type GroupRow } from './helpers/scenarios';
 
 async function seasonRow(groupId: string, status: string) {
   const { data, error } = await adminClient.from('seasons').select('*').eq('group_id', groupId).eq('status', status).single();
@@ -30,10 +30,12 @@ describe('season wind-down: in-flight markets get a grace window instead of inst
   test('end_season force-voids a market with no resolution proposed, but leaves a proposed one alone', async () => {
     const neverProposed = await createMarket(users.owner, group.id, { closesInMs: 60000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: neverProposed.id });
+    await fastForwardCloseTime(neverProposed.id, 60000);
     untouchedMarketId = neverProposed.id;
 
     const proposed = await createMarket(users.owner, group.id, { closesInMs: 60000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: proposed.id });
+    await fastForwardCloseTime(proposed.id, 60000);
     await users.bettor.client.rpc('place_bet', { p_market_id: proposed.id, p_side: 'yes', p_amount: 50 });
     const { error: proposeErr } = await users.sponsor.client.rpc('propose_resolution', {
       p_market_id: proposed.id,
@@ -87,6 +89,7 @@ describe('season wind-down: in-flight markets get a grace window instead of inst
       const group2 = await setupGroup(users2.owner, [users2.sponsor], { seedAmount: 1000, seasonsEnabled: true, seasonLength: 'manual' });
       const market = await createMarket(users2.owner, group2.id, { closesInMs: 60000 });
       await users2.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+      await fastForwardCloseTime(market.id, 60000);
       await users2.sponsor.client.rpc('propose_resolution', {
         p_market_id: market.id,
         p_outcome: 'yes',
@@ -127,6 +130,7 @@ describe('season wind-down: hard cap forces stuck markets closed', () => {
   test('expire_stale force-voids anything still in flight once wind_down_deadline passes, and archives the season', async () => {
     const market = await createMarket(users.owner, group.id, { closesInMs: 60000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 60000);
     await users.sponsor.client.rpc('propose_resolution', {
       p_market_id: market.id,
       p_outcome: 'yes',

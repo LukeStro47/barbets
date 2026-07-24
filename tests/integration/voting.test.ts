@@ -1,10 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestUsers, cleanupTestUsers, backdate, adminClient, type TestUser } from './helpers/testUsers';
-import { setupGroup, createMarket, sleep, type GroupRow } from './helpers/scenarios';
+import { setupGroup, createMarket, fastForwardCloseTime, sleep, type GroupRow } from './helpers/scenarios';
 
 async function toDisputed(proposer: TestUser, challenger: TestUser, groupId: string) {
   const market = await createMarket(proposer, groupId, { closesInMs: 2000 });
   await challenger.client.rpc('sponsor_market', { p_market_id: market.id });
+  await fastForwardCloseTime(market.id, 2000);
   await sleep(3000);
   await adminClient.rpc('expire_stale');
   await proposer.client.rpc('propose_resolution', {

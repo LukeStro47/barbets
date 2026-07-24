@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestUsers, cleanupTestUsers, backdate, adminClient, type TestUser } from './helpers/testUsers';
-import { setupGroup, sleep, type GroupRow } from './helpers/scenarios';
+import { setupGroup, fastForwardCloseTime, sleep, type GroupRow } from './helpers/scenarios';
 
 interface MarketOptionRow {
   id: string;
@@ -8,13 +8,20 @@ interface MarketOptionRow {
   sort_order: number;
 }
 
+// See the matching note in helpers/scenarios.ts: sponsor_market() rejects endorsing a
+// market with under 5 minutes left before closes_at, so this local market-creation helper
+// needs the same Math.max(..., SAFE_SPONSOR_WINDOW_MS) floor createMarket() got — tests
+// that want the market to actually close soon call fastForwardCloseTime() right after their
+// own sponsor_market call.
+const SAFE_SPONSOR_WINDOW_MS = 6 * 60_000;
+
 async function createMCMarket(creator: TestUser, groupId: string, options: string[], closesInMs = 2000) {
   const { data, error } = await creator.client.rpc('create_market', {
     p_group_id: groupId,
     p_title: `MC market ${Date.now()}-${Math.random()}`,
     p_description: 'Integration test market',
     p_market_type: 'multiple_choice',
-    p_closes_at: new Date(Date.now() + closesInMs).toISOString(),
+    p_closes_at: new Date(Date.now() + Math.max(closesInMs, SAFE_SPONSOR_WINDOW_MS)).toISOString(),
     p_line: null,
     p_subject_user_ids: [],
     p_options: options,
@@ -57,6 +64,7 @@ describe('multiple choice markets', () => {
     const labels = ['Dan', 'Priya', 'Sam', 'Jo', 'Someone else'];
     const market = await createMCMarket(users.owner, group.id, labels);
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 2000);
     const options = await getOptions(market.id);
 
     const bettors = [users.a, users.b, users.c, users.d, users.e];
@@ -115,6 +123,7 @@ describe('multiple choice markets', () => {
   test('winning option has zero bets: full refund of every stake', async () => {
     const market = await createMCMarket(users.owner, group.id, ['A', 'B', 'C']);
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 2000);
     const options = await getOptions(market.id);
 
     await users.a.client.rpc('place_bet', { p_market_id: market.id, p_side: null, p_amount: 30, p_option_id: options[0].id });
@@ -142,6 +151,7 @@ describe('multiple choice markets', () => {
   test('hedged bettor across two options settles correctly: one wins, one loses, net payout right', async () => {
     const market = await createMCMarket(users.owner, group.id, ['A', 'B', 'C']);
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 2000);
     const options = await getOptions(market.id);
 
     // hedged bettor (a) bets on both A and B; c bets on B too so B has a real pool.
@@ -194,6 +204,7 @@ describe('multiple choice markets', () => {
     try {
       const market = await createMCMarket(users.owner, group.id, ['A', 'B']);
       await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+      await fastForwardCloseTime(market.id, 2000);
       const options = await getOptions(market.id);
 
       const { error: firstBet } = await users.a.client.rpc('place_bet', {
@@ -315,6 +326,7 @@ describe('multiple choice markets', () => {
 
     const market = await createMCMarket(users.owner, group.id, ['A', '@subj', 'C'], 60000);
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 60000);
 
     const defaultFanout = await adminClient.rpc('get_notification_recipients', { p_market_id: market.id, p_include_subjects: false });
     expect((defaultFanout.data as { user_id: string }[]).map((r) => r.user_id)).not.toContain(users.subj.id);
@@ -327,6 +339,7 @@ describe('multiple choice markets', () => {
     test('a subject of one option cannot see the market, its options, odds, or bets at any pre-resolved status, but sees everything at reveal', async () => {
       const market = await createMCMarket(users.owner, group.id, ['A', 'B', '@subj'], 2000);
       await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+      await fastForwardCloseTime(market.id, 2000);
       const options = await getOptions(market.id);
 
       // hidden while open

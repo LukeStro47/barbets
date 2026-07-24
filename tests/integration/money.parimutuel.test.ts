@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestUsers, cleanupTestUsers, backdate, adminClient, type TestUser } from './helpers/testUsers';
-import { setupGroup, createMarket, sleep, type GroupRow, type MarketRow } from './helpers/scenarios';
+import { setupGroup, createMarket, fastForwardCloseTime, sleep, type GroupRow, type MarketRow } from './helpers/scenarios';
 
 async function resolveAndFinalize(proposer: TestUser, market: MarketRow, outcome: string) {
   await sleep(4000);
@@ -41,6 +41,7 @@ describe('parimutuel payout conservation', () => {
   test('randomized bet distribution: sum(payout) === sum(amount) exactly', async () => {
     const market = await createMarket(users.owner, group.id, { closesInMs: 2000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 2000);
 
     const bettors = [users.a, users.b, users.c, users.d, users.e];
     const amounts: number[] = [];
@@ -74,6 +75,7 @@ describe('parimutuel payout conservation', () => {
   test('one-sided market: everyone gets exactly their stake back', async () => {
     const market = await createMarket(users.owner, group.id, { closesInMs: 2000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 2000);
     await users.a.client.rpc('place_bet', { p_market_id: market.id, p_side: 'yes', p_amount: 42 });
     await users.b.client.rpc('place_bet', { p_market_id: market.id, p_side: 'yes', p_amount: 17 });
 
@@ -89,6 +91,7 @@ describe('parimutuel payout conservation', () => {
   test('winning side has zero bets: full refund of every stake', async () => {
     const market = await createMarket(users.owner, group.id, { closesInMs: 2000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 2000);
     await users.a.client.rpc('place_bet', { p_market_id: market.id, p_side: 'no', p_amount: 30 });
     await users.b.client.rpc('place_bet', { p_market_id: market.id, p_side: 'no', p_amount: 20 });
 
@@ -103,6 +106,7 @@ describe('parimutuel payout conservation', () => {
   test('explicit VOID outcome: full refund, market status voided', async () => {
     const market = await createMarket(users.owner, group.id, { closesInMs: 2000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 2000);
     await users.a.client.rpc('place_bet', { p_market_id: market.id, p_side: 'yes', p_amount: 15 });
     await users.b.client.rpc('place_bet', { p_market_id: market.id, p_side: 'no', p_amount: 35 });
 
@@ -118,6 +122,7 @@ describe('parimutuel payout conservation', () => {
   test('dust goes to the single largest winning stake, tie broken by earliest bet', async () => {
     const market = await createMarket(users.owner, group.id, { closesInMs: 2000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 2000);
 
     // A and B tie at 1 token each on the winning side (placed in order:
     // A first), C is the lone loser at 1 token. total_pool=3, winning_pool=2.
@@ -152,6 +157,7 @@ describe('parimutuel payout conservation', () => {
       // otherwise-empty market takes the whole balance to zero.
       const drain = await createMarket(users.owner, group.id, { closesInMs: 60000 });
       await users.sponsor.client.rpc('sponsor_market', { p_market_id: drain.id });
+      await fastForwardCloseTime(drain.id, 60000);
       const { data: membership } = await adminClient
         .from('memberships')
         .select('balance')

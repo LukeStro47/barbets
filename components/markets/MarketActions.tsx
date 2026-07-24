@@ -56,6 +56,7 @@ interface Props {
 export function MarketActions({ groupId, market, isCreator, isOwner, ownerIsSubject, proposal, challenge, myVote, currentUserId, options }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const isMultipleChoice = market.market_type === 'multiple_choice';
   const [voteChoice, setVoteChoice] = useState<string | null>(myVote?.voted_option_id ?? myVote?.outcome ?? null);
@@ -71,6 +72,27 @@ export function MarketActions({ groupId, market, isCreator, isOwner, ownerIsSubj
       const result = await fn();
       if (result.error) {
         setError(result.error);
+      } else {
+        router.refresh();
+      }
+    });
+  }
+
+  function runSponsor() {
+    setError(null);
+    setNotice(null);
+    startTransition(async () => {
+      const result = await sponsorMarket(market.id);
+      if (result.error) {
+        // Someone else's endorsement beat this one to it (or it expired out from under them)
+        // — a red error next to a still-visible "Endorse" button reads as broken, not stale.
+        // A neutral notice, then a refresh, catches the page up to reality on its own.
+        if (result.error.toLowerCase().includes('already sponsored') || result.error.toLowerCase().includes('expired')) {
+          setNotice('Someone else just endorsed this market. Refreshing...');
+          setTimeout(() => router.refresh(), 1200);
+        } else {
+          setError(result.error);
+        }
       } else {
         router.refresh();
       }
@@ -93,13 +115,14 @@ export function MarketActions({ groupId, market, isCreator, isOwner, ownerIsSubj
   return (
     <div className="space-y-3">
       {error && <p className="text-sm text-danger-700">{error}</p>}
+      {notice && <p className="text-sm text-espresso-500">{notice}</p>}
 
       {market.status === 'pending_sponsor' && !isCreator && (
         <Card>
           <p className="mb-3 text-sm text-espresso-600">
             Two humans behind every market. Endorse this one to open it up for betting.
           </p>
-          <Button disabled={isPending} onClick={() => run(() => sponsorMarket(market.id))} className="w-full">
+          <Button disabled={isPending} onClick={runSponsor} className="w-full">
             Endorse this market
           </Button>
         </Card>

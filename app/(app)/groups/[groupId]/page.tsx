@@ -17,6 +17,15 @@ import { REACTIONS } from '@/lib/reactions';
 const iconLinkClass =
   'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-espresso-50 text-espresso-500 transition-colors hover:bg-espresso-100 hover:text-espresso-700 active:scale-[0.92]';
 
+/** Mirrors the DB's own cutoff (see supabase/migrations/*_pending_sponsor_deadline.sql):
+    a market stops being endorsable at 72h since creation, or 5 minutes before betting
+    would close, whichever comes first. */
+function sponsorDeadline(createdAt: string, closesAt: string): string {
+  const byAge = new Date(createdAt).getTime() + 72 * 3_600_000;
+  const byClose = new Date(closesAt).getTime() - 5 * 60_000;
+  return new Date(Math.min(byAge, byClose)).toISOString();
+}
+
 export default async function GroupFeedPage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
   const supabase = await createClient();
@@ -66,7 +75,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
 
   const { data: markets } = await supabase
     .from('visible_markets')
-    .select('id, title, status, market_type, closes_at, closed_at, outcome, outcome_option_id, line, unit')
+    .select('id, title, status, market_type, closes_at, created_at, resolved_at, outcome, outcome_option_id, line, unit')
     .eq('group_id', groupId)
     .order('created_at', { ascending: false });
 
@@ -108,27 +117,51 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
       status: m.status,
       marketType: m.market_type,
       closesAt: m.closes_at,
-      closedAt: m.closed_at,
+      resolvedAt: m.resolved_at,
       outcome: m.outcome,
       line: m.line,
       unit: m.unit,
     };
 
     if (m.status === 'pending_sponsor') {
-      buckets.pending_sponsor.push(base);
+      buckets.pending_sponsor.push({ ...base, sponsorDeadline: sponsorDeadline(m.created_at, m.closes_at) });
     } else if (m.status === 'open') {
       const { data: count } = await supabase.rpc('get_open_bet_count', { p_market_id: m.id });
       buckets.open.push({ ...base, openBetCount: count ?? 0, needsAttention: needsClarificationMarketIds.has(m.id) });
     } else if (['closed', 'proposed', 'disputed'].includes(m.status)) {
       const bucket = m.status === 'disputed' ? buckets.challenged : buckets.awaiting_resolution;
+      let proposedOutcomeLabel: string | undefined;
+      if (m.status === 'proposed' || m.status === 'disputed') {
+        const { data: proposalRow } = await supabase
+          .from('resolution_proposals')
+          .select('proposed_outcome, proposed_option_id')
+          .eq('market_id', m.id)
+          .single();
+        if (proposalRow?.proposed_option_id) {
+          const { data: option } = await supabase.from('market_options').select('label').eq('id', proposalRow.proposed_option_id).single();
+          proposedOutcomeLabel = option?.label;
+        } else if (proposalRow?.proposed_outcome) {
+          proposedOutcomeLabel = proposalRow.proposed_outcome;
+        }
+      }
       if (m.market_type === 'multiple_choice') {
         const { data: optionOdds } = await supabase.rpc('get_closed_odds_options', { p_market_id: m.id });
         const closedBetCount = (optionOdds ?? []).reduce((sum: number, o: any) => sum + o.bet_count, 0);
-        bucket.push({ ...base, closedBetCount, optionOdds: (optionOdds ?? []).map((o: any) => ({ id: o.option_id, label: o.label, percent: o.pool_percent })) });
+        bucket.push({
+          ...base,
+          closedBetCount,
+          optionOdds: (optionOdds ?? []).map((o: any) => ({ id: o.option_id, label: o.label, percent: o.pool_percent })),
+          proposedOutcomeLabel,
+        });
       } else {
         const { data: odds } = await supabase.rpc('get_closed_odds', { p_market_id: m.id });
         const closedBetCount = (odds ?? []).reduce((sum: number, o: any) => sum + o.bet_count, 0);
-        bucket.push({ ...base, closedBetCount, odds: (odds ?? []).map((o: any) => ({ side: o.side, percent: o.pool_percent })) });
+        bucket.push({
+          ...base,
+          closedBetCount,
+          odds: (odds ?? []).map((o: any) => ({ side: o.side, percent: o.pool_percent })),
+          proposedOutcomeLabel,
+        });
       }
     } else {
       const emojiSet = reactionEmojisByMarket.get(m.id);
@@ -143,7 +176,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
   }
 
   buckets.revealed.sort(
-    (a, b) => new Date(b.closedAt ?? 0).getTime() - new Date(a.closedAt ?? 0).getTime()
+    (a, b) => new Date(b.resolvedAt ?? 0).getTime() - new Date(a.resolvedAt ?? 0).getTime()
   );
 
   const bettingEnabled = settings?.seasons_enabled ? (season?.betting_open ?? false) : (settings?.betting_enabled ?? false);

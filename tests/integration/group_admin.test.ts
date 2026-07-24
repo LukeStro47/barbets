@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestUsers, cleanupTestUsers, adminClient, type TestUser } from './helpers/testUsers';
-import { setupGroup, createMarket, type GroupRow } from './helpers/scenarios';
+import { setupGroup, createMarket, fastForwardCloseTime, type GroupRow } from './helpers/scenarios';
 
 async function membershipRow(groupId: string, userId: string) {
   const { data, error } = await adminClient.from('memberships').select('*').eq('group_id', groupId).eq('user_id', userId).single();
@@ -129,6 +129,7 @@ describe('delete_group', () => {
   test('owner deleting the group voids open markets immediately but only schedules removal 5 days out', async () => {
     const market = await createMarket(users.owner, group.id, { closesInMs: 60000 });
     await users.a.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 60000);
     await users.a.client.rpc('place_bet', { p_market_id: market.id, p_side: 'yes', p_amount: 100 });
 
     const { data, error } = await users.owner.client.rpc('delete_group', { p_group_id: group.id });
@@ -229,6 +230,7 @@ describe('delete_account', () => {
 
       const market = await createMarket(users.owner, group.id, { closesInMs: 60000 });
       await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+      await fastForwardCloseTime(market.id, 60000);
       const { error: betErr } = await users.leaver.client.rpc('place_bet', { p_market_id: market.id, p_side: 'yes', p_amount: 50 });
       expect(betErr).toBeNull();
 

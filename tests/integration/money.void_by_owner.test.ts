@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestUsers, cleanupTestUsers, adminClient, type TestUser } from './helpers/testUsers';
-import { setupGroup, createMarket, type GroupRow } from './helpers/scenarios';
+import { setupGroup, createMarket, fastForwardCloseTime, type GroupRow } from './helpers/scenarios';
 
 async function subscribe(user: TestUser) {
   const { error } = await user.client.from('push_subscriptions').insert({
@@ -54,6 +54,7 @@ describe('void_market_by_owner', () => {
   test('a non-owner cannot void a market', async () => {
     const market = await createMarket(users.owner, group.id, { closesInMs: 60000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 60000);
 
     const { error } = await users.a.client.rpc('void_market_by_owner', { p_market_id: market.id });
     expect(error?.message).toMatch(/forbidden/);
@@ -62,6 +63,7 @@ describe('void_market_by_owner', () => {
   test('the owner voiding refunds every stake exactly and emits market_voided, not market_resolved', async () => {
     const market = await createMarket(users.owner, group.id, { subjectIds: [users.subject.id], closesInMs: 60000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 60000);
     await users.a.client.rpc('place_bet', { p_market_id: market.id, p_side: 'yes', p_amount: 200 });
     await users.b.client.rpc('place_bet', { p_market_id: market.id, p_side: 'no', p_amount: 75 });
 
@@ -111,6 +113,7 @@ describe('void_market_by_owner', () => {
   test('cannot void a market that has already been settled', async () => {
     const market = await createMarket(users.owner, group.id, { closesInMs: 60000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 60000);
     await users.owner.client.rpc('void_market_by_owner', { p_market_id: market.id });
 
     const { error } = await users.owner.client.rpc('void_market_by_owner', { p_market_id: market.id });
@@ -121,6 +124,7 @@ describe('void_market_by_owner', () => {
   test('an owner who is the market\'s subject gets a 404, not a 403', async () => {
     const market = await createMarket(users.sponsor, group.id, { subjectIds: [users.owner.id], closesInMs: 60000 });
     await users.a.client.rpc('sponsor_market', { p_market_id: market.id });
+    await fastForwardCloseTime(market.id, 60000);
 
     const { error } = await users.owner.client.rpc('void_market_by_owner', { p_market_id: market.id });
     expect(error?.message).toMatch(/not_found/);
