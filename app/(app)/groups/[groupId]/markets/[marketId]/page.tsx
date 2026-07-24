@@ -252,7 +252,7 @@ export default async function MarketDetailPage({
             </p>
             <p className="text-sm text-espresso-500">
               Waiting for another member to endorse this market. It expires automatically if nobody does before
-              betting would close, or after 72 hours, whichever comes first.
+              betting would close, or after 24 hours, whichever comes first.
             </p>
             {isMultipleChoice && marketOptions && (
               <div className="space-y-1.5">

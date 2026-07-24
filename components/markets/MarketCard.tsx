@@ -17,7 +17,7 @@ export interface MarketCardData {
   status: MarketStatus;
   marketType: 'yes_no' | 'over_under' | 'multiple_choice';
   closesAt: string;
-  /** pending_sponsor only: the sooner of 72h-since-creation or 5-minutes-before-closes_at — the actual deadline to endorse before it auto-voids. */
+  /** pending_sponsor only: the sooner of 24h-since-creation or 5-minutes-before-closes_at — the actual deadline to endorse before it auto-voids. */
   sponsorDeadline?: string;
   /** When a market actually resolved (resolved/voided only) — used to order the resolved list. */
   resolvedAt?: string | null;

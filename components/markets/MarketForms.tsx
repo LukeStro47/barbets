@@ -412,7 +412,7 @@ export function CreateMarketForm({
         {isPending ? 'Creating…' : 'Create market'}
       </Button>
       <p className="text-center text-xs text-espresso-400">
-        One other member needs to endorse this before it opens. Unendorsed markets expire after 72 hours.
+        One other member needs to endorse this before it opens. Unendorsed markets expire after 24 hours.
       </p>
 
       {pendingFormData && (

@@ -17,11 +17,11 @@ import { REACTIONS } from '@/lib/reactions';
 const iconLinkClass =
   'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-espresso-50 text-espresso-500 transition-colors hover:bg-espresso-100 hover:text-espresso-700 active:scale-[0.92]';
 
-/** Mirrors the DB's own cutoff (see supabase/migrations/*_pending_sponsor_deadline.sql):
-    a market stops being endorsable at 72h since creation, or 5 minutes before betting
+/** Mirrors the DB's own cutoff (see supabase/migrations/*_shorten_sponsor_deadline_to_24h.sql):
+    a market stops being endorsable at 24h since creation, or 5 minutes before betting
     would close, whichever comes first. */
 function sponsorDeadline(createdAt: string, closesAt: string): string {
-  const byAge = new Date(createdAt).getTime() + 72 * 3_600_000;
+  const byAge = new Date(createdAt).getTime() + 24 * 3_600_000;
   const byClose = new Date(closesAt).getTime() - 5 * 60_000;
   return new Date(Math.min(byAge, byClose)).toISOString();
 }
