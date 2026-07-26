@@ -62,6 +62,7 @@ export function MarketActions({ groupId, market, isCreator, isOwner, ownerIsSubj
   const [voteChoice, setVoteChoice] = useState<string | null>(myVote?.voted_option_id ?? myVote?.outcome ?? null);
   const [confirmingVoid, setConfirmingVoid] = useState(false);
   const [confirmingCreatorVoid, setConfirmingCreatorVoid] = useState(false);
+  const [confirmingChallenge, setConfirmingChallenge] = useState(false);
 
   const challengeWindowElapsed = useElapsed(proposal ? new Date(new Date(proposal.proposed_at).getTime() + 8 * 3_600_000).toISOString() : null);
   const voteWindowElapsed = useElapsed(challenge ? new Date(new Date(challenge.created_at).getTime() + 8 * 3_600_000).toISOString() : null);
@@ -135,10 +136,29 @@ export function MarketActions({ groupId, market, isCreator, isOwner, ownerIsSubj
           </p>
           {iAmProposer ? (
             <p className="text-xs text-espresso-400">You proposed this outcome, so you can't challenge it yourself.</p>
-          ) : (
-            <Button variant="outline" disabled={isPending} onClick={() => run(() => challengeResolution(groupId, market.id))} className="w-full">
+          ) : !confirmingChallenge ? (
+            <Button variant="outline" disabled={isPending} onClick={() => setConfirmingChallenge(true)} className="w-full">
               Challenge this proposal
             </Button>
+          ) : (
+            <>
+              <p className="text-xs font-semibold text-danger-700">
+                This moves the market to a secret ballot for everyone eligible to vote on what actually happened.
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setConfirmingChallenge(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  className="flex-1"
+                  disabled={isPending}
+                  onClick={() => run(() => challengeResolution(groupId, market.id))}
+                >
+                  Confirm
+                </Button>
+              </div>
+            </>
           )}
           {challengeWindowElapsed && (
             <button
@@ -165,7 +185,7 @@ export function MarketActions({ groupId, market, isCreator, isOwner, ownerIsSubj
               <CountdownTimer target={new Date(new Date(challenge.created_at).getTime() + 8 * 3_600_000).toISOString()} prefix="Voting closes in" />
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className={isMultipleChoice ? 'flex flex-col gap-2' : 'flex gap-2'}>
             {choiceLabels.map((c) => (
               <button
                 key={c.value}
@@ -175,9 +195,9 @@ export function MarketActions({ groupId, market, isCreator, isOwner, ownerIsSubj
                   setVoteChoice(c.value);
                   run(() => castVote(groupId, market.id, proposalChoiceFor(c.value)));
                 }}
-                className={`flex-1 rounded-full border py-2 text-sm font-bold uppercase ${
-                  voteChoice === c.value ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-500'
-                }`}
+                className={`whitespace-nowrap rounded-full border py-2 text-sm font-bold uppercase ${
+                  isMultipleChoice ? 'w-full truncate px-3 text-left' : 'flex-1 text-center'
+                } ${voteChoice === c.value ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-500'}`}
               >
                 <OptionLabel label={c.label} />
               </button>
@@ -225,7 +245,7 @@ export function MarketActions({ groupId, market, isCreator, isOwner, ownerIsSubj
                   disabled={isPending}
                   onClick={() => run(() => voidMarket(groupId, market.id))}
                 >
-                  Confirm void
+                  Confirm
                 </Button>
               </div>
             </>
@@ -262,7 +282,7 @@ export function MarketActions({ groupId, market, isCreator, isOwner, ownerIsSubj
                   disabled={isPending}
                   onClick={() => run(() => voidMarketAsCreator(groupId, market.id))}
                 >
-                  Confirm void
+                  Confirm
                 </Button>
               </div>
             </>

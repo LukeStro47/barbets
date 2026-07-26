@@ -276,26 +276,29 @@ export default async function MarketDetailPage({
           <p className="text-xs font-semibold text-espresso-400">Closed early by proposal</p>
         )}
 
+        {proposal && (
+          <div className="relative rounded-xl border-2 border-honey-300 bg-honey-50 p-3.5">
+            {proposal.photo_path && (
+              <div className="absolute top-2.5 right-2.5">
+                <ResolutionProofButton marketId={marketId} variant="icon" />
+              </div>
+            )}
+            <p className={`text-xs font-bold uppercase tracking-wide text-honey-700 ${proposal.photo_path ? 'pr-8' : ''}`}>
+              Proposed outcome
+            </p>
+            <p className="mt-0.5 text-lg font-extrabold text-honey-900">
+              <OptionLabel label={(proposedOptionLabel ?? proposal.proposed_outcome ?? '').toUpperCase()} />
+            </p>
+            {proposal.justification && <p className="mt-1.5 text-sm text-espresso-600">{proposal.justification}</p>}
+          </div>
+        )}
+
         {!isMultipleChoice && oddsA && oddsB && (
           <OddsBar left={{ label: sideA.toUpperCase(), percent: oddsA.pool_percent }} right={{ label: sideB.toUpperCase(), percent: oddsB.pool_percent }} />
         )}
 
         {isMultipleChoice && optionOdds && optionOdds.length > 0 && (
           <OddsBarMulti options={optionOdds.map((o) => ({ id: o.option_id, label: o.label, percent: o.pool_percent }))} />
-        )}
-
-        {proposal && (
-          <div className="relative rounded-xl bg-espresso-50 p-3 text-sm text-espresso-600">
-            {proposal.photo_path && (
-              <div className="absolute top-2 right-2">
-                <ResolutionProofButton marketId={marketId} variant="icon" />
-              </div>
-            )}
-            <p className={`font-semibold text-espresso-800 ${proposal.photo_path ? 'pr-8' : ''}`}>
-              Proposed: <OptionLabel label={(proposedOptionLabel ?? proposal.proposed_outcome ?? '').toUpperCase()} />
-            </p>
-            {proposal.justification && <p className="mt-1">{proposal.justification}</p>}
-          </div>
         )}
 
         {(marketRow.status === 'open' || marketRow.status === 'closed') && (

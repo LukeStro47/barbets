@@ -70,6 +70,10 @@ export default async function PrivacyPage() {
         <a href="mailto:luke@pathwell.co" className="font-medium text-espresso-700 underline">
           luke@pathwell.co
         </a>
+        . See also our{' '}
+        <a href="/terms" className="font-medium text-espresso-700 underline">
+          Terms of use
+        </a>
         .
       </p>
     </main>

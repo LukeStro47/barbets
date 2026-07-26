@@ -137,7 +137,7 @@ export function EditSettingsForm({
                 setConfirmingBetting(false);
               }}
             >
-              Turn on betting
+              Turn on
             </Button>
           </div>
         </Modal>
@@ -295,7 +295,7 @@ export function EditSettingsForm({
           disabled={isPending || (distributePayout && creatorPayoutPct + endorserPayoutPct > 100)}
           className="flex-1"
         >
-          Save settings
+          Save
         </Button>
       </div>
     </form>
@@ -541,7 +541,7 @@ export function TransferOwnershipForm({ groupId, members }: { groupId: string; m
                 })
               }
             >
-              Confirm transfer
+              Confirm
             </Button>
           </div>
         </div>
@@ -600,7 +600,7 @@ export function DeleteGroupButton({ groupId, groupName }: { groupId: string; gro
             })
           }
         >
-          Schedule deletion
+          Delete
         </Button>
       </div>
     </div>

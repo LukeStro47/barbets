@@ -49,7 +49,7 @@ export function LeaveGroupButton({ groupId, groupName }: { groupId: string; grou
             })
           }
         >
-          Confirm, leave
+          Leave
         </Button>
       </div>
     </div>

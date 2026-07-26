@@ -54,7 +54,7 @@ export function DeleteAccountButton() {
             })
           }
         >
-          Delete forever
+          Delete
         </Button>
       </div>
     </div>

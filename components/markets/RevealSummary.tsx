@@ -110,7 +110,7 @@ export function RevealSummary({
           ]
         : [];
 
-  const winnerPercent = voided
+  const winnerPercent = refundish
     ? null
     : marketType === 'multiple_choice'
       ? (optionOdds?.find((o) => o.isWinner)?.percent ?? null)
@@ -161,7 +161,7 @@ export function RevealSummary({
               amount={payoutBreakdown.endorser_cut}
             />
             <BreakdownRow label="Split into the group's other open markets" amount={payoutBreakdown.other_markets_cut} />
-            <BreakdownRow label="Held for a future market in this group" amount={payoutBreakdown.held_in_group_pool} />
+            <BreakdownRow label="Held for a future market" amount={payoutBreakdown.held_in_group_pool} />
           </div>
         </Card>
       )}

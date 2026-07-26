@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { signIn, signUp } from '@/lib/actions/auth';
 import { Button } from '@/components/ui/Button';
 
@@ -24,13 +24,34 @@ export function SignInForm({ next }: { next?: string }) {
 
 export function SignUpForm({ next }: { next?: string }) {
   const [state, formAction, isPending] = useActionState(signUp, null);
+  const [agreed, setAgreed] = useState(false);
   return (
     <form action={formAction} className="space-y-3">
       {state?.error && <p className="text-sm text-danger-700">{state.error}</p>}
       {next && <input type="hidden" name="next" value={next} />}
       <input name="email" type="email" placeholder="Email" required className={inputClasses} />
       <input name="password" type="password" placeholder="Password (min 6 characters)" required className={inputClasses} />
-      <Button type="submit" variant="outline" disabled={isPending} className="w-full">
+      <label className="flex items-start gap-2 text-xs text-espresso-500">
+        <input
+          type="checkbox"
+          name="agreeTerms"
+          checked={agreed}
+          onChange={(e) => setAgreed(e.target.checked)}
+          className="mt-0.5 h-4 w-4 shrink-0 rounded border-espresso-300 text-honey-600 focus:ring-honey-400"
+        />
+        <span>
+          I agree to the{' '}
+          <a href="/terms" target="_blank" className="font-semibold text-espresso-700 underline">
+            Terms of use
+          </a>{' '}
+          and{' '}
+          <a href="/privacy" target="_blank" className="font-semibold text-espresso-700 underline">
+            Privacy policy
+          </a>
+          , including not posting abusive content.
+        </span>
+      </label>
+      <Button type="submit" variant="outline" disabled={isPending || !agreed} className="w-full">
         Create account
       </Button>
     </form>

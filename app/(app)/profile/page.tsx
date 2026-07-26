@@ -62,7 +62,7 @@ export default async function ProfilePage() {
       <PushSetup />
 
       <Card>
-        <h2 className="mb-3 font-display font-bold text-espresso-800">My groups & nicknames</h2>
+        <h2 className="mb-3 font-display font-bold text-espresso-800">My groups</h2>
         {(memberships ?? []).length === 0 ? (
           <EmptyState icon="👥" title="You're not in any groups yet" subtitle="Create one or ask a friend for an invite code." />
         ) : (
@@ -92,29 +92,33 @@ export default async function ProfilePage() {
         {(myBets ?? []).length === 0 ? (
           <EmptyState icon="🎲" title="No bets yet" />
         ) : (
-          <ul className="space-y-2">
-            {(myBets ?? []).map((b: any) => {
+          <ul className="overflow-hidden rounded-2xl border border-espresso-100">
+            {(myBets ?? []).map((b: any, i: number) => {
               const market = b.markets;
               const refunded = b.settled_at && market?.outcome === 'void';
               const won = b.settled_at && !refunded && b.payout > 0;
               const lost = b.settled_at && !refunded && b.payout === 0;
               return (
-                <li key={b.id}>
+                <li key={b.id} className={i > 0 ? 'border-t border-espresso-100' : ''}>
                   <Link
                     href={`/groups/${market?.group_id}/markets/${b.market_id}${b.settled_at ? '/reveal' : ''}`}
-                    className="flex items-center justify-between rounded-xl border border-espresso-100 px-3 py-2 text-sm hover:border-honey-300"
+                    className="flex items-center justify-between gap-2.5 px-3 py-2.5 text-sm transition-colors hover:bg-espresso-50"
                   >
-                    <div>
-                      <p className="font-medium text-espresso-800">{market?.title}</p>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-espresso-800">{market?.title}</p>
                       <p className="text-xs text-espresso-400">
-                        {b.amount} on{' '}
+                        {formatTokens(b.amount)} on{' '}
                         <OptionLabel label={(b.option_id ? optionLabelById.get(b.option_id) ?? '' : b.side ?? '').toUpperCase()} />
                       </p>
                     </div>
-                    {!b.settled_at && <span className="text-xs font-semibold text-honey-700">pending</span>}
-                    {refunded && <span className="text-xs font-semibold text-espresso-500">refunded</span>}
-                    {won && <span className="text-xs font-semibold text-honey-600">+{b.payout - b.amount} won</span>}
-                    {lost && <span className="text-xs font-semibold text-espresso-300">−{b.amount} lost</span>}
+                    {!b.settled_at && <span className="shrink-0 text-xs font-semibold text-espresso-400">pending</span>}
+                    {refunded && <span className="shrink-0 text-xs font-semibold text-espresso-400">refunded</span>}
+                    {won && (
+                      <span className="shrink-0 text-xs font-semibold text-success-700">
+                        +{formatTokens(b.payout - b.amount)} won
+                      </span>
+                    )}
+                    {lost && <span className="shrink-0 text-xs font-semibold text-espresso-300">-{formatTokens(b.amount)} lost</span>}
                   </Link>
                 </li>
               );

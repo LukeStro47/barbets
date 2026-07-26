@@ -38,6 +38,9 @@ export default async function HelpPage() {
         <a href="/privacy" className="font-medium text-espresso-700 underline">
           Privacy policy
         </a>
+        <a href="/terms" className="font-medium text-espresso-700 underline">
+          Terms of use
+        </a>
       </div>
     </main>
   );

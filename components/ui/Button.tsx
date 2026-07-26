@@ -29,7 +29,7 @@ export function Button({
   return (
     <button
       className={cn(
-        'font-semibold transition-colors disabled:cursor-not-allowed',
+        'whitespace-nowrap font-semibold transition-colors disabled:cursor-not-allowed',
         variantClasses[variant],
         sizeClasses[size],
         className

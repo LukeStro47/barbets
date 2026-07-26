@@ -534,7 +534,7 @@ function ReviewMarketModal({
             Edit
           </Button>
           <Button type="button" className="flex-1" onClick={onConfirm}>
-            Create market
+            Create
           </Button>
         </div>
       </div>

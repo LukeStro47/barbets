@@ -19,6 +19,7 @@ async function ensureProfileRow(supabase: Awaited<ReturnType<typeof createClient
 }
 
 export async function signUp(_prevState: AuthActionState | null, formData: FormData): Promise<AuthActionState | null> {
+  if (formData.get('agreeTerms') !== 'on') return { error: 'You need to agree to the Terms of use and Privacy policy first.' };
   const email = String(formData.get('email'));
   const password = String(formData.get('password'));
   const next = safeNext(formData.get('next'), '/groups');
