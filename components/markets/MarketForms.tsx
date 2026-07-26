@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createMarket } from '@/lib/actions/markets';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { Modal } from '@/components/ui/Modal';
 import { SubjectPicker, type MemberOption } from '@/components/markets/SubjectPicker';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { TimezoneCaption } from '@/components/ui/TimezoneCaption';
@@ -481,8 +482,8 @@ function ReviewMarketModal({
   const lineIsWholeNumber = line !== null && Number.isInteger(line);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-espresso-950/40 px-5">
-      <div className="w-full max-w-sm space-y-4 rounded-2xl bg-paper-white p-5 shadow-xl">
+    <Modal onClose={onEdit}>
+      <div className="space-y-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">Review your market</p>
           <p className="mt-1 font-display text-lg font-bold text-espresso-900">{title}</p>
@@ -573,6 +574,6 @@ function ReviewMarketModal({
           </Button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
