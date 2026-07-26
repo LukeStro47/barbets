@@ -163,7 +163,13 @@
 /* PageTransition: a subtle directional slide-in on route change, so back/forward
    navigation reads closer to a native push/pop instead of an abrupt content swap.
    Only the incoming content animates (the outgoing page is already gone by the time
-   React re-renders), so this is a settle-in nudge rather than a full two-pane slide. */
+   React re-renders), so this is a settle-in nudge rather than a full two-pane slide.
+   Deliberately no "both"/"forwards" fill mode: holding the final transform (even the
+   identity translateX(0) the "to" keyframe ends on) makes this div a new containing
+   block for every position:fixed descendant instead of the real viewport, which broke
+   BetslipBar's fixed sheet and every centered <Modal> on the page. Without a fill mode,
+   the browser drops the animation's effect the instant it ends and the div reverts to
+   its own (transform-free) styling — no JS cleanup required, and none relied upon. */
 @keyframes page-in-from-right {
   from { transform: translateX(28px); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
@@ -172,8 +178,8 @@
   from { transform: translateX(-28px); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
-.animate-page-in-from-right { animation: page-in-from-right 0.22s cubic-bezier(0.22, 1, 0.36, 1) both; }
-.animate-page-in-from-left { animation: page-in-from-left 0.22s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-page-in-from-right { animation: page-in-from-right 0.22s cubic-bezier(0.22, 1, 0.36, 1); }
+.animate-page-in-from-left { animation: page-in-from-left 0.22s cubic-bezier(0.22, 1, 0.36, 1); }
 @media (prefers-reduced-motion: reduce) {
   .animate-page-in-from-right,
   .animate-page-in-from-left { animation: none; }

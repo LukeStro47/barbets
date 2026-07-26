@@ -7,6 +7,7 @@ import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { proposeResolution } from '@/lib/actions/resolution';
 import { compressImage } from '@/lib/compressImage';
 import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { CameraIcon, ImageIcon } from '@/components/ui/icons';
 import type { Market, MarketOption } from '@/lib/actions/markets';
@@ -26,6 +27,7 @@ export function ProposeResolutionCard({ groupId, market, options }: { groupId: s
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -204,9 +206,39 @@ export function ProposeResolutionCard({ groupId, market, options }: { groupId: s
         </div>
       )}
 
-      <Button disabled={isPending || photoBusy || !proposeOutcome} onClick={submit} className="w-full">
+      <Button disabled={isPending || photoBusy || !proposeOutcome} onClick={() => setConfirming(true)} className="w-full">
         Submit proposal
       </Button>
+
+      {confirming && (
+        <Modal onClose={() => setConfirming(false)}>
+          <p className="font-display text-lg font-bold text-espresso-900">Not a bet, a proposal</p>
+          <p className="text-sm text-espresso-600">
+            You're proposing <OptionLabel label={(choiceLabels.find((c) => c.value === proposeOutcome)?.label ?? '').toUpperCase()} /> is
+            what actually happened, not placing a bet.{' '}
+            {market.status === 'open'
+              ? 'Since betting is still open, this locks it for everyone right now.'
+              : 'Betting is already closed, so this just starts the clock on finalizing it.'}{' '}
+            Other members get 8 hours to challenge it before it's final.
+          </p>
+          <div className="flex gap-2 pt-1">
+            <Button type="button" variant="outline" className="flex-1" onClick={() => setConfirming(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="flex-1"
+              disabled={isPending}
+              onClick={() => {
+                setConfirming(false);
+                submit();
+              }}
+            >
+              Confirm
+            </Button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
