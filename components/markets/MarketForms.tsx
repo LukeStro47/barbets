@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createMarket } from '@/lib/actions/markets';
 import { Button } from '@/components/ui/Button';
@@ -193,6 +193,14 @@ export function CreateMarketForm({
   const [defaultCloseTime] = useState(() => toLocalDatetimeInputValue(new Date(Date.now() + 30 * 60_000)));
   const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
 
+  // A multiple choice market can only be "about" someone one way at a time: an
+  // @mentioned option, or this general About field, never both. Once an option
+  // names its own subject, any general subjects picked earlier no longer apply.
+  const hasOptionSubject = marketType === 'multiple_choice' && options.some((o) => o.label.trim().startsWith('@'));
+  useEffect(() => {
+    if (hasOptionSubject) setSubjects([]);
+  }, [hasOptionSubject]);
+
   function submitMarket(formData: FormData) {
     const closesAtLocal = String(formData.get('closesAt'));
     startTransition(async () => {
@@ -204,7 +212,7 @@ export function CreateMarketForm({
         closesAt: new Date(closesAtLocal).toISOString(),
         line: marketType === 'over_under' ? Number(formData.get('line')) : null,
         unit: marketType === 'over_under' ? unit.trim() || null : null,
-        subjectUserIds: marketType === 'multiple_choice' ? [] : subjects.map((s) => s.userId),
+        subjectUserIds: hasOptionSubject ? [] : subjects.map((s) => s.userId),
         options: marketType === 'multiple_choice' ? options.map((o) => o.label.trim()) : undefined,
       });
       if (result.error) {
@@ -397,10 +405,21 @@ export function CreateMarketForm({
       </Card>
 
       {marketType === 'multiple_choice' ? (
-        <Card>
-          <h3 className="mb-2 font-semibold text-espresso-800">Options</h3>
-          <MultipleChoiceOptionsEditor members={members} options={options} setOptions={setOptions} />
-        </Card>
+        <>
+          <Card>
+            <h3 className="mb-2 font-semibold text-espresso-800">Options</h3>
+            <MultipleChoiceOptionsEditor members={members} options={options} setOptions={setOptions} />
+          </Card>
+          {!hasOptionSubject && (
+            <Card>
+              <h3 className="mb-2 font-semibold text-espresso-800">About (optional)</h3>
+              <p className="mb-2 text-xs text-espresso-400">
+                None of your options name a member, but this market can still be hidden from someone.
+              </p>
+              <SubjectPicker members={members} selected={subjects} onChange={setSubjects} totalMemberCount={totalMemberCount} />
+            </Card>
+          )}
+        </>
       ) : (
         <Card>
           <h3 className="mb-2 font-semibold text-espresso-800">About (optional)</h3>
@@ -497,16 +516,32 @@ function ReviewMarketModal({
           </div>
 
           {marketType === 'multiple_choice' ? (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">Options</p>
-              <ul className="mt-1 space-y-1">
-                {options.map((o) => (
-                  <li key={o.key} className="text-espresso-700">
-                    <OptionLabel label={o.label.trim()} />
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">Options</p>
+                <ul className="mt-1 space-y-1">
+                  {options.map((o) => (
+                    <li key={o.key} className="text-espresso-700">
+                      <OptionLabel label={o.label.trim()} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              {subjects.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">About</p>
+                  <p className="text-espresso-700">
+                    Hidden from{' '}
+                    {subjects.map((s, i) => (
+                      <span key={s.userId}>
+                        {i > 0 && ', '}
+                        <Mention nickname={s.nickname} />
+                      </span>
+                    ))}
+                  </p>
+                </div>
+              )}
+            </>
           ) : (
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">About</p>
