@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { Logo } from '@/components/ui/Logo';
 import { Card } from '@/components/ui/Card';
@@ -96,6 +97,18 @@ export default async function HowItWorksPage() {
             </Card>
           ))}
         </div>
+      </div>
+
+      <div className="flex flex-col gap-2 text-sm">
+        <Link href="/help" className="font-medium text-espresso-700 underline">
+          Help
+        </Link>
+        <Link href="/terms" className="font-medium text-espresso-700 underline">
+          Terms of use
+        </Link>
+        <Link href="/privacy" className="font-medium text-espresso-700 underline">
+          Privacy policy
+        </Link>
       </div>
     </main>
   );

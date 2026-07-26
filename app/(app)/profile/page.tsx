@@ -127,6 +127,21 @@ export default async function ProfilePage() {
         )}
       </Card>
 
+      <div className="flex flex-col gap-2 text-sm">
+        <Link href="/how-it-works" className="font-medium text-espresso-700 underline">
+          How Barbets works
+        </Link>
+        <Link href="/help" className="font-medium text-espresso-700 underline">
+          Help
+        </Link>
+        <Link href="/terms" className="font-medium text-espresso-700 underline">
+          Terms of use
+        </Link>
+        <Link href="/privacy" className="font-medium text-espresso-700 underline">
+          Privacy policy
+        </Link>
+      </div>
+
       <form action={signOut}>
         <Button type="submit" className="w-full">
           Sign out
