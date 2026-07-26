@@ -38,7 +38,14 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div key={pathname} className={transitionClass ?? undefined}>
+    // The animation's "both" fill mode holds its final `transform:
+    // translateX(0)` on this div forever once it finishes — and any
+    // computed transform, even a no-op one, makes this div the containing
+    // block for every position:fixed descendant instead of the real
+    // viewport (this broke BetslipBar's fixed bottom sheet on iOS PWA).
+    // Clearing the class once the animation ends drops the transform and
+    // restores normal fixed-positioning for the rest of the visit.
+    <div key={pathname} className={transitionClass ?? undefined} onAnimationEnd={() => setTransitionClass(null)}>
       {children}
     </div>
   );
