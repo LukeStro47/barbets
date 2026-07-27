@@ -51,9 +51,23 @@ interface Props {
   currentUserId: string;
   /** Populated only for multiple_choice markets, in sort_order. */
   options: MarketOption[] | null;
+  /** group_settings.resolution_window_hours — shared by the challenge window (propose -> dispute) and the vote window (dispute -> finalize). */
+  resolutionWindowHours: number;
 }
 
-export function MarketActions({ groupId, market, isCreator, isOwner, ownerIsSubject, proposal, challenge, myVote, currentUserId, options }: Props) {
+export function MarketActions({
+  groupId,
+  market,
+  isCreator,
+  isOwner,
+  ownerIsSubject,
+  proposal,
+  challenge,
+  myVote,
+  currentUserId,
+  options,
+  resolutionWindowHours,
+}: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -64,8 +78,9 @@ export function MarketActions({ groupId, market, isCreator, isOwner, ownerIsSubj
   const [confirmingCreatorVoid, setConfirmingCreatorVoid] = useState(false);
   const [confirmingChallenge, setConfirmingChallenge] = useState(false);
 
-  const challengeWindowElapsed = useElapsed(proposal ? new Date(new Date(proposal.proposed_at).getTime() + 8 * 3_600_000).toISOString() : null);
-  const voteWindowElapsed = useElapsed(challenge ? new Date(new Date(challenge.created_at).getTime() + 8 * 3_600_000).toISOString() : null);
+  const resolutionWindowMs = resolutionWindowHours * 3_600_000;
+  const challengeWindowElapsed = useElapsed(proposal ? new Date(new Date(proposal.proposed_at).getTime() + resolutionWindowMs).toISOString() : null);
+  const voteWindowElapsed = useElapsed(challenge ? new Date(new Date(challenge.created_at).getTime() + resolutionWindowMs).toISOString() : null);
 
   function run(fn: () => Promise<ActionResult<unknown>>) {
     setError(null);
@@ -132,7 +147,7 @@ export function MarketActions({ groupId, market, isCreator, isOwner, ownerIsSubj
       {market.status === 'proposed' && proposal && (
         <Card className="space-y-3">
           <p className="text-sm text-espresso-600">
-            <CountdownTimer target={new Date(new Date(proposal.proposed_at).getTime() + 8 * 3_600_000).toISOString()} prefix="Challenge window closes in" />
+            <CountdownTimer target={new Date(new Date(proposal.proposed_at).getTime() + resolutionWindowMs).toISOString()} prefix="Challenge window closes in" />
           </p>
           {iAmProposer ? (
             <p className="text-xs text-espresso-400">You proposed this outcome, so you can't challenge it yourself.</p>
@@ -182,7 +197,7 @@ export function MarketActions({ groupId, market, isCreator, isOwner, ownerIsSubj
               Ballots reveal once voting closes, early if everyone's voted. You can change your vote until then.
             </p>
             <p className="text-sm text-espresso-600">
-              <CountdownTimer target={new Date(new Date(challenge.created_at).getTime() + 8 * 3_600_000).toISOString()} prefix="Voting closes in" />
+              <CountdownTimer target={new Date(new Date(challenge.created_at).getTime() + resolutionWindowMs).toISOString()} prefix="Voting closes in" />
             </p>
           </div>
           <div className={isMultipleChoice ? 'flex flex-col gap-2' : 'flex gap-2'}>

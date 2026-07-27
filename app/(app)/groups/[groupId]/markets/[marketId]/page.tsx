@@ -56,7 +56,7 @@ export default async function MarketDetailPage({
         .select('id, requester_id, question, created_at')
         .eq('market_id', marketId)
         .order('created_at'),
-      supabase.from('group_settings').select('allow_hedged_bets, seed_amount').eq('group_id', groupId).single(),
+      supabase.from('group_settings').select('allow_hedged_bets, seed_amount, resolution_window_hours').eq('group_id', groupId).single(),
     ]);
   const isOwner = group?.owner_id === user?.id;
 
@@ -205,6 +205,23 @@ export default async function MarketDetailPage({
       {marketRow.status !== 'pending_sponsor' && <MyBetsCard bets={myBets} optionLabelById={optionLabelById} />}
 
       <Card className="relative space-y-3">
+        {proposal && (
+          <div className="relative rounded-xl border-2 border-honey-300 bg-honey-50 p-3.5">
+            {proposal.photo_path && (
+              <div className="absolute top-2.5 right-2.5">
+                <ResolutionProofButton marketId={marketId} variant="icon" />
+              </div>
+            )}
+            <p className={`text-xs font-bold uppercase tracking-wide text-honey-700 ${proposal.photo_path ? 'pr-8' : ''}`}>
+              Proposed outcome
+            </p>
+            <p className="mt-0.5 text-lg font-extrabold text-honey-900">
+              <OptionLabel label={(proposedOptionLabel ?? proposal.proposed_outcome ?? '').toUpperCase()} />
+            </p>
+            {proposal.justification && <p className="mt-1.5 text-sm text-espresso-600">{proposal.justification}</p>}
+          </div>
+        )}
+
         <div className="space-y-2">
           <div className="pr-8">
             <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">Resolution criteria</p>
@@ -276,23 +293,6 @@ export default async function MarketDetailPage({
           <p className="text-xs font-semibold text-espresso-400">Closed early by proposal</p>
         )}
 
-        {proposal && (
-          <div className="relative rounded-xl border-2 border-honey-300 bg-honey-50 p-3.5">
-            {proposal.photo_path && (
-              <div className="absolute top-2.5 right-2.5">
-                <ResolutionProofButton marketId={marketId} variant="icon" />
-              </div>
-            )}
-            <p className={`text-xs font-bold uppercase tracking-wide text-honey-700 ${proposal.photo_path ? 'pr-8' : ''}`}>
-              Proposed outcome
-            </p>
-            <p className="mt-0.5 text-lg font-extrabold text-honey-900">
-              <OptionLabel label={(proposedOptionLabel ?? proposal.proposed_outcome ?? '').toUpperCase()} />
-            </p>
-            {proposal.justification && <p className="mt-1.5 text-sm text-espresso-600">{proposal.justification}</p>}
-          </div>
-        )}
-
         {!isMultipleChoice && oddsA && oddsB && (
           <OddsBar left={{ label: sideA.toUpperCase(), percent: oddsA.pool_percent }} right={{ label: sideB.toUpperCase(), percent: oddsB.pool_percent }} />
         )}
@@ -318,6 +318,7 @@ export default async function MarketDetailPage({
         myVote={myVote}
         currentUserId={user!.id}
         options={marketOptions}
+        resolutionWindowHours={groupSettings?.resolution_window_hours ?? 8}
       />
 
       {marketRow.status === 'open' && (
