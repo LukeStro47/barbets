@@ -4,8 +4,8 @@
 // an already-placed bet would be actively misleading, so we'd rather show
 // nothing offline than something wrong), plus push notification handling.
 
-const CACHE_NAME = 'barbets-shell-v5';
-const SHELL_URLS = ['/', '/icon-192.png', '/icon-512.png', '/barbets-lockup-tall.png', '/badge-mono.png'];
+const CACHE_NAME = 'barbets-shell-v6';
+const SHELL_URLS = ['/', '/offline', '/icon-192.png', '/icon-512.png', '/barbets-lockup-tall.png', '/badge-mono.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -47,7 +47,16 @@ self.addEventListener('fetch', (event) => {
         }
         return response;
       })
-      .catch(() => caches.match(event.request).then((cached) => cached || caches.match('/')))
+      // A failed page navigation (offline, DNS down, etc.) should land on the dedicated offline
+      // page, not a stale snapshot of the marketing landing page from install time, which for a
+      // logged-in visitor makes no sense and reads as a broken app rather than "you're offline."
+      // Non-navigation requests (data/RSC fetches, images) just fail, since there's nothing sane
+      // to substitute for them.
+      .catch(() =>
+        caches
+          .match(event.request)
+          .then((cached) => cached || (event.request.mode === 'navigate' ? caches.match('/offline') : undefined))
+      )
   );
 });
 

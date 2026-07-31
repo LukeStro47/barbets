@@ -7,6 +7,7 @@ import { SeasonBanner } from '@/components/groups/SeasonBanner';
 import { GroupDeletionBanner } from '@/components/groups/GroupDeletionBanner';
 import { NewMarketButton } from '@/components/groups/NewMarketButton';
 import { GroupMarketSections } from '@/components/groups/GroupMarketSections';
+import { SaveBalanceSnapshot } from '@/components/groups/SaveBalanceSnapshot';
 import { OpenSeasonBettingButton } from '@/components/groups/IntermissionActions';
 import { Mention } from '@/components/ui/Mention';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
@@ -183,6 +184,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
 
   return (
     <main className="mx-auto max-w-lg px-5 py-[22px]">
+      <SaveBalanceSnapshot groupId={groupId} groupName={group!.name} balance={membership?.balance ?? 0} />
       <div className="flex flex-col gap-1.5">
         <Link href="/groups?all=1" className="text-sm font-medium text-espresso-400 hover:text-espresso-600">
           ← All groups
