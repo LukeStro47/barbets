@@ -4,8 +4,15 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Mention } from '@/components/ui/Mention';
-import { formatTokens } from '@/lib/formatNumber';
+import { formatTokens, formatPercent } from '@/lib/formatNumber';
 import { titlesByUser, type GroupTitleRow } from '@/lib/titles';
+
+/** Mirrors The Oracle/Ice Cold's own win-rate definition (see supabase/migrations's
+    _recompute_group_titles): correct means the bet's side/option matches what the market
+    actually resolved to, not whether it profited — a market can pay out a full refund
+    (zero-winner-pool) to someone who still called it right. Same 5-bet floor those titles use,
+    so a single lucky or unlucky bet can't put someone at a misleading 100%/0%. */
+const MIN_SETTLED_BETS_FOR_ACCURACY = 5;
 
 function medal(rank: number): string {
   return rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : `${rank + 1}.`;
@@ -40,6 +47,26 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ gr
       allTime.set(userId, (allTime.get(userId) ?? 0) + row.amount);
     }
   }
+
+  // Void markets have no real outcome to be right or wrong about, so they're excluded entirely
+  // (never 'resolved' with a null outcome — see ARCHITECTURE.md's status/outcome pairing).
+  const { data: settledBetRows } = await supabase
+    .from('bets')
+    .select('user_id, side, option_id, markets!inner(group_id, status, outcome, outcome_option_id)')
+    .eq('markets.group_id', groupId)
+    .eq('markets.status', 'resolved');
+  const accuracyByUser = new Map<string, { correct: number; total: number }>();
+  for (const row of (settledBetRows ?? []) as any[]) {
+    const stat = accuracyByUser.get(row.user_id) ?? { correct: 0, total: 0 };
+    stat.total += 1;
+    const correct = row.option_id ? row.option_id === row.markets.outcome_option_id : row.side === row.markets.outcome;
+    if (correct) stat.correct += 1;
+    accuracyByUser.set(row.user_id, stat);
+  }
+  const accuracyRanking = [...accuracyByUser.entries()]
+    .filter(([, s]) => s.total >= MIN_SETTLED_BETS_FOR_ACCURACY)
+    .map(([userId, s]) => ({ userId, percent: (s.correct / s.total) * 100, total: s.total }))
+    .sort((a, b) => b.percent - a.percent || b.total - a.total);
 
   return (
     <main className="mx-auto max-w-lg space-y-6 px-5 py-8">
@@ -102,6 +129,30 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ gr
                 </div>
               );
             })}
+        </Card>
+      )}
+
+      {accuracyRanking.length > 0 && (
+        <Card className="space-y-1">
+          <h2 className="mb-0.5 font-display font-bold text-espresso-800">Accuracy</h2>
+          <p className="mb-2 text-xs text-espresso-400">
+            How often a bet actually called it right, not how much it won. Min. {MIN_SETTLED_BETS_FOR_ACCURACY} settled bets.
+          </p>
+          {accuracyRanking.map(({ userId, percent, total }, i) => {
+            const m: any = members?.find((x: any) => x.user_id === userId);
+            return (
+              <div key={userId} className="flex items-center justify-between py-2">
+                <div className="flex items-center gap-3">
+                  <span className="w-6 text-center">{medal(i)}</span>
+                  <Mention nickname={m?.nickname ?? ''} titles={badges.get(userId)} className="font-semibold text-espresso-800" />
+                </div>
+                <span className="text-right">
+                  <span className="font-display font-bold tabular-nums text-espresso-900">{formatPercent(percent)}%</span>
+                  <span className="ml-1.5 text-xs text-espresso-400">({total})</span>
+                </span>
+              </div>
+            );
+          })}
         </Card>
       )}
     </main>

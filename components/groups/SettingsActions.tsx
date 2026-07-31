@@ -50,6 +50,7 @@ export function EditSettingsForm({
   const [endorserPayoutPct, setEndorserPayoutPct] = useState(settings.endorser_payout_pct);
   const [allowHedgedBets, setAllowHedgedBets] = useState(settings.allow_hedged_bets);
   const [resolutionWindowHours, setResolutionWindowHours] = useState(settings.resolution_window_hours);
+  const [requireEndorsement, setRequireEndorsement] = useState(settings.require_endorsement);
 
   function handleSubmit(formData: FormData) {
     setError(null);
@@ -67,6 +68,7 @@ export function EditSettingsForm({
         endorserPayoutPct,
         allowHedgedBets,
         resolutionWindowHours,
+        requireEndorsement,
       });
       if (result.error) {
         setError(result.error);
@@ -142,6 +144,18 @@ export function EditSettingsForm({
           </div>
         </Modal>
       )}
+
+      <div className="flex items-center justify-between border-t border-espresso-100 pt-4">
+        <div>
+          <p className="text-sm font-semibold text-espresso-700">Require endorsement</p>
+          <p className="text-xs text-espresso-400">
+            {requireEndorsement
+              ? "A second member has to endorse a market before it opens for betting. Turn this off for a small, high-trust group where waiting on someone else to endorse is just friction, not a real check on anyone."
+              : 'Markets open for betting the moment they\'re created, no second person needed.'}
+          </p>
+        </div>
+        <Switch checked={requireEndorsement} onChange={() => setRequireEndorsement((v) => !v)} />
+      </div>
 
       <div className="space-y-1.5 border-t border-espresso-100 pt-4">
         <label className="block text-sm font-semibold text-espresso-700">Token allocation</label>
@@ -365,6 +379,10 @@ export function ReadOnlySettings({
       <div className={readOnlyRowClasses}>
         <span className="text-espresso-500">Hedging</span>
         <span className="font-semibold text-espresso-800">{settings.allow_hedged_bets ? 'Allowed' : 'One side only'}</span>
+      </div>
+      <div className={readOnlyRowClasses}>
+        <span className="text-espresso-500">Require endorsement</span>
+        <span className="font-semibold text-espresso-800">{settings.require_endorsement ? 'Yes' : 'No, markets open immediately'}</span>
       </div>
       <div className={readOnlyRowClasses}>
         <span className="text-espresso-500">Challenge/resolution window</span>

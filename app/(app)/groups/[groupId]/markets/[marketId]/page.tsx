@@ -12,6 +12,7 @@ import { OddsBar, OddsBarMulti } from '@/components/markets/OddsBar';
 import { MarketActions } from '@/components/markets/MarketActions';
 import { ClarificationRequests, type Clarification } from '@/components/markets/ClarificationRequests';
 import { ProposeResolutionCard } from '@/components/markets/ProposeResolutionCard';
+import { MarketTypeBadge } from '@/components/markets/MarketTypeBadge';
 import { ResolutionProofButton } from '@/components/markets/ResolutionProofButton';
 import { BetslipBar } from '@/components/markets/BetslipBar';
 import { MyBetsCard } from '@/components/markets/MyBetsCard';
@@ -200,6 +201,8 @@ export default async function MarketDetailPage({
         }
       />
 
+      <MarketTypeBadge marketType={marketRow.market_type} />
+
       {statTiles.length > 0 && <StatStrip>{statTiles}</StatStrip>}
 
       {marketRow.status !== 'pending_sponsor' && <MyBetsCard bets={myBets} optionLabelById={optionLabelById} />}
@@ -251,6 +254,11 @@ export default async function MarketDetailPage({
               </span>
             )}
           </div>
+
+          <p className="text-xs text-espresso-400">
+            The group owner can void this market at any time and refund every stake. If the owner is hidden as a
+            subject here, the creator can void it instead.
+          </p>
         </div>
 
         <ClarificationRequests
@@ -301,10 +309,16 @@ export default async function MarketDetailPage({
           <OddsBarMulti options={optionOdds.map((o) => ({ id: o.option_id, label: o.label, percent: o.pool_percent }))} />
         )}
 
-        {(marketRow.status === 'open' || marketRow.status === 'closed') && (
-          <ProposeResolutionCard groupId={groupId} market={marketRow} options={marketOptions} />
-        )}
       </Card>
+
+      {(marketRow.status === 'open' || marketRow.status === 'closed') && (
+        <ProposeResolutionCard
+          groupId={groupId}
+          market={marketRow}
+          options={marketOptions}
+          resolutionWindowHours={groupSettings?.resolution_window_hours ?? 8}
+        />
+      )}
 
       <MarketActions
         groupId={groupId}

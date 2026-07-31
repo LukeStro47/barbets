@@ -127,10 +127,13 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
       {isOwner && activeSeason && (
         <Card>
           <h2 className="mb-2 font-semibold text-espresso-800">Season controls</h2>
-          <div className="mb-3 flex items-center gap-2">
-            <span className="text-sm font-semibold text-espresso-800">{activeSeason.name ?? `Season ${activeSeason.number}`}</span>
-            <SeasonNameEditor groupId={groupId} seasonId={activeSeason.id} currentName={activeSeason.name} />
-          </div>
+          <SeasonNameEditor
+            groupId={groupId}
+            seasonId={activeSeason.id}
+            currentName={activeSeason.name}
+            seasonNumber={activeSeason.number}
+            className="mb-3"
+          />
           <p className="mb-3 text-sm text-espresso-500">
             Voids and refunds any market that hasn't had a resolution proposed yet. A market already awaiting a vote
             or challenge gets up to {(settings as GroupSettings)?.resolution_window_hours ?? 8} more hours to finish before

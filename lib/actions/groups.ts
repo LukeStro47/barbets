@@ -92,6 +92,8 @@ export interface GroupSettings {
   allow_hedged_bets: boolean;
   /** Shared by the challenge window (propose -> dispute) and the vote window (dispute -> finalize), in half-hour steps between 0.5 and 10. */
   resolution_window_hours: number;
+  /** Default true. When false, create_market() opens a market directly instead of routing it through pending_sponsor. */
+  require_endorsement: boolean;
 }
 
 export async function updateGroupSettings(
@@ -109,6 +111,7 @@ export async function updateGroupSettings(
     endorserPayoutPct: number;
     allowHedgedBets: boolean;
     resolutionWindowHours: number;
+    requireEndorsement: boolean;
   }
 ): Promise<ActionResult<GroupSettings>> {
   const supabase = await createClient();
@@ -127,6 +130,7 @@ export async function updateGroupSettings(
       p_allow_hedged_bets: input.allowHedgedBets,
       p_season_custom_ends_at: input.seasonCustomEndsAt ?? null,
       p_resolution_window_hours: input.resolutionWindowHours,
+      p_require_endorsement: input.requireEndorsement,
     })
   );
   if (result.error) return result;

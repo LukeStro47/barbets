@@ -70,7 +70,9 @@ export default async function IntermissionPage({ params }: { params: Promise<{ g
         </p>
       )}
 
-      {isOwner && <SeasonNameEditor groupId={groupId} seasonId={season!.id} currentName={season!.name} />}
+      {isOwner && (
+        <SeasonNameEditor groupId={groupId} seasonId={season!.id} currentName={season!.name} seasonNumber={season!.number} />
+      )}
 
       {lastResult?.snapshot.champion && (
         <div className="relative rounded-[28px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 px-6 pt-7 pb-6 text-center text-paper-white shadow-lg shadow-espresso-950/25">

@@ -12,7 +12,7 @@ export default async function NewMarketPage({ params }: { params: Promise<{ grou
 
   const [{ data: members }, { data: settings }] = await Promise.all([
     supabase.from('memberships').select('user_id, nickname').eq('group_id', groupId).eq('status', 'active'),
-    supabase.from('group_settings').select('timezone').eq('group_id', groupId).single(),
+    supabase.from('group_settings').select('timezone, require_endorsement').eq('group_id', groupId).single(),
   ]);
 
   // A market's creator can never be its own subject, so they're not a valid @mention target here.
@@ -28,6 +28,7 @@ export default async function NewMarketPage({ params }: { params: Promise<{ grou
         members={memberOptions}
         totalMemberCount={(members ?? []).length}
         timezone={settings?.timezone ?? 'UTC'}
+        requireEndorsement={settings?.require_endorsement ?? true}
       />
     </main>
   );

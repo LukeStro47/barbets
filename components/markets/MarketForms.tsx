@@ -10,12 +10,15 @@ import { SubjectPicker, type MemberOption } from '@/components/markets/SubjectPi
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { TimezoneCaption } from '@/components/ui/TimezoneCaption';
 import { Mention } from '@/components/ui/Mention';
+import { MARKET_TYPE_ICON, MARKET_TYPE_LABEL, MARKET_TYPE_DESCRIPTION } from '@/lib/marketType';
 import {
   OVER_UNDER_UNIT_PRESETS,
   OVER_UNDER_CURRENCY_ALTERNATES,
   OVER_UNDER_UNIT_MAX_LENGTH,
   OVER_UNDER_UNIT_INLINE_MAX_LENGTH,
   formatLine,
+  parseLineInput,
+  type LineFormat,
 } from '@/lib/units';
 
 const inputClasses =
@@ -163,11 +166,13 @@ export function CreateMarketForm({
   members,
   totalMemberCount,
   timezone,
+  requireEndorsement,
 }: {
   groupId: string;
   members: MemberOption[];
   totalMemberCount: number;
   timezone: string;
+  requireEndorsement: boolean;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -177,6 +182,7 @@ export function CreateMarketForm({
   const [options, setOptions] = useState<OptionDraft[]>(() => [newOption(), newOption()]);
   const [unit, setUnit] = useState('');
   const [otherUnit, setOtherUnit] = useState(false);
+  const [lineFormat, setLineFormat] = useState<LineFormat>('number');
   const unitIsLong = unit.trim().length > OVER_UNDER_UNIT_INLINE_MAX_LENGTH;
   const [showCurrencyAlternates, setShowCurrencyAlternates] = useState(false);
   const currencyPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -191,7 +197,7 @@ export function CreateMarketForm({
     }
   }
   const [minCloseTime] = useState(() => toLocalDatetimeInputValue(new Date(Date.now() + 60_000)));
-  const [defaultCloseTime] = useState(() => toLocalDatetimeInputValue(new Date(Date.now() + 30 * 60_000)));
+  const [defaultCloseTime] = useState(() => toLocalDatetimeInputValue(new Date(Date.now() + 60 * 60_000)));
   const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
 
   // A multiple choice market can only be "about" someone one way at a time: an
@@ -211,8 +217,8 @@ export function CreateMarketForm({
         description: String(formData.get('description')),
         marketType,
         closesAt: new Date(closesAtLocal).toISOString(),
-        line: marketType === 'over_under' ? Number(formData.get('line')) : null,
-        unit: marketType === 'over_under' ? unit.trim() || null : null,
+        line: marketType === 'over_under' ? parseLineInput(String(formData.get('line')), lineFormat) : null,
+        unit: marketType === 'over_under' ? (lineFormat === 'number' ? unit.trim() || null : lineFormat) : null,
         subjectUserIds: hasOptionSubject ? [] : subjects.map((s) => s.userId),
         options: marketType === 'multiple_choice' ? options.map((o) => o.label.trim()) : undefined,
       });
@@ -248,22 +254,45 @@ export function CreateMarketForm({
     <form onSubmit={handleCreate} className="space-y-5">
       {error && <p className="text-sm text-danger-700">{error}</p>}
 
-      <Card className="space-y-3">
-        <div className="flex flex-wrap gap-2">
+      <div className="space-y-2">
+        <h2 className="font-display text-lg font-bold text-espresso-900">What kind of market?</h2>
+        <div className="space-y-2">
           {(['yes_no', 'over_under', 'multiple_choice'] as const).map((t) => (
             <button
               type="button"
               key={t}
               onClick={() => setMarketType(t)}
-              className={`rounded-full border px-4 py-1.5 text-sm font-semibold ${
-                marketType === t ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-600'
+              className={`flex w-full items-center gap-3.5 rounded-2xl border-2 p-4 text-left transition-colors ${
+                marketType === t ? 'border-honey-500 bg-honey-50' : 'border-espresso-100 bg-paper-white hover:border-espresso-200'
               }`}
             >
-              {t === 'yes_no' ? 'YES / NO' : t === 'over_under' ? 'OVER / UNDER' : 'MULTIPLE CHOICE'}
+              <span aria-hidden className={`text-2xl ${marketType === t ? 'text-honey-600' : 'text-espresso-300'}`}>
+                {MARKET_TYPE_ICON[t]}
+              </span>
+              <span className="min-w-0">
+                <span
+                  className={`block font-display text-base font-bold tracking-wide uppercase ${
+                    marketType === t ? 'text-honey-800' : 'text-espresso-900'
+                  }`}
+                >
+                  {MARKET_TYPE_LABEL[t]}
+                </span>
+                <span className="block text-sm text-espresso-500">{MARKET_TYPE_DESCRIPTION[t]}</span>
+              </span>
+              <span
+                aria-hidden
+                className={`ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                  marketType === t ? 'border-honey-500 bg-honey-500 text-paper-white' : 'border-espresso-200'
+                }`}
+              >
+                {marketType === t && '✓'}
+              </span>
             </button>
           ))}
         </div>
+      </div>
 
+      <Card className="space-y-3">
         <div className="space-y-1.5">
           <label className="block text-sm font-semibold text-espresso-700">Market title</label>
           <textarea
@@ -276,7 +305,7 @@ export function CreateMarketForm({
                   : 'Will Jake finish the marathon?'
             }
             required
-            rows={1}
+            rows={2}
             onInput={(e) => {
               const el = e.currentTarget;
               el.style.height = 'auto';
@@ -285,7 +314,7 @@ export function CreateMarketForm({
             onKeyDown={(e) => {
               if (e.key === 'Enter') e.preventDefault();
             }}
-            className={`${inputClasses} resize-none overflow-hidden`}
+            className={`${inputClasses} min-h-[4.5rem] resize-none overflow-hidden`}
           />
         </div>
 
@@ -308,82 +337,103 @@ export function CreateMarketForm({
             <div className="space-y-1.5">
               <label className="block text-sm font-semibold text-espresso-700">The line</label>
               <div className="flex flex-wrap gap-2">
-                <input
-                  name="line"
-                  type="number"
-                  step="0.5"
-                  placeholder="5.5 (use a half to avoid a push)"
-                  required
-                  className={`${inputClasses} ${otherUnit && !unitIsLong ? 'min-w-0 flex-1' : 'w-full basis-full'}`}
-                />
-                {otherUnit && (
-                  <input
-                    value={unit}
-                    onChange={(e) => setUnit(e.target.value)}
-                    maxLength={OVER_UNDER_UNIT_MAX_LENGTH}
-                    placeholder="Unit"
-                    className={`${inputClasses} ${unitIsLong ? 'basis-full' : 'w-24 shrink-0'}`}
-                  />
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="block text-sm font-semibold text-espresso-700">Unit (optional)</label>
-              <div className="flex flex-wrap gap-2">
-                {OVER_UNDER_UNIT_PRESETS.map((preset) => (
+                {(['number', 'date', 'time'] as const).map((f) => (
                   <button
                     type="button"
-                    key={preset}
-                    onPointerDown={preset === '$' ? startCurrencyPress : undefined}
-                    onPointerUp={preset === '$' ? endCurrencyPress : undefined}
-                    onPointerLeave={preset === '$' ? endCurrencyPress : undefined}
-                    onClick={() => {
-                      setUnit(preset);
-                      setOtherUnit(false);
-                    }}
-                    className={`rounded-full border px-3 py-1 text-sm font-semibold ${
-                      unit === preset && !otherUnit
-                        ? 'border-honey-500 bg-honey-50 text-honey-800'
-                        : 'border-espresso-200 text-espresso-600'
+                    key={f}
+                    onClick={() => setLineFormat(f)}
+                    className={`rounded-full border px-3 py-1 text-sm font-semibold capitalize ${
+                      lineFormat === f ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-600'
                     }`}
                   >
-                    {preset}
+                    {f}
                   </button>
                 ))}
-                {showCurrencyAlternates &&
-                  OVER_UNDER_CURRENCY_ALTERNATES.map((alt) => (
+              </div>
+
+              {lineFormat === 'number' ? (
+                <div className="flex flex-wrap gap-2">
+                  <input
+                    name="line"
+                    type="number"
+                    step="0.5"
+                    placeholder="5.5 (use a half to avoid a push)"
+                    required
+                    className={`${inputClasses} ${otherUnit && !unitIsLong ? 'min-w-0 flex-1' : 'w-full basis-full'}`}
+                  />
+                  {otherUnit && (
+                    <input
+                      value={unit}
+                      onChange={(e) => setUnit(e.target.value)}
+                      maxLength={OVER_UNDER_UNIT_MAX_LENGTH}
+                      placeholder="Unit"
+                      className={`${inputClasses} ${unitIsLong ? 'basis-full' : 'w-24 shrink-0'}`}
+                    />
+                  )}
+                </div>
+              ) : (
+                <input name="line" type={lineFormat === 'date' ? 'date' : 'time'} required className={inputClasses} />
+              )}
+            </div>
+
+            {lineFormat === 'number' && (
+              <div className="space-y-1.5">
+                <label className="block text-sm font-semibold text-espresso-700">Unit (optional)</label>
+                <div className="flex flex-wrap gap-2">
+                  {OVER_UNDER_UNIT_PRESETS.map((preset) => (
                     <button
                       type="button"
-                      key={alt}
+                      key={preset}
+                      onPointerDown={preset === '$' ? startCurrencyPress : undefined}
+                      onPointerUp={preset === '$' ? endCurrencyPress : undefined}
+                      onPointerLeave={preset === '$' ? endCurrencyPress : undefined}
                       onClick={() => {
-                        setUnit(alt);
+                        setUnit(preset);
                         setOtherUnit(false);
                       }}
                       className={`rounded-full border px-3 py-1 text-sm font-semibold ${
-                        unit === alt && !otherUnit
+                        unit === preset && !otherUnit
                           ? 'border-honey-500 bg-honey-50 text-honey-800'
                           : 'border-espresso-200 text-espresso-600'
                       }`}
                     >
-                      {alt}
+                      {preset}
                     </button>
                   ))}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOtherUnit(true);
-                    setUnit('');
-                  }}
-                  className={`rounded-full border px-3 py-1 text-sm font-semibold ${
-                    otherUnit ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-600'
-                  }`}
-                >
-                  Custom
-                </button>
+                  {showCurrencyAlternates &&
+                    OVER_UNDER_CURRENCY_ALTERNATES.map((alt) => (
+                      <button
+                        type="button"
+                        key={alt}
+                        onClick={() => {
+                          setUnit(alt);
+                          setOtherUnit(false);
+                        }}
+                        className={`rounded-full border px-3 py-1 text-sm font-semibold ${
+                          unit === alt && !otherUnit
+                            ? 'border-honey-500 bg-honey-50 text-honey-800'
+                            : 'border-espresso-200 text-espresso-600'
+                        }`}
+                      >
+                        {alt}
+                      </button>
+                    ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOtherUnit(true);
+                      setUnit('');
+                    }}
+                    className={`rounded-full border px-3 py-1 text-sm font-semibold ${
+                      otherUnit ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-600'
+                    }`}
+                  >
+                    Custom
+                  </button>
+                </div>
+                {!showCurrencyAlternates && <p className="text-xs text-espresso-400">Hold $ for other currencies.</p>}
               </div>
-              {!showCurrencyAlternates && <p className="text-xs text-espresso-400">Hold $ for other currencies.</p>}
-            </div>
+            )}
           </div>
         )}
 
@@ -432,7 +482,9 @@ export function CreateMarketForm({
         {isPending ? 'Creating…' : 'Create market'}
       </Button>
       <p className="text-center text-xs text-espresso-400">
-        One other member needs to endorse this before it opens. Unendorsed markets expire after 24 hours.
+        {requireEndorsement
+          ? 'One other member needs to endorse this before it opens. Unendorsed markets expire after 24 hours.'
+          : "This group doesn't require endorsement, so it opens for betting immediately."}
       </p>
 
       {pendingFormData && (
@@ -442,6 +494,7 @@ export function CreateMarketForm({
           subjects={subjects}
           options={options}
           unit={unit}
+          lineFormat={lineFormat}
           timezone={timezone}
           onEdit={() => setPendingFormData(null)}
           onConfirm={() => {
@@ -461,6 +514,7 @@ function ReviewMarketModal({
   subjects,
   options,
   unit,
+  lineFormat,
   timezone,
   onEdit,
   onConfirm,
@@ -470,6 +524,7 @@ function ReviewMarketModal({
   subjects: MemberOption[];
   options: OptionDraft[];
   unit: string;
+  lineFormat: LineFormat;
   timezone: string;
   onEdit: () => void;
   onConfirm: () => void;
@@ -478,8 +533,9 @@ function ReviewMarketModal({
   const description = String(formData.get('description'));
   const closesAtLocal = String(formData.get('closesAt'));
   const closesAtDate = new Date(closesAtLocal);
-  const line = marketType === 'over_under' ? Number(formData.get('line')) : null;
-  const lineIsWholeNumber = line !== null && Number.isInteger(line);
+  const line = marketType === 'over_under' ? parseLineInput(String(formData.get('line')), lineFormat) : null;
+  const displayUnit = lineFormat === 'number' ? unit.trim() || null : lineFormat;
+  const lineIsWholeNumber = lineFormat === 'number' && line !== null && Number.isInteger(line);
 
   return (
     <Modal onClose={onEdit}>
@@ -498,7 +554,7 @@ function ReviewMarketModal({
           {marketType === 'over_under' && (
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">Line</p>
-              <p className="text-espresso-700">{formatLine(line, unit.trim() || null)}</p>
+              <p className="text-espresso-700">{formatLine(line, displayUnit)}</p>
               {lineIsWholeNumber && (
                 <p className="mt-1 rounded-lg bg-honey-50 px-2.5 py-1.5 text-xs text-honey-800">
                   A whole number can land on an exact tie, which the group would have to resolve as VOID. A half

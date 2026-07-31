@@ -92,7 +92,7 @@ export default async function MyBetsPage({ params }: { params: Promise<{ groupId
                     <li key={b.id} className={i > 0 ? 'border-t border-espresso-100' : ''}>
                       <Link href={`/groups/${groupId}/markets/${b.market_id}/reveal`} className={rowClass}>
                         <div className="min-w-0">
-                          <p className="truncate font-medium text-espresso-800">{b.markets?.title}</p>
+                          <p className="line-clamp-2 font-medium text-espresso-800">{b.markets?.title}</p>
                           <p className="text-xs text-espresso-400">
                             {formatTokens(b.amount)} on <OptionLabel label={betLabel(b)} />
                           </p>

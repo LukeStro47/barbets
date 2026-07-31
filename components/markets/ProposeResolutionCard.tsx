@@ -7,6 +7,7 @@ import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { proposeResolution } from '@/lib/actions/resolution';
 import { compressImage } from '@/lib/compressImage';
 import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { CameraIcon, ImageIcon } from '@/components/ui/icons';
@@ -15,19 +16,34 @@ import type { Market, MarketOption } from '@/lib/actions/markets';
 const inputClasses =
   'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-espresso-900 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
 
-/** Lives inside the resolution criteria card rather than off on its own — proposing is squarely part of "what is this market, and what happens to it next." Collapsed behind a button while still `open` (proposing early locks betting, so that shouldn't be one accidental tap away); always expanded once `closed`, since proposing is the only way forward at that point. */
-export function ProposeResolutionCard({ groupId, market, options }: { groupId: string; market: Market; options: MarketOption[] | null }) {
+/** Its own card, deliberately set apart from the resolution-criteria card above it on the market
+    page — proposing is a distinct, consequential action (locks betting immediately, or starts
+    the finalize clock), not just more market metadata to skim past. One button opens a two-step
+    modal, pick the answer, then review a plain-language consequence before confirming, whether
+    the market is still `open` (an early close) or already `closed`; there's no separate inline
+    flow for either case anymore. */
+export function ProposeResolutionCard({
+  groupId,
+  market,
+  options,
+  resolutionWindowHours,
+}: {
+  groupId: string;
+  market: Market;
+  options: MarketOption[] | null;
+  resolutionWindowHours: number;
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const isMultipleChoice = market.market_type === 'multiple_choice';
+  const [modalOpen, setModalOpen] = useState(false);
+  const [step, setStep] = useState<'choose' | 'review'>('choose');
   const [proposeOutcome, setProposeOutcome] = useState<string | null>(null);
   const [justification, setJustification] = useState('');
-  const [expanded, setExpanded] = useState(market.status !== 'open');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
-  const [confirming, setConfirming] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -107,6 +123,21 @@ export function ProposeResolutionCard({ groupId, market, options }: { groupId: s
       : ({ outcome: value as 'yes' | 'no' | 'over' | 'under' | 'void' } as const);
   }
 
+  function openModal() {
+    setError(null);
+    setStep('choose');
+    setModalOpen(true);
+  }
+
+  function closeModal() {
+    setModalOpen(false);
+    setStep('choose');
+    setProposeOutcome(null);
+    setJustification('');
+    removePhoto();
+    setError(null);
+  }
+
   function submit() {
     if (!proposeOutcome) return;
     setError(null);
@@ -127,118 +158,127 @@ export function ProposeResolutionCard({ groupId, market, options }: { groupId: s
       if (result.error) {
         setError(result.error);
       } else {
+        setModalOpen(false);
         router.refresh();
       }
     });
   }
 
-  if (!expanded) {
-    return (
-      <Button variant="outline" className="w-full" onClick={() => setExpanded(true)}>
-        Already decided? Propose the outcome
-      </Button>
-    );
-  }
+  const chosenLabel = (choiceLabels.find((c) => c.value === proposeOutcome)?.label ?? '').toUpperCase();
 
   return (
-    <div className="space-y-3 border-t border-espresso-100 pt-4">
-      <p className="text-sm font-semibold text-espresso-700">Propose what happened</p>
-      {market.status === 'open' && (
-        <p className="text-xs font-semibold text-danger-700">Proposing now locks betting for everyone immediately.</p>
-      )}
-      {error && <p className="text-sm text-danger-700">{error}</p>}
-      <div className="flex flex-wrap gap-2">
-        {choiceLabels.map((c) => (
-          <button
-            key={c.value}
-            type="button"
-            onClick={() => setProposeOutcome(c.value)}
-            className={`rounded-full border px-4 py-1.5 text-sm font-semibold uppercase ${
-              proposeOutcome === c.value ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-600'
-            }`}
-          >
-            <OptionLabel label={c.label} />
-          </button>
-        ))}
-      </div>
-      <textarea
-        value={justification}
-        onChange={(e) => setJustification(e.target.value)}
-        placeholder="Short justification (optional, but helps everyone trust the call)"
-        rows={2}
-        className={inputClasses}
-      />
-
-      <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
-      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoChange} className="hidden" />
-      {photoPreview ? (
-        <div className="flex items-center gap-3">
-          <img src={photoPreview} alt="Proof preview" className="h-16 w-16 rounded-lg object-cover" />
-          <Button type="button" variant="outline" size="sm" onClick={removePhoto}>
-            Remove photo
-          </Button>
-        </div>
-      ) : (
-        <div className="space-y-1.5">
-          <p className="text-xs text-espresso-400">Proof photo (optional)</p>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={photoBusy}
-              onClick={handleTakePhotoClick}
-              className="inline-flex flex-1 items-center justify-center gap-2"
-            >
-              <CameraIcon className="h-4 w-4" />
-              {photoBusy ? 'Processing…' : 'Take a photo'}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={photoBusy}
-              onClick={handleChoosePhotoClick}
-              className="inline-flex flex-1 items-center justify-center gap-2"
-            >
-              <ImageIcon className="h-4 w-4" />
-              Choose photo
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <Button disabled={isPending || photoBusy || !proposeOutcome} onClick={() => setConfirming(true)} className="w-full">
-        Submit proposal
+    <Card className="space-y-2">
+      <p className="text-sm font-semibold text-espresso-700">Know what happened?</p>
+      <p className="text-xs text-espresso-500">
+        {market.status === 'open'
+          ? 'Proposing now closes betting immediately for everyone, then starts the clock for a challenge.'
+          : `Propose what happened and other members get ${resolutionWindowHours}h to challenge it before it's final.`}
+      </p>
+      <Button variant="outline" className="w-full" onClick={openModal}>
+        Propose the outcome
       </Button>
 
-      {confirming && (
-        <Modal onClose={() => setConfirming(false)}>
-          <p className="font-display text-lg font-bold text-espresso-900">Not a bet, a proposal</p>
-          <p className="text-sm text-espresso-600">
-            You're proposing <OptionLabel label={(choiceLabels.find((c) => c.value === proposeOutcome)?.label ?? '').toUpperCase()} /> is
-            what actually happened, not placing a bet.{' '}
-            {market.status === 'open'
-              ? 'Since betting is still open, this locks it for everyone right now.'
-              : 'Betting is already closed, so this just starts the clock on finalizing it.'}{' '}
-            Other members get 8 hours to challenge it before it's final.
-          </p>
-          <div className="flex gap-2 pt-1">
-            <Button type="button" variant="outline" className="flex-1" onClick={() => setConfirming(false)}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              className="flex-1"
-              disabled={isPending}
-              onClick={() => {
-                setConfirming(false);
-                submit();
-              }}
-            >
-              Confirm
-            </Button>
-          </div>
+      {modalOpen && (
+        <Modal onClose={closeModal}>
+          {step === 'choose' ? (
+            <>
+              <p className="font-display text-lg font-bold text-espresso-900">What actually happened?</p>
+              {error && <p className="text-sm text-danger-700">{error}</p>}
+              <div className="flex flex-wrap gap-2">
+                {choiceLabels.map((c) => (
+                  <button
+                    key={c.value}
+                    type="button"
+                    onClick={() => setProposeOutcome(c.value)}
+                    className={`rounded-full border px-4 py-1.5 text-sm font-semibold uppercase ${
+                      proposeOutcome === c.value ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-600'
+                    }`}
+                  >
+                    <OptionLabel label={c.label} />
+                  </button>
+                ))}
+              </div>
+              <textarea
+                value={justification}
+                onChange={(e) => setJustification(e.target.value)}
+                placeholder="Short justification (optional, but helps everyone trust the call)"
+                rows={2}
+                className={inputClasses}
+              />
+
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
+              <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoChange} className="hidden" />
+              {photoPreview ? (
+                <div className="flex items-center gap-3">
+                  <img src={photoPreview} alt="Proof preview" className="h-16 w-16 rounded-lg object-cover" />
+                  <Button type="button" variant="outline" size="sm" onClick={removePhoto}>
+                    Remove photo
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <p className="text-xs text-espresso-400">Proof photo (optional)</p>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={photoBusy}
+                      onClick={handleTakePhotoClick}
+                      className="inline-flex flex-1 items-center justify-center gap-2"
+                    >
+                      <CameraIcon className="h-4 w-4" />
+                      {photoBusy ? 'Processing…' : 'Take a photo'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={photoBusy}
+                      onClick={handleChoosePhotoClick}
+                      className="inline-flex flex-1 items-center justify-center gap-2"
+                    >
+                      <ImageIcon className="h-4 w-4" />
+                      Choose photo
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-1">
+                <Button type="button" variant="outline" className="flex-1" onClick={closeModal}>
+                  Cancel
+                </Button>
+                <Button type="button" className="flex-1" disabled={!proposeOutcome || photoBusy} onClick={() => setStep('review')}>
+                  Review
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="font-display text-lg font-bold text-espresso-900">Review your proposal</p>
+              <p className="text-sm text-espresso-600">
+                You're proposing <OptionLabel label={chosenLabel} /> is what actually happened, not placing a bet.
+              </p>
+              {justification && <p className="rounded-lg bg-espresso-50 p-2.5 text-sm text-espresso-600">{justification}</p>}
+              {photoPreview && <img src={photoPreview} alt="Proof preview" className="h-16 w-16 rounded-lg object-cover" />}
+              {error && <p className="text-sm text-danger-700">{error}</p>}
+              <p className="text-xs font-semibold text-danger-700">
+                {market.status === 'open'
+                  ? 'Betting is still open, so this locks it for everyone right now. '
+                  : 'Betting is already closed. '}
+                Other members get {resolutionWindowHours}h to challenge it before it's final.
+              </p>
+              <div className="flex gap-2 pt-1">
+                <Button type="button" variant="outline" className="flex-1" disabled={isPending} onClick={() => setStep('choose')}>
+                  Back
+                </Button>
+                <Button type="button" className="flex-1" disabled={isPending} onClick={submit}>
+                  Confirm
+                </Button>
+              </div>
+            </>
+          )}
         </Modal>
       )}
-    </div>
+    </Card>
   );
 }
