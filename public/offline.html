@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Barbets</title>
+    <!--
+      Served natively via capacitor.config.ts's server.errorPath, not by Next.js — this is a
+      bundled native asset (from webDir), loaded with zero network by Android's
+      BridgeWebViewClient / iOS's didFailProvisionalNavigation on a failed main-frame load. No
+      React, no Tailwind build, no next/font: everything here has to be able to render with
+      nothing but what's already on the device. Keep this in sync with app/offline/page.tsx's
+      copy (the browser/PWA equivalent), but it can't share code with it.
+    -->
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        background: #faf6ef;
+        color: #705441;
+        font-family:
+          ui-sans-serif, system-ui, -apple-system, sans-serif;
+        padding: 40px 20px calc(env(safe-area-inset-bottom) + 40px);
+        padding-top: calc(env(safe-area-inset-top) + 40px);
+      }
+      img {
+        height: 128px;
+        width: auto;
+        margin-bottom: 32px;
+      }
+      h1 {
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: #2c1f17;
+        margin: 0;
+      }
+      p {
+        max-width: 340px;
+        font-size: 17px;
+        line-height: 1.5;
+        margin: 16px 0 0;
+      }
+      button {
+        margin-top: 32px;
+        width: 100%;
+        max-width: 260px;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 999px;
+        background: #3b2a20;
+        color: #fffdf9;
+        font-size: 15px;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+      }
+      button:active {
+        background: #2c1f17;
+      }
+    </style>
+  </head>
+  <body>
+    <img src="/barbets-lockup-tall.png" alt="Barbets" />
+    <h1>You're offline</h1>
+    <p>
+      Barbets needs a connection to load anything. Odds and balances change too often to show you a guess.
+      Reconnect, and we'll pick back up where you left off.
+    </p>
+    <button id="retry">Try again</button>
+    <script>
+      var APP_URL = 'https://barbets.vercel.app';
+      function retry() {
+        window.location.href = APP_URL;
+      }
+      document.getElementById('retry').addEventListener('click', retry);
+      window.addEventListener('online', retry);
+    </script>
+  </body>
+</html>

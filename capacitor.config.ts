@@ -2,8 +2,9 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 // This app relies on Next.js Server Actions and SSR (see ARCHITECTURE.md) — it can't be bundled
 // as a static export inside the native shell, so the WebView loads the real deployed app instead
-// of `webDir`. `webDir` still has to point at a real folder for `cap sync` to run, but nothing in
-// it is actually served once `server.url` is set.
+// of `webDir` for all normal navigation. `webDir` still has to point at a real folder for `cap
+// sync` to run — and now also holds one real bundled asset, `offline.html`, served locally via
+// `server.errorPath` below when a load fails outright (see that comment for why).
 const config: CapacitorConfig = {
   appId: 'com.mybarbets.app',
   appName: 'Barbets',
@@ -11,6 +12,14 @@ const config: CapacitorConfig = {
   server: {
     url: 'https://barbets.vercel.app',
     androidScheme: 'https',
+    // A failed main-frame load (offline, DNS down) has nowhere else to go: unlike a browser tab,
+    // this WebView has no service worker fallback to lean on for the very first request of a cold
+    // app open — Android's WebView doesn't support service-worker interception of navigation
+    // requests at all, and even where it's supported (WKWebView), nothing's registered yet on a
+    // fresh launch. `errorPath` is Capacitor's own native hook for this (BridgeWebViewClient on
+    // Android, didFailProvisionalNavigation on iOS) — it loads a page bundled locally in `webDir`,
+    // so it works with zero network, unlike everything else this app serves from server.url.
+    errorPath: 'offline.html',
   },
   plugins: {
     // Both platforms default to edge-to-edge (the WebView draws under the status bar with no
