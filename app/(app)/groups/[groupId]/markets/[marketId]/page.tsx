@@ -12,7 +12,6 @@ import { OddsBar, OddsBarMulti } from '@/components/markets/OddsBar';
 import { MarketActions } from '@/components/markets/MarketActions';
 import { ClarificationRequests, type Clarification } from '@/components/markets/ClarificationRequests';
 import { ProposeResolutionCard } from '@/components/markets/ProposeResolutionCard';
-import { MarketTypeBadge } from '@/components/markets/MarketTypeBadge';
 import { ResolutionProofButton } from '@/components/markets/ResolutionProofButton';
 import { BetslipBar } from '@/components/markets/BetslipBar';
 import { MyBetsCard } from '@/components/markets/MyBetsCard';
@@ -186,7 +185,7 @@ export default async function MarketDetailPage({
         title={marketRow.title}
         backHref={`/groups/${groupId}`}
         backLabel="Group"
-        action={
+        backAction={
           <div className="flex items-center gap-1.5">
             {isCreator && clarificationList.length > 0 && (
               <span
@@ -200,8 +199,6 @@ export default async function MarketDetailPage({
           </div>
         }
       />
-
-      <MarketTypeBadge marketType={marketRow.market_type} />
 
       {statTiles.length > 0 && <StatStrip>{statTiles}</StatStrip>}
 

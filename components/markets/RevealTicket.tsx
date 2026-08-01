@@ -174,6 +174,12 @@ export function RevealTicket({
           </p>
           <p className="mb-4 max-w-[88%] text-balance text-[25px] leading-[1.16] font-extrabold tracking-[-0.015em]">{question}</p>
 
+          {line != null && (
+            <p className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-honey-500/15 px-3.5 py-2 text-[15px] font-extrabold text-paper-white">
+              Line: {line}
+            </p>
+          )}
+
           <div className={cn('flex items-center gap-3.5', isMultipleChoice && 'flex-col items-start gap-3')}>
             <div
               className={cn(
@@ -237,9 +243,6 @@ export function RevealTicket({
                     <span className="text-[13px] font-extrabold text-honey-300">
                       {odds[0].label} {odds[0].percent}%
                     </span>
-                    {line != null && (
-                      <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-bold text-paper-white/70">{line}</span>
-                    )}
                     <span className="text-[13px] font-extrabold text-paper-white/50">
                       {odds[1].label} {odds[1].percent}%
                     </span>

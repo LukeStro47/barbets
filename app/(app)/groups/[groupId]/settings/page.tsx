@@ -53,7 +53,7 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
       )}
 
       <Link
-        href="/how-it-works"
+        href={`/how-it-works?group=${groupId}`}
         className="flex items-center gap-3 rounded-2xl border-2 border-honey-300 bg-honey-50 px-5 py-4 transition-colors hover:bg-honey-100"
       >
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-honey-500 text-espresso-900">

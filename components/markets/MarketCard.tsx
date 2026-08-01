@@ -99,7 +99,7 @@ export function MarketCard({ market }: { market: MarketCardData }) {
             ) : (
               <span />
             )}
-            <CountdownTimer target={market.sponsorDeadline ?? market.closesAt} prefix="Time to endorse" />
+            <CountdownTimer target={market.sponsorDeadline ?? market.closesAt} prefix="Time to endorse:" />
           </div>
         )}
 
@@ -159,7 +159,7 @@ function MarketRowMeta({ market }: { market: MarketCardData }) {
   if (market.status === 'pending_sponsor') {
     return (
       <p className="mt-0.5 text-xs text-espresso-400">
-        <CountdownTimer target={market.sponsorDeadline ?? market.closesAt} prefix="Time to endorse" />
+        <CountdownTimer target={market.sponsorDeadline ?? market.closesAt} prefix="Time to endorse:" />
       </p>
     );
   }

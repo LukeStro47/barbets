@@ -116,6 +116,7 @@ export default async function RevealPage({ params }: { params: Promise<{ groupId
           isWinner: o.option_id === marketRow.outcome_option_id,
         }))}
         payoutBreakdown={marketRow.payout_breakdown}
+        carriedBonusPool={marketRow.carried_bonus_pool}
         creatorNickname={creator?.nickname ?? undefined}
         sponsorNickname={sponsor?.nickname ?? undefined}
         resolvedAtIso={marketRow.resolved_at ?? marketRow.created_at}

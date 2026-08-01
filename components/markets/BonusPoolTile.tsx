@@ -24,9 +24,9 @@ export function BonusPoolTile({ amount, carriedAmount }: { amount: number; carri
         <Modal onClose={() => setShowInfo(false)}>
           <p className="font-display font-bold text-espresso-900">What's a bonus pool?</p>
           <p className="text-sm text-espresso-600">
-            Another market in this group resolved and nobody predicted the outcome. Instead of just refunding
-            everyone, the group has payout splitting turned on, so part of that pool got sent here. It'll be added
-            to this market's own pool and split among the winners when this one resolves.
+            Another market in this group resolved without any winners. Your group has payout splitting turned on, so
+            part of that pool got sent here. {amount} tokens have been added to this market's pool and will be split
+            among the winners when this one resolves.
             {carriedAmount ? ` 🎁 ${carriedAmount} of it carried over from an earlier resolution before this market was even created.` : ''}
           </p>
           <Button className="w-full" onClick={() => setShowInfo(false)}>

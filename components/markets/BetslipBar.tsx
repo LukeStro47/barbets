@@ -6,6 +6,7 @@ import { placeBet } from '@/lib/actions/bets';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { cn } from '@/lib/cn';
 import { formatTokens } from '@/lib/formatNumber';
+import { formatLine } from '@/lib/units';
 import type { Market, MarketOption } from '@/lib/actions/markets';
 
 interface ExistingBet {
@@ -240,19 +241,31 @@ export function BetslipBar({
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              {sides.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setBetSide(s)}
-                  className={cn(
-                    'flex-1 rounded-full border py-2 text-sm font-bold uppercase',
-                    betSide === s ? 'border-honey-500 bg-honey-500/15 text-honey-300' : 'border-white/15 text-white/60'
-                  )}
-                >
-                  {s}
-                </button>
-              ))}
+              <button
+                type="button"
+                onClick={() => setBetSide(sides[0])}
+                className={cn(
+                  'flex-1 rounded-full border py-2 text-sm font-bold uppercase',
+                  betSide === sides[0] ? 'border-honey-500 bg-honey-500/15 text-honey-300' : 'border-white/15 text-white/60'
+                )}
+              >
+                {sides[0]}
+              </button>
+              {market.market_type === 'over_under' && market.line != null && (
+                <span className="shrink-0 rounded-full bg-white/10 px-3 py-1.5 text-sm font-bold text-paper-white">
+                  {formatLine(market.line, market.unit)}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => setBetSide(sides[1])}
+                className={cn(
+                  'flex-1 rounded-full border py-2 text-sm font-bold uppercase',
+                  betSide === sides[1] ? 'border-honey-500 bg-honey-500/15 text-honey-300' : 'border-white/15 text-white/60'
+                )}
+              >
+                {sides[1]}
+              </button>
             </div>
           )}
 

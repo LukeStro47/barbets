@@ -32,14 +32,13 @@ export function OfflineGroupBalances() {
       <p className="text-center text-[11px] font-bold tracking-[0.12em] text-espresso-400 uppercase">
         Last known balances
       </p>
-      <p className="mt-1 text-center text-xs text-espresso-400">Read-only, and may be out of date.</p>
       <ul className="mt-3 space-y-2">
         {snapshots.map((s) => (
           <li key={s.groupId}>
             <Card className="flex items-center justify-between px-4 py-3">
               <span className="min-w-0 truncate font-medium text-espresso-800">{s.groupName}</span>
               <span className="shrink-0 text-right">
-                <span className="block font-display font-bold text-espresso-900">{formatTokens(s.balance)}</span>
+                <span className="block font-display font-bold text-espresso-900">{formatTokens(s.balance)} tokens</span>
                 <span className="block text-xs text-espresso-400">as of {timeAgo(s.savedAt)}</span>
               </span>
             </Card>

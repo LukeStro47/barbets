@@ -15,10 +15,10 @@ export default function OfflinePage() {
         Barbets needs a connection to load anything. Odds and balances change too often to show you a
         guess. Reconnect, and we'll pick back up where you left off.
       </p>
+      <OfflineGroupBalances />
       <div className="mt-8 w-full max-w-xs">
         <OfflineRetryButton />
       </div>
-      <OfflineGroupBalances />
     </main>
   );
 }

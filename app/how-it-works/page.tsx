@@ -3,74 +3,95 @@ import { createClient } from '@/lib/supabase/server';
 import { Logo } from '@/components/ui/Logo';
 import { Card } from '@/components/ui/Card';
 import { BackButton } from '@/components/ui/BackButton';
-import { LifecycleSlideshow } from '@/components/ui/LifecycleSlideshow';
+import { LifecycleSlideshow, type LifecycleStep } from '@/components/ui/LifecycleSlideshow';
 
-const lifecycle = [
-  { icon: '🔒', label: 'Open', body: 'Bets are sealed. Nobody sees who bet what, not even you, for anyone else.' },
-  { icon: '📊', label: 'Closed', body: 'Odds appear as a percentage split. Individual bets stay hidden.' },
-  { icon: '🗳️', label: 'Proposed', body: 'Someone says what happened. 8 hours to challenge it.' },
-  { icon: '⚖️', label: 'Challenged', body: 'Someone disagreed. The group votes by secret ballot instead.' },
-  { icon: '🏁', label: 'Resolved', body: 'Winners split the losing pool. Every bet becomes visible.' },
-];
+function windowLabel(hours: number): string {
+  return hours === 1 ? '1 hour' : `${hours} hours`;
+}
 
-const sections = [
-  {
-    icon: '🙈',
-    title: 'Bets are sealed while a market is open',
-    body: "While betting is open, nobody, including you, can see who else has bet, which side they took, or how much. You'll only see your own bets and a running total count of bets placed.",
-  },
-  {
-    icon: '📈',
-    title: 'Odds appear once betting closes',
-    body: 'The moment a market closes, the pool splits into a percentage for each side so everyone can see how it leans. Individual bets stay hidden until the market resolves.',
-  },
-  {
-    icon: '💰',
-    title: 'Payouts are parimutuel',
-    body: "There's no bookmaker setting odds. Everyone who bet on the losing side has their stake split among the winners, proportional to how much each winner staked. Your own stake comes back too.",
-  },
-  {
-    icon: '🔀',
-    title: 'Three market types',
-    body: `Yes/No. Over/Under, against a line. Multiple Choice: one pool split across 2 to 10 named options instead of two sides, e.g. "who's first to leave the party?" You can hedge across more than one option, unless your group's owner turns that off in settings. Whichever type, the pool works the same way: bet on the loser and your stake splits among whoever bet on the winner.`,
-  },
-  {
-    icon: '⚖️',
-    title: 'Resolution is decided by the group',
-    body: "Once a market closes, any eligible member proposes what happened. Nobody disagrees within 8 hours, it stands. Someone challenges it, the group votes by secret ballot, revealed once voting ends. Nobody votes, or the vote ties with the original proposal among the leaders, the proposal still stands rather than voiding. A tie that doesn't include the proposal voids, so challenging only pays off if the group actually rallies behind a different answer.",
-  },
-  {
-    icon: '⏱️',
-    title: 'You can propose the outcome early',
-    body: "If the real-world outcome is already known before a market's closing time, any eligible member can propose it right away instead of waiting. This locks betting for everyone immediately and starts the normal 8-hour challenge window. If you think the event genuinely hasn't happened yet, vote VOID rather than picking a side.",
-  },
-  {
-    icon: '👤',
-    title: 'Markets about you are invisible to you',
-    body: "If a market @mentions you, you won't see it exists: not in your feed, not in counts, not in notifications, nothing, until it resolves. Then you see everything, including who bet what. On a Multiple Choice market, being @mentioned under just one option still hides the whole market, since seeing any option would give it away.",
-  },
-  {
-    icon: '🔄',
-    title: 'Seasons, if your group wants them',
-    body: 'A group can run one continuous economy forever, or reset on a schedule. When a season ends, standings are archived to the Awards and everyone gets reseeded for the next one.',
-  },
-  {
-    icon: '🚪',
-    title: 'Leaving a group',
-    body: "Leaving voids and refunds any market about you, but your other open bets stay in play and settle without you. You won't be reseeded if you come back later, your balance just picks up where it left off. Being removed by the owner is permanent, and rotates the group's invite code.",
-  },
-];
-
-export default async function HowItWorksPage() {
+export default async function HowItWorksPage({ searchParams }: { searchParams: Promise<{ group?: string }> }) {
+  const { group: groupId } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Only populated when linked from a specific group (e.g. its settings page) — RLS already scopes
+  // group_settings reads to members, so a non-member groupId just comes back empty and the page
+  // silently falls back to the generic defaults below.
+  const { data: settings } = groupId
+    ? await supabase
+        .from('group_settings')
+        .select('allow_hedged_bets, require_endorsement, resolution_window_hours, seasons_enabled, distribute_payout')
+        .eq('group_id', groupId)
+        .maybeSingle()
+    : { data: null };
+
+  const window = windowLabel(settings?.resolution_window_hours ?? 8);
+  const hedgingAllowed = settings?.allow_hedged_bets ?? true;
+  const endorsementRequired = settings?.require_endorsement ?? true;
+  const seasonsEnabled = settings?.seasons_enabled ?? false;
+  const distributePayout = settings?.distribute_payout ?? false;
+
+  const lifecycle: LifecycleStep[] = [
+    { icon: '🔒', label: 'Open', body: 'Bets are sealed. Nobody sees who bet what, not even you, for anyone else.' },
+    { icon: '📊', label: 'Closed', body: 'Odds appear as a percentage split. Individual bets stay hidden.' },
+    { icon: '🗳️', label: 'Proposed', body: `Someone says what happened. ${window} to challenge it.` },
+    { icon: '⚖️', label: 'Challenged', body: 'Someone disagreed. The group votes by secret ballot instead.' },
+    { icon: '🏁', label: 'Resolved', body: 'Winners split the losing pool. Every bet becomes visible.' },
+  ];
+
+  const sections = [
+    {
+      icon: '🙈',
+      title: 'Bets are sealed, odds appear once closed',
+      body: "While a market's open, nobody, including you, sees who bet what or how much, just a running total. The moment it closes, the pool splits into a percentage per side, still no individual bets until it resolves.",
+    },
+    {
+      icon: '💰',
+      title: 'Payouts are parimutuel',
+      body: `There's no bookmaker. Everyone on the losing side has their stake split among the winners, proportional to how much each staked, your own stake comes back too.${
+        distributePayout
+          ? " If nobody predicted the outcome, this group sends part of that pool to the creator and endorser and carries the rest into another open market, rather than a plain refund."
+          : ''
+      }`,
+    },
+    {
+      icon: '🎯',
+      title: 'Starting a market',
+      body: `Anyone can propose one: Yes/No, Over/Under against a line, or Multiple Choice across 2 to 10 named options.${
+        endorsementRequired
+          ? ' Another member has to endorse it before betting opens.'
+          : ' This group has endorsement turned off, so it opens for betting right away.'
+      }${hedgingAllowed ? ' Hedging across more than one side or option is allowed.' : ' This group has hedging turned off, one side or option per person.'}`,
+    },
+    {
+      icon: '⚖️',
+      title: 'Resolution is decided by the group',
+      body: `Once a market closes (or someone proposes early, which locks betting immediately), any eligible member says what happened. Nobody disagrees within ${window}, it stands. Someone challenges it, the group votes by secret ballot. A tie or no votes upholds the proposal; a tie that excludes it voids instead.`,
+    },
+    {
+      icon: '👤',
+      title: 'Markets about you are invisible to you',
+      body: "If a market @mentions you, you won't see it exists, anywhere, until it resolves. Then you see everything, including who bet what.",
+    },
+    seasonsEnabled
+      ? {
+          icon: '🔄',
+          title: 'Seasons reset the board',
+          body: "This group resets on a schedule. When a season ends, standings are archived to the Awards and everyone gets reseeded for the next one.",
+        }
+      : {
+          icon: '🚪',
+          title: 'Leaving a group',
+          body: "Leaving voids and refunds any market about you, but your other open bets stay in play and settle without you. Being removed by the owner is permanent.",
+        },
+  ];
+
   return (
     <main className="mx-auto max-w-lg space-y-8 px-5 py-10 pt-[calc(env(safe-area-inset-top)+2.5rem)]">
       <div className="flex items-center justify-between">
-        <BackButton fallbackHref={user ? '/groups' : '/'} />
+        <BackButton fallbackHref={groupId ? `/groups/${groupId}/settings` : user ? '/groups' : '/'} />
         <Logo />
       </div>
 

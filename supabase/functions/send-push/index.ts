@@ -122,18 +122,39 @@ interface Content {
 }
 
 async function marketAndGroup(marketId: string) {
-  const { data: market } = await admin.from('markets').select('title, group_id, market_type').eq('id', marketId).single();
+  const { data: market } = await admin
+    .from('markets')
+    .select('title, group_id, market_type, outcome, outcome_option_id')
+    .eq('id', marketId)
+    .single();
   const { data: group } = await admin.from('groups').select('name').eq('id', market!.group_id).single();
   return { market: market!, group: group! };
 }
 
-async function buildContent(event: NotificationEvent, isSubject: boolean): Promise<Content | null> {
+/** A short, human "what happened" phrase for a resolved market's push copy, e.g. "YES" or a
+    multiple_choice option's own label. VOID reads as "voided" rather than the literal enum value. */
+async function marketOutcomeLabel(market: { outcome: string | null; outcome_option_id: string | null; market_type: string }): Promise<string> {
+  if (market.outcome === 'void') return 'voided';
+  if (market.market_type === 'multiple_choice' && market.outcome_option_id) {
+    const { data: option } = await admin.from('market_options').select('label').eq('id', market.outcome_option_id).single();
+    return option?.label ?? 'resolved';
+  }
+  return market.outcome ? market.outcome.toUpperCase() : 'resolved';
+}
+
+async function resolutionWindowLabel(groupId: string): Promise<string> {
+  const { data: settings } = await admin.from('group_settings').select('resolution_window_hours').eq('group_id', groupId).single();
+  const hours = settings?.resolution_window_hours ?? 8;
+  return hours === 1 ? '1 hour' : `${hours} hours`;
+}
+
+async function buildContent(event: NotificationEvent, isSubject: boolean, winnings?: number | null): Promise<Content | null> {
   if (event.event_type === 'season_ended') {
     const { data: season } = await admin.from('seasons').select('number').eq('id', event.season_id).single();
     const { data: group } = await admin.from('groups').select('name').eq('id', event.group_id).single();
     return {
       title: group!.name,
-      body: `Season ${season!.number} is over. Run it back?`,
+      body: `Season ${season!.number} just wrapped up. Check the final standings and start the next one when you're ready.`,
       url: `/groups/${event.group_id}/intermission`,
     };
   }
@@ -142,7 +163,7 @@ async function buildContent(event: NotificationEvent, isSubject: boolean): Promi
     const { data: group } = await admin.from('groups').select('name').eq('id', event.group_id).single();
     return {
       title: group!.name,
-      body: 'Betting is open. Time to start a market.',
+      body: 'Betting just opened. Be the first to start a market.',
       url: `/groups/${event.group_id}`,
     };
   }
@@ -152,7 +173,9 @@ async function buildContent(event: NotificationEvent, isSubject: boolean): Promi
     const { data: member } = await admin.from('memberships').select('nickname').eq('group_id', event.group_id).eq('user_id', event.actor_id).single();
     return {
       title: group!.name,
-      body: member ? `@${member.nickname} just joined your group.` : 'Someone just joined your group.',
+      body: member
+        ? `@${member.nickname} just joined ${group!.name}. Say hi, or get a market going.`
+        : `Someone just joined ${group!.name}.`,
       url: `/groups/${event.group_id}/settings`,
     };
   }
@@ -179,7 +202,7 @@ async function buildContent(event: NotificationEvent, isSubject: boolean): Promi
     const { data: group } = await admin.from('groups').select('name').eq('id', event.group_id).single();
     return {
       title: group!.name,
-      body: 'Betting is open for this season. Time to start a market.',
+      body: 'Betting just opened for the season. Time to start a market.',
       url: `/groups/${event.group_id}`,
     };
   }
@@ -209,21 +232,37 @@ async function buildContent(event: NotificationEvent, isSubject: boolean): Promi
 
   switch (event.event_type) {
     case 'market_needs_endorsement':
-      return { title: group.name, body: 'New market needs endorsement', url };
+      return { title: group.name, body: `A new market needs an endorser before it can open: "${market.title}"`, url };
     case 'market_opened':
-      return { title: group.name, body: `New market opened: "${market.title}"`, url };
+      return { title: group.name, body: `Betting's open on a new market: "${market.title}"`, url };
     case 'market_closed':
-      return { title: group.name, body: `Odds are live: "${market.title}"`, url };
-    case 'resolution_proposed':
-      return { title: group.name, body: `A resolution was proposed: "${market.title}"`, url };
+      return { title: group.name, body: `Betting just closed, odds are live: "${market.title}"`, url };
+    case 'resolution_proposed': {
+      const windowLabel = await resolutionWindowLabel(event.group_id);
+      return {
+        title: group.name,
+        body: `Someone proposed how "${market.title}" resolved. You have ${windowLabel} to challenge it.`,
+        url,
+      };
+    }
     case 'resolution_challenged':
-      return { title: group.name, body: `A challenge has been raised: "${market.title}"`, url };
-    case 'market_resolved':
-      return isSubject
-        ? { title: group.name, body: 'A market about you has just resolved...', url: revealUrl }
-        : { title: group.name, body: `A market has resolved: "${market.title}"`, url: revealUrl };
+      return { title: group.name, body: `The proposed resolution for "${market.title}" was challenged, cast your vote.`, url };
+    case 'market_resolved': {
+      if (isSubject) {
+        return { title: group.name, body: `A market about you just resolved, come see what it was: "${market.title}"`, url: revealUrl };
+      }
+      const outcomeLabel = await marketOutcomeLabel(market);
+      if (winnings) {
+        return {
+          title: group.name,
+          body: `You won ${winnings} tokens! "${market.title}" resolved: ${outcomeLabel}.`,
+          url: revealUrl,
+        };
+      }
+      return { title: group.name, body: `"${market.title}" resolved: ${outcomeLabel}. See how it played out.`, url: revealUrl };
+    }
     case 'market_voided':
-      return { title: group.name, body: `The owner voided a market and refunded everyone: "${market.title}"`, url: revealUrl };
+      return { title: group.name, body: `The owner voided "${market.title}" and refunded every stake.`, url: revealUrl };
     case 'clarification_requested': {
       const { data: latest } = await admin
         .from('resolution_clarifications')
@@ -238,13 +277,13 @@ async function buildContent(event: NotificationEvent, isSubject: boolean): Promi
       return {
         title: group.name,
         body: requester
-          ? `@${requester.nickname} asked for clearer resolution criteria on "${market.title}"`
-          : `Someone asked for clearer resolution criteria on "${market.title}"`,
+          ? `@${requester.nickname} isn't clear on how "${market.title}" resolves and is asking you to clarify.`
+          : `Someone isn't clear on how "${market.title}" resolves and is asking you to clarify.`,
         url,
       };
     }
     case 'criteria_updated':
-      return { title: group.name, body: `Resolution criteria updated: "${market.title}"`, url };
+      return { title: group.name, body: `The resolution criteria for "${market.title}" just got clearer, take a look.`, url };
     case 'impressive_bet': {
       const { data: bet } = await admin
         .from('bets')
@@ -317,8 +356,38 @@ async function processEvent(event: NotificationEvent) {
     subjectIds = new Set((subjects ?? []).map((s: { user_id: string }) => s.user_id));
   }
 
-  // market_resolved needs different copy for subjects vs everyone else;
-  // every other event type sends the same content to its whole recipient list.
+  // market_resolved's copy is per-recipient, not just per subject/non-subject: a winner gets their
+  // own payout quoted, so every distinct winnings total needs its own buildContent call. Everyone
+  // else (including subjects, who by construction never hold a bet on their own market) shares one
+  // of the two content variants below, same as every other event type.
+  if (event.event_type === 'market_resolved' && event.market_id) {
+    const { data: bets } = await admin
+      .from('bets')
+      .select('user_id, payout')
+      .eq('market_id', event.market_id)
+      .not('payout', 'is', null)
+      .gt('payout', 0);
+    const payoutByUser = new Map<string, number>();
+    for (const b of bets ?? []) {
+      payoutByUser.set(b.user_id, (payoutByUser.get(b.user_id) ?? 0) + b.payout);
+    }
+
+    const contentCache = new Map<string, Content | null>();
+    for (const userId of recipientIds) {
+      const isSubject = subjectIds.has(userId);
+      const winnings = payoutByUser.get(userId) ?? null;
+      const cacheKey = isSubject ? 'subject' : `winnings:${winnings}`;
+      let content = contentCache.get(cacheKey);
+      if (content === undefined) {
+        content = await buildContent(event, isSubject, winnings);
+        contentCache.set(cacheKey, content);
+      }
+      if (content) await sendToUser(userId, content);
+    }
+    return;
+  }
+
+  // Every other event type sends the same content to its whole recipient list.
   const nonSubjectContent = await buildContent(event, false);
   const subjectContent = subjectIds.size > 0 ? await buildContent(event, true) : null;
 

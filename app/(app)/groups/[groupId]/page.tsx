@@ -8,6 +8,7 @@ import { GroupDeletionBanner } from '@/components/groups/GroupDeletionBanner';
 import { NewMarketButton } from '@/components/groups/NewMarketButton';
 import { GroupMarketSections } from '@/components/groups/GroupMarketSections';
 import { SaveBalanceSnapshot } from '@/components/groups/SaveBalanceSnapshot';
+import { PendingBonusPoolNote } from '@/components/groups/PendingBonusPoolNote';
 import { OpenSeasonBettingButton } from '@/components/groups/IntermissionActions';
 import { Mention } from '@/components/ui/Mention';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
@@ -33,7 +34,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
 
   const { data: group } = await supabase
     .from('groups')
-    .select('id, name, invite_code, owner_id, deletion_scheduled_at')
+    .select('id, name, invite_code, owner_id, deletion_scheduled_at, pending_bonus_pool')
     .eq('id', groupId)
     .single();
   notFoundIfEmpty(group);
@@ -254,6 +255,8 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
             )}
           </div>
         </div>
+
+        {group!.pending_bonus_pool > 0 && <PendingBonusPoolNote amount={group!.pending_bonus_pool} />}
 
         {season && <SeasonBanner groupId={groupId} season={{ number: season.number, status: season.status, endsAt: season.ends_at, name: season.name }} />}
 

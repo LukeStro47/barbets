@@ -38,6 +38,7 @@ export function RevealSummary({
   odds,
   optionOdds,
   payoutBreakdown,
+  carriedBonusPool,
   creatorNickname,
   sponsorNickname,
   resolvedAtIso,
@@ -69,6 +70,11 @@ export function RevealSummary({
   optionOdds?: { id: string; label: string; percent: number; isWinner: boolean }[];
   /** Only set when nobody predicted the outcome and the group has distribute_payout on. */
   payoutBreakdown?: PayoutBreakdown | null;
+  /** markets.carried_bonus_pool: bonus tokens this market was seeded with at creation, from another
+      market's earlier zero-winner split. The only bonus-pool signal that survives resolution —
+      markets.bonus_pool itself is always zeroed by finalize_market() the moment a market resolves,
+      whether or not it started with a carried amount. */
+  carriedBonusPool?: number;
   creatorNickname?: string;
   sponsorNickname?: string;
   resolvedAtIso: string;
@@ -147,6 +153,16 @@ export function RevealSummary({
         myNickname={myNickname}
         hasProof={hasProof}
       />
+
+      {!!carriedBonusPool && carriedBonusPool > 0 && (
+        <Card className="flex items-start gap-2.5">
+          <span className="text-lg leading-none">🎁</span>
+          <p className="text-sm text-espresso-600">
+            This market's pool started with {carriedBonusPool} bonus tokens carried over from another market that
+            had no winners, before this market was even created.
+          </p>
+        </Card>
+      )}
 
       {payoutBreakdown && (
         <Card className="space-y-2">
