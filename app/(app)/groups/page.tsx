@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/Button';
 import { JoinGroupForm } from '@/components/groups/JoinGroupForm';
+import { OnboardingCarousel } from '@/components/groups/OnboardingCarousel';
 
 export default async function GroupsHubPage({ searchParams }: { searchParams: Promise<{ all?: string }> }) {
   const { all } = await searchParams;
@@ -34,7 +35,15 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
       />
 
       {(groups ?? []).length === 0 ? (
-        <EmptyState title="No groups yet" subtitle="Start one, or join with a friend's invite code below." />
+        <div className="space-y-3">
+          <OnboardingCarousel />
+          <EmptyState title="No groups yet" subtitle="Start one, or join with a friend's invite code below." />
+          <Link href="/demo" className="block">
+            <Button size="lg" variant="outline" className="w-full">
+              Try a live demo
+            </Button>
+          </Link>
+        </div>
       ) : (
         <ul className="space-y-3">
           {(groups ?? []).map((g: any) => {
