@@ -16,6 +16,7 @@ import { ResolutionProofButton } from '@/components/markets/ResolutionProofButto
 import { BetslipBar } from '@/components/markets/BetslipBar';
 import { MyBetsCard } from '@/components/markets/MyBetsCard';
 import { OptionLabel } from '@/components/markets/OptionLabel';
+import { SubjectMarketPulse, type SubjectMarketPulseData, type SubjectMarketPulseSide } from '@/components/markets/SubjectMarketPulse';
 import { Mention } from '@/components/ui/Mention';
 import { STATUS_LABEL, STATUS_TONE } from '@/lib/marketStatus';
 import { formatTokens } from '@/lib/formatNumber';
@@ -31,6 +32,25 @@ export default async function MarketDetailPage({
   const supabase = await createClient();
 
   const { data: market } = await supabase.from('visible_markets').select('*').eq('id', marketId).single();
+
+  if (!market) {
+    // Not visible via the normal path — the one deliberate exception is a subject of a
+    // not-yet-resolved market, who gets a content-free "pulse" view instead of a flat 404. Any
+    // other reason it's empty (doesn't exist, wrong group, already resolved and RLS hasn't
+    // caught up, etc.) makes this RPC raise too, so `pulse` stays null and falls through to the
+    // same 404 as before.
+    const { data: pulse } = await supabase.rpc('get_subject_market_pulse', { p_market_id: marketId }).maybeSingle();
+    if (pulse) {
+      const pulseData = pulse as SubjectMarketPulseData;
+      let sides: SubjectMarketPulseSide[] | null = null;
+      if (pulseData.market_type !== 'multiple_choice') {
+        const { data: sidesData } = await supabase.rpc('get_subject_market_pulse_sides', { p_market_id: marketId });
+        sides = sidesData as SubjectMarketPulseSide[] | null;
+      }
+      return <SubjectMarketPulse groupId={groupId} pulse={pulseData} sides={sides} />;
+    }
+  }
+
   const marketRow = notFoundIfEmpty<Market>(market);
   const isMultipleChoice = marketRow.market_type === 'multiple_choice';
 

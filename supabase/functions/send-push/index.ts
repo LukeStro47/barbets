@@ -235,6 +235,8 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
       return { title: group.name, body: `A new market needs an endorser before it can open: "${market.title}"`, url };
     case 'market_opened':
       return { title: group.name, body: `Betting's open on a new market: "${market.title}"`, url };
+    case 'market_opened_about_you':
+      return { title: group.name, body: `A new market just opened about you. No spoilers, but you can watch the action.`, url };
     case 'market_closed':
       return { title: group.name, body: `Betting just closed, odds are live: "${market.title}"`, url };
     case 'resolution_proposed': {
