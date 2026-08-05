@@ -1,54 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Capacitor } from '@capacitor/core';
+import { useInstallPrompt } from '@/components/pwa/useInstallPrompt';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 
-type Platform = 'checking' | 'ios' | 'android' | 'other' | 'installed';
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
-}
-
-/** Device-aware "install Barbets" instructions — iOS never fires beforeinstallprompt (Safari has no native install button, only the Share sheet), while Chrome on Android does, so we offer a real one-tap install there when the browser makes it available and fall back to menu instructions otherwise. */
+/** Device-aware "install Barbets" instructions, shown permanently on /profile as the durable
+ * place to find them again. See also InstallBanner, the dismissible nudge shown right after
+ * joining/creating a group. */
 export function InstallPrompt() {
-  const [platform, setPlatform] = useState<Platform>('checking');
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-
-  useEffect(() => {
-    // Already a real app in this context, no home-screen install to prompt for.
-    if (Capacitor.isNativePlatform()) {
-      setPlatform('installed');
-      return;
-    }
-
-    const ua = navigator.userAgent;
-    const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    const isAndroid = /Android/.test(ua);
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
-
-    if (isStandalone) {
-      setPlatform('installed');
-      return;
-    }
-    setPlatform(isIOS ? 'ios' : isAndroid ? 'android' : 'other');
-
-    function onBeforeInstallPrompt(e: Event) {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-    }
-    window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
-    return () => window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
-  }, []);
-
-  async function handleInstallClick() {
-    if (!deferredPrompt) return;
-    await deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
-    setDeferredPrompt(null);
-  }
+  const { platform, deferredPrompt, promptInstall } = useInstallPrompt();
 
   if (platform === 'checking' || platform === 'installed' || platform === 'other') return null;
 
@@ -64,7 +24,7 @@ export function InstallPrompt() {
           <li>Choose "Add to Home Screen"</li>
         </ol>
       ) : deferredPrompt ? (
-        <Button size="sm" onClick={handleInstallClick}>
+        <Button size="sm" onClick={promptInstall}>
           Install app
         </Button>
       ) : (

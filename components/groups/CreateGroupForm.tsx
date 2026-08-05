@@ -6,6 +6,7 @@ import { createGroup } from '@/lib/actions/groups';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Switch } from '@/components/ui/Switch';
+import { JUST_JOINED_GROUP_KEY } from '@/components/pwa/PushReminderModal';
 import { formatSeasonLength, SEASON_LENGTH_HINTS, type SeasonLength } from '@/lib/seasonLength';
 import { COMMON_TIMEZONES, friendlyTimezoneName } from '@/lib/timezone';
 
@@ -65,6 +66,7 @@ export function CreateGroupForm() {
       if (result.error) {
         setError(result.error);
       } else {
+        localStorage.setItem(JUST_JOINED_GROUP_KEY, '1');
         router.push(`/groups/${result.data!.id}`);
       }
     });

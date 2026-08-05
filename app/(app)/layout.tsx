@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { PullToRefresh } from '@/components/layout/PullToRefresh';
 import { PageTransition } from '@/components/layout/PageTransition';
+import { PushReminderModal } from '@/components/pwa/PushReminderModal';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -14,6 +15,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-dvh bg-paper">
       <AppHeader />
+      <PushReminderModal />
       <PullToRefresh>
         <PageTransition>{children}</PageTransition>
       </PullToRefresh>

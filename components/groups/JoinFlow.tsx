@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { StackedLogo } from '@/components/ui/StackedLogo';
 import { Modal } from '@/components/ui/Modal';
+import { JUST_JOINED_GROUP_KEY } from '@/components/pwa/PushReminderModal';
 
 const inputClasses =
   'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-center text-espresso-900 placeholder:text-espresso-300 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
@@ -108,6 +109,7 @@ export function JoinFlow({
               if (result.error) {
                 setError(result.error);
               } else {
+                localStorage.setItem(JUST_JOINED_GROUP_KEY, '1');
                 router.push(`/groups/${result.data!.group_id}`);
               }
             })

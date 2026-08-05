@@ -19,6 +19,12 @@ export type PushPlatform = 'checking' | 'ios-needs-install' | 'unsupported' | 'r
 export function usePushSubscription() {
   const [platform, setPlatform] = useState<PushPlatform>('checking');
   const [subscribed, setSubscribed] = useState(false);
+  // Distinct from `platform !== 'checking'`: platform flips to 'ready' synchronously, before the
+  // async getSubscription()/checkPermissions() below resolves, so `subscribed` briefly reads false
+  // even for an already-subscribed device. Callers that decide whether to interrupt the user (e.g.
+  // PushReminderModal) need to wait for this, not just for `platform`, or they flash open then
+  // immediately close once the real value comes in.
+  const [subscribedKnown, setSubscribedKnown] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, setPending] = useState(false);
@@ -33,6 +39,7 @@ export function usePushSubscription() {
         setPermission(receive === 'granted' ? 'granted' : receive === 'denied' ? 'denied' : 'default');
         if (receive !== 'granted') {
           setSubscribed(false);
+          setSubscribedKnown(true);
           return;
         }
         // Same reasoning as the web path below: re-save on every mount so "on" always means the
@@ -41,6 +48,7 @@ export function usePushSubscription() {
         nativeTokenRef.current = token;
         const result = await saveNativePushSubscription(token, Capacitor.getPlatform() as 'android' | 'ios');
         setSubscribed(!result.error);
+        setSubscribedKnown(true);
       });
 
       const listener = FirebaseMessaging.addListener('tokenReceived', async ({ token }) => {
@@ -57,10 +65,12 @@ export function usePushSubscription() {
 
     if (isIOS && !isStandalone) {
       setPlatform('ios-needs-install');
+      setSubscribedKnown(true);
       return;
     }
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       setPlatform('unsupported');
+      setSubscribedKnown(true);
       return;
     }
 
@@ -71,6 +81,7 @@ export function usePushSubscription() {
       const existing = await reg.pushManager.getSubscription();
       if (!existing) {
         setSubscribed(false);
+        setSubscribedKnown(true);
         return;
       }
       // The browser can keep reporting a subscription the server has since deleted
@@ -79,6 +90,7 @@ export function usePushSubscription() {
       const json = existing.toJSON();
       const result = await savePushSubscription({ endpoint: json.endpoint!, keys: { p256dh: json.keys!.p256dh, auth: json.keys!.auth } });
       setSubscribed(!result.error);
+      setSubscribedKnown(true);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -183,5 +195,5 @@ export function usePushSubscription() {
     }
   }, [unsubscribeNative]);
 
-  return { platform, subscribed, permission, error, isPending, subscribe, unsubscribe };
+  return { platform, subscribed, subscribedKnown, permission, error, isPending, subscribe, unsubscribe };
 }
