@@ -5,7 +5,6 @@ import { notFoundIfEmpty } from '@/lib/errors';
 import { type MarketCardData } from '@/components/markets/MarketCard';
 import { SeasonBanner } from '@/components/groups/SeasonBanner';
 import { GroupDeletionBanner } from '@/components/groups/GroupDeletionBanner';
-import { InstallBanner } from '@/components/pwa/InstallBanner';
 import { NewMarketButton } from '@/components/groups/NewMarketButton';
 import { GroupMarketSections } from '@/components/groups/GroupMarketSections';
 import { SaveBalanceSnapshot } from '@/components/groups/SaveBalanceSnapshot';
@@ -226,8 +225,6 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
         {group!.deletion_scheduled_at && (
           <GroupDeletionBanner groupId={groupId} deletionScheduledAt={group!.deletion_scheduled_at} isOwner={isOwner} />
         )}
-
-        <InstallBanner />
 
         <div className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-espresso-900 to-espresso-700 p-[22px]">
           <Image
