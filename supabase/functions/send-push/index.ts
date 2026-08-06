@@ -113,6 +113,8 @@ interface NotificationEvent {
   market_id: string | null;
   season_id: string | null;
   actor_id: string | null;
+  custom_title: string | null;
+  custom_body: string | null;
 }
 
 interface Content {
@@ -222,6 +224,14 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
       title: group!.name,
       body: 'The Awards just shuffled. See who holds what now.',
       url: `/groups/${event.group_id}/awards`,
+    };
+  }
+
+  if (event.event_type === 'admin_broadcast') {
+    return {
+      title: event.custom_title!,
+      body: event.custom_body!,
+      url: `/groups/${event.group_id}`,
     };
   }
 
