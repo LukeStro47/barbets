@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useState } from 'react';
+import Link from 'next/link';
 import { signIn, signUp } from '@/lib/actions/auth';
 import { Button } from '@/components/ui/Button';
 
@@ -18,6 +19,9 @@ export function SignInForm({ next }: { next?: string }) {
       <Button type="submit" disabled={isPending} className="w-full">
         Sign in
       </Button>
+      <Link href="/forgot-password" className="block text-center text-sm text-espresso-400 hover:text-espresso-700">
+        Forgot password?
+      </Link>
     </form>
   );
 }

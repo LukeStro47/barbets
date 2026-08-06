@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 
 export interface AuthActionState {
@@ -52,6 +53,35 @@ export async function signOut(): Promise<void> {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect('/login');
+}
+
+/** x-forwarded-proto is set by Vercel but absent locally, where host always starts with
+    localhost/127.0.0.1 — falls back to http there and https everywhere else. */
+async function getOrigin(): Promise<string> {
+  const h = await headers();
+  const host = h.get('host') ?? 'localhost:3000';
+  const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') || host.startsWith('127.0.0.1') ? 'http' : 'https');
+  return `${proto}://${host}`;
+}
+
+export interface RequestPasswordResetState {
+  error?: string;
+  success?: boolean;
+}
+
+/** resetPasswordForEmail never reveals whether the email actually has an account — it only
+    errors on real problems (rate limiting, malformed input), so surfacing those directly is
+    safe and doesn't add any user-enumeration risk on top of what Supabase already prevents. */
+export async function requestPasswordReset(
+  _prevState: RequestPasswordResetState | null,
+  formData: FormData
+): Promise<RequestPasswordResetState> {
+  const email = String(formData.get('email'));
+  const origin = await getOrigin();
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${origin}/reset-password` });
+  if (error) return { error: error.message };
+  return { success: true };
 }
 
 export interface ProfileActionState {
