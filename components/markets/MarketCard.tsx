@@ -200,11 +200,16 @@ function MarketRowMeta({ market }: { market: MarketCardData }) {
   const [sideA, sideB] = market.marketType === 'yes_no' ? ['yes', 'no'] : ['over', 'under'];
 
   // None of the status-specific branches below apply — a hidden-subject market has no odds,
-  // no proposed outcome, nothing to show beyond that it exists and roughly when it closes.
+  // no proposed outcome, nothing to show beyond that it exists and roughly when it closes. A
+  // shimmering redacted pill stands in for the (nonexistent, client-side) title/details, real
+  // meta text follows right after it.
   if (market.mystery) {
     return (
-      <p className="mt-0.5 text-xs text-espresso-400">
-        {market.openBetCount ?? market.closedBetCount ?? 0} bets · <CountdownTimer target={market.closesAt} />
+      <p className="mt-1 flex items-center gap-2 text-xs text-espresso-400">
+        <span className="h-2 w-24 shrink-0 rounded-full animate-mystery-shimmer-light" />
+        <span>
+          {market.openBetCount ?? market.closedBetCount ?? 0} bets · <CountdownTimer target={market.closesAt} />
+        </span>
       </p>
     );
   }
@@ -286,14 +291,22 @@ function MarketRow({ market, isLast }: { market: MarketCardData; isLast: boolean
       href={href}
       className={cn(
         'flex items-center gap-3 px-[18px] py-[14px] transition-colors hover:bg-espresso-50/25',
+        market.mystery && 'bg-honey-50',
         !isLast && 'border-b border-espresso-50'
       )}
     >
-      <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px]', TONE_CLASSES[STATUS_TONE[market.status]])}>
-        {market.mystery ? <span className="text-base font-extrabold leading-none">?</span> : <Icon className="h-4 w-4" />}
+      <span
+        className={cn(
+          'flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px]',
+          market.mystery ? 'bg-espresso-900 text-honey-300' : TONE_CLASSES[STATUS_TONE[market.status]]
+        )}
+      >
+        {market.mystery ? <span className="text-[17px] font-extrabold leading-none">?</span> : <Icon className="h-4 w-4" />}
       </span>
       <span className="min-w-0 flex-1">
-        <p className="font-display text-[15px] font-semibold leading-[1.3] text-espresso-900">{market.title}</p>
+        <p className="font-display text-[15px] font-semibold leading-[1.3] text-espresso-900">
+          {market.mystery ? 'A market about you' : market.title}
+        </p>
         <MarketRowMeta market={market} />
       </span>
       {market.needsAttention && <AttentionBadge />}

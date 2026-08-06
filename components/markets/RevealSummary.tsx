@@ -51,6 +51,7 @@ export function RevealSummary({
   reactionNicknames,
   myNickname,
   hasProof,
+  isSubjectOfThisMarket,
 }: {
   groupName: string;
   /** The market's title, shown on the ticket itself since it has to be self-contained once shared outside the app. */
@@ -92,6 +93,8 @@ export function RevealSummary({
   myNickname: string;
   /** Whether the winning resolution proposal has a proof photo attached. */
   hasProof: boolean;
+  /** True when the viewer is a hidden subject of this market — see RevealTicket's `sealedForSubject`. */
+  isSubjectOfThisMarket?: boolean;
 }) {
   const [sideA, sideB] = marketType === 'yes_no' ? ['yes', 'no'] : ['over', 'under'];
   const oddsA = odds?.find((o) => o.side === sideA);
@@ -152,6 +155,7 @@ export function RevealSummary({
         reactionNicknames={reactionNicknames}
         myNickname={myNickname}
         hasProof={hasProof}
+        sealedForSubject={isSubjectOfThisMarket}
       />
 
       {!!carriedBonusPool && carriedBonusPool > 0 && (

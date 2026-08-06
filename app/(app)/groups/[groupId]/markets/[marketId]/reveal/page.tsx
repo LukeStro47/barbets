@@ -77,6 +77,7 @@ export default async function RevealPage({ params }: { params: Promise<{ groupId
   const creator = { nickname: nicknameByUserId.get(marketRow.creator_id) };
   const sponsor = marketRow.sponsor_id ? { nickname: nicknameByUserId.get(marketRow.sponsor_id) } : null;
   const hiddenFrom = subjectUserIds.map((userId) => `@${nicknameByUserId.get(userId) ?? '?'}`);
+  const isSubjectOfThisMarket = !!user && subjectUserIds.includes(user.id);
 
   const headline =
     marketRow.status === 'voided'
@@ -129,6 +130,7 @@ export default async function RevealPage({ params }: { params: Promise<{ groupId
         myReaction={myReaction as ReactionEmoji | null}
         reactionNicknames={Object.fromEntries(reactionNicknames)}
         myNickname={myNickname}
+        isSubjectOfThisMarket={isSubjectOfThisMarket}
       />
       <p className="text-center text-xs text-espresso-400">
         Started by <Mention nickname={creator?.nickname ?? ''} />

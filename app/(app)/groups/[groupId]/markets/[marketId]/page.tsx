@@ -16,7 +16,7 @@ import { ResolutionProofButton } from '@/components/markets/ResolutionProofButto
 import { BetslipBar } from '@/components/markets/BetslipBar';
 import { MyBetsCard } from '@/components/markets/MyBetsCard';
 import { OptionLabel } from '@/components/markets/OptionLabel';
-import { SubjectMarketPulse, type SubjectMarketPulseData, type SubjectMarketPulseSide } from '@/components/markets/SubjectMarketPulse';
+import { SubjectMarketPulse, type SubjectMarketPulseData } from '@/components/markets/SubjectMarketPulse';
 import { Mention } from '@/components/ui/Mention';
 import { STATUS_LABEL, STATUS_TONE } from '@/lib/marketStatus';
 import { formatTokens } from '@/lib/formatNumber';
@@ -35,19 +35,16 @@ export default async function MarketDetailPage({
 
   if (!market) {
     // Not visible via the normal path — the one deliberate exception is a subject of a
-    // not-yet-resolved market, who gets a content-free "pulse" view instead of a flat 404. Any
-    // other reason it's empty (doesn't exist, wrong group, already resolved and RLS hasn't
-    // caught up, etc.) makes this RPC raise too, so `pulse` stays null and falls through to the
-    // same 404 as before.
-    const { data: pulse } = await supabase.rpc('get_subject_market_pulse', { p_market_id: marketId }).maybeSingle();
+    // not-yet-resolved market, who gets a content-free "pulse" view (a sealed ticket, no odds,
+    // no question) instead of a flat 404. Any other reason it's empty (doesn't exist, wrong
+    // group, already resolved and RLS hasn't caught up, etc.) makes this RPC raise too, so
+    // `pulse` stays null and falls through to the same 404 as before.
+    const [{ data: pulse }, { data: group }] = await Promise.all([
+      supabase.rpc('get_subject_market_pulse', { p_market_id: marketId }).maybeSingle(),
+      supabase.from('groups').select('name').eq('id', groupId).single(),
+    ]);
     if (pulse) {
-      const pulseData = pulse as SubjectMarketPulseData;
-      let sides: SubjectMarketPulseSide[] | null = null;
-      if (pulseData.market_type !== 'multiple_choice') {
-        const { data: sidesData } = await supabase.rpc('get_subject_market_pulse_sides', { p_market_id: marketId });
-        sides = sidesData as SubjectMarketPulseSide[] | null;
-      }
-      return <SubjectMarketPulse groupId={groupId} pulse={pulseData} sides={sides} />;
+      return <SubjectMarketPulse groupId={groupId} groupName={group?.name ?? 'Group'} pulse={pulse as SubjectMarketPulseData} />;
     }
   }
 
