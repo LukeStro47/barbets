@@ -37,6 +37,21 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
     netByGroup.set(groupId, (netByGroup.get(groupId) ?? 0) + row.amount);
   }
 
+  // Which groups are currently sitting in intermission — a net-tokens figure there is stale
+  // (nothing's being wagered), so those cards show "Season ended" instead. Batched across every
+  // group, not queried per card, same reasoning the ledger query above already uses.
+  const groupIds = (groups ?? []).map((g) => g.id);
+  const { data: seasonsEnabledRows } =
+    groupIds.length > 0
+      ? await supabase.from('group_settings').select('group_id, seasons_enabled').in('group_id', groupIds)
+      : { data: [] };
+  const seasonsEnabledGroupIds = (seasonsEnabledRows ?? []).filter((r) => r.seasons_enabled).map((r) => r.group_id);
+  const { data: intermissionSeasonRows } =
+    seasonsEnabledGroupIds.length > 0
+      ? await supabase.from('seasons').select('group_id').in('group_id', seasonsEnabledGroupIds).eq('status', 'intermission')
+      : { data: [] };
+  const intermissionGroupIds = new Set((intermissionSeasonRows ?? []).map((r) => r.group_id));
+
   // With exactly one group, skip straight to it — the hub is still reachable
   // via ?all=1 (e.g. to join or start a second group).
   if (!all && (groups ?? []).length === 1) {
@@ -72,19 +87,24 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
             const myIndex = ranked.findIndex((m: { user_id: string }) => m.user_id === user?.id);
             const myRank = myIndex + 1;
             const myNet = netByGroup.get(g.id) ?? 0;
+            const inIntermission = intermissionGroupIds.has(g.id);
             return (
               <li key={g.id}>
                 <Link href={`/groups/${g.id}`}>
                   <Card className="flex items-center justify-between transition-shadow hover:shadow-md">
                     <div>
                       <p className="font-display font-bold text-espresso-900">{g.name}</p>
-                      <p className="text-sm">
-                        <span className={cn('font-semibold', myNet >= 0 ? 'text-success-700' : 'text-danger-700')}>
-                          {myNet >= 0 ? '+' : ''}
-                          {formatTokens(myNet)} tokens
-                        </span>
-                        <span className="text-espresso-400"> · {formatOrdinal(myRank)}</span>
-                      </p>
+                      {inIntermission ? (
+                        <p className="text-sm font-semibold text-espresso-400">Season ended</p>
+                      ) : (
+                        <p className="text-sm">
+                          <span className={cn('font-semibold', myNet >= 0 ? 'text-success-700' : 'text-danger-700')}>
+                            {myNet >= 0 ? '+' : ''}
+                            {formatTokens(myNet)} tokens
+                          </span>
+                          <span className="text-espresso-400"> · {formatOrdinal(myRank)}</span>
+                        </p>
+                      )}
                       {g.deletion_scheduled_at && (
                         <p className="mt-0.5 text-xs font-semibold text-danger-700">Being deleted</p>
                       )}
