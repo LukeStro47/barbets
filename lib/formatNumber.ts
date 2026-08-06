@@ -7,3 +7,19 @@ export function formatTokens(n: number): string {
 export function formatPercent(n: number): string {
   return (Math.round(n * 10) / 10).toString();
 }
+
+/** "1st"/"2nd"/"3rd"/"4th"... standard English ordinal suffix, including the 11th-13th exception. */
+export function formatOrdinal(n: number): string {
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
+  switch (n % 10) {
+    case 1:
+      return `${n}st`;
+    case 2:
+      return `${n}nd`;
+    case 3:
+      return `${n}rd`;
+    default:
+      return `${n}th`;
+  }
+}

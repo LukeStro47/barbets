@@ -53,11 +53,25 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
 
   const { data: openBetRows } = await supabase
     .from('bets')
-    .select('amount, markets!inner(group_id)')
+    .select('market_id, side, option_id, amount, markets!inner(group_id)')
     .eq('user_id', user!.id)
     .eq('markets.group_id', groupId)
     .is('settled_at', null);
   const pendingTokens = (openBetRows ?? []).reduce((sum, b) => sum + b.amount, 0);
+
+  // Grouped by market so an open market's card can show "You: 50 on YES" — settled_at IS NULL
+  // also covers bets on closed/proposed/disputed markets, but only the 'open' branch below ever
+  // looks this map up, so that's harmless. multiple_choice bets carry an option_id instead of a
+  // side, so their labels need a separate lookup against market_options.
+  const myOpenBetsByMarket = new Map<string, { side: string | null; option_id: string | null; amount: number }[]>();
+  for (const b of openBetRows ?? []) {
+    if (!myOpenBetsByMarket.has(b.market_id)) myOpenBetsByMarket.set(b.market_id, []);
+    myOpenBetsByMarket.get(b.market_id)!.push(b);
+  }
+  const myOpenOptionIds = [...new Set((openBetRows ?? []).map((b) => b.option_id).filter((id): id is string => !!id))];
+  const { data: myOpenOptionRows } =
+    myOpenOptionIds.length > 0 ? await supabase.from('market_options').select('id, label').in('id', myOpenOptionIds) : { data: [] };
+  const myOpenOptionLabelById = new Map((myOpenOptionRows ?? []).map((o) => [o.id, o.label]));
 
   const { data: settings } = await supabase
     .from('group_settings')
@@ -147,7 +161,12 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
       buckets.pending_sponsor.push({ ...base, sponsorDeadline: sponsorDeadline(m.created_at, m.closes_at) });
     } else if (m.status === 'open') {
       const { data: count } = await supabase.rpc('get_open_bet_count', { p_market_id: m.id });
-      buckets.open.push({ ...base, openBetCount: count ?? 0, needsAttention: needsClarificationMarketIds.has(m.id) });
+      const myOpenBets = myOpenBetsByMarket.get(m.id);
+      const myBets = myOpenBets?.map((b) => ({
+        label: b.side ? b.side.toUpperCase() : (myOpenOptionLabelById.get(b.option_id!) ?? '?'),
+        amount: b.amount,
+      }));
+      buckets.open.push({ ...base, openBetCount: count ?? 0, needsAttention: needsClarificationMarketIds.has(m.id), myBets });
     } else if (['closed', 'proposed', 'disputed'].includes(m.status)) {
       const bucket = m.status === 'disputed' ? buckets.challenged : buckets.awaiting_resolution;
       let proposedOutcomeLabel: string | undefined;

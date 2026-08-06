@@ -7,7 +7,8 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/Button';
 import { JoinGroupForm } from '@/components/groups/JoinGroupForm';
 import { OnboardingCarousel } from '@/components/groups/OnboardingCarousel';
-import { formatTokens } from '@/lib/formatNumber';
+import { cn } from '@/lib/cn';
+import { formatTokens, formatOrdinal } from '@/lib/formatNumber';
 
 export default async function GroupsHubPage({ searchParams }: { searchParams: Promise<{ all?: string }> }) {
   const { all } = await searchParams;
@@ -19,6 +20,22 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
     .from('groups')
     .select('id, name, deletion_scheduled_at, memberships(user_id, balance, status)')
     .order('created_at', { ascending: false });
+
+  // Net tokens per group — same definition the leaderboard page's "All-time net" card uses
+  // (every ledger entry except the seed itself, so reseeding for a new season doesn't count as
+  // "winning" tokens back). One query across every group the viewer's in, not one per card.
+  const { data: ledgerRows } = user
+    ? await supabase
+        .from('ledger')
+        .select('amount, memberships!inner(user_id, group_id)')
+        .eq('memberships.user_id', user.id)
+        .neq('reason', 'seed')
+    : { data: [] };
+  const netByGroup = new Map<string, number>();
+  for (const row of (ledgerRows ?? []) as any[]) {
+    const groupId = row.memberships.group_id;
+    netByGroup.set(groupId, (netByGroup.get(groupId) ?? 0) + row.amount);
+  }
 
   // With exactly one group, skip straight to it — the hub is still reachable
   // via ?all=1 (e.g. to join or start a second group).
@@ -54,15 +71,19 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
               .sort((a: { balance: number }, b: { balance: number }) => b.balance - a.balance);
             const myIndex = ranked.findIndex((m: { user_id: string }) => m.user_id === user?.id);
             const myRank = myIndex + 1;
-            const myBalance = myIndex >= 0 ? ranked[myIndex].balance : 0;
+            const myNet = netByGroup.get(g.id) ?? 0;
             return (
               <li key={g.id}>
                 <Link href={`/groups/${g.id}`}>
                   <Card className="flex items-center justify-between transition-shadow hover:shadow-md">
                     <div>
                       <p className="font-display font-bold text-espresso-900">{g.name}</p>
-                      <p className="text-sm text-espresso-400">
-                        #{myRank} · {formatTokens(myBalance)} tokens
+                      <p className="text-sm">
+                        <span className={cn('font-semibold', myNet >= 0 ? 'text-success-700' : 'text-danger-700')}>
+                          {myNet >= 0 ? '+' : ''}
+                          {formatTokens(myNet)} tokens
+                        </span>
+                        <span className="text-espresso-400"> · {formatOrdinal(myRank)}</span>
                       </p>
                       {g.deletion_scheduled_at && (
                         <p className="mt-0.5 text-xs font-semibold text-danger-700">Being deleted</p>

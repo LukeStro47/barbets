@@ -44,6 +44,8 @@ export interface MarketCardData {
   reactionGlyphs?: string[];
   /** resolved/voided only: the viewer's own total payout minus total stake across every bet they placed on this market (summed, in case of a hedge — same convention the "Resolved" push copy uses). Undefined when the viewer never bet on it; always 0 for a void (refund = stake back), so it never renders a won/lost suffix. */
   myNet?: number;
+  /** open only: every bet the viewer has placed on this market so far (more than one entry means a hedge across sides/options). Undefined/empty when they haven't bet on it yet. */
+  myBets?: { label: string; amount: number }[];
 }
 
 function AttentionBadge() {
@@ -70,16 +72,27 @@ function ReactionFacepile({ glyphs }: { glyphs: string[] }) {
   );
 }
 
-/** "+N won" (success-green, same treatment RevealSummary.tsx uses) or "-N lost" (muted) appended
-    next to a resolved market's outcome, when the viewer had a bet on it. Renders nothing for an
-    undefined or zero myNet — undefined means the viewer never bet on it, zero means a void
-    refund or (rare) an exact stake-back. */
+/** "+N won" (success-green) or "-N lost" (danger-red) appended next to a resolved market's
+    outcome, when the viewer had a bet on it. Renders nothing for an undefined or zero myNet —
+    undefined means the viewer never bet on it, zero means a void refund or (rare) an exact
+    stake-back. */
 function MyNetLabel({ myNet }: { myNet?: number }) {
   if (!myNet) return null;
   return myNet > 0 ? (
     <span className="text-success-700"> · +{formatTokens(myNet)} won</span>
   ) : (
-    <span className="text-espresso-400"> · −{formatTokens(Math.abs(myNet))} lost</span>
+    <span className="text-danger-700"> · −{formatTokens(Math.abs(myNet))} lost</span>
+  );
+}
+
+/** "You: 50 on YES" (single bet) or "You: 50 on YES, 20 on NO" (hedged) — shown on an open
+    market's card so the viewer doesn't have to open it to remember their own position. */
+function MyBetsLabel({ myBets }: { myBets?: { label: string; amount: number }[] }) {
+  if (!myBets || myBets.length === 0) return null;
+  return (
+    <span className="font-semibold text-honey-700">
+      You: {myBets.map((b) => `${formatTokens(b.amount)} on ${b.label}`).join(', ')}
+    </span>
   );
 }
 
@@ -120,9 +133,16 @@ export function MarketCard({ market }: { market: MarketCardData }) {
         )}
 
         {market.status === 'open' && (
-          <div className="flex items-center justify-between text-sm text-espresso-500">
-            <span>🤫 {market.openBetCount ?? 0} bets placed</span>
-            <CountdownTimer target={market.closesAt} />
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-sm text-espresso-500">
+              <span>🤫 {market.openBetCount ?? 0} bets placed</span>
+              <CountdownTimer target={market.closesAt} />
+            </div>
+            {market.myBets && market.myBets.length > 0 && (
+              <p className="text-xs">
+                <MyBetsLabel myBets={market.myBets} />
+              </p>
+            )}
           </div>
         )}
 
@@ -189,6 +209,12 @@ function MarketRowMeta({ market }: { market: MarketCardData }) {
     return (
       <p className="mt-0.5 text-xs text-espresso-400">
         {market.openBetCount ?? 0} bets · <CountdownTimer target={market.closesAt} />
+        {market.myBets && market.myBets.length > 0 && (
+          <>
+            {' · '}
+            <MyBetsLabel myBets={market.myBets} />
+          </>
+        )}
       </p>
     );
   }
