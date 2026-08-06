@@ -1,8 +1,8 @@
 import { cn } from '@/lib/cn';
 import { ClockIcon, LockIcon, UnlockIcon } from '@/components/ui/icons';
 
-const CAPTION_STATIC = "Someone started a market about you. The question, the options and who's betting stay hidden until it resolves.";
-const CAPTION_OVERLAY = "This market about you has resolved. The question, the options and who bet stay hidden until you tap to open it.";
+const CAPTION_STATIC = "Someone started a market about you. The question, the options, and who's betting stay hidden until it resolves.";
+const CAPTION_OVERLAY = "This market about you has resolved. The question, the options, and who bet stay hidden until you tap to open it.";
 
 function Wordmark() {
   return (
@@ -111,7 +111,7 @@ export function SealedTicketCover({ groupLabel, stats, mode, tearing, onOpen, on
         }
       >
         <div className={cn('absolute inset-0', HATCH)} />
-        <div className="relative px-6 pt-6 pb-[54px]">
+        <div className="relative px-6 pt-6 pb-[78px]">
           <div className="mb-5 flex items-center justify-between">
             <Wordmark />
             <span className="inline-flex items-center gap-1.5 rounded-full bg-honey-500/[0.16] px-2.5 py-1 text-[10.5px] font-extrabold tracking-[0.09em] text-honey-300 uppercase">
@@ -134,8 +134,8 @@ export function SealedTicketCover({ groupLabel, stats, mode, tearing, onOpen, on
       >
         <div className={cn('absolute inset-0', HATCH)} />
         {stats && stats.length > 0 && (
-          <div className="relative px-6 pt-[54px] pb-5">
-            <p className="mb-2.5 text-[11px] font-bold tracking-[0.1em] text-honey-400 uppercase">What you can see</p>
+          <div className="relative px-6 pt-[78px] pb-5">
+            <p className="mb-2.5 text-[11px] font-bold tracking-[0.1em] text-honey-400 uppercase">About the Market</p>
             <div className="mb-4 grid grid-cols-3 gap-2">
               {stats.map((s) => (
                 <div key={s.label} className="rounded-[14px] bg-white/[0.07] px-3 py-2.5">

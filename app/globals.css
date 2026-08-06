@@ -237,17 +237,11 @@
 }
 
 /* Mystery markets (a hidden subject can't see a market exists until it
-   resolves): a shimmering redacted placeholder — one keyframe, two gradient
-   variants since the feed row sits on paper and the sealed ticket's redacted
-   question lines sit on the dark ticket gradient. */
+   resolves): a shimmering redacted placeholder for the sealed ticket's
+   redacted question lines, on the dark ticket gradient. */
 @keyframes mystery-shimmer {
   from { background-position: 130% 0; }
   to { background-position: -30% 0; }
-}
-.animate-mystery-shimmer-light {
-  background-image: linear-gradient(100deg, var(--color-espresso-100) 30%, var(--color-honey-200) 50%, var(--color-espresso-100) 70%);
-  background-size: 220% 100%;
-  animation: mystery-shimmer 3.2s linear infinite;
 }
 .animate-mystery-shimmer-dark {
   background-image: linear-gradient(100deg, rgba(255, 253, 249, 0.09) 30%, rgba(232, 163, 61, 0.28) 50%, rgba(255, 253, 249, 0.09) 70%);
@@ -255,7 +249,6 @@
   animation: mystery-shimmer 3s linear infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  .animate-mystery-shimmer-light,
   .animate-mystery-shimmer-dark {
     animation: none;
     background-position: 0 0;

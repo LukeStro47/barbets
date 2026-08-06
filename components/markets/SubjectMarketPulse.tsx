@@ -40,7 +40,7 @@ export function SubjectMarketPulse({
         title="A market about you"
         backHref={`/groups/${groupId}`}
         backLabel={groupName}
-        backAction={<Badge tone={STATUS_TONE[pulse.status]}>{STATUS_LABEL[pulse.status]} · about you</Badge>}
+        backAction={<Badge tone={STATUS_TONE[pulse.status]}>{STATUS_LABEL[pulse.status]}</Badge>}
       />
 
       <SealedTicketCover groupLabel={`${groupName} · About you`} stats={stats} mode="static" />

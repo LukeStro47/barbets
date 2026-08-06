@@ -203,16 +203,11 @@ function MarketRowMeta({ market }: { market: MarketCardData }) {
   const [sideA, sideB] = market.marketType === 'yes_no' ? ['yes', 'no'] : ['over', 'under'];
 
   // None of the status-specific branches below apply — a hidden-subject market has no odds,
-  // no proposed outcome, nothing to show beyond that it exists and roughly when it closes. A
-  // shimmering redacted pill stands in for the (nonexistent, client-side) title/details, real
-  // meta text follows right after it.
+  // no proposed outcome, nothing to show beyond that it exists and roughly when it closes.
   if (market.mystery) {
     return (
-      <p className="mt-1 flex items-center gap-2 text-xs text-espresso-400">
-        <span className="h-2 w-24 shrink-0 rounded-full animate-mystery-shimmer-light" />
-        <span>
-          {market.openBetCount ?? market.closedBetCount ?? 0} bets · <CountdownTimer target={market.closesAt} />
-        </span>
+      <p className="mt-0.5 text-xs text-espresso-400">
+        {market.openBetCount ?? market.closedBetCount ?? 0} bets · <CountdownTimer target={market.closesAt} />
       </p>
     );
   }
