@@ -131,6 +131,9 @@ export default async function ProfilePage() {
         <Link href="/how-it-works" className="font-medium text-espresso-700 underline">
           How Barbets works
         </Link>
+        <Link href="/feedback" className="font-medium text-espresso-700 underline">
+          Send feedback
+        </Link>
         <Link href="/help" className="font-medium text-espresso-700 underline">
           Help
         </Link>
