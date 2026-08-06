@@ -22,7 +22,7 @@ export default async function HowItWorksPage({ searchParams }: { searchParams: P
   const { data: settings } = groupId
     ? await supabase
         .from('group_settings')
-        .select('allow_hedged_bets, require_endorsement, resolution_window_hours, seasons_enabled, distribute_payout')
+        .select('allow_hedged_bets, require_endorsement, resolution_window_hours, seasons_enabled, distribute_payout, seed_amount')
         .eq('group_id', groupId)
         .maybeSingle()
     : { data: null };
@@ -32,6 +32,7 @@ export default async function HowItWorksPage({ searchParams }: { searchParams: P
   const endorsementRequired = settings?.require_endorsement ?? true;
   const seasonsEnabled = settings?.seasons_enabled ?? false;
   const distributePayout = settings?.distribute_payout ?? false;
+  const seedAmount = settings?.seed_amount ?? 1000;
 
   const lifecycle: LifecycleStep[] = [
     { icon: '🔒', label: 'Open', body: 'Bets are sealed. Nobody sees who bet what, not even you, for anyone else.' },
@@ -55,6 +56,13 @@ export default async function HowItWorksPage({ searchParams }: { searchParams: P
           ? " If nobody predicted the outcome, this group sends part of that pool to the creator and endorser and carries the rest into another open market, rather than a plain refund."
           : ''
       }`,
+    },
+    {
+      icon: '🪙',
+      title: 'Everyone starts with the same stake',
+      body: `Every member gets ${seedAmount.toLocaleString()} tokens the moment they join${
+        seasonsEnabled ? ", and the same amount again whenever a new season starts" : ''
+      }. There's no way to buy more, your stake is your stake.`,
     },
     {
       icon: '🎯',
@@ -121,6 +129,9 @@ export default async function HowItWorksPage({ searchParams }: { searchParams: P
       </div>
 
       <div className="flex flex-col gap-2 text-sm">
+        <Link href="/demo" className="font-medium text-espresso-700 underline">
+          Prefer to see it in action? Try the interactive demo
+        </Link>
         <Link href="/help" className="font-medium text-espresso-700 underline">
           Help
         </Link>
