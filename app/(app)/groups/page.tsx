@@ -7,13 +7,17 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/Button';
 import { JoinGroupForm } from '@/components/groups/JoinGroupForm';
 import { OnboardingCarousel } from '@/components/groups/OnboardingCarousel';
+import { formatTokens } from '@/lib/formatNumber';
 
 export default async function GroupsHubPage({ searchParams }: { searchParams: Promise<{ all?: string }> }) {
   const { all } = await searchParams;
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const { data: groups } = await supabase
     .from('groups')
-    .select('id, name, invite_code, deletion_scheduled_at, memberships(status)')
+    .select('id, name, deletion_scheduled_at, memberships(user_id, balance, status)')
     .order('created_at', { ascending: false });
 
   // With exactly one group, skip straight to it — the hub is still reachable
@@ -38,16 +42,19 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
         <div className="space-y-3">
           <OnboardingCarousel />
           <EmptyState title="No groups yet" subtitle="Start one, or join with a friend's invite code below." />
-          <Link href="/demo" className="block">
-            <Button size="lg" variant="outline" className="w-full">
-              Try a live demo
-            </Button>
-          </Link>
         </div>
       ) : (
         <ul className="space-y-3">
           {(groups ?? []).map((g: any) => {
-            const memberCount = (g.memberships ?? []).filter((m: { status: string }) => m.status === 'active').length;
+            // Same rank definition the leaderboard page uses: non-removed members sorted by
+            // balance descending, rank = array index + 1 — no RPC/window function needed for
+            // a lightweight per-card badge.
+            const ranked = (g.memberships ?? [])
+              .filter((m: { status: string }) => m.status !== 'removed')
+              .sort((a: { balance: number }, b: { balance: number }) => b.balance - a.balance);
+            const myIndex = ranked.findIndex((m: { user_id: string }) => m.user_id === user?.id);
+            const myRank = myIndex + 1;
+            const myBalance = myIndex >= 0 ? ranked[myIndex].balance : 0;
             return (
               <li key={g.id}>
                 <Link href={`/groups/${g.id}`}>
@@ -55,7 +62,7 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
                     <div>
                       <p className="font-display font-bold text-espresso-900">{g.name}</p>
                       <p className="text-sm text-espresso-400">
-                        {memberCount} member{memberCount === 1 ? '' : 's'} · {g.invite_code}
+                        #{myRank} · {formatTokens(myBalance)} tokens
                       </p>
                       {g.deletion_scheduled_at && (
                         <p className="mt-0.5 text-xs font-semibold text-danger-700">Being deleted</p>
@@ -74,6 +81,14 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
         <h2 className="mb-3 font-semibold text-espresso-800">Join with a code</h2>
         <JoinGroupForm />
       </Card>
+
+      {(groups ?? []).length === 0 && (
+        <Link href="/demo" className="block">
+          <Button size="lg" variant="outline" className="w-full">
+            Try a live demo
+          </Button>
+        </Link>
+      )}
     </main>
   );
 }

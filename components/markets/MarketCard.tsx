@@ -8,6 +8,7 @@ import { OptionLabel } from '@/components/markets/OptionLabel';
 import { ChevronRightIcon, FlagIcon, TargetIcon, ClockIcon, AlertTriangleIcon, CheckCircleIcon } from '@/components/ui/icons';
 import { STATUS_LABEL, STATUS_TONE, type MarketStatus } from '@/lib/marketStatus';
 import { formatLine } from '@/lib/units';
+import { formatTokens } from '@/lib/formatNumber';
 import { cn } from '@/lib/cn';
 
 export interface MarketCardData {
@@ -41,6 +42,8 @@ export interface MarketCardData {
   needsAttention?: boolean;
   /** Distinct reaction glyphs present on a resolved/voided market, in REACTIONS canonical order — renders a compact view-only facepile. Mutually exclusive with needsAttention in practice (only open markets can need attention; only resolved/voided ones can have reactions), so they share the same badge slot. */
   reactionGlyphs?: string[];
+  /** resolved/voided only: the viewer's own total payout minus total stake across every bet they placed on this market (summed, in case of a hedge — same convention the "Resolved" push copy uses). Undefined when the viewer never bet on it; always 0 for a void (refund = stake back), so it never renders a won/lost suffix. */
+  myNet?: number;
 }
 
 function AttentionBadge() {
@@ -64,6 +67,19 @@ function ReactionFacepile({ glyphs }: { glyphs: string[] }) {
         </span>
       ))}
     </span>
+  );
+}
+
+/** "+N won" (success-green, same treatment RevealSummary.tsx uses) or "-N lost" (muted) appended
+    next to a resolved market's outcome, when the viewer had a bet on it. Renders nothing for an
+    undefined or zero myNet — undefined means the viewer never bet on it, zero means a void
+    refund or (rare) an exact stake-back. */
+function MyNetLabel({ myNet }: { myNet?: number }) {
+  if (!myNet) return null;
+  return myNet > 0 ? (
+    <span className="text-success-700"> · +{formatTokens(myNet)} won</span>
+  ) : (
+    <span className="text-espresso-400"> · −{formatTokens(Math.abs(myNet))} lost</span>
   );
 }
 
@@ -132,9 +148,14 @@ export function MarketCard({ market }: { market: MarketCardData }) {
 
         {['resolved', 'voided'].includes(market.status) && (
           <p className="text-sm font-semibold text-espresso-600">
-            {market.outcome === 'void'
-              ? 'Voided, everyone refunded'
-              : `Outcome: ${(isMultipleChoice ? market.outcomeLabel : market.outcome)?.toUpperCase()}`}
+            {market.outcome === 'void' ? (
+              'Voided, everyone refunded'
+            ) : (
+              <>
+                {(isMultipleChoice ? market.outcomeLabel : market.outcome)?.toUpperCase()}
+                <MyNetLabel myNet={market.myNet} />
+              </>
+            )}
           </p>
         )}
       </Card>
@@ -208,7 +229,8 @@ function MarketRowMeta({ market }: { market: MarketCardData }) {
     }
     return (
       <p className="mt-0.5 text-xs text-espresso-400">
-        Outcome: {isMultipleChoice ? <OptionLabel label={market.outcomeLabel ?? ''} /> : market.outcome?.toUpperCase()}
+        {isMultipleChoice ? <OptionLabel label={market.outcomeLabel ?? ''} /> : market.outcome?.toUpperCase()}
+        <MyNetLabel myNet={market.myNet} />
       </p>
     );
   }

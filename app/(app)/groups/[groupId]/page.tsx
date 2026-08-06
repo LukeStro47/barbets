@@ -103,6 +103,24 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
     reactionEmojisByMarket.get(r.market_id)!.add(r.emoji);
   }
 
+  // The viewer's own bets on every revealed market, so each market row can show "+N won"/"-N
+  // lost" instead of just the bare outcome — same shape as the reveal page's per-bet query
+  // (app/(app)/groups/[groupId]/markets/[marketId]/reveal/page.tsx), just scoped to one user
+  // across many markets instead of every user on one market.
+  const { data: myBetRows } =
+    revealedMarketIds.length > 0
+      ? await supabase
+          .from('bets')
+          .select('market_id, side, option_id, amount, payout')
+          .eq('user_id', user!.id)
+          .in('market_id', revealedMarketIds)
+      : { data: [] };
+  const myBetsByMarket = new Map<string, { side: string | null; option_id: string | null; amount: number; payout: number | null }[]>();
+  for (const b of myBetRows ?? []) {
+    if (!myBetsByMarket.has(b.market_id)) myBetsByMarket.set(b.market_id, []);
+    myBetsByMarket.get(b.market_id)!.push(b);
+  }
+
   const buckets: Record<string, MarketCardData[]> = {
     pending_sponsor: [],
     open: [],
@@ -168,11 +186,27 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
     } else {
       const emojiSet = reactionEmojisByMarket.get(m.id);
       const reactionGlyphs = emojiSet ? REACTIONS.filter((r) => emojiSet.has(r.emoji)).map((r) => r.glyph) : undefined;
+
+      // Summed across every bet the viewer placed on this market (handles a hedge the same way
+      // the "Resolved" push copy already does) — undefined when they never bet on it at all, so
+      // MarketCard/MarketRowMeta knows to render nothing extra rather than "+0 won".
+      const myBets = myBetsByMarket.get(m.id);
+      let myNet: number | undefined;
+      if (myBets && myBets.length > 0) {
+        const isMultipleChoice = m.market_type === 'multiple_choice';
+        const totalStaked = myBets.reduce((sum, b) => sum + b.amount, 0);
+        const totalPayout = myBets.reduce((sum, b) => {
+          const isWinner = isMultipleChoice ? b.option_id === m.outcome_option_id : b.side === m.outcome;
+          return sum + (isWinner ? (b.payout ?? 0) : 0);
+        }, 0);
+        myNet = totalPayout - totalStaked;
+      }
+
       if (m.market_type === 'multiple_choice' && m.outcome_option_id) {
         const { data: option } = await supabase.from('market_options').select('label').eq('id', m.outcome_option_id).single();
-        buckets.revealed.push({ ...base, outcomeLabel: option?.label ?? null, reactionGlyphs });
+        buckets.revealed.push({ ...base, outcomeLabel: option?.label ?? null, reactionGlyphs, myNet });
       } else {
-        buckets.revealed.push({ ...base, reactionGlyphs });
+        buckets.revealed.push({ ...base, reactionGlyphs, myNet });
       }
     }
   }
