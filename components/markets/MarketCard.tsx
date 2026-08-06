@@ -46,6 +46,8 @@ export interface MarketCardData {
   myNet?: number;
   /** open only: every bet the viewer has placed on this market so far (more than one entry means a hedge across sides/options). Undefined/empty when they haven't bet on it yet. */
   myBets?: { label: string; amount: number }[];
+  /** True for a market the viewer is a hidden subject of — title is always the literal string "???" (no title/description ever reaches the client for these), and every status-specific rendering below is skipped in favor of a bare bet-count/closes-in line. Sourced from get_subject_market_pulse_for_group, never from visible_markets. */
+  mystery?: boolean;
 }
 
 function AttentionBadge() {
@@ -197,6 +199,16 @@ function MarketRowMeta({ market }: { market: MarketCardData }) {
   const isMultipleChoice = market.marketType === 'multiple_choice';
   const [sideA, sideB] = market.marketType === 'yes_no' ? ['yes', 'no'] : ['over', 'under'];
 
+  // None of the status-specific branches below apply — a hidden-subject market has no odds,
+  // no proposed outcome, nothing to show beyond that it exists and roughly when it closes.
+  if (market.mystery) {
+    return (
+      <p className="mt-0.5 text-xs text-espresso-400">
+        {market.openBetCount ?? market.closedBetCount ?? 0} bets · <CountdownTimer target={market.closesAt} />
+      </p>
+    );
+  }
+
   if (market.status === 'pending_sponsor') {
     return (
       <p className="mt-0.5 text-xs text-espresso-400">
@@ -278,7 +290,7 @@ function MarketRow({ market, isLast }: { market: MarketCardData; isLast: boolean
       )}
     >
       <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px]', TONE_CLASSES[STATUS_TONE[market.status]])}>
-        <Icon className="h-4 w-4" />
+        {market.mystery ? <span className="text-base font-extrabold leading-none">?</span> : <Icon className="h-4 w-4" />}
       </span>
       <span className="min-w-0 flex-1">
         <p className="font-display text-[15px] font-semibold leading-[1.3] text-espresso-900">{market.title}</p>

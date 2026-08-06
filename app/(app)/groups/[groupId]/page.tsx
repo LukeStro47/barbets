@@ -230,6 +230,34 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
     }
   }
 
+  // Markets the viewer is a hidden subject of never appear in `markets` above at all (that's
+  // the whole point of visible_markets) — get_subject_market_pulse_for_group is the one
+  // sanctioned crack in that wall, returning just enough to render a "???" teaser row alongside
+  // real markets in whichever status bucket it actually belongs to. Never includes
+  // pending_sponsor (no real activity yet) or resolved/voided (already fully visible normally).
+  const { data: mysteryMarkets } = await supabase.rpc('get_subject_market_pulse_for_group', { p_group_id: groupId });
+  const MYSTERY_BUCKET: Record<string, keyof typeof buckets> = {
+    open: 'open',
+    closed: 'awaiting_resolution',
+    proposed: 'awaiting_resolution',
+    disputed: 'challenged',
+  };
+  for (const m of mysteryMarkets ?? []) {
+    const bucketKey = MYSTERY_BUCKET[m.status];
+    if (!bucketKey) continue;
+    buckets[bucketKey].push({
+      id: m.market_id,
+      groupId,
+      title: '???',
+      status: m.status,
+      marketType: m.market_type,
+      closesAt: m.closes_at,
+      outcome: null,
+      mystery: true,
+      ...(m.status === 'open' ? { openBetCount: Number(m.bet_count) } : { closedBetCount: Number(m.bet_count) }),
+    });
+  }
+
   buckets.revealed.sort(
     (a, b) => new Date(b.resolvedAt ?? 0).getTime() - new Date(a.resolvedAt ?? 0).getTime()
   );
