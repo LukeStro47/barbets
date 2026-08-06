@@ -17,6 +17,7 @@ import { NicknameEditor } from '@/components/groups/NicknameEditor';
 import { LeaveGroupButton } from '@/components/groups/LeaveGroupButton';
 import { GroupDeletionBanner } from '@/components/groups/GroupDeletionBanner';
 import { SeasonNameEditor } from '@/components/groups/SeasonNameEditor';
+import { GroupNameEditor } from '@/components/groups/GroupNameEditor';
 import { Mention } from '@/components/ui/Mention';
 import { InfoIcon, ChevronRightIcon } from '@/components/ui/icons';
 import type { GroupSettings } from '@/lib/actions/groups';
@@ -65,6 +66,13 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
         </span>
         <ChevronRightIcon className="h-4 w-3 shrink-0 text-espresso-400" />
       </Link>
+
+      {isOwner && (
+        <Card className="space-y-2">
+          <h2 className="font-semibold text-espresso-800">Group name</h2>
+          <GroupNameEditor groupId={groupId} currentName={group!.name} />
+        </Card>
+      )}
 
       <Card className="space-y-2">
         <h2 className="font-semibold text-espresso-800">Your nickname</h2>

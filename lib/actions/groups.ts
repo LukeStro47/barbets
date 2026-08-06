@@ -59,6 +59,16 @@ export async function joinGroup(inviteCode: string, nickname?: string): Promise<
   return result;
 }
 
+export async function renameGroup(groupId: string, name: string): Promise<ActionResult<Group>> {
+  const supabase = await createClient();
+  const result = await runRpc<Group>(await supabase.rpc('rename_group', { p_group_id: groupId, p_name: name }));
+  if (result.error) return result;
+  revalidatePath(`/groups/${groupId}`);
+  revalidatePath(`/groups/${groupId}/settings`);
+  revalidatePath('/groups');
+  return result;
+}
+
 export async function updateNickname(groupId: string, nickname: string): Promise<ActionResult<Membership>> {
   const supabase = await createClient();
   const result = await runRpc<Membership>(
