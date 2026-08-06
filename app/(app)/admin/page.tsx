@@ -22,13 +22,21 @@ export default async function AdminPage() {
   const { data: isAdmin } = await supabase.rpc('is_platform_admin');
   if (!isAdmin) notFound();
 
-  const [{ data: stats }, { data: groups }] = (await Promise.all([
+  const [{ data: stats }, { data: groups }, { data: members }] = (await Promise.all([
     supabase.rpc('get_platform_admin_stats').single(),
     supabase.rpc('list_groups_for_admin'),
+    supabase.rpc('list_group_members_for_admin'),
   ])) as [
     { data: { active_groups: number; total_markets: number; total_users: number } | null },
     { data: { id: string; name: string; member_count: number }[] | null },
+    { data: { group_id: string; user_id: string; nickname: string }[] | null },
   ];
+
+  const membersByGroup = new Map<string, { userId: string; nickname: string }[]>();
+  for (const m of members ?? []) {
+    if (!membersByGroup.has(m.group_id)) membersByGroup.set(m.group_id, []);
+    membersByGroup.get(m.group_id)!.push({ userId: m.user_id, nickname: m.nickname });
+  }
 
   return (
     <main className="mx-auto max-w-lg space-y-6 px-5 py-8">
@@ -44,12 +52,17 @@ export default async function AdminPage() {
         <div>
           <h2 className="font-semibold text-espresso-800">Send a test notification</h2>
           <p className="text-sm text-espresso-500">
-            Pushes a custom title/body to every member of the chosen group, for trying out ad/marketing copy on
-            real devices.
+            Pushes a title/body to everyone in a group, or just one person — start from a real notification
+            template or write your own, for trying out ad/marketing copy on real devices.
           </p>
         </div>
         <AdminBroadcastForm
-          groups={(groups ?? []).map((g: any) => ({ id: g.id, name: g.name, memberCount: g.member_count }))}
+          groups={(groups ?? []).map((g: any) => ({
+            id: g.id,
+            name: g.name,
+            memberCount: g.member_count,
+            members: membersByGroup.get(g.id) ?? [],
+          }))}
         />
       </Card>
     </main>
