@@ -184,3 +184,54 @@
   .animate-page-in-from-right,
   .animate-page-in-from-left { animation: none; }
 }
+
+/* /demo walkthrough (DemoWalkthrough/DemoBetslip/DemoRevealCard): step
+   content and CTAs fade/slide in on every step change, "who called it" rows
+   stagger in, the betslip sheet slides up and its backdrop/the bet-confirmed
+   overlay fade in. Fill-mode `both` is safe here (see the page-in-from-right
+   note above for why that's usually risky) because none of these wrappers
+   ever contain a position:fixed descendant — DemoWalkthrough renders the
+   betslip sheet and confirmed overlay as top-level siblings, never nested
+   inside an animated per-step wrapper. */
+@keyframes demo-fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes demo-fade-up-scale {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes demo-fade-up-btn {
+  from { opacity: 0; transform: translateY(6px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes demo-fade-left {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes demo-sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes demo-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-demo-fade-up { animation: demo-fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-demo-fade-up-scale { animation: demo-fade-up-scale 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both; }
+.animate-demo-fade-up-btn { animation: demo-fade-up-btn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-demo-fade-left { animation: demo-fade-left 0.4s ease both; }
+.animate-demo-sheet-up { animation: demo-sheet-up 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-demo-fade { animation: demo-fade 0.25s ease both; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-demo-fade-up,
+  .animate-demo-fade-up-scale,
+  .animate-demo-fade-up-btn,
+  .animate-demo-fade-left,
+  .animate-demo-sheet-up,
+  .animate-demo-fade {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
