@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/Button';
 import { JoinGroupForm } from '@/components/groups/JoinGroupForm';
 import { OnboardingCarousel } from '@/components/groups/OnboardingCarousel';
+import { CaretUpIcon, CaretDownIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/cn';
 import { formatTokens, formatOrdinal } from '@/lib/formatNumber';
 
@@ -58,6 +59,14 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
     redirect(`/groups/${groups![0].id}`);
   }
 
+  // Groups whose current season has ended sink to the bottom — nothing to act on there right
+  // now, so they shouldn't compete with groups still being actively played for the top of the
+  // list. A stable sort (native Array#sort in every engine this app ships to) preserves the
+  // existing newest-first order within each partition.
+  const sortedGroups = [...(groups ?? [])].sort(
+    (a, b) => (intermissionGroupIds.has(a.id) ? 1 : 0) - (intermissionGroupIds.has(b.id) ? 1 : 0)
+  );
+
   return (
     <main className="mx-auto max-w-lg space-y-8 px-5 py-8">
       <PageHeader
@@ -77,7 +86,7 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
         </div>
       ) : (
         <ul className="space-y-3">
-          {(groups ?? []).map((g: any) => {
+          {sortedGroups.map((g: any) => {
             // Same rank definition the leaderboard page uses: non-removed members sorted by
             // balance descending, rank = array index + 1 — no RPC/window function needed for
             // a lightweight per-card badge.
@@ -88,19 +97,31 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
             const myRank = myIndex + 1;
             const myNet = netByGroup.get(g.id) ?? 0;
             const inIntermission = intermissionGroupIds.has(g.id);
+            // A self-service leave sets the membership to 'dormant' rather than removing it (see
+            // ARCHITECTURE.md) — the group staying in this list afterward is intentional
+            // (rejoinable, balance preserved), but with nothing to distinguish it from a group
+            // you're still active in it reads as "leaving did nothing." This badge is that cue.
+            const myMembership = (g.memberships ?? []).find((m: { user_id: string }) => m.user_id === user?.id);
+            const iLeft = myMembership?.status === 'dormant';
             return (
               <li key={g.id}>
                 <Link href={`/groups/${g.id}`}>
                   <Card className="flex items-center justify-between transition-shadow hover:shadow-md">
                     <div>
                       <p className="font-display font-bold text-espresso-900">{g.name}</p>
-                      {inIntermission ? (
+                      {iLeft ? (
+                        <p className="text-sm font-semibold text-espresso-400">You left this group</p>
+                      ) : inIntermission ? (
                         <p className="text-sm font-semibold text-espresso-400">Season ended</p>
                       ) : (
-                        <p className="text-sm">
+                        <p className="flex items-center gap-1 text-sm">
+                          {myNet >= 0 ? (
+                            <CaretUpIcon className="h-3 w-3 shrink-0 text-success-700" />
+                          ) : (
+                            <CaretDownIcon className="h-3 w-3 shrink-0 text-danger-700" />
+                          )}
                           <span className={cn('font-semibold', myNet >= 0 ? 'text-success-700' : 'text-danger-700')}>
-                            {myNet >= 0 ? '+' : ''}
-                            {formatTokens(myNet)} tokens
+                            {formatTokens(Math.abs(myNet))} tokens
                           </span>
                           <span className="text-espresso-400"> · {formatOrdinal(myRank)}</span>
                         </p>

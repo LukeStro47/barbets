@@ -74,27 +74,34 @@ function ReactionFacepile({ glyphs }: { glyphs: string[] }) {
   );
 }
 
-/** "+N won" (success-green) or "-N lost" (danger-red) appended next to a resolved market's
+/** "N won" (success-green) or "N lost" (danger-red) appended next to a resolved market's
     outcome, when the viewer had a bet on it. Renders nothing for an undefined or zero myNet —
     undefined means the viewer never bet on it, zero means a void refund or (rare) an exact
     stake-back. */
 function MyNetLabel({ myNet }: { myNet?: number }) {
   if (!myNet) return null;
   return myNet > 0 ? (
-    <span className="text-success-700"> · +{formatTokens(myNet)} won</span>
+    <span className="text-success-700"> · {formatTokens(myNet)} won</span>
   ) : (
-    <span className="text-danger-700"> · −{formatTokens(Math.abs(myNet))} lost</span>
+    <span className="text-danger-700"> · {formatTokens(Math.abs(myNet))} lost</span>
   );
 }
 
-/** "You: 50 on YES" (single bet) or "You: 50 on YES, 20 on NO" (hedged) — shown on an open
-    market's card so the viewer doesn't have to open it to remember their own position. */
-function MyBetsLabel({ myBets }: { myBets?: { label: string; amount: number }[] }) {
+/** The viewer's own position on an open market — as a wrapped row of small chips ("50 YES",
+    "20 NO" for a hedge) rather than a run-on "You: 50 on YES, 20 on NO" sentence, which reads
+    fine for one bet but wraps mid-phrase once hedged across a couple of sides/options,
+    especially in the narrow MarketRow layout. Chips wrap as whole units instead. */
+function MyBetsChips({ myBets }: { myBets?: { label: string; amount: number }[] }) {
   if (!myBets || myBets.length === 0) return null;
   return (
-    <span className="font-semibold text-honey-700">
-      You: {myBets.map((b) => `${formatTokens(b.amount)} on ${b.label}`).join(', ')}
-    </span>
+    <div className="mt-1 flex flex-wrap items-center gap-1">
+      <span className="text-[11px] font-semibold text-espresso-400">You</span>
+      {myBets.map((b, i) => (
+        <span key={i} className="rounded-full bg-honey-100 px-2 py-0.5 text-[11px] font-bold text-honey-800">
+          {formatTokens(b.amount)} {b.label}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -135,16 +142,12 @@ export function MarketCard({ market }: { market: MarketCardData }) {
         )}
 
         {market.status === 'open' && (
-          <div className="space-y-1">
+          <div>
             <div className="flex items-center justify-between text-sm text-espresso-500">
               <span>🤫 {market.openBetCount ?? 0} bets placed</span>
               <CountdownTimer target={market.closesAt} />
             </div>
-            {market.myBets && market.myBets.length > 0 && (
-              <p className="text-xs">
-                <MyBetsLabel myBets={market.myBets} />
-              </p>
-            )}
+            <MyBetsChips myBets={market.myBets} />
           </div>
         )}
 
@@ -224,15 +227,12 @@ function MarketRowMeta({ market }: { market: MarketCardData }) {
 
   if (market.status === 'open') {
     return (
-      <p className="mt-0.5 text-xs text-espresso-400">
-        {market.openBetCount ?? 0} bets · <CountdownTimer target={market.closesAt} />
-        {market.myBets && market.myBets.length > 0 && (
-          <>
-            {' · '}
-            <MyBetsLabel myBets={market.myBets} />
-          </>
-        )}
-      </p>
+      <>
+        <p className="mt-0.5 text-xs text-espresso-400">
+          {market.openBetCount ?? 0} bets · <CountdownTimer target={market.closesAt} />
+        </p>
+        <MyBetsChips myBets={market.myBets} />
+      </>
     );
   }
 

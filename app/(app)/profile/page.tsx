@@ -19,6 +19,8 @@ export default async function ProfilePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const { data: isAdmin } = await supabase.rpc('is_platform_admin');
+
   const { data: memberships } = await supabase
     .from('memberships')
     .select('group_id, balance, nickname, groups(name)')
@@ -115,10 +117,10 @@ export default async function ProfilePage() {
                     {refunded && <span className="shrink-0 text-xs font-semibold text-espresso-400">refunded</span>}
                     {won && (
                       <span className="shrink-0 text-xs font-semibold text-success-700">
-                        +{formatTokens(b.payout - b.amount)} won
+                        {formatTokens(b.payout - b.amount)} won
                       </span>
                     )}
-                    {lost && <span className="shrink-0 text-xs font-semibold text-espresso-300">-{formatTokens(b.amount)} lost</span>}
+                    {lost && <span className="shrink-0 text-xs font-semibold text-espresso-300">{formatTokens(b.amount)} lost</span>}
                   </Link>
                 </li>
               );
@@ -128,6 +130,11 @@ export default async function ProfilePage() {
       </Card>
 
       <div className="flex flex-col gap-2 text-sm">
+        {isAdmin && (
+          <Link href="/admin" className="font-medium text-espresso-700 underline">
+            Admin
+          </Link>
+        )}
         <Link href="/how-it-works" className="font-medium text-espresso-700 underline">
           How Barbets works
         </Link>
