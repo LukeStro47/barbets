@@ -7,7 +7,7 @@ FULL DESCRIPTION (4000 char max)
 --------------------------------
 Barbets turns your friend group into its own private prediction market.
 
-Create a market about anything — will Jake actually run the marathon? Who's the first to leave the party? Will the group hit its fundraising goal? — and bet play-money tokens on how it turns out. No real money ever changes hands.
+Create markets on anything, from whether someone will be late to a party, to who's the first to bail on the group trip, to whether the fundraiser actually hits its goal. Bet play-money tokens on how it all turns out. No real money ever changes hands.
 
 WHAT MAKES BARBETS DIFFERENT
 
@@ -49,10 +49,12 @@ Play Console will ask about "simulated gambling" — answer honestly (yes, betti
 
 RELEASE NOTES (this version, 500 char max)
 --------------------------------
-Barbets is here.
+What's new in 1.2:
 
-- Create private prediction markets for your friend group
-- Bets stay sealed until odds go public
-- Parimutuel payouts, no bookmaker
-- Push notifications for markets that need you
-- No real money, ever
+- Works offline now: a friendly screen instead of a blank error if you lose connection
+- Reworked how markets get resolved, see the consequences before you confirm
+- Tap to see where bonus tokens on a market came from
+- Smarter notifications, including how much you won when a market resolves
+- Endorsement step is now optional for small, high-trust groups
+- New accuracy stat on the leaderboard
+- Assorted polish and bug fixes
