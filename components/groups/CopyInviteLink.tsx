@@ -1,11 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 
 export function CopyInviteLink({ inviteCode }: { inviteCode: string }) {
   const [copied, setCopied] = useState(false);
-  const url = typeof window !== 'undefined' ? `${window.location.origin}/join/${inviteCode}` : `/join/${inviteCode}`;
+  // Starts as the relative path (matches the server render, which has no
+  // `window`) then upgrades to the absolute URL once mounted client-side —
+  // reading window.location.origin during the initial render would mismatch
+  // the server's HTML and trigger a hydration warning, same reasoning
+  // CreateGroupForm's timezone state uses.
+  const [url, setUrl] = useState(`/join/${inviteCode}`);
+  useEffect(() => {
+    setUrl(`${window.location.origin}/join/${inviteCode}`);
+  }, [inviteCode]);
 
   return (
     <div className="space-y-1.5">
