@@ -40,7 +40,7 @@ export default async function IntermissionPage({ params }: { params: Promise<{ g
 
   const [{ data: lastResult }, { data: members }, { data: optouts }, { data: optins }] = await Promise.all([
     supabase.from('season_results').select('snapshot').eq('group_id', groupId).order('created_at', { ascending: false }).limit(1).single(),
-    supabase.from('memberships').select('user_id, nickname, status').eq('group_id', groupId).neq('status', 'removed'),
+    supabase.from('memberships').select('user_id, nickname, status').eq('group_id', groupId).in('status', ['active', 'dormant']),
     supabase.from('season_optouts').select('user_id').eq('season_id', season!.id),
     supabase.from('season_optins').select('user_id').eq('season_id', season!.id),
   ]);

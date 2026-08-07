@@ -244,7 +244,7 @@ describe('leave group (self-service)', () => {
     expect(error?.message).toMatch(/invalid_operation/);
   });
 
-  test('leaving voids markets you are a subject of, but your own open bets elsewhere stay in play and you go dormant (not removed)', async () => {
+  test('leaving voids markets you are a subject of, but your own open bets elsewhere stay in play and you go left (not removed)', async () => {
     const marketAboutLeaver = await createMarket(users.owner, group.id, { subjectIds: [users.leaver.id], closesInMs: 60000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: marketAboutLeaver.id });
     await fastForwardCloseTime(marketAboutLeaver.id, 60000);
@@ -279,11 +279,21 @@ describe('leave group (self-service)', () => {
 
     const leaverAfter = await membershipRow(group.id, users.leaver.id);
     expect(leaverAfter.balance).toBe(leaverBefore.balance - 40); // stake left the balance, not refunded
-    expect(leaverAfter.status).toBe('dormant');
+    expect(leaverAfter.status).toBe('left');
 
-    // dormant (not removed) — the group is still visible, so a later rejoin is possible
+    // left (not removed) means a later rejoin is still possible — but unlike the old dormant
+    // behavior, a left member loses RLS visibility into the group immediately, same as removed.
     const { data: accessCheck } = await users.leaver.client.from('groups').select('id').eq('id', group.id);
-    expect(accessCheck).toEqual([{ id: group.id }]);
+    expect(accessCheck).toEqual([]);
+
+    const { data: rejoined, error: rejoinErr } = await users.leaver.client.rpc('join_group', {
+      p_invite_code: group.invite_code,
+      p_nickname: 'leaver',
+    });
+    expect(rejoinErr).toBeNull();
+    expect((Array.isArray(rejoined) ? rejoined[0] : rejoined).balance).toBe(leaverAfter.balance); // not reseeded
+    const leaverRejoined = await membershipRow(group.id, users.leaver.id);
+    expect(leaverRejoined.status).toBe('active');
   });
 
   test('leaving cancels a pending season opt-in, so a later start_season does not reactivate them', async () => {
@@ -319,7 +329,7 @@ describe('leave group (self-service)', () => {
       expect(startErr).toBeNull();
 
       const otherAfterStart = await membershipRow(group.id, users.other.id);
-      expect(otherAfterStart.status).toBe('dormant'); // must NOT have been reactivated into the new season
+      expect(otherAfterStart.status).toBe('left'); // must NOT have been reactivated into the new season
     } finally {
       await cleanupTestUsers(stayer);
     }

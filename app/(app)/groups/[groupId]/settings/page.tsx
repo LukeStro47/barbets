@@ -40,7 +40,7 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
 
   const [{ data: settings }, { data: members }, { data: myMembership }, { data: activeSeason }] = await Promise.all([
     supabase.from('group_settings').select('*').eq('group_id', groupId).single(),
-    supabase.from('memberships').select('user_id, status, nickname').eq('group_id', groupId).neq('status', 'removed'),
+    supabase.from('memberships').select('user_id, status, nickname').eq('group_id', groupId).in('status', ['active', 'dormant']),
     supabase.from('memberships').select('nickname').eq('group_id', groupId).eq('user_id', user!.id).single(),
     supabase.from('seasons').select('id, number, name, betting_open').eq('group_id', groupId).eq('status', 'active').single(),
   ]);

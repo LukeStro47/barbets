@@ -26,21 +26,42 @@ describe('per-group nicknames', () => {
     }
   });
 
-  test('leaving and rejoining keeps the original nickname, not a re-prompted one', async () => {
+  test('leaving frees the nickname immediately, and rejoining applies whatever new nickname is requested', async () => {
     const leaver = await createTestUsers('nickrj', ['x']);
+    const claimer = await createTestUsers('nickcl', ['y']);
     try {
       await leaver.x.client.rpc('join_group', { p_invite_code: group.invite_code, p_nickname: 'origx' });
       await leaver.x.client.rpc('leave_group', { p_group_id: group.id });
 
-      // rejoining with a *different* requested nickname should be ignored —
-      // reactivation keeps whatever nickname the membership already has.
+      // Unlike a dormant reactivation (which keeps its reserved nickname untouched), a left
+      // member's old nickname is free the instant they leave — someone else can claim it right
+      // away, and the leaver themselves gets whatever nickname they request on rejoin, same
+      // validation a brand-new join uses.
+      const { error: claimErr } = await claimer.y.client.rpc('join_group', { p_invite_code: group.invite_code, p_nickname: 'origx' });
+      expect(claimErr).toBeNull();
+
       const { data, error } = await leaver.x.client.rpc('join_group', {
         p_invite_code: group.invite_code,
-        p_nickname: 'somethingelse',
+        p_nickname: 'newx',
       });
       expect(error).toBeNull();
       const membership = Array.isArray(data) ? data[0] : data;
-      expect(membership.nickname).toBe('origx');
+      expect(membership.nickname).toBe('newx');
+    } finally {
+      await cleanupTestUsers(leaver);
+      await cleanupTestUsers(claimer);
+    }
+  });
+
+  test('rejoining a left membership with an already-taken nickname is rejected, same as a brand-new join', async () => {
+    const leaver = await createTestUsers('nickrj2', ['x']);
+    try {
+      await leaver.x.client.rpc('join_group', { p_invite_code: group.invite_code, p_nickname: 'origx2' });
+      await leaver.x.client.rpc('leave_group', { p_group_id: group.id });
+
+      const { error } = await leaver.x.client.rpc('join_group', { p_invite_code: group.invite_code, p_nickname: 'owner' });
+      expect(error?.message).toMatch(/invalid_operation/);
+      expect(error?.message).toMatch(/taken/);
     } finally {
       await cleanupTestUsers(leaver);
     }

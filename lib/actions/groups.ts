@@ -18,7 +18,7 @@ export interface Membership {
   group_id: string;
   user_id: string;
   balance: number;
-  status: 'active' | 'dormant' | 'removed';
+  status: 'active' | 'dormant' | 'left' | 'removed';
   nickname: string;
   joined_at: string;
 }

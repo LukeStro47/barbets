@@ -24,12 +24,37 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ gr
 
   const { data: settings } = await supabase.from('group_settings').select('seasons_enabled').eq('group_id', groupId).single();
 
-  const { data: members } = await supabase
+  const { data: activeMembers } = await supabase
     .from('memberships')
     .select('user_id, balance, status, nickname')
     .eq('group_id', groupId)
-    .neq('status', 'removed')
-    .order('balance', { ascending: false });
+    .in('status', ['active', 'dormant']);
+
+  // A member who's left only stays on the leaderboard if they actually played — otherwise
+  // leaving is clean, with no trace anywhere. "Played" means a real bet, or a non-seed ledger
+  // entry (covers e.g. a zero-winner-pool creator/endorser cut with no bet of their own).
+  const { data: leftMembers } = await supabase
+    .from('memberships')
+    .select('id, user_id, balance, status, nickname')
+    .eq('group_id', groupId)
+    .eq('status', 'left');
+
+  let members: any[] = activeMembers ?? [];
+  if (leftMembers && leftMembers.length > 0) {
+    const leftUserIds = leftMembers.map((m) => m.user_id);
+    const leftMembershipIds = leftMembers.map((m) => m.id);
+    const [{ data: leftBetRows }, { data: leftLedgerRows }] = await Promise.all([
+      supabase.from('bets').select('user_id, markets!inner(group_id)').eq('markets.group_id', groupId).in('user_id', leftUserIds),
+      supabase.from('ledger').select('membership_id').in('membership_id', leftMembershipIds).neq('reason', 'seed'),
+    ]);
+    const membershipIdToUserId = new Map(leftMembers.map((m) => [m.id, m.user_id]));
+    const activeLeftUserIds = new Set([
+      ...(leftBetRows ?? []).map((b: any) => b.user_id),
+      ...(leftLedgerRows ?? []).map((l: any) => membershipIdToUserId.get(l.membership_id)).filter((id): id is string => !!id),
+    ]);
+    members = [...members, ...leftMembers.filter((m) => activeLeftUserIds.has(m.user_id))];
+  }
+  members.sort((a, b) => b.balance - a.balance);
 
   const { data: titleRows } = await supabase.from('group_titles').select('title_key, user_id, stat_value').eq('group_id', groupId);
   const badges = titlesByUser((titleRows ?? []) as GroupTitleRow[]);
@@ -103,6 +128,7 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ gr
               <Mention nickname={m.nickname} titles={badges.get(m.user_id)} className="font-semibold text-espresso-800" />
               {m.balance === 0 && <span title="Broke">🏚️</span>}
               {m.status === 'dormant' && <span className="text-xs text-espresso-400">(sitting out)</span>}
+              {m.status === 'left' && <span className="text-xs text-espresso-400">(left)</span>}
             </div>
             <span className="font-display font-bold tabular-nums text-espresso-900">{formatTokens(m.balance)}</span>
           </div>

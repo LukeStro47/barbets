@@ -87,31 +87,23 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
       ) : (
         <ul className="space-y-3">
           {sortedGroups.map((g: any) => {
-            // Same rank definition the leaderboard page uses: non-removed members sorted by
-            // balance descending, rank = array index + 1 — no RPC/window function needed for
-            // a lightweight per-card badge.
+            // Same rank definition the leaderboard page uses: currently-playing members (active
+            // or dormant, i.e. not removed or left) sorted by balance descending, rank = array
+            // index + 1 — no RPC/window function needed for a lightweight per-card badge.
             const ranked = (g.memberships ?? [])
-              .filter((m: { status: string }) => m.status !== 'removed')
+              .filter((m: { status: string }) => m.status === 'active' || m.status === 'dormant')
               .sort((a: { balance: number }, b: { balance: number }) => b.balance - a.balance);
             const myIndex = ranked.findIndex((m: { user_id: string }) => m.user_id === user?.id);
             const myRank = myIndex + 1;
             const myNet = netByGroup.get(g.id) ?? 0;
             const inIntermission = intermissionGroupIds.has(g.id);
-            // A self-service leave sets the membership to 'dormant' rather than removing it (see
-            // ARCHITECTURE.md) — the group staying in this list afterward is intentional
-            // (rejoinable, balance preserved), but with nothing to distinguish it from a group
-            // you're still active in it reads as "leaving did nothing." This badge is that cue.
-            const myMembership = (g.memberships ?? []).find((m: { user_id: string }) => m.user_id === user?.id);
-            const iLeft = myMembership?.status === 'dormant';
             return (
               <li key={g.id}>
                 <Link href={`/groups/${g.id}`}>
                   <Card className="flex items-center justify-between transition-shadow hover:shadow-md">
                     <div>
                       <p className="font-display font-bold text-espresso-900">{g.name}</p>
-                      {iLeft ? (
-                        <p className="text-sm font-semibold text-espresso-400">You left this group</p>
-                      ) : inIntermission ? (
+                      {inIntermission ? (
                         <p className="text-sm font-semibold text-espresso-400">Season ended</p>
                       ) : (
                         <p className="flex items-center gap-1 text-sm">

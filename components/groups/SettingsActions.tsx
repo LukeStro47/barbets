@@ -587,9 +587,8 @@ export function DeleteGroupButton({ groupId, groupName }: { groupId: string; gro
     <div className="space-y-2">
       {error && <p className="text-sm text-danger-700">{error}</p>}
       <p className="text-sm text-espresso-600">
-        This immediately voids and refunds every open market in {groupName}, then permanently deletes the group
-        for everyone in 5 days. Everyone can still view it until then, and you can cancel any time before the 5
-        days are up. Type the group name to confirm.
+        This immediately and permanently deletes {groupName} for everyone — every open market is voided and
+        refunded first, then the group is gone. This can't be undone. Type the group name to confirm.
       </p>
       <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={groupName} className={inputClasses} />
       <div className="flex gap-2">
@@ -613,7 +612,7 @@ export function DeleteGroupButton({ groupId, groupName }: { groupId: string; gro
               if (result.error) {
                 setError(result.error);
               } else {
-                router.refresh();
+                router.push('/groups');
               }
             })
           }

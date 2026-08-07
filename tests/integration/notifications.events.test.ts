@@ -139,8 +139,8 @@ describe('member_joined notifies only the group owner', () => {
     }
   });
 
-  test('a dormant member reactivating (rejoin) does not emit another member_joined event', async () => {
-    // `a` leaves (goes dormant), then rejoins — this is a reactivation, not
+  test('a left member reactivating (rejoin) does not emit another member_joined event', async () => {
+    // `a` leaves (goes 'left'), then rejoins — this is a reactivation, not
     // a new membership, so join_group() should not fire a second event.
     await users.a.client.rpc('leave_group', { p_group_id: group.id });
 

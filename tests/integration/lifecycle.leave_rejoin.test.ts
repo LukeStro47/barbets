@@ -31,11 +31,16 @@ describe('leave then rejoin', () => {
     expect(before.balance).toBe(1000);
 
     await users.leaver.client.rpc('leave_group', { p_group_id: group.id });
-    const dormant = await membershipRow(group.id, users.leaver.id);
-    expect(dormant.status).toBe('dormant');
-    expect(dormant.balance).toBe(1000);
+    const left = await membershipRow(group.id, users.leaver.id);
+    expect(left.status).toBe('left');
+    expect(left.balance).toBe(1000);
 
-    const { data: rejoined, error } = await users.leaver.client.rpc('join_group', { p_invite_code: group.invite_code });
+    // Rejoining a 'left' membership needs a nickname again — it was freed up when they left,
+    // unlike a 'dormant' reactivation which keeps its reserved name automatically.
+    const { data: rejoined, error } = await users.leaver.client.rpc('join_group', {
+      p_invite_code: group.invite_code,
+      p_nickname: users.leaver.tag,
+    });
     expect(error).toBeNull();
     expect((Array.isArray(rejoined) ? rejoined[0] : rejoined).balance).toBe(1000); // not reseeded
 
@@ -44,7 +49,7 @@ describe('leave then rejoin', () => {
     expect(after.balance).toBe(1000);
   });
 
-  test('leaving with an open bet, then the market resolves: the (dormant) balance receives the correct payout', async () => {
+  test('leaving with an open bet, then the market resolves: the (left) balance receives the correct payout', async () => {
     const market = await createMarket(users.owner, group.id, { closesInMs: 2000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
     await fastForwardCloseTime(market.id, 2000);
@@ -54,9 +59,9 @@ describe('leave then rejoin', () => {
     await users.other.client.rpc('place_bet', { p_market_id: market.id, p_side: 'no', p_amount: 50 });
 
     await users.leaver.client.rpc('leave_group', { p_group_id: group.id });
-    const dormantMidBet = await membershipRow(group.id, users.leaver.id);
-    expect(dormantMidBet.status).toBe('dormant');
-    expect(dormantMidBet.balance).toBe(leaverBefore.balance - 100); // stake still out, not refunded by leaving
+    const leftMidBet = await membershipRow(group.id, users.leaver.id);
+    expect(leftMidBet.status).toBe('left');
+    expect(leftMidBet.balance).toBe(leaverBefore.balance - 100); // stake still out, not refunded by leaving
 
     await new Promise((r) => setTimeout(r, 2500));
     await adminClient.rpc('expire_stale');
@@ -75,8 +80,8 @@ describe('leave then rejoin', () => {
 
     // leaver bet 100 on the only winning side against other's 50 losing stake -> pool 150, all to leaver
     const leaverAfter = await membershipRow(group.id, users.leaver.id);
-    expect(leaverAfter.status).toBe('dormant');
-    expect(leaverAfter.balance).toBe(dormantMidBet.balance + 150);
+    expect(leaverAfter.status).toBe('left');
+    expect(leaverAfter.balance).toBe(leftMidBet.balance + 150);
   });
 
   test('ledger conservation: sum of ledger entries always reconciles the leaver membership balance', async () => {
