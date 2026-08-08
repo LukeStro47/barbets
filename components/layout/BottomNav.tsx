@@ -164,7 +164,9 @@ export function BottomNav({ groups, bettingEnabledByGroup }: { groups: NavGroup[
     if (tab === 'home') {
       openSwitcher();
     } else if (tab === 'you') {
-      router.push('/profile');
+      // Carries the group you're currently in along to Profile, so it opens already scoped to
+      // it instead of falling back to whichever group Profile defaults to on its own.
+      router.push(currentGroup ? `/profile?group=${currentGroup.id}` : '/profile');
     } else if (tab === 'markets') {
       router.push(currentGroup ? `/groups/${currentGroup.id}` : '/groups?all=1');
     } else if (tab === 'board') {

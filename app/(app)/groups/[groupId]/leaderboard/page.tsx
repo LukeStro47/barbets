@@ -22,6 +22,10 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ gr
   const { groupId } = await params;
   const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   const { data: settings } = await supabase.from('group_settings').select('seasons_enabled').eq('group_id', groupId).single();
 
   const { data: activeMembers } = await supabase
@@ -108,31 +112,55 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ gr
         }
       />
 
-      <Card className="space-y-1">
-        <h2 className="mb-2 font-display font-bold text-espresso-800">
+      <Card className="space-y-2">
+        <h2 className="mb-1 font-display font-bold text-espresso-800">
           {settings?.seasons_enabled ? 'This season' : 'Standings'}
         </h2>
-        {(members ?? []).map((m: any, i: number) => (
-          <div
-            key={m.user_id}
-            className={`flex items-center justify-between rounded-xl px-2 py-2 ${i === 0 ? 'bg-honey-50' : ''}`}
-          >
-            <div className="flex items-center gap-3">
-              {i === 0 ? (
-                <span className="flex h-7 w-7 shrink-0 -rotate-6 items-center justify-center rounded-full border-2 border-honey-500 bg-espresso-900 text-sm shadow-[0_6px_12px_-4px_rgba(232,163,61,0.55)]">
-                  🥇
+        {(() => {
+          const top = members?.[0]?.balance || 1;
+          return (members ?? []).map((m: any, i: number) => {
+            const isMe = m.user_id === user?.id;
+            const pct = Math.max(9, Math.round((m.balance / top) * 100));
+            return (
+              <div
+                key={m.user_id}
+                className={`relative h-[54px] overflow-hidden rounded-2xl bg-espresso-50 ${
+                  isMe ? 'border-[1.5px] border-honey-500' : 'border-[1.5px] border-transparent'
+                }`}
+              >
+                <span
+                  className={`absolute inset-y-0 left-0 ${isMe ? 'bg-honey-500' : 'bg-honey-500/30'}`}
+                  style={{ width: `${pct}%` }}
+                />
+                <span className="absolute inset-0 flex items-center gap-2.5 px-3">
+                  <span className="w-5 shrink-0 text-center text-xs font-extrabold text-espresso-500">{medal(i)}</span>
+                  <span
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-paper-white text-xs font-extrabold text-espresso-700 ${
+                      isMe ? 'border-2 border-honey-500' : 'border-[1.5px] border-espresso-100'
+                    }`}
+                  >
+                    {m.nickname.slice(0, 2).toUpperCase()}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <Mention nickname={m.nickname} titles={badges.get(m.user_id)} className="block truncate text-[13.5px] font-bold text-espresso-900" />
+                    {(m.balance === 0 || m.status !== 'active') && (
+                      <span className="block text-[10.5px] font-semibold text-espresso-400">
+                        {m.balance === 0 && 'Broke'}
+                        {m.balance === 0 && m.status !== 'active' && ' · '}
+                        {m.status === 'dormant' && 'Sitting out'}
+                        {m.status === 'left' && 'Left'}
+                      </span>
+                    )}
+                  </span>
+                  <span className="shrink-0 font-display text-[15px] font-extrabold tabular-nums text-espresso-900">
+                    {formatTokens(m.balance)}
+                  </span>
                 </span>
-              ) : (
-                <span className="w-6 text-center">{medal(i)}</span>
-              )}
-              <Mention nickname={m.nickname} titles={badges.get(m.user_id)} className="font-semibold text-espresso-800" />
-              {m.balance === 0 && <span title="Broke">🏚️</span>}
-              {m.status === 'dormant' && <span className="text-xs text-espresso-400">(sitting out)</span>}
-              {m.status === 'left' && <span className="text-xs text-espresso-400">(left)</span>}
-            </div>
-            <span className="font-display font-bold tabular-nums text-espresso-900">{formatTokens(m.balance)}</span>
-          </div>
-        ))}
+              </div>
+            );
+          });
+        })()}
+        <p className="pt-1 text-[11.5px] text-espresso-400">Bar length is share of the group's tokens. Your row is outlined.</p>
       </Card>
 
       {allTime && (
