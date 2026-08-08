@@ -259,42 +259,26 @@ export function CreateMarketForm({
     <form onSubmit={handleCreate} className="space-y-5">
       {error && <p className="text-sm text-danger-700">{error}</p>}
 
-      <div className="space-y-2">
-        <h2 className="font-display text-lg font-bold text-espresso-900">What kind of market?</h2>
-        <div className="space-y-2">
+      <div className="space-y-1.5">
+        <label className="block text-sm font-semibold text-espresso-700">Market type</label>
+        <div className="flex gap-1 rounded-xl bg-espresso-50 p-1">
           {(['yes_no', 'over_under', 'multiple_choice'] as const).map((t) => (
             <button
               type="button"
               key={t}
               onClick={() => setMarketType(t)}
-              className={`flex w-full items-center gap-3.5 rounded-2xl border-2 p-4 text-left transition-colors ${
-                marketType === t ? 'border-honey-500 bg-honey-50' : 'border-espresso-100 bg-paper-white hover:border-espresso-200'
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-colors ${
+                marketType === t ? 'bg-paper-white text-espresso-900 shadow-sm' : 'text-espresso-400 hover:text-espresso-600'
               }`}
             >
-              <span aria-hidden className={`text-2xl ${marketType === t ? 'text-honey-600' : 'text-espresso-300'}`}>
+              <span aria-hidden className="text-sm">
                 {MARKET_TYPE_ICON[t]}
               </span>
-              <span className="min-w-0">
-                <span
-                  className={`block font-display text-base font-bold tracking-wide uppercase ${
-                    marketType === t ? 'text-honey-800' : 'text-espresso-900'
-                  }`}
-                >
-                  {MARKET_TYPE_LABEL[t]}
-                </span>
-                <span className="block text-sm text-espresso-500">{MARKET_TYPE_DESCRIPTION[t]}</span>
-              </span>
-              <span
-                aria-hidden
-                className={`ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
-                  marketType === t ? 'border-honey-500 bg-honey-500 text-paper-white' : 'border-espresso-200'
-                }`}
-              >
-                {marketType === t && '✓'}
-              </span>
+              {MARKET_TYPE_LABEL[t]}
             </button>
           ))}
         </div>
+        <p className="text-xs text-espresso-400">{MARKET_TYPE_DESCRIPTION[marketType]}</p>
       </div>
 
       <Card className="space-y-3">

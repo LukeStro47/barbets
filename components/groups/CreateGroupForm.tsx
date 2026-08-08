@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/Switch';
 import { JUST_JOINED_GROUP_KEY } from '@/components/pwa/PushReminderModal';
 import { formatSeasonLength, SEASON_LENGTH_HINTS, type SeasonLength } from '@/lib/seasonLength';
 import { COMMON_TIMEZONES, friendlyTimezoneName } from '@/lib/timezone';
+import { formatTokenInputValue } from '@/lib/formatNumber';
 
 const inputClasses =
   'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-espresso-900 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
@@ -72,10 +73,11 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
 
   function handleSubmit(formData: FormData) {
     setError(null);
+    const seedAmount = Number(String(formData.get('seedAmount')).replace(/,/g, ''));
     startTransition(async () => {
       const result = await createGroup({
         name: String(formData.get('name')),
-        seedAmount: Number(formData.get('seedAmount')),
+        seedAmount,
         seasonsEnabled,
         seasonLength: seasonsEnabled ? seasonLength : null,
         seasonCustomEndsAt: seasonsEnabled && seasonLength === 'custom' ? new Date(seasonCustomEndsAt).toISOString() : null,
@@ -91,7 +93,7 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
       // these stays editable from Settings, so a failure here shouldn't block
       // navigation the way a real createGroup() failure does.
       await updateGroupSettings(result.data!.id, {
-        seedAmount: Number(formData.get('seedAmount')),
+        seedAmount,
         seasonsEnabled,
         seasonLength: seasonsEnabled ? seasonLength : null,
         seasonCustomEndsAt: seasonsEnabled && seasonLength === 'custom' ? new Date(seasonCustomEndsAt).toISOString() : null,
@@ -125,7 +127,18 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
             label="Token allocation"
             hint="Every member starts with this many tokens, both when they join and again at the start of each season."
           >
-            <input name="seedAmount" type="number" min={1} defaultValue={initialSeedAmount ?? 1000} required className={inputClasses} />
+            <input
+              name="seedAmount"
+              type="text"
+              inputMode="numeric"
+              defaultValue={formatTokenInputValue(String(initialSeedAmount ?? 1000))}
+              onChange={(e) => {
+                const formatted = formatTokenInputValue(e.target.value);
+                if (formatted !== e.target.value) e.target.value = formatted;
+              }}
+              required
+              className={inputClasses}
+            />
           </Field>
         </div>
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { LoadingAnimation } from '@/components/ui/LoadingAnimation';
 
 const VISIBLE_DELAY_MS = 150;
@@ -18,13 +19,17 @@ export function PageLoader() {
 
   if (!visible) return null;
 
-  return (
-    // fixed, not min-h-dvh: this renders inside BottomNavSpacer's padded wrapper (reserves room
-    // for BottomNav below it), and an in-flow full-viewport-height block plus that padding
-    // overflowed the real viewport height, making an otherwise-static loading screen scrollable.
-    // z-20 sits below BottomNav's z-30, same reasoning BootSplash already uses fixed inset-0.
+  // Portal to document.body rather than rendering in place, same reasoning Modal.tsx already
+  // documents: this mounts wherever the route's loading.tsx boundary sits, which is inside
+  // PageTransition's slide-in wrapper — and a CSS transform on any ancestor (PageTransition's
+  // `animate-page-in-from-*` classes) becomes the containing block for a `position: fixed`
+  // descendant instead of the real viewport. That's what made the loading screen slide/scale
+  // along with the incoming page instead of sitting still — a portal sidesteps the whole
+  // ancestor chain, landing this as a true sibling of the transformed wrapper, not a child of it.
+  return createPortal(
     <div className="fixed inset-0 z-20 flex items-center justify-center bg-[#EDE9E0]">
       <LoadingAnimation />
-    </div>
+    </div>,
+    document.body
   );
 }

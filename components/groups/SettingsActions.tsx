@@ -11,6 +11,7 @@ import { Modal } from '@/components/ui/Modal';
 import { formatSeasonLength, SEASON_LENGTH_HINTS, type SeasonLength } from '@/lib/seasonLength';
 import { COMMON_TIMEZONES, friendlyTimezoneName } from '@/lib/timezone';
 import { Mention } from '@/components/ui/Mention';
+import { formatTokens, formatTokenInputValue } from '@/lib/formatNumber';
 import type { GroupSettings } from '@/lib/actions/groups';
 
 const inputClasses =
@@ -56,7 +57,7 @@ export function EditSettingsForm({
     setError(null);
     startTransition(async () => {
       const result = await updateGroupSettings(groupId, {
-        seedAmount: Number(formData.get('seedAmount')),
+        seedAmount: Number(String(formData.get('seedAmount')).replace(/,/g, '')),
         seasonsEnabled,
         seasonLength: seasonsEnabled ? seasonLength : null,
         seasonCustomEndsAt: seasonsEnabled && seasonLength === 'custom' ? new Date(seasonCustomEndsAt).toISOString() : null,
@@ -159,7 +160,18 @@ export function EditSettingsForm({
 
       <div className="space-y-1.5 border-t border-espresso-100 pt-4">
         <label className="block text-sm font-semibold text-espresso-700">Token allocation</label>
-        <input name="seedAmount" type="number" min={1} defaultValue={settings.seed_amount} required className={inputClasses} />
+        <input
+          name="seedAmount"
+          type="text"
+          inputMode="numeric"
+          defaultValue={formatTokenInputValue(String(settings.seed_amount))}
+          onChange={(e) => {
+            const formatted = formatTokenInputValue(e.target.value);
+            if (formatted !== e.target.value) e.target.value = formatted;
+          }}
+          required
+          className={inputClasses}
+        />
         <p className="text-xs text-espresso-400">
           Never changes anyone's current balance. Applies to new members joining from now on
           {settings.seasons_enabled ? ', and to everyone once the next season starts.' : '.'}
@@ -350,7 +362,7 @@ export function ReadOnlySettings({
       </div>
       <div className={readOnlyRowClasses}>
         <span className="text-espresso-500">Token allocation</span>
-        <span className="font-semibold text-espresso-800">{settings.seed_amount}</span>
+        <span className="font-semibold text-espresso-800">{formatTokens(settings.seed_amount)}</span>
       </div>
       <div className={readOnlyRowClasses}>
         <span className="text-espresso-500">Time zone</span>

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { PlusIcon } from '@/components/ui/icons';
 import { MARKET_TYPE_LABEL, MARKET_TYPE_DESCRIPTION, MARKET_TYPE_ICON, type MarketType } from '@/lib/marketType';
 import { getActiveNavTab, getRouteGroupId, shouldHideBottomNav, type NavTab } from '@/lib/navRoute';
+import { formatTokenInputValue } from '@/lib/formatNumber';
 import { cn } from '@/lib/cn';
 
 export type NavGroup = { id: string; name: string; initials: string; meta: string };
@@ -84,7 +85,7 @@ export function BottomNav({ groups, bettingEnabledByGroup }: { groups: NavGroup[
   const [marketType, setMarketType] = useState<MarketType>('yes_no');
   const [bettingOffOpen, setBettingOffOpen] = useState(false);
   const [groupName, setGroupName] = useState('');
-  const [groupSeedAmount, setGroupSeedAmount] = useState('1000');
+  const [groupSeedAmount, setGroupSeedAmount] = useState('1,000');
 
   // Neither sheet is a normal in-flow page element, so nothing else stops a scroll or a
   // pull-to-refresh gesture on the (dimmed but still-present) page underneath — same lock
@@ -160,7 +161,7 @@ export function BottomNav({ groups, bettingEnabledByGroup }: { groups: NavGroup[
     const name = groupName.trim();
     if (!name) return;
     setCreateOpen(false);
-    const params = new URLSearchParams({ name, seedAmount: groupSeedAmount || '1000' });
+    const params = new URLSearchParams({ name, seedAmount: groupSeedAmount.replace(/,/g, '') || '1000' });
     router.push(`/groups/new?${params.toString()}`);
   }
 
@@ -308,10 +309,10 @@ export function BottomNav({ groups, bettingEnabledByGroup }: { groups: NavGroup[
                   <div className="rounded-2xl border-[1.5px] border-white/15 bg-white/5 px-[15px] py-3">
                     <label className="block text-[10px] font-bold tracking-[0.07em] text-paper-white/40 uppercase">Token allocation</label>
                     <input
-                      type="number"
-                      min={1}
+                      type="text"
+                      inputMode="numeric"
                       value={groupSeedAmount}
-                      onChange={(e) => setGroupSeedAmount(e.target.value)}
+                      onChange={(e) => setGroupSeedAmount(formatTokenInputValue(e.target.value))}
                       className="mt-[3px] block w-full border-0 bg-transparent p-0 text-sm font-bold text-paper-white focus:outline-none"
                     />
                   </div>

@@ -3,6 +3,15 @@ export function formatTokens(n: number): string {
   return n.toLocaleString('en-US');
 }
 
+/** Live comma-formatter for a "token allocation" text input as the user types — strips
+ * anything that isn't a digit, then re-inserts thousands commas (e.g. "10a5,00" -> "1,500").
+ * Pair with `.replace(/,/g, '')` wherever the value is actually read/submitted. */
+export function formatTokenInputValue(raw: string): string {
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return '';
+  return Number(digits).toLocaleString('en-US');
+}
+
 /** Round to 1 decimal, no trailing zero — for percentages computed client-side (e.g. 100 - x), where plain subtraction on an already-rounded float can print artifacts like 16.700000000000003. Math.round snaps to a clean integer before dividing back down, so the float garbage never survives to display. */
 export function formatPercent(n: number): string {
   return (Math.round(n * 10) / 10).toString();
