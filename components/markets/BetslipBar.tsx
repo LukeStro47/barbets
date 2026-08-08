@@ -7,7 +7,10 @@ import { OptionLabel } from '@/components/markets/OptionLabel';
 import { cn } from '@/lib/cn';
 import { formatTokens } from '@/lib/formatNumber';
 import { formatLine } from '@/lib/units';
+import { useKeyboardInset } from '@/lib/useKeyboardInset';
 import type { Market, MarketOption } from '@/lib/actions/markets';
+
+const KEYBOARD_OPEN_THRESHOLD_PX = 80;
 
 interface ExistingBet {
   side: string | null;
@@ -59,6 +62,11 @@ export function BetslipBar({
   const [isPending, startTransition] = useTransition();
   const [confirmed, setConfirmed] = useState<{ amount: number; label: string } | null>(null);
   const [idleNudge, setIdleNudge] = useState(false);
+
+  // The amount input's numeric keyboard pushes this sheet up just enough to reveal the input
+  // itself, leaving Confirm flush against the keyboard with no breathing room — pad past it.
+  const keyboardInset = useKeyboardInset();
+  const keyboardOpen = keyboardInset > KEYBOARD_OPEN_THRESHOLD_PX;
 
   const betAmountNum = betAmount === '' ? 0 : Number(betAmount);
   const balanceAfter = Math.max(0, balance - betAmountNum);
@@ -203,6 +211,7 @@ export function BetslipBar({
           'fixed inset-x-0 bottom-0 z-50 !m-0 max-h-[85dvh] overflow-y-auto rounded-t-[22px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 pb-[calc(env(safe-area-inset-bottom)+20px)] transition-transform duration-300 ease-out',
           isOpen ? 'translate-y-0' : 'translate-y-full'
         )}
+        style={{ paddingBottom: keyboardOpen ? keyboardInset + 16 : undefined }}
         aria-hidden={!isOpen}
       >
         <div className="mx-auto my-2.5 h-1 w-9 rounded-full bg-white/25" />

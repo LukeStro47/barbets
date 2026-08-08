@@ -8,7 +8,12 @@ import { PlusIcon } from '@/components/ui/icons';
 import { MARKET_TYPE_LABEL, MARKET_TYPE_DESCRIPTION, MARKET_TYPE_ICON, type MarketType } from '@/lib/marketType';
 import { getActiveNavTab, getRouteGroupId, shouldHideBottomNav, type NavTab } from '@/lib/navRoute';
 import { formatTokenInputValue } from '@/lib/formatNumber';
+import { useKeyboardInset } from '@/lib/useKeyboardInset';
 import { cn } from '@/lib/cn';
+
+/** Below this, treat visualViewport shrinkage as browser-chrome noise (e.g. the URL bar hiding
+ * on scroll), not a real keyboard — a real on-screen keyboard is always much taller. */
+const KEYBOARD_OPEN_THRESHOLD_PX = 80;
 
 export type NavGroup = { id: string; name: string; initials: string; meta: string };
 
@@ -87,6 +92,13 @@ export function BottomNav({ groups, bettingEnabledByGroup }: { groups: NavGroup[
   const [groupName, setGroupName] = useState('');
   const [groupSeedAmount, setGroupSeedAmount] = useState('1,000');
 
+  // position:fixed uses the *layout* viewport, which doesn't shrink when the on-screen keyboard
+  // opens, so the tab bar would otherwise float on top of the keyboard instead of being covered
+  // by it. Simplest correct fix: don't show it while a keyboard is up — there's no page to
+  // switch tabs on while you're mid-type anyway.
+  const keyboardInset = useKeyboardInset();
+  const keyboardOpen = keyboardInset > KEYBOARD_OPEN_THRESHOLD_PX;
+
   // Neither sheet is a normal in-flow page element, so nothing else stops a scroll or a
   // pull-to-refresh gesture on the (dimmed but still-present) page underneath — same lock
   // BetslipBar's own open sheet already uses, and the same signal PullToRefresh checks before
@@ -110,7 +122,21 @@ export function BottomNav({ groups, bettingEnabledByGroup }: { groups: NavGroup[
 
   const activeTab = getActiveNavTab(pathname);
   const groupId = getRouteGroupId(pathname);
-  const currentGroup = groupId ? groups.find((g) => g.id === groupId) : undefined;
+
+  // Profile isn't nested under /groups/[id], so on its own it'd read as "no group in scope" and
+  // collapse Markets/Board away — but arriving there from a group should still feel like you're
+  // "in" that group, just looking at your profile for a moment. Updated inline during render
+  // (not an effect) so this render already reflects it, same pattern prevPathnameRef below uses.
+  // Visiting the all-groups hub is the one deliberate "I'm not in a group right now" signal, so
+  // it clears the memory instead of leaving it stale.
+  const lastGroupIdRef = useRef<string | null>(null);
+  if (groupId) {
+    lastGroupIdRef.current = groupId;
+  } else if (pathname === '/groups') {
+    lastGroupIdRef.current = null;
+  }
+  const effectiveGroupId = groupId ?? (pathname === '/profile' ? lastGroupIdRef.current : null);
+  const currentGroup = effectiveGroupId ? groups.find((g) => g.id === effectiveGroupId) : undefined;
   const inGroup = !!currentGroup;
 
   if (shouldHideBottomNav(pathname)) return null;
@@ -243,7 +269,14 @@ export function BottomNav({ groups, bettingEnabledByGroup }: { groups: NavGroup[
       {createOpen && (
         <>
           <div onClick={toggleCreate} className="fixed inset-0 z-40 animate-bottomnav-scrim-in bg-espresso-950/45" />
-          <div className="fixed inset-x-0 bottom-0 z-40 animate-bottomnav-sheet-up rounded-t-[28px] bg-gradient-to-br from-espresso-900 via-espresso-700 to-espresso-700 px-5 pt-3.5 pb-[env(safe-area-inset-bottom)]">
+          <div
+            className="fixed inset-x-0 bottom-0 z-40 animate-bottomnav-sheet-up rounded-t-[28px] bg-gradient-to-br from-espresso-900 via-espresso-700 to-espresso-700 px-5 pt-3.5 pb-[env(safe-area-inset-bottom)]"
+            // Once the keyboard pushes this sheet up, the browser scrolls just far enough to
+            // reveal the focused input — which leaves the Continue button sitting flush against
+            // the keyboard with no breathing room. Pad past the keyboard height plus a bit extra
+            // instead, only while it's actually open (undefined lets the class above win at rest).
+            style={{ paddingBottom: keyboardOpen ? keyboardInset + 16 : undefined }}
+          >
             <button onClick={toggleCreate} aria-label="Close" className="block w-full border-0 bg-transparent pb-[13px]">
               <span className="mx-auto block h-1 w-[38px] rounded-full bg-white/20" />
             </button>
@@ -331,6 +364,7 @@ export function BottomNav({ groups, bettingEnabledByGroup }: { groups: NavGroup[
       )}
 
       {/* ---- The bar ---- */}
+      {!keyboardOpen && (
       <nav
         className="fixed inset-x-0 bottom-0 z-30 border-t border-espresso-100 bg-paper-white pb-[max(20px,env(safe-area-inset-bottom))]"
       >
@@ -402,6 +436,7 @@ export function BottomNav({ groups, bettingEnabledByGroup }: { groups: NavGroup[
           </button>
         </div>
       </nav>
+      )}
     </>
   );
 }

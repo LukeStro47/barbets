@@ -107,12 +107,21 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
                         <p className="text-sm font-semibold text-espresso-400">Season ended</p>
                       ) : (
                         <p className="flex items-center gap-1 text-sm">
-                          {myNet >= 0 ? (
+                          {myNet > 0 ? (
                             <CaretUpIcon className="h-3 w-3 shrink-0 text-success-700" />
-                          ) : (
+                          ) : myNet < 0 ? (
                             <CaretDownIcon className="h-3 w-3 shrink-0 text-danger-700" />
+                          ) : (
+                            <span aria-hidden className="w-3 shrink-0 text-center leading-none text-honey-600">
+                              –
+                            </span>
                           )}
-                          <span className={cn('font-semibold', myNet >= 0 ? 'text-success-700' : 'text-danger-700')}>
+                          <span
+                            className={cn(
+                              'font-semibold',
+                              myNet > 0 ? 'text-success-700' : myNet < 0 ? 'text-danger-700' : 'text-honey-600'
+                            )}
+                          >
                             {formatTokens(Math.abs(myNet))} tokens
                           </span>
                           <span className="text-espresso-400"> · {formatOrdinal(myRank)}</span>

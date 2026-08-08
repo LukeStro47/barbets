@@ -51,8 +51,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     // pt-[env(safe-area-inset-top)] used to live on AppHeader itself (now removed) so its own
     // background could extend up into the status bar area; with no top bar to do that, the
-    // safe-area push just moves here so content still clears the notch/status bar.
+    // safe-area push just moves here so content still clears the notch/status bar on first paint.
     <div className="min-h-dvh bg-paper pt-[env(safe-area-inset-top)]">
+      {/* That padding alone only protects the very top of the page before any scrolling — it's
+          in-flow, so it scrolls away with everything else, and content then slides freely under
+          the status bar (most visible on Android, where the status bar's icons sit right over
+          whatever's now underneath). A fixed, paper-colored band pinned to the true top edge
+          stays put regardless of scroll position, same trick the old AppHeader got for free by
+          being `sticky` with its own background. Safe on an iOS notch/Dynamic Island too — it's
+          driven by the same env(safe-area-inset-top) value either way, just persistent now. */}
+      <div aria-hidden="true" className="fixed inset-x-0 top-0 z-30 h-[env(safe-area-inset-top)] bg-paper" />
       <PushReminderModal />
       <InstallBanner />
       <PullToRefresh>
