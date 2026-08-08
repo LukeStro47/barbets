@@ -19,7 +19,11 @@ export function PageLoader() {
   if (!visible) return null;
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-[#EDE9E0]">
+    // fixed, not min-h-dvh: this renders inside BottomNavSpacer's padded wrapper (reserves room
+    // for BottomNav below it), and an in-flow full-viewport-height block plus that padding
+    // overflowed the real viewport height, making an otherwise-static loading screen scrollable.
+    // z-20 sits below BottomNav's z-30, same reasoning BootSplash already uses fixed inset-0.
+    <div className="fixed inset-0 z-20 flex items-center justify-center bg-[#EDE9E0]">
       <LoadingAnimation />
     </div>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -23,8 +23,8 @@ const SLOT: Record<NavTab, number> = { home: 0, markets: 1, board: 3, you: 4 };
 
 const MARKET_TYPES: MarketType[] = ['yes_no', 'over_under', 'multiple_choice'];
 
-function iconButtonClass(active: boolean) {
-  return cn('relative flex h-full flex-none basis-1/5 items-center justify-center border-0 bg-transparent p-0', active && 'text-espresso-950');
+function iconButtonClass(active: boolean, basis: 'basis-1/5' | 'basis-1/3') {
+  return cn('relative flex h-full flex-none items-center justify-center border-0 bg-transparent p-0', basis, active && 'text-espresso-950');
 }
 
 type GlyphProps = { className?: string; strokeWidth: number };
@@ -83,6 +83,20 @@ export function BottomNav({ groups, bettingEnabledByGroup }: { groups: NavGroup[
   const [createOpen, setCreateOpen] = useState(false);
   const [marketType, setMarketType] = useState<MarketType>('yes_no');
   const [bettingOffOpen, setBettingOffOpen] = useState(false);
+  const [groupName, setGroupName] = useState('');
+  const [groupSeedAmount, setGroupSeedAmount] = useState('1000');
+
+  // Neither sheet is a normal in-flow page element, so nothing else stops a scroll or a
+  // pull-to-refresh gesture on the (dimmed but still-present) page underneath — same lock
+  // BetslipBar's own open sheet already uses, and the same signal PullToRefresh checks before
+  // arming.
+  useEffect(() => {
+    if (!switcherOpen && !createOpen) return;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [switcherOpen, createOpen]);
 
   // Reset any open sheet the moment the route actually changes, so navigating away (e.g. picking
   // a group) doesn't leave a sheet re-appearing stale on the next visible page.
@@ -140,6 +154,14 @@ export function BottomNav({ groups, bettingEnabledByGroup }: { groups: NavGroup[
     if (!currentGroup) return;
     setCreateOpen(false);
     router.push(`/groups/${currentGroup.id}/markets/new?type=${marketType}`);
+  }
+
+  function continueCreateGroup() {
+    const name = groupName.trim();
+    if (!name) return;
+    setCreateOpen(false);
+    const params = new URLSearchParams({ name, seedAmount: groupSeedAmount || '1000' });
+    router.push(`/groups/new?${params.toString()}`);
   }
 
   // Markets/Board only mean anything with a current group in scope — outside one (the
@@ -220,9 +242,7 @@ export function BottomNav({ groups, bettingEnabledByGroup }: { groups: NavGroup[
       {createOpen && (
         <>
           <div onClick={toggleCreate} className="fixed inset-0 z-40 animate-bottomnav-scrim-in bg-espresso-950/45" />
-          <div
-            className="fixed inset-x-0 bottom-[var(--bottomnav-height)] z-40 animate-bottomnav-sheet-up rounded-t-[28px] bg-gradient-to-br from-espresso-900 via-espresso-700 to-espresso-700 px-5 pt-3.5 pb-6"
-          >
+          <div className="fixed inset-x-0 bottom-0 z-40 animate-bottomnav-sheet-up rounded-t-[28px] bg-gradient-to-br from-espresso-900 via-espresso-700 to-espresso-700 px-5 pt-3.5 pb-[env(safe-area-inset-bottom)]">
             <button onClick={toggleCreate} aria-label="Close" className="block w-full border-0 bg-transparent pb-[13px]">
               <span className="mx-auto block h-1 w-[38px] rounded-full bg-white/20" />
             </button>
@@ -259,9 +279,6 @@ export function BottomNav({ groups, bettingEnabledByGroup }: { groups: NavGroup[
                   })}
                 </div>
                 <div className="flex items-center gap-2.5 border-t border-white/10 pt-3.5">
-                  <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[10px] bg-honey-300/15 text-[11px] font-extrabold text-honey-300">
-                    {currentGroup!.initials}
-                  </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[10px] font-bold tracking-[0.07em] text-paper-white/40 uppercase">Posting to</span>
                     <span className="block truncate text-[13px] font-extrabold text-paper-white">{currentGroup!.name}</span>
@@ -278,22 +295,34 @@ export function BottomNav({ groups, bettingEnabledByGroup }: { groups: NavGroup[
               <>
                 <p className="mb-0.5 font-display text-base font-extrabold tracking-[-0.01em] text-paper-white">New group</p>
                 <p className="mb-3.5 text-xs text-paper-white/50">A private table, everyone starts even.</p>
-                <div className="mb-2 rounded-2xl border-[1.5px] border-white/15 bg-white/5 px-[15px] py-3.5">
-                  <span className="block text-[10px] font-bold tracking-[0.07em] text-paper-white/40 uppercase">Group name</span>
-                  <span className="mt-[3px] block text-sm font-bold text-paper-white/35">Sunday Roast Club</span>
+                <div className="mb-3.5 flex flex-col gap-2">
+                  <div className="rounded-2xl border-[1.5px] border-white/15 bg-white/5 px-[15px] py-3">
+                    <label className="block text-[10px] font-bold tracking-[0.07em] text-paper-white/40 uppercase">Group name</label>
+                    <input
+                      value={groupName}
+                      onChange={(e) => setGroupName(e.target.value)}
+                      placeholder="The Wednesday Wagers"
+                      className="mt-[3px] block w-full border-0 bg-transparent p-0 text-sm font-bold text-paper-white placeholder:text-paper-white/30 focus:outline-none"
+                    />
+                  </div>
+                  <div className="rounded-2xl border-[1.5px] border-white/15 bg-white/5 px-[15px] py-3">
+                    <label className="block text-[10px] font-bold tracking-[0.07em] text-paper-white/40 uppercase">Token allocation</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={groupSeedAmount}
+                      onChange={(e) => setGroupSeedAmount(e.target.value)}
+                      className="mt-[3px] block w-full border-0 bg-transparent p-0 text-sm font-bold text-paper-white focus:outline-none"
+                    />
+                  </div>
                 </div>
-                <div className="flex items-center gap-2.5">
-                  <span className="min-w-0 flex-1 text-[11.5px] text-paper-white/50">1,000 tokens each to start</span>
-                  <button
-                    onClick={() => {
-                      setCreateOpen(false);
-                      router.push('/groups/new');
-                    }}
-                    className="shrink-0 rounded-full border-0 bg-honey-500 px-[18px] py-2.5 text-[12.5px] font-extrabold text-espresso-900"
-                  >
-                    Create group
-                  </button>
-                </div>
+                <button
+                  onClick={continueCreateGroup}
+                  disabled={!groupName.trim()}
+                  className="w-full rounded-full border-0 bg-honey-500 py-2.5 text-[12.5px] font-extrabold text-espresso-900 disabled:opacity-40"
+                >
+                  Continue
+                </button>
               </>
             )}
           </div>
@@ -318,7 +347,7 @@ export function BottomNav({ groups, bettingEnabledByGroup }: { groups: NavGroup[
                 const Glyph = TAB_GLYPH[t.key];
                 const active = activeTab === t.key;
                 return (
-                  <button key={t.key} aria-label={t.label} aria-current={active ? 'page' : undefined} onClick={() => goToTab(t.key)} className={iconButtonClass(active)}>
+                  <button key={t.key} aria-label={t.label} aria-current={active ? 'page' : undefined} onClick={() => goToTab(t.key)} className={iconButtonClass(active, 'basis-1/5')}>
                     <Glyph strokeWidth={active ? 2.3 : 1.9} className={cn('h-[23px] w-[23px]', !active && 'text-espresso-300')} />
                   </button>
                 );
@@ -328,7 +357,7 @@ export function BottomNav({ groups, bettingEnabledByGroup }: { groups: NavGroup[
                 const Glyph = TAB_GLYPH[t.key];
                 const active = activeTab === t.key;
                 return (
-                  <button key={t.key} aria-label={t.label} aria-current={active ? 'page' : undefined} onClick={() => goToTab(t.key)} className={iconButtonClass(active)}>
+                  <button key={t.key} aria-label={t.label} aria-current={active ? 'page' : undefined} onClick={() => goToTab(t.key)} className={iconButtonClass(active, 'basis-1/5')}>
                     <Glyph strokeWidth={active ? 2.3 : 1.9} className={cn('h-[23px] w-[23px]', !active && 'text-espresso-300')} />
                   </button>
                 );
@@ -336,7 +365,7 @@ export function BottomNav({ groups, bettingEnabledByGroup }: { groups: NavGroup[
             </>
           ) : (
             <>
-              {(['home', null, 'you'] as const).map((key, i) =>
+              {(['home', null, 'you'] as const).map((key) =>
                 key === null ? (
                   <span key="spacer" className="basis-1/3" />
                 ) : (
@@ -345,18 +374,8 @@ export function BottomNav({ groups, bettingEnabledByGroup }: { groups: NavGroup[
                     const Glyph = TAB_GLYPH[key];
                     const active = activeTab === key;
                     return (
-                      <button
-                        key={key}
-                        aria-label={t.label}
-                        aria-current={active ? 'page' : undefined}
-                        onClick={() => goToTab(key)}
-                        className={cn(
-                          'relative flex h-full basis-1/3 flex-col items-center justify-center gap-1 border-0 bg-transparent p-0',
-                          active && 'text-espresso-950'
-                        )}
-                      >
-                        <Glyph strokeWidth={active ? 2.3 : 1.9} className={cn('h-[22px] w-[22px]', !active && 'text-espresso-300')} />
-                        <span className={cn('text-[10px] font-bold tracking-[0.02em]', active ? 'text-espresso-800' : 'text-espresso-300')}>{t.label}</span>
+                      <button key={key} aria-label={t.label} aria-current={active ? 'page' : undefined} onClick={() => goToTab(key)} className={iconButtonClass(active, 'basis-1/3')}>
+                        <Glyph strokeWidth={active ? 2.3 : 1.9} className={cn('h-[23px] w-[23px]', !active && 'text-espresso-300')} />
                       </button>
                     );
                   })()

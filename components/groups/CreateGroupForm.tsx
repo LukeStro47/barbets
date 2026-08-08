@@ -29,7 +29,7 @@ function Field({ label, hint, children }: { label: string; hint: string; childre
   );
 }
 
-export function CreateGroupForm() {
+export function CreateGroupForm({ initialName, initialSeedAmount }: { initialName?: string; initialSeedAmount?: number } = {}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -117,8 +117,17 @@ export function CreateGroupForm() {
 
       <Card className="space-y-4">
         <Field label="Group name" hint="What your friends will see when they get the invite.">
-          <input name="name" placeholder="The Wednesday Wagers" required className={inputClasses} />
+          <input name="name" placeholder="The Wednesday Wagers" defaultValue={initialName} required className={inputClasses} />
         </Field>
+
+        <div className="border-t border-espresso-100 pt-4">
+          <Field
+            label="Token allocation"
+            hint="Every member starts with this many tokens, both when they join and again at the start of each season."
+          >
+            <input name="seedAmount" type="number" min={1} defaultValue={initialSeedAmount ?? 1000} required className={inputClasses} />
+          </Field>
+        </div>
 
         <div className="border-t border-espresso-100 pt-4">
           <Field label="Your nickname" hint="This is what you'll be @mentioned as in this group. One word: letters, numbers, and underscores only.">
@@ -148,15 +157,6 @@ export function CreateGroupForm() {
                 </option>
               ))}
             </select>
-          </Field>
-        </div>
-
-        <div className="border-t border-espresso-100 pt-4">
-          <Field
-            label="Token allocation"
-            hint="Every member starts with this many tokens, both when they join and again at the start of each season."
-          >
-            <input name="seedAmount" type="number" min={1} defaultValue={1000} required className={inputClasses} />
           </Field>
         </div>
 
