@@ -90,12 +90,13 @@ function MyNetLabel({ myNet }: { myNet?: number }) {
 /** The viewer's own position on an open market — as a wrapped row of small chips ("50 YES",
     "20 NO" for a hedge) rather than a run-on "You: 50 on YES, 20 on NO" sentence, which reads
     fine for one bet but wraps mid-phrase once hedged across a couple of sides/options,
-    especially in the narrow MarketRow layout. Chips wrap as whole units instead. */
+    especially in the narrow MarketRow layout. Chips wrap as whole units instead. No "You" label
+    on the chips themselves — every other card in this list has none, so a bare chip already
+    reads as "your stake" by contrast. */
 function MyBetsChips({ myBets }: { myBets?: { label: string; amount: number }[] }) {
   if (!myBets || myBets.length === 0) return null;
   return (
     <div className="mt-1 flex flex-wrap items-center gap-1">
-      <span className="text-[11px] font-semibold text-espresso-400">You</span>
       {myBets.map((b, i) => (
         <span key={i} className="rounded-full bg-honey-100 px-2 py-0.5 text-[11px] font-bold text-honey-800">
           {formatTokens(b.amount)} {b.label}
