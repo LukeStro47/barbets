@@ -67,8 +67,8 @@ function OptionRow({
   const isMention = option.label.startsWith('@');
 
   return (
-    <div className="flex items-center gap-2">
-      <span className="w-5 shrink-0 text-center text-xs font-semibold text-espresso-400">{index + 1}</span>
+    <div className="flex items-center gap-2.5">
+      <span className="w-5 shrink-0 text-center text-sm font-semibold text-espresso-400">{index + 1}</span>
       <div className="relative flex-1">
         <input
           value={option.label}
@@ -76,7 +76,7 @@ function OptionRow({
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 150)}
           placeholder={`Option ${index + 1}, or @nickname`}
-          className={`w-full rounded-lg border px-3 py-1.5 text-sm placeholder:text-espresso-300 focus:outline-none focus:ring-2 ${
+          className={`w-full rounded-xl border px-4 py-2.5 text-[15px] placeholder:text-espresso-300 focus:outline-none focus:ring-2 ${
             isMention
               ? 'border-honey-400 bg-paper-white italic font-semibold text-honey-700 focus:border-honey-500 focus:ring-honey-200'
               : 'border-espresso-200 bg-paper-white text-espresso-900 focus:border-honey-500 focus:ring-honey-200'
@@ -89,7 +89,7 @@ function OptionRow({
                 <button
                   type="button"
                   onClick={() => onChange(`@${m.nickname}`)}
-                  className="block w-full px-3 py-1.5 text-left text-sm text-espresso-800 hover:bg-honey-50"
+                  className="block w-full px-4 py-2 text-left text-sm text-espresso-800 hover:bg-honey-50"
                 >
                   <Mention nickname={m.nickname} className="text-honey-700" />
                 </button>
@@ -103,7 +103,7 @@ function OptionRow({
           type="button"
           onClick={onRemove}
           aria-label="Remove option"
-          className="shrink-0 rounded-full px-2 text-espresso-400 hover:text-danger-700"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg text-espresso-400 hover:bg-espresso-50 hover:text-danger-700"
         >
           ×
         </button>
@@ -130,7 +130,7 @@ function MultipleChoiceOptionsEditor({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {options.map((option, i) => (
         <OptionRow
           key={option.key}
@@ -147,7 +147,7 @@ function MultipleChoiceOptionsEditor({
         <button
           type="button"
           onClick={() => setOptions([...options, newOption()])}
-          className="w-full rounded-xl border border-dashed border-espresso-200 py-2 text-sm font-semibold text-espresso-500 hover:border-honey-400 hover:text-honey-700"
+          className="w-full rounded-xl border border-dashed border-espresso-200 py-2.5 text-sm font-semibold text-espresso-500 hover:border-honey-400 hover:text-honey-700"
         >
           + Add option
         </button>

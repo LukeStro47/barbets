@@ -5,7 +5,6 @@ import { notFoundIfEmpty } from '@/lib/errors';
 import { type MarketCardData } from '@/components/markets/MarketCard';
 import { SeasonBanner } from '@/components/groups/SeasonBanner';
 import { GroupDeletionBanner } from '@/components/groups/GroupDeletionBanner';
-import { NewMarketButton } from '@/components/groups/NewMarketButton';
 import { GroupMarketSections } from '@/components/groups/GroupMarketSections';
 import { SaveBalanceSnapshot } from '@/components/groups/SaveBalanceSnapshot';
 import { PendingBonusPoolNote } from '@/components/groups/PendingBonusPoolNote';
@@ -262,8 +261,6 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
     (a, b) => new Date(b.resolvedAt ?? 0).getTime() - new Date(a.resolvedAt ?? 0).getTime()
   );
 
-  const bettingEnabled = settings?.seasons_enabled ? (season?.betting_open ?? false) : (settings?.betting_enabled ?? false);
-
   return (
     <main className="mx-auto max-w-lg px-5 py-[22px]">
       <SaveBalanceSnapshot groupId={groupId} groupName={group!.name} balance={membership?.balance ?? 0} />
@@ -277,7 +274,6 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
             <Link href={`/groups/${groupId}/settings`} className={iconLinkClass} aria-label={isOwner ? 'Settings' : 'Group info'}>
               {isOwner ? <SettingsIcon className="h-4 w-4" /> : <InfoIcon className="h-4 w-4" />}
             </Link>
-            <NewMarketButton groupId={groupId} bettingEnabled={bettingEnabled} />
           </div>
         </div>
         {season && season.status !== 'intermission' && (
