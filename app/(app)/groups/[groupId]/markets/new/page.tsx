@@ -1,9 +1,20 @@
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { CreateMarketForm } from '@/components/markets/MarketForms';
+import type { MarketType } from '@/lib/marketType';
 
-export default async function NewMarketPage({ params }: { params: Promise<{ groupId: string }> }) {
+const VALID_TYPES: MarketType[] = ['yes_no', 'over_under', 'multiple_choice'];
+
+export default async function NewMarketPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ groupId: string }>;
+  searchParams: Promise<{ type?: string }>;
+}) {
   const { groupId } = await params;
+  const { type } = await searchParams;
+  const initialType = VALID_TYPES.includes(type as MarketType) ? (type as MarketType) : undefined;
   const supabase = await createClient();
 
   const {
@@ -29,6 +40,7 @@ export default async function NewMarketPage({ params }: { params: Promise<{ grou
         totalMemberCount={(members ?? []).length}
         timezone={settings?.timezone ?? 'UTC'}
         requireEndorsement={settings?.require_endorsement ?? true}
+        initialMarketType={initialType}
       />
     </main>
   );

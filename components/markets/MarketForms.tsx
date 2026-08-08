@@ -167,17 +167,22 @@ export function CreateMarketForm({
   totalMemberCount,
   timezone,
   requireEndorsement,
+  initialMarketType,
 }: {
   groupId: string;
   members: MemberOption[];
   totalMemberCount: number;
   timezone: string;
   requireEndorsement: boolean;
+  /** Pre-selects the type step — set when arriving from BottomNav's create-market sheet, which
+   * already asked "how should it settle?" before handing off here. Still just the initial value;
+   * the picker below stays fully changeable. */
+  initialMarketType?: 'yes_no' | 'over_under' | 'multiple_choice';
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [marketType, setMarketType] = useState<'yes_no' | 'over_under' | 'multiple_choice'>('yes_no');
+  const [marketType, setMarketType] = useState<'yes_no' | 'over_under' | 'multiple_choice'>(initialMarketType ?? 'yes_no');
   const [subjects, setSubjects] = useState<MemberOption[]>([]);
   const [options, setOptions] = useState<OptionDraft[]>(() => [newOption(), newOption()]);
   const [unit, setUnit] = useState('');

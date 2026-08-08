@@ -48,6 +48,13 @@
     background-color: var(--color-paper);
     color: var(--color-espresso-800);
   }
+  :root {
+    /* BottomNav's own rendered height (60px row + its bottom safe-area padding) — shared so
+       any page-specific bottom bar (currently just BetslipBar) can stack itself flush above
+       the nav instead of underneath it, rather than duplicating this as a guessed magic number
+       in more than one component. */
+    --bottomnav-height: calc(60px + max(20px, env(safe-area-inset-bottom)));
+  }
 }
 
 /* Bet-confirmed overlay: a honey checkmark popping in, then drawing its
@@ -109,6 +116,27 @@
 .animate-betslip-idle-bounce { animation: betslip-idle-bounce 0.7s ease-out; }
 @media (prefers-reduced-motion: reduce) {
   .animate-betslip-idle-bounce { animation: none; }
+}
+
+/* BottomNav's Home/+ sheets: a scrim fade plus a sheet that eases up from the bar it opened
+   from, rather than an abrupt appear. */
+@keyframes bottomnav-scrim-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes bottomnav-sheet-up {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.animate-bottomnav-scrim-in { animation: bottomnav-scrim-in 200ms ease both; }
+.animate-bottomnav-sheet-up { animation: bottomnav-sheet-up 340ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-bottomnav-scrim-in,
+  .animate-bottomnav-sheet-up {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* LoadingAnimation (splash + route loading states): a die/coin tumbling and

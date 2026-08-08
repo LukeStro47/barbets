@@ -142,8 +142,10 @@ export function BetslipBar({
     <>
       {/* In-flow, invisible twin of the bar below — reserves exactly the bar's real rendered
           height at the end of the page, instead of a guessed padding value that drifts out of
-          sync with the bar's actual size and leaves a visible gap above it. */}
-      <div aria-hidden="true" className="invisible !m-0 pb-[env(safe-area-inset-bottom)]">
+          sync with the bar's actual size and leaves a visible gap above it. BottomNavSpacer
+          (app/(app)/layout.tsx) separately reserves room for BottomNav itself, which this bar
+          now stacks above rather than covering. */}
+      <div aria-hidden="true" className="invisible !m-0">
         <div className="w-full px-5 py-4">
           <div className="mx-auto flex max-w-lg items-center justify-between">
             <div>
@@ -155,12 +157,16 @@ export function BetslipBar({
         </div>
       </div>
 
-      {/* Static backing strip, pinned to the true screen edge, never animated: the idle-bounce
-          animation below translates the whole bar upward, and since the bar itself is what
-          carries the brown background, that translation would otherwise uncover bare page
-          background for the duration of the bounce. This sits behind it at the same color so
-          the bottom edge always reads as solid brown, bounce or not. */}
-      <div aria-hidden="true" className="fixed inset-x-0 bottom-0 z-20 !m-0 bg-espresso-900 pb-[calc(env(safe-area-inset-bottom)+20px)]" />
+      {/* Static backing strip, pinned to BottomNav's top edge (not the true screen edge —
+          BottomNav itself now occupies that), never animated: the idle-bounce animation below
+          translates the whole bar upward, and since the bar itself is what carries the brown
+          background, that translation would otherwise uncover BottomNav's own bar for the
+          duration of the bounce. This sits behind it at the same color so the strip between the
+          bar and the nav always reads as solid brown, bounce or not. */}
+      <div
+        aria-hidden="true"
+        className="fixed inset-x-0 bottom-[var(--bottomnav-height)] z-20 !m-0 bg-espresso-900 pb-5"
+      />
 
       {/* !m-0 on every top-level element here: the parent <main> uses space-y-*, which in
           Tailwind v4 puts margin-bottom on every child except the literal last one — since
@@ -170,7 +176,7 @@ export function BetslipBar({
           would silently break again if page.tsx's structure ever changes. */}
       <div
         className={cn(
-          'fixed inset-x-0 bottom-0 z-30 !m-0 rounded-t-[20px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 pb-[env(safe-area-inset-bottom)] shadow-[0_-14px_28px_-10px_rgba(28,19,13,0.4)]',
+          'fixed inset-x-0 bottom-[var(--bottomnav-height)] z-30 !m-0 rounded-t-[20px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 shadow-[0_-14px_28px_-10px_rgba(28,19,13,0.4)]',
           idleNudge && 'animate-betslip-idle-bounce'
         )}
         onAnimationEnd={() => setIdleNudge(false)}

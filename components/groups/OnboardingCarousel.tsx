@@ -51,8 +51,8 @@ const SLIDES: Slide[] = [
 /**
  * Full-screen, swipe-through, non-interactive explainer shown the first time
  * a brand-new member lands on the empty /groups hub — before pointing them
- * at the interactive /demo market. Portal-rendered to escape AppHeader's
- * z-10 stacking context (a true takeover, not just an in-page block), one
+ * at the interactive /demo market. Portal-rendered to escape any ancestor's
+ * stacking context (a true takeover, not just an in-page block), one
  * shot only via a permanent localStorage flag, same convention InstallBanner
  * (components/pwa/InstallBanner.tsx) already uses for its own dismissal.
  *
