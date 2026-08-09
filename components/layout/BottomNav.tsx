@@ -8,12 +8,8 @@ import { PlusIcon } from '@/components/ui/icons';
 import { MARKET_TYPE_LABEL, MARKET_TYPE_DESCRIPTION, MARKET_TYPE_ICON, type MarketType } from '@/lib/marketType';
 import { getActiveNavTab, getRouteGroupId, shouldHideBottomNav, type NavTab } from '@/lib/navRoute';
 import { formatTokenInputValue } from '@/lib/formatNumber';
-import { useKeyboardInset } from '@/lib/useKeyboardInset';
+import { useKeyboardState } from '@/lib/useKeyboardInset';
 import { cn } from '@/lib/cn';
-
-/** Below this, treat visualViewport shrinkage as browser-chrome noise (e.g. the URL bar hiding
- * on scroll), not a real keyboard — a real on-screen keyboard is always much taller. */
-const KEYBOARD_OPEN_THRESHOLD_PX = 80;
 
 export type NavGroup = { id: string; name: string; initials: string; meta: string };
 
@@ -96,8 +92,7 @@ export function BottomNav({ groups, bettingEnabledByGroup }: { groups: NavGroup[
   // opens, so the tab bar would otherwise float on top of the keyboard instead of being covered
   // by it. Simplest correct fix: don't show it while a keyboard is up — there's no page to
   // switch tabs on while you're mid-type anyway.
-  const keyboardInset = useKeyboardInset();
-  const keyboardOpen = keyboardInset > KEYBOARD_OPEN_THRESHOLD_PX;
+  const { visible: keyboardOpen, inset: keyboardInset } = useKeyboardState();
 
   // Neither sheet is a normal in-flow page element, so nothing else stops a scroll or a
   // pull-to-refresh gesture on the (dimmed but still-present) page underneath — same lock

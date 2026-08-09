@@ -7,10 +7,8 @@ import { OptionLabel } from '@/components/markets/OptionLabel';
 import { cn } from '@/lib/cn';
 import { formatTokens } from '@/lib/formatNumber';
 import { formatLine } from '@/lib/units';
-import { useKeyboardInset } from '@/lib/useKeyboardInset';
+import { useKeyboardState } from '@/lib/useKeyboardInset';
 import type { Market, MarketOption } from '@/lib/actions/markets';
-
-const KEYBOARD_OPEN_THRESHOLD_PX = 80;
 
 interface ExistingBet {
   side: string | null;
@@ -65,8 +63,7 @@ export function BetslipBar({
 
   // The amount input's numeric keyboard pushes this sheet up just enough to reveal the input
   // itself, leaving Confirm flush against the keyboard with no breathing room — pad past it.
-  const keyboardInset = useKeyboardInset();
-  const keyboardOpen = keyboardInset > KEYBOARD_OPEN_THRESHOLD_PX;
+  const { visible: keyboardOpen, inset: keyboardInset } = useKeyboardState();
 
   const betAmountNum = betAmount === '' ? 0 : Number(betAmount);
   const balanceAfter = Math.max(0, balance - betAmountNum);

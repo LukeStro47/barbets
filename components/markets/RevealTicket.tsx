@@ -9,7 +9,7 @@ import { ReactionBar } from '@/components/markets/ReactionBar';
 import { ResolutionProofButton } from '@/components/markets/ResolutionProofButton';
 import { SealedTicketCover } from '@/components/markets/SealedTicketCover';
 import { Button } from '@/components/ui/Button';
-import { CheckIcon, DownloadIcon, LinkIcon, ShareIcon } from '@/components/ui/icons';
+import { CheckIcon, ShareIcon } from '@/components/ui/icons';
 import type { ReactionEmoji } from '@/lib/actions/reactions';
 
 export interface TicketCaller {
@@ -180,24 +180,46 @@ export function RevealTicket({
     URL.revokeObjectURL(url);
   }
 
+  // One button covers every environment instead of splitting on canShareFiles: the richest path
+  // (native share sheet with the actual image attached) is tried first, then a plain url/text
+  // share (works in plenty of browsers that can't share files), and only once neither exists at
+  // all does it fall back to doing the two things a share sheet would've offered itself —
+  // downloading the image and copying the link — in a single tap. That download always happens
+  // in the final fallback regardless of whether the clipboard write succeeds, since a permissions
+  // failure on `navigator.clipboard` (blocked in an insecure/embedded context) shouldn't also
+  // swallow the image save; previously an uncaught rejection there made "Copy link" look like it
+  // silently did nothing.
   async function handleShare() {
-    if (!blob) return;
-    const file = new File([blob], 'barbets-reveal.png', { type: 'image/png' });
-    try {
-      await navigator.share({ files: [file], title: `${groupName} · ${question}`, text: `See how "${question}" resolved.` });
-    } catch (err) {
-      if ((err as Error)?.name !== 'AbortError') downloadBlob(blob);
+    const shareTitle = `${groupName} · ${question}`;
+    const shareText = `See how "${question}" resolved.`;
+
+    if (canShareFiles && blob) {
+      const file = new File([blob], 'barbets-reveal.png', { type: 'image/png' });
+      try {
+        await navigator.share({ files: [file], title: shareTitle, text: shareText });
+        return;
+      } catch (err) {
+        if ((err as Error)?.name === 'AbortError') return;
+      }
     }
-  }
 
-  function handleSaveImage() {
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title: shareTitle, text: shareText, url: window.location.href });
+        return;
+      } catch (err) {
+        if ((err as Error)?.name === 'AbortError') return;
+      }
+    }
+
     if (blob) downloadBlob(blob);
-  }
-
-  async function handleCopyLink() {
-    await navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1600);
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      // Image save above already went through — a blocked clipboard isn't a total failure.
+    }
   }
 
   const formattedDate = new Date(resolvedAtIso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
@@ -394,23 +416,10 @@ export function RevealTicket({
       </div>
 
       <div className="mt-3.5 flex flex-wrap gap-2">
-        {canShareFiles ? (
-          <Button onClick={handleShare} disabled={capturing} variant="accent" className="inline-flex flex-1 items-center justify-center gap-2">
-            <ShareIcon className="h-4 w-4" />
-            {capturing ? 'Preparing…' : 'Share'}
-          </Button>
-        ) : (
-          <>
-            <Button onClick={handleSaveImage} disabled={capturing} variant="accent" className="inline-flex flex-1 items-center justify-center gap-2">
-              <DownloadIcon className="h-4 w-4" />
-              {capturing ? 'Preparing…' : 'Save image'}
-            </Button>
-            <Button onClick={handleCopyLink} variant="outline" className="inline-flex flex-1 items-center justify-center gap-2">
-              <LinkIcon className="h-4 w-4" />
-              {copied ? 'Copied' : 'Copy link'}
-            </Button>
-          </>
-        )}
+        <Button onClick={handleShare} disabled={capturing} variant="accent" className="inline-flex flex-1 items-center justify-center gap-2">
+          <ShareIcon className="h-4 w-4" />
+          {capturing ? 'Preparing…' : copied ? 'Copied' : 'Share'}
+        </Button>
         {hasProof && <ResolutionProofButton marketId={marketId} variant="action" />}
       </div>
     </div>

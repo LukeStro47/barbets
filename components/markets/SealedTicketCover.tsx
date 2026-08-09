@@ -96,7 +96,7 @@ export interface SealedTicketCoverProps {
 
 export function SealedTicketCover({ groupLabel, stats, mode, tearing, onOpen, onTornComplete }: SealedTicketCoverProps) {
   const topHalf = (
-    <div className={cn('relative overflow-hidden', mode === 'static' ? 'rounded-t-[28px]' : 'absolute inset-x-0 top-0 h-[53%] rounded-t-[28px]')}>
+    <div className={cn('overflow-hidden', mode === 'static' ? 'relative rounded-t-[28px]' : 'absolute inset-x-0 top-0 h-[53%] rounded-t-[28px]')}>
       <div
         className={cn(mode === 'overlay' ? 'absolute inset-0' : 'relative', tearing && 'animate-mystery-cover-top')}
         style={{ background: 'linear-gradient(150deg,#1c130d,#2c1f17 60%,#3b2a20)' }}
@@ -127,7 +127,7 @@ export function SealedTicketCover({ groupLabel, stats, mode, tearing, onOpen, on
   );
 
   const bottomHalf = (
-    <div className={cn('relative overflow-hidden', mode === 'static' ? 'rounded-b-[28px]' : 'absolute inset-x-0 bottom-0 top-[53%] rounded-b-[28px]')}>
+    <div className={cn('overflow-hidden', mode === 'static' ? 'relative rounded-b-[28px]' : 'absolute inset-x-0 bottom-0 top-[53%] rounded-b-[28px]')}>
       <div
         className={cn(mode === 'overlay' ? 'absolute inset-0' : 'relative', tearing && 'animate-mystery-cover-bottom')}
         style={{ background: 'linear-gradient(150deg,#3b2a20,#2c1f17 70%,#1c130d)' }}
