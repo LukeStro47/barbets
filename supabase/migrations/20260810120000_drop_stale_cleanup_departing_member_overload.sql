@@ -1,0 +1,30 @@
+-- Drops the orphaned 2-argument _cleanup_departing_member overload.
+--
+-- 20260707191508_leave_group_function.sql created (uuid, uuid). The very next
+-- day, 20260708093000_leave_rejoin_patch.sql added a p_refund_own_bets flag
+-- via CREATE OR REPLACE with (uuid, uuid, boolean default true) — which, per
+-- this project's own repeatedly-relearned lesson (see ARCHITECTURE.md's note
+-- on function identity being the argument type signature, not the name), did
+-- not replace anything. It created a second function alongside the first, and
+-- only the new signature got its REVOKEs. Both have been live ever since.
+--
+-- Nothing is broken today: all three callers (leave_group, remove_member,
+-- delete_account) pass the third argument explicitly, so they resolve to the
+-- 3-arg version unambiguously, and the helper is internal (revoked from
+-- public/authenticated) so PostgREST can never reach it either way. Verified
+-- against the live database before writing this: a 3-arg call plans fine, a
+-- 2-arg call fails with 42725 "function _cleanup_departing_member(uuid, uuid)
+-- is not unique".
+--
+-- Dropped anyway for two reasons. First, the ambiguity is a live trap: the
+-- 2-arg form is the signature documented in the older migration, so it's the
+-- natural thing for a future caller to write, and it would fail at runtime
+-- inside leave_group/remove_member. Second, and worse, the stale body is
+-- semantically wrong now — it unconditionally refunds the departing member's
+-- own open bets, which is exactly the behavior that was deliberately removed
+-- to close the peek-at-closed-odds-then-leave exploit. A wrong copy of a
+-- money helper is not something to leave lying around on the strength of
+-- "nothing calls it right now".
+--
+-- No behavior change: this removes a function with zero callers.
+drop function if exists _cleanup_departing_member(uuid, uuid);
