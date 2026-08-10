@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { runRpc, type ActionResult } from '@/lib/errors';
+import { normalizeInviteCode } from '@/lib/inviteCode';
 
 export interface Group {
   id: string;
@@ -11,6 +12,8 @@ export interface Group {
   invite_code: string;
   created_at: string;
   deletion_scheduled_at: string | null;
+  /** One of lib/avatars.ts's GROUP_AVATARS keys, or null for the initials fallback. Stored as free text, so an unrecognized key degrades to initials rather than erroring. */
+  avatar_key: string | null;
 }
 
 export interface Membership {
@@ -51,8 +54,11 @@ export async function createGroup(input: {
 
 export async function joinGroup(inviteCode: string, nickname?: string): Promise<ActionResult<Membership>> {
   const supabase = await createClient();
+  // Every join in the app funnels through here, so this is where a code still carrying the retired
+  // "BB-" prefix (a printed card, an old shared link) gets cleaned up — join_group() itself only
+  // ever sees the stored 4-character form.
   const result = await runRpc<Membership>(
-    await supabase.rpc('join_group', { p_invite_code: inviteCode, p_nickname: nickname ?? null })
+    await supabase.rpc('join_group', { p_invite_code: normalizeInviteCode(inviteCode), p_nickname: nickname ?? null })
   );
   if (result.error) return result;
   revalidatePath('/groups');
@@ -66,6 +72,18 @@ export async function renameGroup(groupId: string, name: string): Promise<Action
   revalidatePath(`/groups/${groupId}`);
   revalidatePath(`/groups/${groupId}/settings`);
   revalidatePath('/groups');
+  return result;
+}
+
+/** Pass null to clear it back to the group's initials. */
+export async function setGroupAvatar(groupId: string, avatarKey: string | null): Promise<ActionResult<Group>> {
+  const supabase = await createClient();
+  const result = await runRpc<Group>(await supabase.rpc('set_group_avatar', { p_group_id: groupId, p_avatar_key: avatarKey }));
+  if (result.error) return result;
+  revalidatePath(`/groups/${groupId}`);
+  revalidatePath(`/groups/${groupId}/settings`);
+  revalidatePath('/groups');
+  revalidatePath('/profile');
   return result;
 }
 
@@ -98,7 +116,6 @@ export interface GroupSettings {
   accepting_members: boolean;
   distribute_payout: boolean;
   creator_payout_pct: number;
-  endorser_payout_pct: number;
   allow_hedged_bets: boolean;
   /** Shared by the challenge window (propose -> dispute) and the vote window (dispute -> finalize), in half-hour steps between 0.5 and 10. */
   resolution_window_hours: number;
@@ -118,7 +135,6 @@ export async function updateGroupSettings(
     acceptingMembers: boolean;
     distributePayout: boolean;
     creatorPayoutPct: number;
-    endorserPayoutPct: number;
     allowHedgedBets: boolean;
     resolutionWindowHours: number;
     requireEndorsement: boolean;
@@ -136,7 +152,6 @@ export async function updateGroupSettings(
       p_accepting_members: input.acceptingMembers,
       p_distribute_payout: input.distributePayout,
       p_creator_payout_pct: input.creatorPayoutPct,
-      p_endorser_payout_pct: input.endorserPayoutPct,
       p_allow_hedged_bets: input.allowHedgedBets,
       p_season_custom_ends_at: input.seasonCustomEndsAt ?? null,
       p_resolution_window_hours: input.resolutionWindowHours,

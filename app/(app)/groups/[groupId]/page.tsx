@@ -12,6 +12,7 @@ import { OpenSeasonBettingButton } from '@/components/groups/IntermissionActions
 import { WaitingOnYouCard } from '@/components/groups/WaitingOnYouCard';
 import { InvitePill } from '@/components/groups/InvitePill';
 import { Mention } from '@/components/ui/Mention';
+import { GroupAvatar } from '@/components/ui/GroupAvatar';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { SettingsIcon, InfoIcon, TicketIcon } from '@/components/ui/icons';
 import { formatTokens } from '@/lib/formatNumber';
@@ -36,7 +37,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
 
   const { data: group } = await supabase
     .from('groups')
-    .select('id, name, invite_code, owner_id, deletion_scheduled_at, pending_bonus_pool')
+    .select('id, name, avatar_key, invite_code, owner_id, deletion_scheduled_at, pending_bonus_pool')
     .eq('id', groupId)
     .single();
   notFoundIfEmpty(group);
@@ -271,7 +272,15 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
       <SaveBalanceSnapshot groupId={groupId} groupName={group!.name} balance={membership?.balance ?? 0} />
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between gap-3">
-          <h1 className="min-w-0 font-display text-[29px] font-bold tracking-[-0.02em] text-espresso-950">{group!.name}</h1>
+          <div className="flex min-w-0 items-center gap-2.5">
+            {/* Only rendered once the group has actually picked a logo: falling back to the
+                initials tile here would put a redundant "TG" chip next to a heading that already
+                says the group's name in full. */}
+            {group!.avatar_key && (
+              <GroupAvatar name={group!.name} avatarKey={group!.avatar_key} className="h-9 w-9 rounded-xl" />
+            )}
+            <h1 className="min-w-0 font-display text-[29px] font-bold tracking-[-0.02em] text-espresso-950">{group!.name}</h1>
+          </div>
           <div className="flex shrink-0 items-center gap-2">
             <Link href={`/groups/${groupId}/bets`} className={iconLinkClass} aria-label="My bets">
               <TicketIcon className="h-4 w-4" />

@@ -2,13 +2,14 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { INVITE_CODE_LENGTH, normalizeInviteCode } from '@/lib/inviteCode';
 
-const CODE_LENGTH = 4;
+const CODE_LENGTH = INVITE_CODE_LENGTH;
 
-/** Four boxes, not the mock's six — the real invite code (supabase/migrations' create_group)
- * is a literal "BB-" prefix plus exactly 4 characters, so this matches the actual format
- * rather than the mock's generic box count. "BB-" is prepended automatically; the boxes only
- * ever hold the 4 significant characters. */
+/** Four boxes, not the mock's six — the real invite code (supabase/migrations'
+ * _generate_invite_code) is exactly 4 characters, so this matches the actual format rather than
+ * the mock's generic box count. A pasted code that still carries the retired "BB-" prefix is
+ * normalized away by normalizeInviteCode rather than filling the boxes with "BB-X". */
 export function InviteCodeBoxes() {
   const router = useRouter();
   const [chars, setChars] = useState<string[]>(Array(CODE_LENGTH).fill(''));
@@ -35,11 +36,7 @@ export function InviteCodeBoxes() {
   async function handlePaste() {
     try {
       const text = await navigator.clipboard.readText();
-      const clean = text
-        .toUpperCase()
-        .replace(/^BB-?/, '')
-        .replace(/[^A-Z0-9]/g, '')
-        .slice(0, CODE_LENGTH);
+      const clean = normalizeInviteCode(text);
       if (!clean) return;
       setChars(Array.from({ length: CODE_LENGTH }, (_, i) => clean[i] ?? ''));
       inputRefs.current[Math.min(clean.length, CODE_LENGTH - 1)]?.focus();
@@ -50,7 +47,7 @@ export function InviteCodeBoxes() {
 
   function join() {
     if (!ready) return;
-    router.push(`/join/BB-${code}`);
+    router.push(`/join/${code}`);
   }
 
   return (

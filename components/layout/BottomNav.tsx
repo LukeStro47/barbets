@@ -10,8 +10,9 @@ import { getActiveNavTab, getRouteGroupId, shouldHideBottomNav, type NavTab } fr
 import { formatTokenInputValue } from '@/lib/formatNumber';
 import { useKeyboardState } from '@/lib/useKeyboardInset';
 import { cn } from '@/lib/cn';
+import { GroupAvatar } from '@/components/ui/GroupAvatar';
 
-export type NavGroup = { id: string; name: string; initials: string; meta: string };
+export type NavGroup = { id: string; name: string; avatarKey: string | null; meta: string };
 
 const TABS: { key: NavTab; label: string }[] = [
   { key: 'home', label: 'Home' },
@@ -246,9 +247,12 @@ export function BottomNav({
                       current ? 'border-honey-500 bg-honey-500/10' : 'border-transparent bg-transparent'
                     )}
                   >
-                    <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] bg-espresso-900 text-[11.5px] font-extrabold text-honey-300">
-                      {g.initials}
-                    </span>
+                    <GroupAvatar
+                      name={g.name}
+                      avatarKey={g.avatarKey}
+                      className="h-[34px] w-[34px] rounded-[11px] text-[11.5px]"
+                      fallbackClassName="bg-espresso-900 text-honey-300"
+                    />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[13.5px] font-extrabold text-espresso-900">{g.name}</span>
                       <span className="block truncate text-[11px] text-espresso-400">{g.meta}</span>

@@ -387,7 +387,10 @@ export function RevealTicket({
               <img src="/barbets-mono-white.png" alt="" width={15} height={15} />
               <span className="text-[11px] font-extrabold tracking-[0.07em] text-paper-white/55 uppercase">Barbets</span>
             </div>
-            <span className="text-[10.5px] tracking-[0.02em] text-paper-white/30">barbets.vercel.app</span>
+            {/* The shareable domain, deliberately not the deployment's own URL — this ticket gets
+                screenshotted and sent to people outside the app, and mybarbets.com is the address
+                that's meant to outlive whatever Vercel deployment happens to be serving it. */}
+            <span className="text-[10.5px] tracking-[0.02em] text-paper-white/30">mybarbets.com</span>
           </div>
         </div>
         </div>

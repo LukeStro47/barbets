@@ -203,13 +203,23 @@ export function DemoWalkthrough({ isLoggedIn }: { isLoggedIn: boolean }) {
               Reveal the result
             </button>
           )}
+          {/* "Start betting" was a promise the app can't keep from here: there's nothing to bet
+              on until you're in a group with other people, so the honest next step is making one.
+              Going home stays available underneath for anyone who just wanted the tour. */}
           {step === 'resolved' && (
             <div className="animate-demo-fade-up-btn flex flex-col gap-2.5">
               <Link href={isLoggedIn ? '/groups/new' : '/login?mode=signup'} className="block">
                 <Button size="lg" variant="accent" className="w-full transition-transform active:scale-[0.97]">
-                  Start Betting
+                  Create a Group
                 </Button>
               </Link>
+              <p className="text-center text-[12.5px] leading-[1.5] text-espresso-400">
+                A group is where markets live. Not ready?{' '}
+                <Link href={isLoggedIn ? '/groups' : '/'} className="font-semibold text-espresso-600 underline">
+                  Head back home
+                </Link>
+                .
+              </p>
               <button
                 type="button"
                 onClick={replay}

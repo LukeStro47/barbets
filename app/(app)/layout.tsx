@@ -6,7 +6,6 @@ import { PullToRefresh } from '@/components/layout/PullToRefresh';
 import { PageTransition } from '@/components/layout/PageTransition';
 import { PushReminderModal } from '@/components/pwa/PushReminderModal';
 import { InstallBanner } from '@/components/pwa/InstallBanner';
-import { initials } from '@/lib/initials';
 import { getGroupTaskCounts } from '@/lib/tasks';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -18,7 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const { data: groupRows } = await supabase
     .from('groups')
-    .select('id, name, memberships(status)')
+    .select('id, name, avatar_key, memberships(status)')
     .order('created_at', { ascending: false });
 
   const groupIds = (groupRows ?? []).map((g) => g.id);
@@ -40,7 +39,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const groups: NavGroup[] = (groupRows ?? []).map((g) => {
     const memberCount = (g.memberships ?? []).filter((m: { status: string }) => m.status === 'active' || m.status === 'dormant').length;
-    return { id: g.id, name: g.name, initials: initials(g.name), meta: `${memberCount} member${memberCount === 1 ? '' : 's'}` };
+    return { id: g.id, name: g.name, avatarKey: g.avatar_key, meta: `${memberCount} member${memberCount === 1 ? '' : 's'}` };
   });
 
   const bettingEnabledByGroup: Record<string, boolean> = {};

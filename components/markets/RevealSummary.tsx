@@ -176,6 +176,9 @@ export function RevealSummary({
               label={<>Creator {creatorNickname && <Mention nickname={creatorNickname} />}</>}
               amount={payoutBreakdown.creator_cut}
             />
+            {/* The endorser's cut was removed (see 20260810130000), so this is always 0 on anything
+                resolved since. Kept because BreakdownRow hides a zero anyway and markets that
+                resolved before that change still carry a real number here. */}
             <BreakdownRow
               label={<>Endorser {sponsorNickname && <Mention nickname={sponsorNickname} />}</>}
               amount={payoutBreakdown.endorser_cut}
@@ -219,7 +222,17 @@ export function RevealSummary({
                         {b.payout === b.amount ? `↩ refunded ${b.payout}` : b.payout && b.payout > 0 ? `↩ ${b.payout} back` : '0 back'}
                       </span>
                     )}
-                    {won && (
+                    {/* A win that pays out exactly the stake means nobody took the other side, so
+                        there were no losing stakes to split. "+0 won" read as a bug and "you won
+                        your bet back" read like a consolation prize, when in fact the call was
+                        right and the money simply comes back untouched. */}
+                    {won && winnings === 0 && (
+                      <>
+                        <p className="text-success-700">Won</p>
+                        <p className="text-[11px] font-semibold text-espresso-400">{b.payout} returned</p>
+                      </>
+                    )}
+                    {won && winnings > 0 && (
                       <>
                         <p className="text-success-700">+{winnings} won</p>
                         <p className="text-[11px] font-semibold text-espresso-400">{b.payout} back total</p>

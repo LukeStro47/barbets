@@ -74,6 +74,10 @@ describe('notification event emission', () => {
   test('propose_resolution and challenge_resolution emit their events, excluding the acting user each time', async () => {
     const market = await createMarket(users.owner, group.id, { closesInMs: 2000 });
     await users.a.client.rpc('sponsor_market', { p_market_id: market.id });
+    // Without a real bet, expire_stale() voids this at closes_at rather than closing it, and does
+    // so silently — no market_closed, nothing to propose against
+    // (20260808100000_auto_void_zero_bet_markets_on_close.sql).
+    await users.b.client.rpc('place_bet', { p_market_id: market.id, p_side: 'yes', p_amount: 10 });
     await fastForwardCloseTime(market.id, 2000);
     await sleep(3000);
     await adminClient.rpc('expire_stale');
@@ -94,6 +98,8 @@ describe('notification event emission', () => {
   test('market_resolved recipients include the subject (the one exception to subject exclusion)', async () => {
     const market = await createMarket(users.owner, group.id, { subjectIds: [users.subject.id], closesInMs: 2000 });
     await users.a.client.rpc('sponsor_market', { p_market_id: market.id });
+    // Same zero-bet auto-void as above. The bettor is b, not the subject, who can't bet anyway.
+    await users.b.client.rpc('place_bet', { p_market_id: market.id, p_side: 'yes', p_amount: 10 });
     await fastForwardCloseTime(market.id, 2000);
     await sleep(3000);
     await adminClient.rpc('expire_stale');

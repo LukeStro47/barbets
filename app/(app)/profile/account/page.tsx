@@ -1,10 +1,11 @@
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
+import { ChevronRightIcon } from '@/components/ui/icons';
 import { ChangeEmailForm, ChangePasswordForm } from '@/components/profile/AccountForms';
 import { DeleteAccountButton } from '@/components/profile/DeleteAccountButton';
 import { DigestToggleStub } from '@/components/profile/DigestToggleStub';
-import { PushSetup } from '@/components/pwa/PushSetup';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 
 /** /profile/account — everything destructive or rarely touched, one tap deeper than the
@@ -27,11 +28,23 @@ export default async function AccountPage() {
         </div>
       </Card>
 
-      <Card className="space-y-1">
-        <h2 className="mb-2 font-display font-bold text-espresso-800">Notifications &amp; app</h2>
+      {/* PushSetup itself moved to /profile/notifications, where the rest of the push preferences
+          now live — keeping it here too would give the device toggle two homes that could show
+          different states. */}
+      <Card className="space-y-3">
+        <h2 className="font-display font-bold text-espresso-800">Notifications &amp; app</h2>
+        <Link
+          href="/profile/notifications"
+          className="flex items-center gap-3 rounded-2xl border border-espresso-100 px-4 py-3 transition-colors hover:bg-espresso-50/40"
+        >
+          <span className="flex-1">
+            <p className="text-sm font-semibold text-espresso-800">Notification settings</p>
+            <p className="text-xs text-espresso-400">Choose what each group can ping you about, plus nudges and news.</p>
+          </span>
+          <ChevronRightIcon className="h-4 w-3 shrink-0 text-espresso-300" />
+        </Link>
         <DigestToggleStub />
       </Card>
-      <PushSetup />
       <InstallPrompt />
 
       <Card>

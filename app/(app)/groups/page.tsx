@@ -9,7 +9,7 @@ import { OnboardingCarousel } from '@/components/groups/OnboardingCarousel';
 import { PlusIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/cn';
 import { formatSignedTokens, formatOrdinal } from '@/lib/formatNumber';
-import { initials } from '@/lib/initials';
+import { GroupAvatar } from '@/components/ui/GroupAvatar';
 import { getGroupTaskCounts } from '@/lib/tasks';
 
 export default async function GroupsHubPage({ searchParams }: { searchParams: Promise<{ all?: string }> }) {
@@ -20,7 +20,7 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
   } = await supabase.auth.getUser();
   const { data: groups } = await supabase
     .from('groups')
-    .select('id, name, deletion_scheduled_at, memberships(user_id, balance, status)')
+    .select('id, name, avatar_key, deletion_scheduled_at, memberships(user_id, balance, status)')
     .order('created_at', { ascending: false });
 
   // Net tokens per group — same definition the leaderboard page's "All-time net" card uses
@@ -91,7 +91,6 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
         </div>
       ) : (
         <div className="space-y-3">
-          <p className="ml-1 text-[11.5px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">You're in</p>
           <div className="overflow-hidden rounded-[20px] border border-espresso-100 bg-paper-white">
             {sortedGroups.map((g: any, i) => {
               // Same rank definition the leaderboard page uses: currently-playing members
@@ -117,14 +116,12 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
                     i < sortedGroups.length - 1 && 'border-b border-espresso-50'
                   )}
                 >
-                  <span
-                    className={cn(
-                      'flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] text-[12.5px] font-extrabold',
-                      isLive ? 'bg-espresso-900 text-honey-300' : 'bg-espresso-50 text-espresso-500'
-                    )}
-                  >
-                    {initials(g.name)}
-                  </span>
+                  <GroupAvatar
+                    name={g.name}
+                    avatarKey={g.avatar_key}
+                    className="h-10 w-10 rounded-[13px] text-[12.5px]"
+                    fallbackClassName={isLive ? 'bg-espresso-900 text-honey-300' : 'bg-espresso-50 text-espresso-500'}
+                  />
                   <span className="min-w-0 flex-1">
                     <p className="truncate font-display text-[15.5px] font-extrabold leading-[1.25] text-espresso-950">{g.name}</p>
                     {inIntermission ? (

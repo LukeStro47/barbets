@@ -48,10 +48,12 @@ export function EditSettingsForm({
   const [acceptingMembers, setAcceptingMembers] = useState(settings.accepting_members);
   const [distributePayout, setDistributePayout] = useState(settings.distribute_payout);
   const [creatorPayoutPct, setCreatorPayoutPct] = useState(settings.creator_payout_pct);
-  const [endorserPayoutPct, setEndorserPayoutPct] = useState(settings.endorser_payout_pct);
   const [allowHedgedBets, setAllowHedgedBets] = useState(settings.allow_hedged_bets);
   const [resolutionWindowHours, setResolutionWindowHours] = useState(settings.resolution_window_hours);
   const [requireEndorsement, setRequireEndorsement] = useState(settings.require_endorsement);
+
+  const creatorPctValid = Number.isFinite(creatorPayoutPct) && creatorPayoutPct >= 0 && creatorPayoutPct <= 100;
+  const openMarketsPct = creatorPctValid ? 100 - creatorPayoutPct : '—';
 
   function handleSubmit(formData: FormData) {
     setError(null);
@@ -66,7 +68,6 @@ export function EditSettingsForm({
         acceptingMembers,
         distributePayout,
         creatorPayoutPct,
-        endorserPayoutPct,
         allowHedgedBets,
         resolutionWindowHours,
         requireEndorsement,
@@ -184,13 +185,16 @@ export function EditSettingsForm({
             <p className="text-sm font-semibold text-espresso-700">Split universal losses</p>
             <p className="text-xs text-espresso-400">
               {distributePayout
-                ? "When everyone loses in a market, split that pool between the creator, the endorser, and the group's other open markets instead of refunding it."
+                ? "When everyone loses in a market, split that pool between the creator and the group's other open markets instead of refunding it."
                 : "Off by default: when everyone loses in a market, everyone gets their stake back."}
             </p>
           </div>
           <Switch checked={distributePayout} onChange={() => setDistributePayout((v) => !v)} />
         </div>
 
+        {/* Only one number is actually a choice. What's left over is arithmetic, so it's shown
+            rather than asked for: two editable fields could be set to sum past 100, and the second
+            one was never the interesting decision anyway. */}
         {distributePayout && (
           <div className="flex gap-3 pt-1">
             <label className="flex-1 space-y-1">
@@ -204,21 +208,25 @@ export function EditSettingsForm({
                 className={inputClasses}
               />
             </label>
-            <label className="flex-1 space-y-1">
-              <span className="text-xs font-semibold text-espresso-500">Endorser %</span>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={endorserPayoutPct}
-                onChange={(e) => setEndorserPayoutPct(Number(e.target.value))}
-                className={inputClasses}
-              />
-            </label>
+            <div className="flex-1 space-y-1">
+              <span className="block text-xs font-semibold text-espresso-500">Open markets %</span>
+              <div
+                aria-readonly
+                className="w-full rounded-xl border border-espresso-100 bg-espresso-50 px-4 py-2.5 font-semibold text-espresso-500"
+              >
+                {openMarketsPct}
+              </div>
+            </div>
           </div>
         )}
-        {distributePayout && creatorPayoutPct + endorserPayoutPct > 100 && (
-          <p className="text-xs text-danger-700">Creator and endorser percentages can't add up to more than 100.</p>
+        {distributePayout && (
+          <p className="text-xs text-espresso-400">
+            Whatever the creator doesn't take is split across the group's other open markets, or held for the next
+            market if there aren't any.
+          </p>
+        )}
+        {distributePayout && !creatorPctValid && (
+          <p className="text-xs text-danger-700">The creator percentage has to be between 0 and 100.</p>
         )}
       </div>
 
@@ -318,7 +326,7 @@ export function EditSettingsForm({
         )}
         <Button
           type="submit"
-          disabled={isPending || (distributePayout && creatorPayoutPct + endorserPayoutPct > 100)}
+          disabled={isPending || (distributePayout && !creatorPctValid)}
           className="flex-1"
         >
           Save
@@ -381,8 +389,7 @@ export function ReadOnlySettings({
         {settings.distribute_payout ? (
           <span className="text-right font-semibold text-espresso-800">
             <span className="block">Creator {settings.creator_payout_pct}%</span>
-            <span className="block">Endorser {settings.endorser_payout_pct}%</span>
-            <span className="block">Rest to other markets</span>
+            <span className="block">Open markets {100 - settings.creator_payout_pct}%</span>
           </span>
         ) : (
           <span className="font-semibold text-espresso-800">Refunded to everyone</span>

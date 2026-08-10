@@ -53,7 +53,7 @@ export default async function HowItWorksPage({ searchParams }: { searchParams: P
       title: 'Payouts are parimutuel',
       body: `There's no bookmaker. Everyone on the losing side has their stake split among the winners, proportional to how much each staked, your own stake comes back too.${
         distributePayout
-          ? " If nobody predicted the outcome, this group sends part of that pool to the creator and endorser and carries the rest into another open market, rather than a plain refund."
+          ? " If nobody predicted the outcome, this group sends part of that pool to the market's creator and carries the rest into another open market, rather than a plain refund."
           : ''
       }`,
     },

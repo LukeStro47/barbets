@@ -5,6 +5,12 @@ import { setupGroup, createMarket, fastForwardCloseTime, sleep, type GroupRow } 
 async function toDisputed(proposer: TestUser, challenger: TestUser, groupId: string) {
   const market = await createMarket(proposer, groupId, { closesInMs: 2000 });
   await challenger.client.rpc('sponsor_market', { p_market_id: market.id });
+  // At least one real bet, otherwise expire_stale() voids the market outright at closes_at
+  // instead of closing it (20260808100000_auto_void_zero_bet_markets_on_close.sql) and there's
+  // nothing left to propose, challenge, or vote on. The amount is irrelevant to what this suite
+  // asserts, which is entirely about how ballots are counted.
+  const { error: betErr } = await proposer.client.rpc('place_bet', { p_market_id: market.id, p_side: 'yes', p_amount: 10 });
+  if (betErr) throw new Error(`toDisputed place_bet: ${betErr.message}`);
   await fastForwardCloseTime(market.id, 2000);
   await sleep(3000);
   await adminClient.rpc('expire_stale');

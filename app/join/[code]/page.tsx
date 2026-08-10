@@ -2,9 +2,14 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { JoinFlow } from '@/components/groups/JoinFlow';
 import { InvalidInviteModal } from '@/components/groups/InvalidInviteModal';
+import { normalizeInviteCode } from '@/lib/inviteCode';
 
 export default async function JoinPage({ params }: { params: Promise<{ code: string }> }) {
-  const { code } = await params;
+  const { code: rawCode } = await params;
+  // Codes printed on cards, or shared before the prefix was dropped, still read "BB-XXXX" — those
+  // links have to keep working, so the URL is normalized once here and only the clean code is
+  // used from this point on (lookup, the sign-in bounce-back, and JoinFlow's own join call).
+  const code = normalizeInviteCode(rawCode);
   const supabase = await createClient();
 
   const {

@@ -11,6 +11,7 @@ import { BonusPoolTile } from '@/components/markets/BonusPoolTile';
 import { OddsBar, OddsBarMulti } from '@/components/markets/OddsBar';
 import { PoolStrip } from '@/components/markets/PoolStrip';
 import { FinalOddsCard } from '@/components/markets/FinalOddsCard';
+import { YourPositionCard } from '@/components/markets/PositionPayouts';
 import { SettlementCard } from '@/components/markets/SettlementCard';
 import { ResolutionTimeline } from '@/components/markets/ResolutionTimeline';
 import { MarketOverflowMenu } from '@/components/markets/MarketOverflowMenu';
@@ -299,6 +300,23 @@ export default async function MarketDetailPage({
 
       {isDisputed && (
         <>
+          {/* Pool/bets/vote-clock sits above the ballot, not under it: it's the context you read
+              before deciding how to vote (and the clock you're racing), so burying it below a card
+              tall enough to push it off-screen made it easy to miss entirely. */}
+          <PoolStrip
+            cells={[
+              { label: 'Pool', value: formatTokens(closedVolume ?? 0) },
+              { label: 'Bets', value: closedBetCount ?? 0 },
+              {
+                label: 'Vote ends',
+                value: challenge ? (
+                  <CountdownTimer target={new Date(new Date(challenge.created_at).getTime() + resolutionWindowHours * 3_600_000).toISOString()} prefix="" />
+                ) : (
+                  '—'
+                ),
+              },
+            ]}
+          />
           <MarketActions
             groupId={groupId}
             market={marketRow}
@@ -317,19 +335,10 @@ export default async function MarketDetailPage({
             eligibleVoters={eligibleVoters}
             hideVoidCard
           />
-          <PoolStrip
-            cells={[
-              { label: 'Pool', value: formatTokens(closedVolume ?? 0) },
-              { label: 'Bets', value: closedBetCount ?? 0 },
-              {
-                label: 'Vote ends',
-                value: challenge ? (
-                  <CountdownTimer target={new Date(new Date(challenge.created_at).getTime() + resolutionWindowHours * 3_600_000).toISOString()} prefix="" />
-                ) : (
-                  '—'
-                ),
-              },
-            ]}
+          <YourPositionCard
+            myBets={myBets}
+            sideOdds={!isMultipleChoice ? (odds ?? undefined) : undefined}
+            optionOdds={isMultipleChoice ? (optionOdds ?? undefined) : undefined}
           />
           <SettlementCard
             moneySplit={
@@ -352,7 +361,20 @@ export default async function MarketDetailPage({
         <>
           {statTiles.length > 0 && <StatStrip>{statTiles}</StatStrip>}
 
-          {marketRow.status !== 'pending_sponsor' && <MyBetsCard bets={myBets} optionLabelById={optionLabelById} />}
+          {/* Once betting has locked (proposed reaches here; closed/disputed are handled in their
+              own branches above), what the stake is actually worth is the interesting number, so
+              the projection card supersedes the plain stake list. While a market's still open,
+              odds are deliberately withheld, so there's nothing to project against and the plain
+              list is all there is to show. */}
+          {marketRow.status === 'proposed' && (odds || optionOdds) ? (
+            <YourPositionCard
+              myBets={myBets}
+              sideOdds={!isMultipleChoice ? (odds ?? undefined) : undefined}
+              optionOdds={isMultipleChoice ? (optionOdds ?? undefined) : undefined}
+            />
+          ) : (
+            marketRow.status !== 'pending_sponsor' && <MyBetsCard bets={myBets} optionLabelById={optionLabelById} />
+          )}
 
           <Card className="relative space-y-3">
             {proposal && (

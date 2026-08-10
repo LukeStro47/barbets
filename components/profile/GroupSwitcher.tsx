@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/cn';
+import { GroupAvatar } from '@/components/ui/GroupAvatar';
 
 export interface SwitcherGroup {
   id: string;
   name: string;
-  initials: string;
+  avatarKey: string | null;
   handle: string;
 }
 
@@ -26,9 +27,12 @@ export function GroupSwitcher({ groups, currentGroupId }: { groups: SwitcherGrou
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-[13px] rounded-[22px] border border-espresso-100 bg-paper-white px-4 py-3.5 text-left"
       >
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-espresso-900 text-sm font-extrabold text-honey-300">
-          {current.initials}
-        </span>
+        <GroupAvatar
+          name={current.name}
+          avatarKey={current.avatarKey}
+          className="h-11 w-11 rounded-2xl text-sm"
+          fallbackClassName="bg-espresso-900 text-honey-300"
+        />
         <span className="min-w-0 flex-1">
           <span className="block text-[10px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase">Showing</span>
           <span className="mt-0.5 block truncate text-[19px] font-extrabold tracking-[-0.015em] text-espresso-900">{current.name}</span>
@@ -58,9 +62,12 @@ export function GroupSwitcher({ groups, currentGroupId }: { groups: SwitcherGrou
                     active ? 'bg-honey-500/10' : 'bg-transparent'
                   )}
                 >
-                  <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[10px] bg-espresso-900 text-[10.5px] font-extrabold text-honey-300">
-                    {g.initials}
-                  </span>
+                  <GroupAvatar
+                    name={g.name}
+                    avatarKey={g.avatarKey}
+                    className="h-[30px] w-[30px] rounded-[10px] text-[10.5px]"
+                    fallbackClassName="bg-espresso-900 text-honey-300"
+                  />
                   <span className="min-w-0 flex-1">
                     <span className={cn('block truncate text-[13.5px] font-extrabold', active ? 'text-honey-700' : 'text-espresso-900')}>
                       {g.name}

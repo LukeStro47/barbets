@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestUsers, cleanupTestUsers, backdate, adminClient, type TestUser } from './helpers/testUsers';
 import { setupGroup, createMarket, fastForwardCloseTime, sleep, type GroupRow, type MarketRow } from './helpers/scenarios';
 
-async function enableDistribute(owner: TestUser, groupId: string, creatorPct: number, endorserPct: number) {
+async function enableDistribute(owner: TestUser, groupId: string, creatorPct: number) {
   const { error } = await owner.client.rpc('update_group_settings', {
     p_group_id: groupId,
     p_seed_amount: 1000,
@@ -13,7 +13,6 @@ async function enableDistribute(owner: TestUser, groupId: string, creatorPct: nu
     p_accepting_members: true,
     p_distribute_payout: true,
     p_creator_payout_pct: creatorPct,
-    p_endorser_payout_pct: endorserPct,
   });
   if (error) throw new Error(`enableDistribute: ${error.message}`);
 }
@@ -65,8 +64,8 @@ describe('distribute_payout: zero-winner-pool reward split (opt-in setting)', ()
     await cleanupTestUsers(users);
   });
 
-  test('creator/endorser take their cut and the remainder tops up another open market, absorbed correctly on that market\'s own resolution', async () => {
-    await enableDistribute(users.owner, group.id, 20, 10);
+  test('the creator takes their cut and the whole remainder tops up another open market, absorbed correctly on that market\'s own resolution', async () => {
+    await enableDistribute(users.owner, group.id, 20);
 
     const marketA = await createMarket(users.owner, group.id, { closesInMs: 2000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: marketA.id });
@@ -86,20 +85,20 @@ describe('distribute_payout: zero-winner-pool reward split (opt-in setting)', ()
     expect(resolved.status).toBe('resolved');
 
     expect(await balance(group.id, users.owner.id)).toBe(ownerBefore + 30); // 20% of 150
-    expect(await balance(group.id, users.sponsor.id)).toBe(sponsorBefore + 15); // 10% of 150
+    expect(await balance(group.id, users.sponsor.id)).toBe(sponsorBefore); // the endorser no longer takes a cut
 
     expect(resolved.payout_breakdown).toEqual({
       creator_cut: 30,
-      endorser_cut: 15,
-      other_markets_cut: 105,
+      endorser_cut: 0,
+      other_markets_cut: 120,
       held_in_group_pool: 0,
     });
 
     const betsA = await getBets(marketA.id);
     expect(betsA.every((b) => b.payout === 0 && b.settled_at !== null)).toBe(true);
 
-    // remainder = 150 - 30 - 15 = 105, the only other open market gets all of it.
-    expect(await bonusPool(marketB.id)).toBe(105);
+    // remainder = 150 - 30 = 120, the only other open market gets all of it.
+    expect(await bonusPool(marketB.id)).toBe(120);
 
     // marketB later resolves normally — the bonus folds into its total pool
     // and is absorbed by the winning side exactly like any other stake.
@@ -109,12 +108,12 @@ describe('distribute_payout: zero-winner-pool reward split (opt-in setting)', ()
 
     const betsB = await getBets(marketB.id);
     const cBet = betsB.find((b) => b.user_id === users.c.id)!;
-    expect(cBet.payout).toBe(155); // 50 staked + 105 inherited bonus, sole winner
+    expect(cBet.payout).toBe(170); // 50 staked + 120 inherited bonus, sole winner
     expect(await bonusPool(marketB.id)).toBe(0);
   });
 
   test('no other open market: the remainder holds in the group\'s pending pool, never back to this market\'s own bettors', async () => {
-    await enableDistribute(users.owner, group.id, 25, 5);
+    await enableDistribute(users.owner, group.id, 25);
 
     // marketA and marketB from the previous test are both already resolved
     // by this point, so this is genuinely the only market in the group.
@@ -133,20 +132,20 @@ describe('distribute_payout: zero-winner-pool reward split (opt-in setting)', ()
     expect(resolved.status).toBe('resolved');
 
     expect(await balance(group.id, users.owner.id)).toBe(ownerBefore + 100); // 25% of 400
-    expect(await balance(group.id, users.sponsor.id)).toBe(sponsorBefore + 20); // 5% of 400
+    expect(await balance(group.id, users.sponsor.id)).toBe(sponsorBefore); // the endorser no longer takes a cut
 
-    // remainder = 400 - 100 - 20 = 280, held in the group's pending pool —
+    // remainder = 400 - 100 = 300, held in the group's pending pool —
     // neither bettor gets any of it back, unlike a normal winners split.
     const bets = await getBets(market.id);
     expect(bets.find((b) => b.user_id === users.a.id)!.payout).toBe(0);
     expect(bets.find((b) => b.user_id === users.b.id)!.payout).toBe(0);
-    expect(await pendingBonusPool(group.id)).toBe(pendingBefore + 280);
+    expect(await pendingBonusPool(group.id)).toBe(pendingBefore + 300);
 
     expect(resolved.payout_breakdown).toEqual({
       creator_cut: 100,
-      endorser_cut: 20,
+      endorser_cut: 0,
       other_markets_cut: 0,
-      held_in_group_pool: 280,
+      held_in_group_pool: 300,
     });
   });
 });
@@ -171,7 +170,7 @@ describe('bonus_pool never gets orphaned', () => {
   });
 
   test('a market carrying bonus_pool holds it in the group\'s pending pool if it voids with no other open market', async () => {
-    await enableDistribute(users.owner, group.id, 25, 5);
+    await enableDistribute(users.owner, group.id, 25);
 
     const source = await createMarket(users.owner, group.id, { closesInMs: 2000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: source.id });
@@ -245,7 +244,6 @@ describe('pending_bonus_pool at season end', () => {
         p_accepting_members: true,
         p_distribute_payout: true,
         p_creator_payout_pct: 25,
-        p_endorser_payout_pct: 5,
       });
       if (settingsErr) throw new Error(`enable distribute: ${settingsErr.message}`);
 
@@ -262,9 +260,9 @@ describe('pending_bonus_pool at season end', () => {
       await users.b.client.rpc('place_bet', { p_market_id: market.id, p_side: 'no', p_amount: 300 });
 
       // Nobody bet 'yes', and this is the only market in a brand-new group —
-      // the remainder (400 - 100 - 20 = 280) holds in pending_bonus_pool.
+      // the remainder (400 - 100 = 300) holds in pending_bonus_pool.
       await resolveAndFinalize(users.sponsor, market, 'yes');
-      expect(await pendingBonusPool(group.id)).toBe(280);
+      expect(await pendingBonusPool(group.id)).toBe(300);
 
       // Nothing else in flight, so end_season() archives synchronously right
       // away — the fast path, not the winding_down/deferred one — and
@@ -274,12 +272,12 @@ describe('pending_bonus_pool at season end', () => {
 
       expect(await pendingBonusPool(group.id)).toBe(0);
 
-      // 280 split evenly across all 4 active members = 70 each, on top of
-      // the creator/endorser cuts owner/sponsor already received.
-      expect(await balance(group.id, users.owner.id)).toBe(before.owner + 100 + 70); // 25% of 400 + even split
-      expect(await balance(group.id, users.sponsor.id)).toBe(before.sponsor + 20 + 70); // 5% of 400 + even split
-      expect(await balance(group.id, users.a.id)).toBe(before.a - 100 + 70); // lost the 100 stake, then the even split
-      expect(await balance(group.id, users.b.id)).toBe(before.b - 300 + 70); // lost the 300 stake, then the even split
+      // 300 split evenly across all 4 active members = 75 each, on top of
+      // the creator cut the owner already received.
+      expect(await balance(group.id, users.owner.id)).toBe(before.owner + 100 + 75); // 25% of 400 + even split
+      expect(await balance(group.id, users.sponsor.id)).toBe(before.sponsor + 75); // even split only, no endorser cut
+      expect(await balance(group.id, users.a.id)).toBe(before.a - 100 + 75); // lost the 100 stake, then the even split
+      expect(await balance(group.id, users.b.id)).toBe(before.b - 300 + 75); // lost the 300 stake, then the even split
     } finally {
       await cleanupTestUsers(users);
     }

@@ -18,6 +18,8 @@ import { LeaveGroupButton } from '@/components/groups/LeaveGroupButton';
 import { GroupDeletionBanner } from '@/components/groups/GroupDeletionBanner';
 import { SeasonNameEditor } from '@/components/groups/SeasonNameEditor';
 import { GroupNameEditor } from '@/components/groups/GroupNameEditor';
+import { AvatarPicker } from '@/components/groups/AvatarPicker';
+import { GroupAvatar } from '@/components/ui/GroupAvatar';
 import { Mention } from '@/components/ui/Mention';
 import { InfoIcon, ChevronRightIcon } from '@/components/ui/icons';
 import type { GroupSettings } from '@/lib/actions/groups';
@@ -28,7 +30,7 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
 
   const { data: group } = await supabase
     .from('groups')
-    .select('id, name, invite_code, owner_id, deletion_scheduled_at')
+    .select('id, name, avatar_key, invite_code, owner_id, deletion_scheduled_at')
     .eq('id', groupId)
     .single();
   notFoundIfEmpty(group);
@@ -73,6 +75,24 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
           <GroupNameEditor groupId={groupId} currentName={group!.name} />
         </Card>
       )}
+
+      <Card className="space-y-3">
+        <div className="flex items-center gap-3">
+          <GroupAvatar
+            name={group!.name}
+            avatarKey={group!.avatar_key}
+            className="h-12 w-12 rounded-2xl text-sm"
+            fallbackClassName="bg-espresso-900 text-honey-300"
+          />
+          <div>
+            <h2 className="font-semibold text-espresso-800">Group logo</h2>
+            <p className="text-xs text-espresso-400">
+              {isOwner ? 'Pick one, or keep the initials.' : 'Only the group owner can change this.'}
+            </p>
+          </div>
+        </div>
+        {isOwner && <AvatarPicker groupId={groupId} groupName={group!.name} avatarKey={group!.avatar_key} />}
+      </Card>
 
       <Card className="space-y-2">
         <h2 className="font-semibold text-espresso-800">Your nickname</h2>

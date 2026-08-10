@@ -150,7 +150,7 @@ async function resolutionWindowLabel(groupId: string): Promise<string> {
   return hours === 1 ? '1 hour' : `${hours} hours`;
 }
 
-async function buildContent(event: NotificationEvent, isSubject: boolean, winnings?: number | null): Promise<Content | null> {
+async function buildContent(event: NotificationEvent, isSubject: boolean, winnings?: number | null, staked?: number | null): Promise<Content | null> {
   if (event.event_type === 'season_ended') {
     const { data: season } = await admin.from('seasons').select('number').eq('id', event.season_id).single();
     const { data: group } = await admin.from('groups').select('name').eq('id', event.group_id).single();
@@ -227,6 +227,18 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
     };
   }
 
+  // The Friday-midday prompt. Group-scoped with no market behind it (the sweep only
+  // fires it for groups with nothing open), so it deep-links straight to the create form
+  // rather than to a group page that has nothing on it worth landing on.
+  if (event.event_type === 'weekend_nudge') {
+    const { data: group } = await admin.from('groups').select('name').eq('id', event.group_id).single();
+    return {
+      title: group!.name,
+      body: "Weekend's nearly here. Anyone up to something worth betting on?",
+      url: `/groups/${event.group_id}/markets/new`,
+    };
+  }
+
   if (event.event_type === 'admin_broadcast') {
     return {
       title: event.custom_title!,
@@ -249,6 +261,10 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
       return { title: group.name, body: `A new market just opened about you. No spoilers, but you can watch the action.`, url };
     case 'market_closed':
       return { title: group.name, body: `Betting just closed, odds are live: "${market.title}"`, url };
+    // Only ever sent to someone who hasn't bet in this group for a week (that filtering
+    // happens in get_event_recipients), so the copy can lean on it.
+    case 'market_closing_soon':
+      return { title: group.name, body: `Betting closes in 2 hours on "${market.title}". It's been a minute since your last one.`, url };
     case 'resolution_proposed': {
       const windowLabel = await resolutionWindowLabel(event.group_id);
       return {
@@ -264,6 +280,17 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
         return { title: group.name, body: `A market about you just resolved, come see what it was: "${market.title}"`, url: revealUrl };
       }
       const outcomeLabel = await marketOutcomeLabel(market);
+      // A payout that exactly equals the stake means nobody took the other side, so there were no
+      // losing stakes to split. Quoting it as "you won N tokens" overstates it (they're up
+      // nothing), and framing it as winning your own bet back reads like a consolation prize when
+      // the call was in fact correct. Say they won, and say the stake comes back.
+      if (winnings && staked && winnings === staked) {
+        return {
+          title: group.name,
+          body: `You called "${market.title}" right: ${outcomeLabel}. Nobody took the other side, so your ${staked} tokens come straight back.`,
+          url: revealUrl,
+        };
+      }
       if (winnings) {
         return {
           title: group.name,
@@ -373,25 +400,31 @@ async function processEvent(event: NotificationEvent) {
   // else (including subjects, who by construction never hold a bet on their own market) shares one
   // of the two content variants below, same as every other event type.
   if (event.event_type === 'market_resolved' && event.market_id) {
+    // `amount` rides along with `payout` so the copy can tell a real win apart from a payout that
+    // is exactly the stake coming back (a one-sided market, where there were no losing stakes to
+    // split) — see the market_resolved case in buildContent.
     const { data: bets } = await admin
       .from('bets')
-      .select('user_id, payout')
+      .select('user_id, payout, amount')
       .eq('market_id', event.market_id)
       .not('payout', 'is', null)
       .gt('payout', 0);
     const payoutByUser = new Map<string, number>();
+    const stakeByUser = new Map<string, number>();
     for (const b of bets ?? []) {
       payoutByUser.set(b.user_id, (payoutByUser.get(b.user_id) ?? 0) + b.payout);
+      stakeByUser.set(b.user_id, (stakeByUser.get(b.user_id) ?? 0) + b.amount);
     }
 
     const contentCache = new Map<string, Content | null>();
     for (const userId of recipientIds) {
       const isSubject = subjectIds.has(userId);
       const winnings = payoutByUser.get(userId) ?? null;
-      const cacheKey = isSubject ? 'subject' : `winnings:${winnings}`;
+      const staked = stakeByUser.get(userId) ?? null;
+      const cacheKey = isSubject ? 'subject' : `winnings:${winnings}:${staked}`;
       let content = contentCache.get(cacheKey);
       if (content === undefined) {
-        content = await buildContent(event, isSubject, winnings);
+        content = await buildContent(event, isSubject, winnings, staked);
         contentCache.set(cacheKey, content);
       }
       if (content) await sendToUser(userId, content);

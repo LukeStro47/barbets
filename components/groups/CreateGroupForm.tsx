@@ -61,15 +61,16 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
   // default: on) so a brand-new market doesn't wait on a second approver,
   // allowHedgedBets off (DB default: on) since a fresh, small group hasn't
   // opted into that risk yet, and resolutionWindowHours 2h (DB default: 8h)
-  // for a snappier first few resolutions. distributePayout/creatorPayoutPct/
-  // endorserPayoutPct match the DB defaults as-is.
+  // for a snappier first few resolutions. distributePayout/creatorPayoutPct
+  // match the DB defaults as-is.
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [requireEndorsement, setRequireEndorsement] = useState(false);
   const [allowHedgedBets, setAllowHedgedBets] = useState(false);
   const [distributePayout, setDistributePayout] = useState(false);
   const [creatorPayoutPct, setCreatorPayoutPct] = useState(25);
-  const [endorserPayoutPct, setEndorserPayoutPct] = useState(5);
   const [resolutionWindowHours, setResolutionWindowHours] = useState(2);
+
+  const creatorPctValid = Number.isFinite(creatorPayoutPct) && creatorPayoutPct >= 0 && creatorPayoutPct <= 100;
 
   function handleSubmit(formData: FormData) {
     setError(null);
@@ -102,7 +103,6 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
         acceptingMembers: true,
         distributePayout,
         creatorPayoutPct,
-        endorserPayoutPct,
         allowHedgedBets,
         resolutionWindowHours,
         requireEndorsement,
@@ -256,7 +256,7 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
                   <p className="text-sm font-semibold text-espresso-700">Split universal losses</p>
                   <p className="text-xs text-espresso-400">
                     {distributePayout
-                      ? "When everyone loses in a market, split that pool between the creator, the endorser, and the group's other open markets instead of refunding it."
+                      ? "When everyone loses in a market, split that pool between the creator and the group's other open markets instead of refunding it."
                       : 'Off by default: when everyone loses in a market, everyone gets their stake back.'}
                   </p>
                 </div>
@@ -276,21 +276,19 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
                       className={inputClasses}
                     />
                   </label>
-                  <label className="flex-1 space-y-1">
-                    <span className="text-xs font-semibold text-espresso-500">Endorser %</span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={endorserPayoutPct}
-                      onChange={(e) => setEndorserPayoutPct(Number(e.target.value))}
-                      className={inputClasses}
-                    />
-                  </label>
+                  <div className="flex-1 space-y-1">
+                    <span className="block text-xs font-semibold text-espresso-500">Open markets %</span>
+                    <div
+                      aria-readonly
+                      className="w-full rounded-xl border border-espresso-100 bg-espresso-50 px-4 py-2.5 font-semibold text-espresso-500"
+                    >
+                      {creatorPctValid ? 100 - creatorPayoutPct : '—'}
+                    </div>
+                  </div>
                 </div>
               )}
-              {distributePayout && creatorPayoutPct + endorserPayoutPct > 100 && (
-                <p className="text-xs text-danger-700">Creator and endorser percentages can't add up to more than 100.</p>
+              {distributePayout && !creatorPctValid && (
+                <p className="text-xs text-danger-700">The creator percentage has to be between 0 and 100.</p>
               )}
             </div>
 
@@ -333,7 +331,7 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
 
       <Button
         type="submit"
-        disabled={isPending || (distributePayout && creatorPayoutPct + endorserPayoutPct > 100)}
+        disabled={isPending || (distributePayout && !creatorPctValid)}
         className="w-full"
         size="lg"
       >

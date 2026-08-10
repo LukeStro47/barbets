@@ -8,7 +8,6 @@ import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { GroupSwitcher } from '@/components/profile/GroupSwitcher';
 import { ShareRecordCard } from '@/components/profile/ShareRecordCard';
-import { initials } from '@/lib/initials';
 import { formatTokens, formatOrdinal } from '@/lib/formatNumber';
 import { MARKET_TYPE_LABEL } from '@/lib/marketType';
 
@@ -35,7 +34,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
 
   const { data: memberships } = await supabase
     .from('memberships')
-    .select('group_id, nickname, balance, joined_at, groups(name)')
+    .select('group_id, nickname, balance, joined_at, groups(name, avatar_key)')
     .eq('user_id', user!.id)
     .neq('status', 'removed')
     .order('joined_at', { ascending: false });
@@ -94,7 +93,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   const switcherGroups = memberships.map((m) => ({
     id: m.group_id,
     name: (m.groups as any)?.name ?? '',
-    initials: initials((m.groups as any)?.name ?? ''),
+    avatarKey: (m.groups as any)?.avatar_key ?? null,
     handle: m.nickname,
   }));
 

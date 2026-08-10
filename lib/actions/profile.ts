@@ -6,16 +6,53 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { runRpc, type ActionResult } from '@/lib/errors';
 
+/** The master switch: off means no push of any kind, whatever the per-category or per-group
+ * preferences say. Goes through an RPC, not a direct `update users` — that table has select and
+ * insert policies but deliberately no update policy, so the plain write this used to do matched
+ * zero rows and reported success. */
 export async function setNotificationsEnabled(enabled: boolean): Promise<ActionResult<null>> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: 'Not signed in.' };
-
-  const { error } = await supabase.from('users').update({ notifications_enabled: enabled }).eq('id', user.id);
-  if (error) return { error: error.message };
+  const result = await runRpc<unknown>(await supabase.rpc('set_notifications_enabled', { p_enabled: enabled }));
+  if (result.error) return { error: result.error };
   revalidatePath('/profile');
+  revalidatePath('/profile/notifications');
+  return { data: null };
+}
+
+/** The two app-wide categories: nudges (we prod you when nothing's happening) and promos. The
+ * general per-group ones live on the membership instead, see updateGroupNotificationPrefs. */
+export async function updateNotificationCategories(input: {
+  notifyNudges: boolean;
+  notifyPromos: boolean;
+}): Promise<ActionResult<null>> {
+  const supabase = await createClient();
+  const result = await runRpc<unknown>(
+    await supabase.rpc('update_notification_categories', {
+      p_notify_nudges: input.notifyNudges,
+      p_notify_promos: input.notifyPromos,
+    })
+  );
+  if (result.error) return { error: result.error };
+  revalidatePath('/profile/notifications');
+  return { data: null };
+}
+
+export async function updateGroupNotificationPrefs(
+  groupId: string,
+  input: { notifyGroup: boolean; notifyMarkets: boolean; notifyResults: boolean; notifyAdmin: boolean }
+): Promise<ActionResult<null>> {
+  const supabase = await createClient();
+  const result = await runRpc<unknown>(
+    await supabase.rpc('update_group_notification_prefs', {
+      p_group_id: groupId,
+      p_notify_group: input.notifyGroup,
+      p_notify_markets: input.notifyMarkets,
+      p_notify_results: input.notifyResults,
+      p_notify_admin: input.notifyAdmin,
+    })
+  );
+  if (result.error) return { error: result.error };
+  revalidatePath('/profile/notifications');
   return { data: null };
 }
 
