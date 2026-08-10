@@ -2,12 +2,14 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { sponsorMarket } from '@/lib/actions/markets';
 import { challengeResolution, castVote, finalizeMarket, voidMarket, voidMarketAsCreator } from '@/lib/actions/resolution';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { Modal } from '@/components/ui/Modal';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { OptionLabel } from '@/components/markets/OptionLabel';
+import { ResolutionProofButton } from '@/components/markets/ResolutionProofButton';
+import { Mention } from '@/components/ui/Mention';
 import type { Market, MarketOption } from '@/lib/actions/markets';
 import type { ActionResult } from '@/lib/errors';
 
@@ -30,6 +32,7 @@ interface Proposal {
   proposed_option_id: string | null;
   justification: string | null;
   proposed_at: string;
+  photo_path?: string | null;
 }
 
 interface Challenge {
@@ -49,10 +52,17 @@ interface Props {
   challenge: Challenge | null;
   myVote: { outcome: string | null; voted_option_id: string | null } | null;
   currentUserId: string;
+  /** disputed only: display name for the proposal-quote block ("@sam proposed NO"). */
+  proposerNickname?: string;
   /** Populated only for multiple_choice markets, in sort_order. */
   options: MarketOption[] | null;
   /** group_settings.resolution_window_hours — shared by the challenge window (propose -> dispute) and the vote window (dispute -> finalize). */
   resolutionWindowHours: number;
+  /** disputed only: ballots cast so far vs. eligible voters, for the "N of M voted" count. */
+  votesCast?: number;
+  eligibleVoters?: number;
+  /** Suppresses the owner/creator void card below — the page renders MarketOverflowMenu's "···" instead for the closed/disputed screens, where a permanently-visible danger card competed with the page's one real job. */
+  hideVoidCard?: boolean;
 }
 
 export function MarketActions({
@@ -65,18 +75,26 @@ export function MarketActions({
   challenge,
   myVote,
   currentUserId,
+  proposerNickname,
   options,
   resolutionWindowHours,
+  votesCast,
+  eligibleVoters,
+  hideVoidCard = false,
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const isMultipleChoice = market.market_type === 'multiple_choice';
   const [voteChoice, setVoteChoice] = useState<string | null>(myVote?.voted_option_id ?? myVote?.outcome ?? null);
+  // Collapsed the moment there's a vote to show, whether that's one already on file (loading
+  // the page after having voted) or one just cast this session — expands back out only via
+  // "Switch vote," instead of always showing all three options once a ballot's already in.
+  const [ballotExpanded, setBallotExpanded] = useState(voteChoice === null);
   const [confirmingVoid, setConfirmingVoid] = useState(false);
   const [confirmingCreatorVoid, setConfirmingCreatorVoid] = useState(false);
   const [confirmingChallenge, setConfirmingChallenge] = useState(false);
+  const [showRulesModal, setShowRulesModal] = useState(false);
 
   const resolutionWindowMs = resolutionWindowHours * 3_600_000;
   const challengeWindowElapsed = useElapsed(proposal ? new Date(new Date(proposal.proposed_at).getTime() + resolutionWindowMs).toISOString() : null);
@@ -94,33 +112,17 @@ export function MarketActions({
     });
   }
 
-  function runSponsor() {
-    setError(null);
-    setNotice(null);
-    startTransition(async () => {
-      const result = await sponsorMarket(market.id);
-      if (result.error) {
-        // Someone else's endorsement beat this one to it (or it expired out from under them)
-        // — a red error next to a still-visible "Endorse" button reads as broken, not stale.
-        // A neutral notice, then a refresh, catches the page up to reality on its own.
-        if (result.error.toLowerCase().includes('already sponsored') || result.error.toLowerCase().includes('expired')) {
-          setNotice('Someone else just endorsed this market. Refreshing...');
-          setTimeout(() => router.refresh(), 1200);
-        } else {
-          setError(result.error);
-        }
-      } else {
-        router.refresh();
-      }
-    });
-  }
-
   const sides = market.market_type === 'yes_no' ? (['yes', 'no'] as const) : (['over', 'under'] as const);
   /** Choices offered on a ballot/proposal: every option (or side) plus VOID. */
   const choiceLabels: { value: string; label: string }[] = isMultipleChoice
     ? [...(options ?? []).map((o) => ({ value: o.id, label: o.label })), { value: 'void', label: 'VOID' }]
     : [...sides.map((s) => ({ value: s, label: s.toUpperCase() })), { value: 'void', label: 'VOID' }];
   const iAmProposer = proposal?.proposer_id === currentUserId;
+  const proposalChoiceLabel = proposal
+    ? proposal.proposed_option_id
+      ? ((options ?? []).find((o) => o.id === proposal.proposed_option_id)?.label ?? null)
+      : proposal.proposed_outcome
+    : null;
 
   function proposalChoiceFor(value: string) {
     return isMultipleChoice && value !== 'void'
@@ -131,18 +133,6 @@ export function MarketActions({
   return (
     <div className="space-y-3">
       {error && <p className="text-sm text-danger-700">{error}</p>}
-      {notice && <p className="text-sm text-espresso-500">{notice}</p>}
-
-      {market.status === 'pending_sponsor' && !isCreator && (
-        <Card>
-          <p className="mb-3 text-sm text-espresso-600">
-            Two humans behind every market. Endorse this one to open it up for betting.
-          </p>
-          <Button disabled={isPending} onClick={runSponsor} className="w-full">
-            Endorse this market
-          </Button>
-        </Card>
-      )}
 
       {market.status === 'proposed' && proposal && (
         <Card className="space-y-3">
@@ -188,54 +178,123 @@ export function MarketActions({
       )}
 
       {market.status === 'disputed' && challenge && (
-        <Card className="space-y-3">
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-espresso-700">Cast your vote</p>
-            <p className="text-xs text-espresso-500">
-              Secret ballot on what actually happened, not on whether you agree with the proposal. Vote VOID if it
-              can't be fairly judged. A tie or no votes upholds the proposal; a tie without it voids instead.
-              Ballots reveal once voting closes, early if everyone's voted. You can change your vote until then.
-            </p>
-            <p className="text-sm text-espresso-600">
-              <CountdownTimer target={new Date(new Date(challenge.created_at).getTime() + resolutionWindowMs).toISOString()} prefix="Voting closes in" />
-            </p>
+        <Card className="!rounded-[22px] overflow-hidden !border-[1.5px] !border-danger-500 !p-0 shadow-[0_6px_18px_-10px_rgba(28,19,13,0.35)]">
+          <div className="flex items-center justify-between gap-2 bg-danger-100 px-[18px] py-3">
+            <p className="text-xs font-extrabold tracking-[0.06em] text-danger-700 uppercase">Your ballot</p>
+            {votesCast !== undefined && eligibleVoters !== undefined && (
+              <p className="text-[12.5px] font-bold text-danger-700">
+                {votesCast} of {eligibleVoters} voted
+              </p>
+            )}
           </div>
-          <div className={isMultipleChoice ? 'flex flex-col gap-2' : 'flex gap-2'}>
-            {choiceLabels.map((c) => (
+
+          <div className="space-y-3.5 p-[18px]">
+            {proposal && (
+              <div className="space-y-1 rounded-2xl bg-espresso-50 p-3.5">
+                <p className="text-xs text-espresso-500">
+                  {proposerNickname ? <Mention nickname={proposerNickname} /> : 'Someone'} proposed{' '}
+                  <strong className="font-extrabold text-espresso-900">
+                    <OptionLabel label={(proposalChoiceLabel ?? '').toUpperCase()} />
+                  </strong>
+                </p>
+                {proposal.justification && <p className="text-[13.5px] leading-[1.4] text-espresso-600">"{proposal.justification}"</p>}
+                {proposal.photo_path && <ResolutionProofButton marketId={market.id} variant="action" />}
+              </div>
+            )}
+
+            <div className="space-y-0.5">
+              <p className="text-base font-extrabold text-espresso-950">What actually happened?</p>
+              <p className="text-[13px] leading-[1.4] text-espresso-500">
+                Vote on the outcome, not on whether you agree with the proposal.{' '}
+                <button type="button" onClick={() => setShowRulesModal(true)} className="font-bold text-honey-700">
+                  How votes settle
+                </button>
+              </p>
+            </div>
+
+            {ballotExpanded ? (
+              <div className="flex flex-col gap-2">
+                {choiceLabels.map((c) => {
+                  const selected = voteChoice === c.value;
+                  return (
+                    <button
+                      key={c.value}
+                      type="button"
+                      disabled={isPending}
+                      onClick={() => {
+                        setVoteChoice(c.value);
+                        setBallotExpanded(false);
+                        run(() => castVote(groupId, market.id, proposalChoiceFor(c.value)));
+                      }}
+                      className={`flex w-full items-center gap-2.5 rounded-2xl border-[1.5px] px-3.5 py-3 text-left text-[15px] font-extrabold uppercase ${
+                        selected ? 'border-espresso-900 bg-espresso-900 text-paper-white' : 'border-espresso-200 text-espresso-500'
+                      }`}
+                    >
+                      <span
+                        className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 ${
+                          selected ? 'border-honey-300' : 'border-espresso-200'
+                        }`}
+                      >
+                        {selected && <span className="h-2 w-2 rounded-full bg-honey-300" />}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate">
+                        <OptionLabel label={c.label} />
+                      </span>
+                      {c.value === 'void' && <span className="shrink-0 text-xs font-semibold text-espresso-400 normal-case">Can't be judged</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex w-full items-center gap-2.5 rounded-2xl border-[1.5px] border-espresso-900 bg-espresso-900 px-3.5 py-3">
+                <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 border-honey-300">
+                  <span className="h-2 w-2 rounded-full bg-honey-300" />
+                </span>
+                <span className="min-w-0 flex-1 truncate text-[15px] font-extrabold text-paper-white">
+                  Your vote:{' '}
+                  <OptionLabel label={(choiceLabels.find((c) => c.value === voteChoice)?.label ?? '').toUpperCase()} />
+                </span>
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => setBallotExpanded(true)}
+                  className="shrink-0 text-xs font-bold text-honey-300 underline"
+                >
+                  Switch vote
+                </button>
+              </div>
+            )}
+
+            <p className="text-xs text-espresso-400">Secret until voting closes. Change it any time before then.</p>
+
+            {voteWindowElapsed && (
               <button
-                key={c.value}
-                type="button"
                 disabled={isPending}
-                onClick={() => {
-                  setVoteChoice(c.value);
-                  run(() => castVote(groupId, market.id, proposalChoiceFor(c.value)));
-                }}
-                className={`whitespace-nowrap rounded-full border py-2 text-sm font-bold uppercase ${
-                  isMultipleChoice ? 'w-full truncate px-3 text-left' : 'flex-1 text-center'
-                } ${voteChoice === c.value ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-500'}`}
+                onClick={() => run(() => finalizeMarket(groupId, market.id))}
+                className="w-full text-center text-xs text-espresso-400 underline"
               >
-                <OptionLabel label={c.label} />
+                Finalize now
               </button>
-            ))}
+            )}
           </div>
-          {voteChoice && (
-            <p className="text-center text-xs text-espresso-400">
-              Your current vote: {(choiceLabels.find((c) => c.value === voteChoice)?.label ?? voteChoice).toUpperCase()}
-            </p>
-          )}
-          {voteWindowElapsed && (
-            <button
-              disabled={isPending}
-              onClick={() => run(() => finalizeMarket(groupId, market.id))}
-              className="w-full text-center text-xs text-espresso-400 underline"
-            >
-              Finalize now
-            </button>
-          )}
         </Card>
       )}
 
-      {isOwner && (
+      {showRulesModal && (
+        <Modal onClose={() => setShowRulesModal(false)}>
+          <p className="font-display font-bold text-espresso-900">How votes settle</p>
+          <p className="text-sm text-espresso-600">
+            Secret ballot on what actually happened, not on whether you agree with the proposal. Vote VOID if it
+            can't be fairly judged. A tie or no votes upholds the proposal; a tie without it voids instead. Ballots
+            reveal once voting closes, early if everyone's voted. You can change your vote until then.
+          </p>
+          <Button className="w-full" onClick={() => setShowRulesModal(false)}>
+            Got it
+          </Button>
+        </Modal>
+      )}
+
+      {!hideVoidCard && isOwner && (
         <Card className="space-y-2 border border-danger-200">
           <p className="text-sm font-semibold text-danger-700">Owner controls</p>
           {!confirmingVoid ? (
@@ -268,7 +327,7 @@ export function MarketActions({
         </Card>
       )}
 
-      {isCreator && ownerIsSubject && (
+      {!hideVoidCard && isCreator && ownerIsSubject && (
         <Card className="space-y-2 border border-danger-200">
           <p className="text-sm font-semibold text-danger-700">Owner can't act on this one</p>
           {!confirmingCreatorVoid ? (

@@ -12,6 +12,13 @@ export function formatTokenInputValue(raw: string): string {
   return Number(digits).toLocaleString('en-US');
 }
 
+/** Signed token amount for a net-gain/loss display — "+240" / "−85" (a real minus sign, not
+ * a bare negative number) so a group row's win/loss reads at a glance without also needing a
+ * caret icon or color to carry the direction. Zero renders as "+0", same as any other gain. */
+export function formatSignedTokens(n: number): string {
+  return n < 0 ? `−${formatTokens(Math.abs(n))}` : `+${formatTokens(n)}`;
+}
+
 /** Round to 1 decimal, no trailing zero — for percentages computed client-side (e.g. 100 - x), where plain subtraction on an already-rounded float can print artifacts like 16.700000000000003. Math.round snaps to a clean integer before dividing back down, so the float garbage never survives to display. */
 export function formatPercent(n: number): string {
   return (Math.round(n * 10) / 10).toString();

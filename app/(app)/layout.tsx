@@ -7,6 +7,7 @@ import { PageTransition } from '@/components/layout/PageTransition';
 import { PushReminderModal } from '@/components/pwa/PushReminderModal';
 import { InstallBanner } from '@/components/pwa/InstallBanner';
 import { initials } from '@/lib/initials';
+import { getGroupTaskCounts } from '@/lib/tasks';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -48,6 +49,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     bettingEnabledByGroup[g.id] = settings?.seasons_enabled ? (activeSeasonBettingOpenByGroup.get(g.id) ?? false) : (settings?.betting_enabled ?? false);
   }
 
+  const taskCounts = await getGroupTaskCounts(supabase, groupIds, user.id);
+  const hasNeedsYou = [...taskCounts.values()].some((count) => count > 0);
+
   return (
     // pt-[env(safe-area-inset-top)] used to live on AppHeader itself (now removed) so its own
     // background could extend up into the status bar area; with no top bar to do that, the
@@ -68,7 +72,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <BottomNavSpacer>{children}</BottomNavSpacer>
         </PageTransition>
       </PullToRefresh>
-      <BottomNav groups={groups} bettingEnabledByGroup={bettingEnabledByGroup} />
+      <BottomNav groups={groups} bettingEnabledByGroup={bettingEnabledByGroup} hasNeedsYou={hasNeedsYou} />
     </div>
   );
 }

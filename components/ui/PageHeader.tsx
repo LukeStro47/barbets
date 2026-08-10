@@ -9,7 +9,7 @@ export function PageHeader({
   action,
 }: {
   title: string;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
   backHref?: string;
   backLabel?: string;
   /** Rendered on the same row as the back link, right-aligned — for compact status pills that would otherwise crowd the title onto a narrower line. */

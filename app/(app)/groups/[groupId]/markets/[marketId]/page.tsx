@@ -9,6 +9,12 @@ import { ClosesInStatTile } from '@/components/markets/ClosesInStatTile';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { BonusPoolTile } from '@/components/markets/BonusPoolTile';
 import { OddsBar, OddsBarMulti } from '@/components/markets/OddsBar';
+import { PoolStrip } from '@/components/markets/PoolStrip';
+import { FinalOddsCard } from '@/components/markets/FinalOddsCard';
+import { SettlementCard } from '@/components/markets/SettlementCard';
+import { ResolutionTimeline } from '@/components/markets/ResolutionTimeline';
+import { MarketOverflowMenu } from '@/components/markets/MarketOverflowMenu';
+import { EndorseAction } from '@/components/markets/EndorseAction';
 import { MarketActions } from '@/components/markets/MarketActions';
 import { ClarificationRequests, type Clarification } from '@/components/markets/ClarificationRequests';
 import { ProposeResolutionCard } from '@/components/markets/ProposeResolutionCard';
@@ -76,6 +82,7 @@ export default async function MarketDetailPage({
       supabase.from('group_settings').select('allow_hedged_bets, seed_amount, resolution_window_hours').eq('group_id', groupId).single(),
     ]);
   const isOwner = group?.owner_id === user?.id;
+  const resolutionWindowHours = groupSettings?.resolution_window_hours ?? 8;
 
   const subjectUserIds = (subjectRows ?? []).map((s) => s.user_id);
   const ownerIsSubject = !!group?.owner_id && subjectUserIds.includes(group.owner_id);
@@ -148,6 +155,23 @@ export default async function MarketDetailPage({
       .single();
     proposal = data;
   }
+
+  let proposerNickname: string | undefined;
+  if (proposal) {
+    proposerNickname = nicknameByUserId.get(proposal.proposer_id);
+    if (!proposerNickname) {
+      const { data: proposerMember } = await supabase
+        .from('memberships')
+        .select('nickname')
+        .eq('group_id', groupId)
+        .eq('user_id', proposal.proposer_id)
+        .single();
+      proposerNickname = proposerMember?.nickname;
+    }
+  }
+
+  let votesCast: number | undefined;
+  let eligibleVoters: number | undefined;
   if (marketRow.status === 'disputed') {
     const { data } = await supabase.from('challenges').select('challenger_id, created_at').eq('market_id', marketId).single();
     challenge = data;
@@ -158,6 +182,20 @@ export default async function MarketDetailPage({
       .eq('voter_id', user!.id)
       .maybeSingle();
     myVote = vote;
+
+    // Mirrors cast_vote's own eligible-voter query exactly (memberships not removed, minus
+    // this market's subjects) so "N of M voted" never promises a headcount the vote itself
+    // wouldn't recognize.
+    const [{ count: votesCount }, eligibleResult] = await Promise.all([
+      supabase.from('votes').select('id', { count: 'exact', head: true }).eq('market_id', marketId),
+      (() => {
+        let q = supabase.from('memberships').select('user_id', { count: 'exact', head: true }).eq('group_id', groupId).neq('status', 'removed');
+        if (subjectUserIds.length > 0) q = q.not('user_id', 'in', `(${subjectUserIds.join(',')})`);
+        return q;
+      })(),
+    ]);
+    votesCast = votesCount ?? 0;
+    eligibleVoters = eligibleResult.count ?? 0;
   }
 
   const [sideA, sideB] = marketRow.market_type === 'yes_no' ? ['yes', 'no'] : ['over', 'under'];
@@ -177,6 +215,10 @@ export default async function MarketDetailPage({
     ? marketOptions?.find((o) => o.id === proposal!.proposed_option_id)?.label
     : null;
   const optionLabelById = (id: string) => marketOptions?.find((o) => o.id === id)?.label ?? '?';
+  const lineLabel = marketRow.market_type === 'over_under' ? formatLine(marketRow.line, marketRow.unit) : undefined;
+
+  const isClosed = marketRow.status === 'closed';
+  const isDisputed = marketRow.status === 'disputed';
 
   const statTiles: React.ReactNode[] = [];
   if (marketRow.market_type === 'over_under') {
@@ -197,170 +239,274 @@ export default async function MarketDetailPage({
   }
 
   return (
-    <main className="mx-auto max-w-lg space-y-6 px-5 py-8">
+    <main className="mx-auto max-w-lg space-y-4 px-5 py-8">
       <PageHeader
         title={marketRow.title}
         backHref={`/groups/${groupId}`}
         backLabel="Group"
         backAction={
-          <div className="flex items-center gap-1.5">
-            {isCreator && clarificationList.length > 0 && (
-              <span
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-danger-100 text-sm font-bold text-danger-700"
-                title="Needs clarification"
-              >
-                !
-              </span>
-            )}
-            <Badge tone={STATUS_TONE[marketRow.status]}>{STATUS_LABEL[marketRow.status]}</Badge>
-          </div>
+          isClosed ? (
+            <MarketOverflowMenu groupId={groupId} marketId={marketId} isOwner={isOwner} isCreator={isCreator} ownerIsSubject={ownerIsSubject} />
+          ) : isDisputed ? (
+            <div className="flex items-center gap-1.5">
+              <Badge tone={STATUS_TONE.disputed}>{STATUS_LABEL.disputed}</Badge>
+              <MarketOverflowMenu groupId={groupId} marketId={marketId} isOwner={isOwner} isCreator={isCreator} ownerIsSubject={ownerIsSubject} />
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              {isCreator && clarificationList.length > 0 && (
+                <span
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-danger-100 text-sm font-bold text-danger-700"
+                  title="Needs clarification"
+                >
+                  !
+                </span>
+              )}
+              <Badge tone={STATUS_TONE[marketRow.status]}>{STATUS_LABEL[marketRow.status]}</Badge>
+            </div>
+          )
         }
       />
 
-      {statTiles.length > 0 && <StatStrip>{statTiles}</StatStrip>}
-
-      {marketRow.status !== 'pending_sponsor' && <MyBetsCard bets={myBets} optionLabelById={optionLabelById} />}
-
-      <Card className="relative space-y-3">
-        {proposal && (
-          <div className="relative rounded-xl border-2 border-honey-300 bg-honey-50 p-3.5">
-            {proposal.photo_path && (
-              <div className="absolute top-2.5 right-2.5">
-                <ResolutionProofButton marketId={marketId} variant="icon" />
-              </div>
-            )}
-            <p className={`text-xs font-bold uppercase tracking-wide text-honey-700 ${proposal.photo_path ? 'pr-8' : ''}`}>
-              Proposed outcome
-            </p>
-            <p className="mt-0.5 text-lg font-extrabold text-honey-900">
-              <OptionLabel label={(proposedOptionLabel ?? proposal.proposed_outcome ?? '').toUpperCase()} />
-            </p>
-            {proposal.justification && <p className="mt-1.5 text-sm text-espresso-600">{proposal.justification}</p>}
-          </div>
-        )}
-
-        <div className="space-y-2">
-          <div className="pr-8">
-            <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">Resolution criteria</p>
-            <p className="mt-0.5 text-espresso-600">{marketRow.description}</p>
-          </div>
-
-          <div className="flex flex-wrap gap-1.5">
-            <span className="inline-flex items-center gap-1 rounded-full bg-espresso-50 px-2.5 py-1 text-xs font-medium text-espresso-600">
-              <span className="text-espresso-400">Started by</span>
-              <Mention nickname={creator?.nickname ?? ''} />
-            </span>
-            {sponsor && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-espresso-50 px-2.5 py-1 text-xs font-medium text-espresso-600">
-                <span className="text-espresso-400">Endorsed by</span>
-                <Mention nickname={sponsor.nickname ?? ''} />
-              </span>
-            )}
-            {subjects.length > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-espresso-50 px-2.5 py-1 text-xs font-medium text-espresso-600">
-                <span className="text-espresso-400">Hidden from</span>
-                {subjects.map((s, i) => (
-                  <span key={i}>
-                    {i > 0 && ', '}
-                    <Mention nickname={s.nickname ?? ''} />
-                  </span>
-                ))}
-              </span>
-            )}
-          </div>
-
-          <p className="text-xs text-espresso-400">
-            The group owner can void this market at any time and refund every stake. If the owner is hidden as a
-            subject here, the creator can void it instead.
-          </p>
-        </div>
-
-        <ClarificationRequests
-          groupId={groupId}
-          marketId={marketId}
-          status={marketRow.status}
-          description={marketRow.description}
-          isCreator={isCreator}
-          clarifications={clarificationList}
-        />
-
-        {marketRow.status === 'pending_sponsor' && (
-          <div className="space-y-2">
-            <p className="text-sm text-espresso-600">
-              <CountdownTimer target={marketRow.closes_at} prefix="Betting closes" />
-            </p>
-            <p className="text-sm text-espresso-500">
-              Waiting for another member to endorse this market. It expires automatically if nobody does before
-              betting would close, or after 24 hours, whichever comes first.
-            </p>
-            {isMultipleChoice && marketOptions && (
-              <div className="space-y-1.5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">Multiple choice options</p>
-                <ul className="space-y-1.5">
-                  {marketOptions.map((o) => (
-                    <li
-                      key={o.id}
-                      className="rounded-xl border-2 border-honey-300 bg-honey-50 px-3 py-2 text-sm font-semibold text-honey-800"
-                    >
-                      <OptionLabel label={o.label} />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
-
-        {marketRow.closed_at && marketRow.closed_at < marketRow.closes_at && (
-          <p className="text-xs font-semibold text-espresso-400">Closed early by proposal</p>
-        )}
-
-        {!isMultipleChoice && oddsA && oddsB && (
-          <OddsBar left={{ label: sideA.toUpperCase(), percent: oddsA.pool_percent }} right={{ label: sideB.toUpperCase(), percent: oddsB.pool_percent }} />
-        )}
-
-        {isMultipleChoice && optionOdds && optionOdds.length > 0 && (
-          <OddsBarMulti options={optionOdds.map((o) => ({ id: o.option_id, label: o.label, percent: o.pool_percent }))} />
-        )}
-
-      </Card>
-
-      {(marketRow.status === 'open' || marketRow.status === 'closed') && (
-        <ProposeResolutionCard
-          groupId={groupId}
-          market={marketRow}
-          options={marketOptions}
-          resolutionWindowHours={groupSettings?.resolution_window_hours ?? 8}
-        />
+      {isClosed && (
+        <>
+          <PoolStrip
+            cells={[
+              { label: 'Pool', value: formatTokens(closedVolume ?? 0) },
+              { label: 'Bets', value: closedBetCount ?? 0 },
+              { label: 'Status', value: 'Closed' },
+            ]}
+          />
+          <FinalOddsCard
+            sideOdds={!isMultipleChoice ? (odds ?? undefined) : undefined}
+            optionOdds={isMultipleChoice ? (optionOdds ?? undefined) : undefined}
+            lineLabel={lineLabel}
+            myBets={myBets}
+          />
+          <SettlementCard description={marketRow.description} />
+          <ProposeResolutionCard
+            groupId={groupId}
+            market={marketRow}
+            options={marketOptions}
+            resolutionWindowHours={resolutionWindowHours}
+            variant="waiting"
+          />
+          <Card>
+            <ResolutionTimeline resolutionWindowHours={resolutionWindowHours} />
+          </Card>
+        </>
       )}
 
-      <MarketActions
-        groupId={groupId}
-        market={marketRow}
-        isCreator={marketRow.creator_id === user?.id}
-        isSponsor={marketRow.sponsor_id === user?.id}
-        isOwner={isOwner}
-        ownerIsSubject={ownerIsSubject}
-        proposal={proposal}
-        challenge={challenge}
-        myVote={myVote}
-        currentUserId={user!.id}
-        options={marketOptions}
-        resolutionWindowHours={groupSettings?.resolution_window_hours ?? 8}
-      />
+      {isDisputed && (
+        <>
+          <MarketActions
+            groupId={groupId}
+            market={marketRow}
+            isCreator={isCreator}
+            isSponsor={marketRow.sponsor_id === user?.id}
+            isOwner={isOwner}
+            ownerIsSubject={ownerIsSubject}
+            proposal={proposal}
+            challenge={challenge}
+            myVote={myVote}
+            currentUserId={user!.id}
+            proposerNickname={proposerNickname}
+            options={marketOptions}
+            resolutionWindowHours={resolutionWindowHours}
+            votesCast={votesCast}
+            eligibleVoters={eligibleVoters}
+            hideVoidCard
+          />
+          <PoolStrip
+            cells={[
+              { label: 'Pool', value: formatTokens(closedVolume ?? 0) },
+              { label: 'Bets', value: closedBetCount ?? 0 },
+              {
+                label: 'Vote ends',
+                value: challenge ? (
+                  <CountdownTimer target={new Date(new Date(challenge.created_at).getTime() + resolutionWindowHours * 3_600_000).toISOString()} prefix="" />
+                ) : (
+                  '—'
+                ),
+              },
+            ]}
+          />
+          <SettlementCard
+            moneySplit={
+              !isMultipleChoice && oddsA && oddsB
+                ? [
+                    { label: sideA.toUpperCase(), percent: oddsA.pool_percent },
+                    { label: sideB.toUpperCase(), percent: oddsB.pool_percent },
+                  ]
+                : undefined
+            }
+            description={marketRow.description}
+          />
+          <Card>
+            <ResolutionTimeline resolutionWindowHours={resolutionWindowHours} stage="disputed" />
+          </Card>
+        </>
+      )}
 
-      {marketRow.status === 'open' && (
-        <BetslipBar
-          groupId={groupId}
-          market={marketRow}
-          balance={balance}
-          options={marketOptions}
-          existingBets={myBets}
-          allowHedgedBets={groupSettings?.allow_hedged_bets ?? true}
-          seedAmount={groupSettings?.seed_amount ?? 1000}
-          betCount={openBetCount}
-          betVolume={openBetVolume}
-        />
+      {!isClosed && !isDisputed && (
+        <>
+          {statTiles.length > 0 && <StatStrip>{statTiles}</StatStrip>}
+
+          {marketRow.status !== 'pending_sponsor' && <MyBetsCard bets={myBets} optionLabelById={optionLabelById} />}
+
+          <Card className="relative space-y-3">
+            {proposal && (
+              <div className="relative rounded-xl border-2 border-honey-300 bg-honey-50 p-3.5">
+                {proposal.photo_path && (
+                  <div className="absolute top-2.5 right-2.5">
+                    <ResolutionProofButton marketId={marketId} variant="icon" />
+                  </div>
+                )}
+                <p className={`text-xs font-bold uppercase tracking-wide text-honey-700 ${proposal.photo_path ? 'pr-8' : ''}`}>
+                  Proposed outcome
+                </p>
+                <p className="mt-0.5 text-lg font-extrabold text-honey-900">
+                  <OptionLabel label={(proposedOptionLabel ?? proposal.proposed_outcome ?? '').toUpperCase()} />
+                </p>
+                {proposal.justification && <p className="mt-1.5 text-sm text-espresso-600">{proposal.justification}</p>}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <div className="pr-8">
+                <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">Resolution criteria</p>
+                <p className="mt-0.5 text-espresso-600">{marketRow.description}</p>
+              </div>
+
+              <div className="flex flex-wrap gap-1.5">
+                <span className="inline-flex items-center gap-1 rounded-full bg-espresso-50 px-2.5 py-1 text-xs font-medium text-espresso-600">
+                  <span className="text-espresso-400">Started by</span>
+                  <Mention nickname={creator?.nickname ?? ''} />
+                </span>
+                {sponsor && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-espresso-50 px-2.5 py-1 text-xs font-medium text-espresso-600">
+                    <span className="text-espresso-400">Endorsed by</span>
+                    <Mention nickname={sponsor.nickname ?? ''} />
+                  </span>
+                )}
+                {subjects.length > 0 && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-espresso-50 px-2.5 py-1 text-xs font-medium text-espresso-600">
+                    <span className="text-espresso-400">Hidden from</span>
+                    {subjects.map((s, i) => (
+                      <span key={i}>
+                        {i > 0 && ', '}
+                        <Mention nickname={s.nickname ?? ''} />
+                      </span>
+                    ))}
+                  </span>
+                )}
+              </div>
+
+              <p className="text-xs text-espresso-400">
+                The group owner can void this market at any time and refund every stake. If the owner is hidden as a
+                subject here, the creator can void it instead.
+              </p>
+            </div>
+
+            <ClarificationRequests
+              groupId={groupId}
+              marketId={marketId}
+              status={marketRow.status}
+              description={marketRow.description}
+              isCreator={isCreator}
+              clarifications={clarificationList}
+            />
+
+            {marketRow.status === 'pending_sponsor' && (
+              <div className="space-y-2">
+                <p className="text-sm text-espresso-600">
+                  <CountdownTimer target={marketRow.closes_at} prefix="Betting closes" />
+                </p>
+                <p className="text-sm text-espresso-500">
+                  Waiting for another member to endorse this market. It expires automatically if nobody does before
+                  betting would close, or after 24 hours, whichever comes first.
+                </p>
+                {isMultipleChoice && marketOptions && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">Multiple choice options</p>
+                    <ul className="space-y-1.5">
+                      {marketOptions.map((o) => (
+                        <li
+                          key={o.id}
+                          className="rounded-xl border-2 border-honey-300 bg-honey-50 px-3 py-2 text-sm font-semibold text-honey-800"
+                        >
+                          <OptionLabel label={o.label} />
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {marketRow.closed_at && marketRow.closed_at < marketRow.closes_at && (
+              <p className="text-xs font-semibold text-espresso-400">Closed early by proposal</p>
+            )}
+
+            {!isMultipleChoice && oddsA && oddsB && (
+              <OddsBar left={{ label: sideA.toUpperCase(), percent: oddsA.pool_percent }} right={{ label: sideB.toUpperCase(), percent: oddsB.pool_percent }} />
+            )}
+
+            {isMultipleChoice && optionOdds && optionOdds.length > 0 && (
+              <OddsBarMulti options={optionOdds.map((o) => ({ id: o.option_id, label: o.label, percent: o.pool_percent }))} />
+            )}
+          </Card>
+
+          {marketRow.status === 'pending_sponsor' && (
+            <Card>
+              <ResolutionTimeline resolutionWindowHours={resolutionWindowHours} stage="pending_sponsor" />
+              {!isCreator && <EndorseAction marketId={marketId} />}
+            </Card>
+          )}
+
+          {marketRow.status === 'open' && (
+            <Card>
+              <ResolutionTimeline resolutionWindowHours={resolutionWindowHours} stage="open" />
+              <ProposeResolutionCard
+                groupId={groupId}
+                market={marketRow}
+                options={marketOptions}
+                resolutionWindowHours={resolutionWindowHours}
+                variant="embedded"
+              />
+            </Card>
+          )}
+
+          <MarketActions
+            groupId={groupId}
+            market={marketRow}
+            isCreator={isCreator}
+            isSponsor={marketRow.sponsor_id === user?.id}
+            isOwner={isOwner}
+            ownerIsSubject={ownerIsSubject}
+            proposal={proposal}
+            challenge={challenge}
+            myVote={myVote}
+            currentUserId={user!.id}
+            proposerNickname={proposerNickname}
+            options={marketOptions}
+            resolutionWindowHours={resolutionWindowHours}
+          />
+
+          {marketRow.status === 'open' && (
+            <BetslipBar
+              groupId={groupId}
+              market={marketRow}
+              balance={balance}
+              options={marketOptions}
+              existingBets={myBets}
+              allowHedgedBets={groupSettings?.allow_hedged_bets ?? true}
+              seedAmount={groupSettings?.seed_amount ?? 1000}
+              betCount={openBetCount}
+              betVolume={openBetVolume}
+            />
+          )}
+        </>
       )}
     </main>
   );

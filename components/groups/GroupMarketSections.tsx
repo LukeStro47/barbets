@@ -2,16 +2,17 @@
 
 import { useState } from 'react';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Button } from '@/components/ui/Button';
 import { MarketRowList, type MarketCardData } from '@/components/markets/MarketCard';
+import { STATUS_LABEL } from '@/lib/marketStatus';
 import { cn } from '@/lib/cn';
 
-type Filter = 'all' | 'open' | 'pending' | 'resolved';
+type Filter = 'open' | 'pending' | 'settled';
 
 const TABS: { key: Filter; label: string }[] = [
-  { key: 'all', label: 'All' },
   { key: 'open', label: 'Open' },
   { key: 'pending', label: 'Pending' },
-  { key: 'resolved', label: 'Resolved' },
+  { key: 'settled', label: 'Settled' },
 ];
 
 export function GroupMarketSections({
@@ -27,12 +28,10 @@ export function GroupMarketSections({
   challenged: MarketCardData[];
   revealed: MarketCardData[];
 }) {
-  const [filter, setFilter] = useState<Filter>('all');
-
-  const showOpenGroup = filter === 'all' || filter === 'open';
-  const showPendingGroup = filter === 'all' || filter === 'pending';
-  const showResolvedGroup = filter === 'all' || filter === 'resolved';
-  const pendingGroupEmpty = pendingSponsor.length === 0 && awaitingResolution.length === 0 && challenged.length === 0;
+  const [filter, setFilter] = useState<Filter>('open');
+  const openEmpty = open.length === 0;
+  const pendingEmpty = pendingSponsor.length === 0 && awaitingResolution.length === 0 && challenged.length === 0;
+  const nothingActive = openEmpty && pendingEmpty;
 
   return (
     <div className="flex flex-col gap-[18px]">
@@ -54,55 +53,81 @@ export function GroupMarketSections({
         ))}
       </div>
 
-      {showPendingGroup && pendingSponsor.length > 0 && (
-        <Section label="Awaiting endorsement">
-          <MarketRowList markets={pendingSponsor} />
-        </Section>
-      )}
-
-      {showOpenGroup && (
-        <Section label="Open">
-          {open.length === 0 ? (
-            <EmptyState icon="🎲" title="Nothing open right now" subtitle="Start a market to get the pool going." />
+      {filter === 'open' && (
+        <Section label="Betting open">
+          {openEmpty ? (
+            nothingActive ? (
+              <EmptyState
+                icon="🎲"
+                title="Nothing open right now"
+                subtitle="See what's already settled instead."
+                action={
+                  <Button variant="outline" size="sm" onClick={() => setFilter('settled')}>
+                    View settled
+                  </Button>
+                }
+              />
+            ) : (
+              <EmptyState
+                icon="🎲"
+                title="Nothing open right now"
+                subtitle="Something's still pending, though."
+                action={
+                  <Button variant="outline" size="sm" onClick={() => setFilter('pending')}>
+                    View pending
+                  </Button>
+                }
+              />
+            )
           ) : (
             <MarketRowList markets={open} />
           )}
         </Section>
       )}
 
-      {showPendingGroup && awaitingResolution.length > 0 && (
-        <Section label="Awaiting resolution">
-          <MarketRowList markets={awaitingResolution} />
-        </Section>
+      {filter === 'pending' && (
+        <>
+          {pendingSponsor.length > 0 && (
+            <Section label={STATUS_LABEL.pending_sponsor}>
+              <MarketRowList markets={pendingSponsor} />
+            </Section>
+          )}
+          {challenged.length > 0 && (
+            <Section label={STATUS_LABEL.disputed}>
+              <MarketRowList markets={challenged} />
+            </Section>
+          )}
+          {awaitingResolution.length > 0 && (
+            <Section label={STATUS_LABEL.closed}>
+              <MarketRowList markets={awaitingResolution} />
+            </Section>
+          )}
+          {pendingEmpty &&
+            (nothingActive ? (
+              <EmptyState
+                icon="⏳"
+                title="Nothing pending"
+                subtitle="See what's already settled instead."
+                action={
+                  <Button variant="outline" size="sm" onClick={() => setFilter('settled')}>
+                    View settled
+                  </Button>
+                }
+              />
+            ) : (
+              <EmptyState icon="⏳" title="Nothing pending" subtitle="No markets awaiting endorsement, resolution, or a vote." />
+            ))}
+        </>
       )}
 
-      {showPendingGroup && challenged.length > 0 && (
-        <Section label="Challenged">
-          <MarketRowList markets={challenged} />
-        </Section>
-      )}
-
-      {filter === 'pending' && pendingGroupEmpty && (
-        <EmptyState icon="⏳" title="Nothing pending" subtitle="No markets awaiting endorsement, resolution, or a vote." />
-      )}
-
-      {showResolvedGroup && revealed.length > 0 && (
-        <Section label="Resolved markets">
-          <MarketRowList markets={filter === 'all' ? revealed.slice(0, 5) : revealed} />
-          {filter === 'all' && revealed.length > 5 && (
-            <button
-              type="button"
-              onClick={() => setFilter('resolved')}
-              className="text-center text-xs font-medium text-espresso-400 underline"
-            >
-              See all {revealed.length} resolved markets
-            </button>
+      {filter === 'settled' && (
+        <Section label="Settled">
+          {revealed.length === 0 ? (
+            <EmptyState icon="🏁" title="No settled markets yet" subtitle="Once a market resolves, it'll show up here." />
+          ) : (
+            <MarketRowList markets={revealed} />
           )}
         </Section>
-      )}
-
-      {filter === 'resolved' && revealed.length === 0 && (
-        <EmptyState icon="🏁" title="No resolved markets yet" subtitle="Once a market resolves, it'll show up here." />
       )}
     </div>
   );

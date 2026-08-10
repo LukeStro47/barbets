@@ -9,11 +9,14 @@ import { GroupMarketSections } from '@/components/groups/GroupMarketSections';
 import { SaveBalanceSnapshot } from '@/components/groups/SaveBalanceSnapshot';
 import { PendingBonusPoolNote } from '@/components/groups/PendingBonusPoolNote';
 import { OpenSeasonBettingButton } from '@/components/groups/IntermissionActions';
+import { WaitingOnYouCard } from '@/components/groups/WaitingOnYouCard';
+import { InvitePill } from '@/components/groups/InvitePill';
 import { Mention } from '@/components/ui/Mention';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { SettingsIcon, InfoIcon, TicketIcon } from '@/components/ui/icons';
 import { formatTokens } from '@/lib/formatNumber';
 import { REACTIONS } from '@/lib/reactions';
+import { getGroupTasks } from '@/lib/tasks';
 
 const iconLinkClass =
   'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-espresso-50 text-espresso-500 transition-colors hover:bg-espresso-100 hover:text-espresso-700 active:scale-[0.92]';
@@ -49,6 +52,8 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
     .eq('group_id', groupId)
     .eq('user_id', user!.id)
     .single();
+
+  const { tasks } = await getGroupTasks(supabase, groupId, user!.id);
 
   const { data: openBetRows } = await supabase
     .from('bets')
@@ -297,35 +302,39 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
           <GroupDeletionBanner groupId={groupId} deletionScheduledAt={group!.deletion_scheduled_at} isOwner={isOwner} />
         )}
 
-        <div className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-espresso-900 to-espresso-700 p-[22px]">
+        <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-espresso-900 to-espresso-700 px-5 py-[18px]">
           <Image
             src="/barbets-mono-white.png"
             alt=""
             width={96}
             height={96}
-            className="pointer-events-none absolute -top-4 -right-4 rotate-[-10deg] opacity-[0.14]"
+            className="pointer-events-none absolute -top-4 -right-4 rotate-[-10deg] opacity-[0.12]"
           />
-          <p className="relative text-[11px] font-bold tracking-[0.12em] text-honey-400 uppercase">Your balance</p>
-          <p className="relative mt-1.5 font-display text-[40px] font-bold tracking-[-0.01em] text-paper-white">
-            {formatTokens(membership?.balance ?? 0)}
-          </p>
-          {pendingTokens > 0 && (
-            <p className="relative mt-0.5 text-xs font-medium text-honey-200/80">
-              {formatTokens(pendingTokens)} tokens in active bets
-            </p>
-          )}
-          <div className="relative mt-4 flex items-end justify-between border-t border-white/10 pt-3.5">
+          <div className="relative flex items-end justify-between gap-4">
             <div>
-              <p className="text-[10px] font-semibold tracking-[0.1em] text-espresso-300 uppercase">Invite code</p>
-              <p className="mt-0.5 text-sm font-semibold text-honey-200">{group!.invite_code}</p>
-            </div>
-            {membership?.nickname && (
-              <p className="text-sm text-espresso-200">
-                Playing as <Mention nickname={membership.nickname} />
+              <p className="text-[10.5px] font-bold tracking-[0.12em] text-honey-400 uppercase">Free to bet</p>
+              <p className="mt-0.5 font-display text-[38px] leading-none font-extrabold tracking-[-0.02em] text-paper-white">
+                {formatTokens(Math.max(0, (membership?.balance ?? 0) - pendingTokens))}
               </p>
+            </div>
+            {pendingTokens > 0 && (
+              <div className="pb-[3px] text-right">
+                <p className="text-[10.5px] font-bold tracking-[0.12em] text-paper-white/40 uppercase">In play</p>
+                <p className="mt-0.5 text-[19px] leading-none font-bold text-honey-200">{formatTokens(pendingTokens)}</p>
+              </div>
             )}
           </div>
+          <div className="relative mt-3.5 flex items-center justify-between border-t border-white/10 pt-3">
+            {membership?.nickname && (
+              <p className="text-[13px] text-espresso-200">
+                Playing as <Mention nickname={membership.nickname} className="text-honey-200" />
+              </p>
+            )}
+            <InvitePill inviteCode={group!.invite_code} />
+          </div>
         </div>
+
+        <WaitingOnYouCard groupId={groupId} tasks={tasks} />
 
         {group!.pending_bonus_pool > 0 && <PendingBonusPoolNote amount={group!.pending_bonus_pool} />}
 

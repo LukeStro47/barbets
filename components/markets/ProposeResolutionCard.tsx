@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
 import { OptionLabel } from '@/components/markets/OptionLabel';
-import { CameraIcon, ImageIcon } from '@/components/ui/icons';
+import { CameraIcon, ImageIcon, ClockIcon } from '@/components/ui/icons';
 import type { Market, MarketOption } from '@/lib/actions/markets';
 
 const inputClasses =
@@ -27,11 +27,17 @@ export function ProposeResolutionCard({
   market,
   options,
   resolutionWindowHours,
+  variant = 'default',
 }: {
   groupId: string;
   market: Market;
   options: MarketOption[] | null;
   resolutionWindowHours: number;
+  /** 'waiting' — the market-closed screen's dashed "waiting on a result" empty state.
+   * 'embedded' — bare trigger button, no card/copy of its own, meant to sit inside another
+   * card (the "what happens next" timeline already explains what proposing does). Same modal
+   * underneath in every case. */
+  variant?: 'default' | 'waiting' | 'embedded';
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -167,16 +173,43 @@ export function ProposeResolutionCard({
   const chosenLabel = (choiceLabels.find((c) => c.value === proposeOutcome)?.label ?? '').toUpperCase();
 
   return (
-    <Card className="space-y-2">
-      <p className="text-sm font-semibold text-espresso-700">Know what happened?</p>
-      <p className="text-xs text-espresso-500">
-        {market.status === 'open'
-          ? 'Proposing now closes betting immediately for everyone, then starts the clock for a challenge.'
-          : `Propose what happened and other members get ${resolutionWindowHours}h to challenge it before it's final.`}
-      </p>
-      <Button variant="outline" className="w-full" onClick={openModal}>
-        Propose the outcome
-      </Button>
+    <>
+      {variant === 'waiting' ? (
+        <Card className="space-y-3.5 !rounded-[20px] !border !border-dashed !border-espresso-200">
+          <div className="flex items-start gap-2.5">
+            <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] bg-espresso-50 text-espresso-600">
+              <ClockIcon className="h-[17px] w-[17px]" />
+            </span>
+            <div className="flex-1 space-y-0.5">
+              <p className="text-[15.5px] font-extrabold text-espresso-950">Waiting on a result</p>
+              <p className="text-[13.5px] leading-[1.45] text-espresso-500">
+                Nobody's said how it went yet. Anyone who knows can call it, including you.
+              </p>
+            </div>
+          </div>
+          <Button className="w-full" onClick={openModal}>
+            Propose the outcome
+          </Button>
+        </Card>
+      ) : variant === 'embedded' ? (
+        <div className="border-t border-espresso-50 pt-3.5">
+          <Button className="w-full" onClick={openModal}>
+            Propose the outcome
+          </Button>
+        </div>
+      ) : (
+        <Card className="space-y-2">
+          <p className="text-sm font-semibold text-espresso-700">Know what happened?</p>
+          <p className="text-xs text-espresso-500">
+            {market.status === 'open'
+              ? 'Proposing now closes betting immediately for everyone, then starts the clock for a challenge.'
+              : `Propose what happened and other members get ${resolutionWindowHours}h to challenge it before it's final.`}
+          </p>
+          <Button variant="outline" className="w-full" onClick={openModal}>
+            Propose the outcome
+          </Button>
+        </Card>
+      )}
 
       {modalOpen && (
         <Modal onClose={closeModal}>
@@ -279,6 +312,6 @@ export function ProposeResolutionCard({
           )}
         </Modal>
       )}
-    </Card>
+    </>
   );
 }

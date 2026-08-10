@@ -189,6 +189,9 @@ export function MarketCard({ market }: { market: MarketCardData }) {
   );
 }
 
+/** The row-list's status icon tile — colored via the same 3-tone system as STATUS_TONE
+ * (danger = needs you, ink = live, neutral = informational/done), each with its own glyph so
+ * status reads at a glance without needing to decode a bare color. */
 const STATUS_ROW_ICON: Record<MarketStatus, ComponentType<{ className?: string }>> = {
   pending_sponsor: FlagIcon,
   open: TargetIcon,
@@ -222,12 +225,15 @@ function MarketRowMeta({ market }: { market: MarketCardData }) {
   }
 
   if (market.status === 'open') {
+    // A single position now shows as the row's trailing pill instead (see MarketRow) — the
+    // chips here are only needed for a hedge, where more than one position won't fit there.
+    const showChips = (market.myBets?.length ?? 0) > 1;
     return (
       <>
         <p className="mt-0.5 text-xs text-espresso-400">
           {market.openBetCount ?? 0} bets · <CountdownTimer target={market.closesAt} />
         </p>
-        <MyBetsChips myBets={market.myBets} />
+        {showChips && <MyBetsChips myBets={market.myBets} />}
       </>
     );
   }
@@ -280,13 +286,18 @@ function MarketRowMeta({ market }: { market: MarketCardData }) {
 function MarketRow({ market, isLast }: { market: MarketCardData; isLast: boolean }) {
   const isRevealed = market.status === 'resolved' || market.status === 'voided';
   const href = `/groups/${market.groupId}/markets/${market.id}${isRevealed ? '/reveal' : ''}`;
+  const showBetPill = market.status === 'open' && !market.mystery;
+  // A single position fits in the trailing pill itself (replacing "Add" with what you actually
+  // bet); a hedge across sides/options can't, so that case falls back to a plain "Add" and
+  // keeps its breakdown in the chips under the title instead (see MarketRowMeta below).
+  const singleBet = market.myBets?.length === 1 ? market.myBets[0] : null;
   const Icon = STATUS_ROW_ICON[market.status];
 
   return (
     <Link
       href={href}
       className={cn(
-        'flex items-center gap-3 px-[18px] py-[14px] transition-colors hover:bg-espresso-50/25',
+        'flex items-center gap-3 px-4 py-[14px] transition-colors hover:bg-espresso-50/25',
         market.mystery && 'bg-honey-50',
         !isLast && 'border-b border-espresso-50'
       )}
@@ -300,14 +311,26 @@ function MarketRow({ market, isLast }: { market: MarketCardData; isLast: boolean
         {market.mystery ? <span className="text-[17px] font-extrabold leading-none">?</span> : <Icon className="h-4 w-4" />}
       </span>
       <span className="min-w-0 flex-1">
-        <p className="font-display text-[15px] font-semibold leading-[1.3] text-espresso-900">
+        <p className="font-display text-[15.5px] font-bold leading-[1.25] text-espresso-950">
           {market.mystery ? 'A market about you' : market.title}
         </p>
         <MarketRowMeta market={market} />
       </span>
       {market.needsAttention && <AttentionBadge />}
       {market.reactionGlyphs && market.reactionGlyphs.length > 0 && <ReactionFacepile glyphs={market.reactionGlyphs} />}
-      <ChevronRightIcon className="h-3.5 w-2 shrink-0 text-espresso-200" />
+      {showBetPill ? (
+        singleBet ? (
+          <span className="shrink-0 rounded-full bg-honey-100 px-3 py-[5px] text-xs font-bold text-honey-800">
+            {formatTokens(singleBet.amount)} {singleBet.label}
+          </span>
+        ) : (
+          <span className="shrink-0 rounded-full border-[1.5px] border-espresso-200 px-3 py-[5px] text-xs font-bold text-espresso-800">
+            {market.myBets && market.myBets.length > 0 ? 'Add' : 'Bet'}
+          </span>
+        )
+      ) : (
+        <ChevronRightIcon className="h-3.5 w-2 shrink-0 text-espresso-200" />
+      )}
     </Link>
   );
 }

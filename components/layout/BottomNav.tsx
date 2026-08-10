@@ -77,7 +77,18 @@ const TAB_GLYPH: Record<NavTab, (props: GlyphProps) => React.ReactNode> = {
  * group, and whether to render at all are all derived from the pathname (lib/navRoute.ts) so
  * ~15 pages don't each need to thread nav state down manually.
  */
-export function BottomNav({ groups, bettingEnabledByGroup }: { groups: NavGroup[]; bettingEnabledByGroup: Record<string, boolean> }) {
+export function BottomNav({
+  groups,
+  bettingEnabledByGroup,
+  hasNeedsYou = false,
+}: {
+  groups: NavGroup[];
+  bettingEnabledByGroup: Record<string, boolean>;
+  /** True when any of the viewer's groups has a market waiting on them (an endorsement, a
+   * vote) — surfaced as a small red dot on the Home tab, since Home is where the switcher
+   * (and from there, every group's own "N waiting on you" card) lives. */
+  hasNeedsYou?: boolean;
+}) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -380,7 +391,12 @@ export function BottomNav({ groups, bettingEnabledByGroup }: { groups: NavGroup[
                 const active = activeTab === t.key;
                 return (
                   <button key={t.key} aria-label={t.label} aria-current={active ? 'page' : undefined} onClick={() => goToTab(t.key)} className={iconButtonClass(active, 'basis-1/5')}>
-                    <Glyph strokeWidth={active ? 2.3 : 1.9} className={cn('h-[23px] w-[23px]', !active && 'text-espresso-300')} />
+                    <span className="relative">
+                      <Glyph strokeWidth={active ? 2.3 : 1.9} className={cn('h-[23px] w-[23px]', !active && 'text-espresso-300')} />
+                      {t.key === 'home' && hasNeedsYou && (
+                        <span className="absolute top-0 right-0 h-2 w-2 rounded-full border-2 border-paper-white bg-danger-500" />
+                      )}
+                    </span>
                   </button>
                 );
               })}
@@ -407,7 +423,12 @@ export function BottomNav({ groups, bettingEnabledByGroup }: { groups: NavGroup[
                     const active = activeTab === key;
                     return (
                       <button key={key} aria-label={t.label} aria-current={active ? 'page' : undefined} onClick={() => goToTab(key)} className={iconButtonClass(active, 'basis-1/3')}>
-                        <Glyph strokeWidth={active ? 2.3 : 1.9} className={cn('h-[23px] w-[23px]', !active && 'text-espresso-300')} />
+                        <span className="relative">
+                          <Glyph strokeWidth={active ? 2.3 : 1.9} className={cn('h-[23px] w-[23px]', !active && 'text-espresso-300')} />
+                          {key === 'home' && hasNeedsYou && (
+                            <span className="absolute top-0 right-0 h-2 w-2 rounded-full border-2 border-paper-white bg-danger-500" />
+                          )}
+                        </span>
                       </button>
                     );
                   })()
