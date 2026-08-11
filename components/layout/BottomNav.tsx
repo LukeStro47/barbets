@@ -381,10 +381,15 @@ export function BottomNav({
         className="fixed inset-x-0 bottom-0 z-30 border-t border-espresso-100 bg-paper-white pb-[max(20px,env(safe-area-inset-bottom))]"
       >
         <div className="relative flex h-[60px] items-center">
+          {/* Sits below the icon rather than hanging off the bar's top border, so it reads as an
+              underline belonging to the tab instead of a separate rule along the top edge. The row
+              is 60px with a 23px icon centred in it, leaving ~18px underneath, so a 3px pill at
+              bottom-[9px] lands roughly midway: clearly attached to the icon, clearly clear of the
+              bar edge. Fully rounded now that it floats and no longer meets an edge. */}
           {indicatorLeft && (
             <span
               aria-hidden
-              className="absolute -top-px h-[3px] w-[22px] rounded-b-[3px] bg-honey-600 transition-[left] duration-[460ms] ease-[cubic-bezier(0.34,1.3,0.5,1)] motion-reduce:transition-none"
+              className="absolute bottom-[9px] h-[3px] w-[22px] rounded-full bg-honey-600 transition-[left] duration-[460ms] ease-[cubic-bezier(0.34,1.3,0.5,1)] motion-reduce:transition-none"
               style={{ left: indicatorLeft }}
             />
           )}
