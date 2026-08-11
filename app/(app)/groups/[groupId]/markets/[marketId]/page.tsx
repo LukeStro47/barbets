@@ -286,11 +286,16 @@ export default async function MarketDetailPage({
     />
   );
 
+  // "Plus", not "includes": the Pool cell above is real stakes only (get_open_bet_volume sums
+  // bets), and a market's bonus_pool is absorbed into total_pool when it resolves, not while
+  // it's still taking bets. Saying "includes" next to a figure that doesn't would be a lie
+  // about money.
   const bonusPoolNote = marketRow.bonus_pool > 0 && (
     <p className="text-xs font-semibold text-espresso-400">
-      Includes {formatTokens(marketRow.bonus_pool)} bonus tokens from an earlier resolution
+      Plus {formatTokens(marketRow.bonus_pool)} bonus tokens from an earlier resolution, added to the pool when this
+      market settles
       {marketRow.carried_bonus_pool > 0 && marketRow.carried_bonus_pool !== marketRow.bonus_pool
-        ? ` (${formatTokens(marketRow.carried_bonus_pool)} carried in at creation)`
+        ? ` (${formatTokens(marketRow.carried_bonus_pool)} of it carried in at creation)`
         : ''}
       .
     </p>
