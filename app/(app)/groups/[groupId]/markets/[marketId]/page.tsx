@@ -416,7 +416,6 @@ export default async function MarketDetailPage({
                 market={marketRow}
                 options={marketOptions}
                 resolutionWindowHours={resolutionWindowHours}
-                variant="embedded"
               />
             </ResolutionTimeline>
           </Card>
@@ -478,12 +477,11 @@ export default async function MarketDetailPage({
           proposerNickname={proposerNickname}
           justification={proposal.justification}
           hasPhoto={!!proposal.photo_path}
+          positionRows={rows}
           sideOdds={!isMultipleChoice ? (odds ?? undefined) : undefined}
           optionOdds={isMultipleChoice ? (optionOdds ?? undefined) : undefined}
           lineLabel={lineLabel}
         />
-
-        <PositionTicket rows={rows} meta={kindLabel} />
 
         <SettlementCard description={marketRow.description} />
 
@@ -525,15 +523,15 @@ export default async function MarketDetailPage({
             myBets={myBets}
           />
           <SettlementCard description={marketRow.description} />
-          <ProposeResolutionCard
-            groupId={groupId}
-            market={marketRow}
-            options={marketOptions}
-            resolutionWindowHours={resolutionWindowHours}
-            variant="waiting"
-          />
           <Card>
-            <ResolutionTimeline resolutionWindowHours={resolutionWindowHours} />
+            <ResolutionTimeline resolutionWindowHours={resolutionWindowHours}>
+              <ProposeResolutionCard
+                groupId={groupId}
+                market={marketRow}
+                options={marketOptions}
+                resolutionWindowHours={resolutionWindowHours}
+              />
+            </ResolutionTimeline>
           </Card>
         </>
       )}

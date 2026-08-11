@@ -294,26 +294,37 @@ export function BetslipBar({
                 ))}
           </div>
 
-          {/* Stake reads as the drawn 30px display, but is a real input so free entry lives here
-              rather than only in the quick amounts — a group whose seed is 200 needs to be able
-              to type 37, and the chips below are derived from that seed rather than fixed. */}
-          <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-white/12 pt-4">
-            <label htmlFor="betslip-stake" className="text-[11.5px] font-extrabold tracking-[0.1em] text-paper-white/50 uppercase">
-              Stake
-            </label>
-            <input
-              id="betslip-stake"
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={balance}
-              value={betAmount}
-              onChange={(e) => setBetAmount(e.target.value)}
-              className="w-32 bg-transparent text-right font-display text-[30px] leading-none font-extrabold tracking-[-0.02em] text-paper-white tabular-nums focus:outline-none"
-            />
+          {/* A real, obviously-editable field, not a display that happens to accept typing. The
+              quick amounts below are shortcuts into it — they're derived from the group's seed,
+              so they can't cover every group, and someone who wants to stake 37 must be able to
+              just say 37. The field is the control; the chips fill it in. */}
+          <div className="mt-4 border-t border-white/12 pt-4">
+            <div className="flex items-baseline justify-between gap-3">
+              <label htmlFor="betslip-stake" className="text-[11.5px] font-extrabold tracking-[0.1em] text-paper-white/50 uppercase">
+                Stake
+              </label>
+              <span className="text-[11.5px] font-semibold text-paper-white/45">You have {formatTokens(balance)}</span>
+            </div>
+            <div className="relative mt-2">
+              <input
+                id="betslip-stake"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={balance}
+                placeholder="0"
+                value={betAmount}
+                onChange={(e) => setBetAmount(e.target.value)}
+                onFocus={(e) => e.target.select()}
+                className="w-full rounded-2xl border-[1.5px] border-white/22 bg-white/6 py-3 pr-[86px] pl-4 font-display text-[30px] leading-none font-extrabold tracking-[-0.02em] text-paper-white tabular-nums placeholder:text-paper-white/25 focus:border-honey-500 focus:outline-none"
+              />
+              <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-xs font-semibold text-paper-white/50">
+                tokens
+              </span>
+            </div>
           </div>
 
-          <div className="mt-3 flex gap-2">
+          <div className="mt-2.5 flex gap-2">
             {chipAmounts.map((amt) => (
               <QuickAmount
                 key={amt}

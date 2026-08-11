@@ -7,39 +7,35 @@ import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { proposeResolution } from '@/lib/actions/resolution';
 import { compressImage } from '@/lib/compressImage';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
 import { OptionLabel } from '@/components/markets/OptionLabel';
-import { CameraIcon, ImageIcon, ClockIcon } from '@/components/ui/icons';
+import { CameraIcon, ImageIcon } from '@/components/ui/icons';
 import type { Market, MarketOption } from '@/lib/actions/markets';
 
 const inputClasses =
   'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-espresso-900 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
 
-/** Its own card, deliberately set apart from the resolution-criteria card above it on the market
-    page — proposing is a distinct, consequential action (locks betting immediately, or starts
-    the finalize clock), not just more market metadata to skim past. One button opens a two-step
-    modal, pick the answer, then review a plain-language consequence before confirming, whether
-    the market is still `open` (an early close) or already `closed`; there's no separate inline
-    flow for either case anymore. */
+/**
+ * The "propose what happened" trigger and its two-step modal (pick the answer, then read a
+ * plain-language consequence before confirming). Works the same whether the market is still
+ * `open` (proposing closes betting immediately for everyone) or already `closed`; only the
+ * button's wording changes.
+ *
+ * Renders as a bare outlined button with no card, divider, or copy of its own, because it is
+ * always handed to `ResolutionTimeline` as that stage's one action — the steps directly above it
+ * are the explanation, so repeating them here would say the same thing twice. Outlined rather
+ * than filled so that on an open market it never looks like it belongs where betting does.
+ */
 export function ProposeResolutionCard({
   groupId,
   market,
   options,
   resolutionWindowHours,
-  variant = 'default',
 }: {
   groupId: string;
   market: Market;
   options: MarketOption[] | null;
   resolutionWindowHours: number;
-  /** 'waiting' — the market-closed screen's dashed "waiting on a result" empty state, where
-   * proposing is the screen's whole job and so gets a filled button.
-   * 'embedded' — bare outlined trigger, no card, divider, or copy of its own, meant to be handed
-   * to ResolutionTimeline as its action. Outlined rather than filled because on an open market
-   * the primary action is betting, and this must never look like it belongs where betting does.
-   * Same modal underneath in every case. */
-  variant?: 'default' | 'waiting' | 'embedded';
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -176,44 +172,15 @@ export function ProposeResolutionCard({
 
   return (
     <>
-      {variant === 'waiting' ? (
-        <Card className="space-y-3.5 !rounded-[20px] !border !border-dashed !border-espresso-200">
-          <div className="flex items-start gap-2.5">
-            <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] bg-espresso-50 text-espresso-600">
-              <ClockIcon className="h-[17px] w-[17px]" />
-            </span>
-            <div className="flex-1 space-y-0.5">
-              <p className="text-[15.5px] font-extrabold text-espresso-950">Waiting on a result</p>
-              <p className="text-[13.5px] leading-[1.45] text-espresso-500">
-                Nobody's said how it went yet. Anyone who knows can call it, including you.
-              </p>
-            </div>
-          </div>
-          <Button className="w-full" onClick={openModal}>
-            Propose the outcome
-          </Button>
-        </Card>
-      ) : variant === 'embedded' ? (
-        <button
-          type="button"
-          onClick={openModal}
-          className="w-full rounded-full border border-espresso-200 px-4 py-2.5 text-sm font-semibold text-espresso-600 transition-colors hover:bg-espresso-50"
-        >
-          Propose result early
-        </button>
-      ) : (
-        <Card className="space-y-2">
-          <p className="text-sm font-semibold text-espresso-700">Know what happened?</p>
-          <p className="text-xs text-espresso-500">
-            {market.status === 'open'
-              ? 'Proposing now closes betting immediately for everyone, then starts the clock for a challenge.'
-              : `Propose what happened and other members get ${resolutionWindowHours}h to challenge it before it's final.`}
-          </p>
-          <Button variant="outline" className="w-full" onClick={openModal}>
-            Propose the outcome
-          </Button>
-        </Card>
-      )}
+      {/* "early" only while betting is still open, where proposing is what closes it. On an
+          already-closed market there is nothing early about it — it is just the next step. */}
+      <button
+        type="button"
+        onClick={openModal}
+        className="w-full rounded-full border border-espresso-200 px-4 py-2.5 text-sm font-semibold text-espresso-600 transition-colors hover:bg-espresso-50"
+      >
+        {market.status === 'open' ? 'Propose result early' : 'Propose the outcome'}
+      </button>
 
       {modalOpen && (
         <Modal onClose={closeModal}>

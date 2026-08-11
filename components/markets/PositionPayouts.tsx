@@ -82,7 +82,52 @@ export interface PositionTicketRow extends Position {
 }
 
 /**
- * The template's "Your position" ticket: the first card on any market screen where the viewer
+ * The staked/if-it-lands rows on their own, with no container: they head their own ticket on an
+ * open market, and sit inside the proposed-outcome ticket once there's a call to read them
+ * against (where "if it lands" becomes "if this stands").
+ */
+export function PositionRows({
+  rows,
+  showProjection = true,
+  /** "Staked" under a ticket header that already reads "Your position"; "Your position" when
+   * these rows sit inside someone else's card and have to name themselves. */
+  leftLabel = 'Staked',
+}: {
+  rows: PositionTicketRow[];
+  showProjection?: boolean;
+  leftLabel?: string;
+}) {
+  return (
+    <div className="space-y-3">
+      {rows.map((row, i) => {
+        const loses = row.standsToWin === false;
+        return (
+          <div key={i} className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase">{leftLabel}</p>
+              <p className="mt-0.5 truncate text-base font-extrabold text-espresso-950">
+                {formatTokens(row.amount)} on <OptionLabel label={row.label} />
+              </p>
+            </div>
+            {showProjection && (
+              <div className="shrink-0 text-right">
+                <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase">
+                  {row.standsToWin === undefined ? 'If it lands' : 'If this stands'}
+                </p>
+                <p className={`mt-0.5 text-base font-extrabold ${loses ? 'text-danger-700' : 'text-honey-800'}`}>
+                  {loses ? `${formatTokens(row.amount)} lost` : `→ ${formatTokens(row.projected)} back`}
+                </p>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * The template's "Your position" ticket: the first card on an open market screen where the viewer
  * has money down, and the reason the explainer card below it disappears — the header band's
  * meta carries the line/option count that card would have shown, so nothing is lost by hiding it.
  */
@@ -103,31 +148,7 @@ export function PositionTicket({
 
   return (
     <TicketCard label="Your position" meta={meta} footer={footer} bodyClassName="px-[18px] py-[15px]">
-      <div className="space-y-3">
-        {rows.map((row, i) => {
-          const loses = row.standsToWin === false;
-          return (
-            <div key={i} className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase">Staked</p>
-                <p className="mt-0.5 truncate text-base font-extrabold text-espresso-950">
-                  {formatTokens(row.amount)} on <OptionLabel label={row.label} />
-                </p>
-              </div>
-              {showProjection && (
-                <div className="shrink-0 text-right">
-                  <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase">
-                    {row.standsToWin === undefined ? 'If it lands' : 'If this stands'}
-                  </p>
-                  <p className={`mt-0.5 text-base font-extrabold ${loses ? 'text-danger-700' : 'text-honey-800'}`}>
-                    {loses ? `${formatTokens(row.amount)} lost` : `→ ${formatTokens(row.projected)} back`}
-                  </p>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      <PositionRows rows={rows} showProjection={showProjection} />
     </TicketCard>
   );
 }
