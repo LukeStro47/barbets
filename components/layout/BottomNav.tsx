@@ -285,9 +285,14 @@ export function BottomNav({
             className="fixed inset-x-0 bottom-0 z-40 animate-bottomnav-sheet-up rounded-t-[28px] bg-gradient-to-br from-espresso-900 via-espresso-700 to-espresso-700 px-5 pt-3.5 pb-[env(safe-area-inset-bottom)]"
             // Once the keyboard pushes this sheet up, the browser scrolls just far enough to
             // reveal the focused input — which leaves the Continue button sitting flush against
-            // the keyboard with no breathing room. Pad past the keyboard height plus a bit extra
-            // instead, only while it's actually open (undefined lets the class above win at rest).
-            style={{ paddingBottom: keyboardOpen ? keyboardInset + 16 : undefined }}
+            // the keyboard with no breathing room. Add the keyboard's height to the sheet's normal
+            // floor rather than replacing it: `keyboardOpen` is focus-driven and `keyboardInset`
+            // reads ~0 on the WebViews that shrink the layout viewport, so a plain override drops
+            // the sheet below its resting position for as long as the field holds focus. Same fix
+            // as BetslipBar's drawer.
+            style={{
+              paddingBottom: keyboardOpen && keyboardInset > 0 ? `calc(env(safe-area-inset-bottom) + ${keyboardInset + 16}px)` : undefined,
+            }}
           >
             <button onClick={toggleCreate} aria-label="Close" className="block w-full border-0 bg-transparent pb-[13px]">
               <span className="mx-auto block h-1 w-[38px] rounded-full bg-white/20" />

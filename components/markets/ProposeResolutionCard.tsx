@@ -8,6 +8,7 @@ import { proposeResolution } from '@/lib/actions/resolution';
 import { compressImage } from '@/lib/compressImage';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { ConsequenceRow } from '@/components/ui/ConsequenceRow';
 import { TicketCard } from '@/components/markets/TicketCard';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { CameraIcon, CheckIcon, ImageIcon } from '@/components/ui/icons';
@@ -24,10 +25,12 @@ const inputClasses =
  * `open` (proposing closes betting immediately for everyone) or already `closed`; only the
  * button's wording changes.
  *
- * Renders as a bare outlined button with no card, divider, or copy of its own, because it is
- * always handed to `ResolutionTimeline` as that stage's one action — the steps directly above it
- * are the explanation, so repeating them here would say the same thing twice. Outlined rather
- * than filled so that on an open market it never looks like it belongs where betting does.
+ * Renders as a bare button with no card, divider, or copy of its own, because it is always handed
+ * to `ResolutionTimeline` as that stage's one action — the steps directly above it are the
+ * explanation, so repeating them here would say the same thing twice. Filled in espresso rather
+ * than honey: on a closed market this is the one thing left to do and it should read that way,
+ * but honey stays reserved for the bet slip, so on a still-open market it never looks like it
+ * belongs where betting does.
  */
 export function ProposeResolutionCard({
   groupId,
@@ -193,7 +196,7 @@ export function ProposeResolutionCard({
       <button
         type="button"
         onClick={openModal}
-        className="w-full rounded-full border border-espresso-200 px-4 py-2.5 text-sm font-semibold text-espresso-600 transition-colors hover:bg-espresso-50"
+        className="w-full rounded-full bg-espresso-800 px-4 py-2.5 text-sm font-bold text-paper-white transition-colors hover:bg-espresso-900"
       >
         {market.status === 'open' ? 'Propose result early' : 'Propose the outcome'}
       </button>
@@ -332,7 +335,7 @@ export function ProposeResolutionCard({
 
                 <div>
                   <p className="mb-2 text-[11.5px] font-extrabold tracking-[0.08em] text-espresso-400 uppercase">What this does</p>
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col">
                     <ConsequenceRow dotClassName="bg-danger-500">
                       {market.status === 'open' ? (
                         <>
@@ -345,7 +348,7 @@ export function ProposeResolutionCard({
                     <ConsequenceRow dotClassName="bg-espresso-800">
                       The group gets <strong className="font-bold text-espresso-900">{windowLabel} to challenge</strong> your call.
                     </ConsequenceRow>
-                    <ConsequenceRow dotClassName="bg-espresso-200">
+                    <ConsequenceRow dotClassName="bg-espresso-200" isLast>
                       No challenge and it's final: the pool pays out and the ticket unseals.
                     </ConsequenceRow>
                   </div>
@@ -406,13 +409,3 @@ function OutcomeRow({
   );
 }
 
-/** A single ranked consequence on step 2. The dot's colour is the ranking: red for the thing
- * that happens to other people immediately, dark for the window, faint for the eventual end. */
-function ConsequenceRow({ dotClassName, children }: { dotClassName: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-start gap-2.5">
-      <span className={cn('mt-[5px] h-[7px] w-[7px] shrink-0 rounded-full', dotClassName)} />
-      <p className="text-[13.5px] leading-[1.4] text-espresso-700">{children}</p>
-    </div>
-  );
-}

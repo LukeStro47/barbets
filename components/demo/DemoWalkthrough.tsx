@@ -86,9 +86,6 @@ export function DemoWalkthrough({ isLoggedIn }: { isLoggedIn: boolean }) {
   const [outcome, setOutcome] = useState<DemoOutcome | null>(null);
   const [betslipOpen, setBetslipOpen] = useState(false);
   const [barsRevealed, setBarsRevealed] = useState(false);
-  // Bumped on replay to force DemoBetslip to remount, resetting its internal side/amount
-  // selection back to defaults — it otherwise persists as a top-level sibling across steps.
-  const [betslipKey, setBetslipKey] = useState(0);
 
   const stepIndex = STEPS.indexOf(step);
   const { title, description } = STEP_COPY[step];
@@ -106,14 +103,6 @@ export function DemoWalkthrough({ isLoggedIn }: { isLoggedIn: boolean }) {
     setSide(betSide);
     setOutcome(resolveDemoBet(betSide, amount));
     setStep('closed');
-  }
-
-  function replay() {
-    setStep('open');
-    setSide(null);
-    setOutcome(null);
-    setBarsRevealed(false);
-    setBetslipKey((k) => k + 1);
   }
 
   return (
@@ -220,20 +209,12 @@ export function DemoWalkthrough({ isLoggedIn }: { isLoggedIn: boolean }) {
                 </Link>
                 .
               </p>
-              <button
-                type="button"
-                onClick={replay}
-                className="w-full text-center text-[13px] font-semibold text-espresso-400 transition-colors hover:text-espresso-700"
-              >
-                Replay the demo
-              </button>
             </div>
           )}
         </div>
       </div>
 
       <DemoBetslip
-        key={betslipKey}
         isOpen={betslipOpen}
         onClose={() => setBetslipOpen(false)}
         balance={DEMO_STARTING_BALANCE}

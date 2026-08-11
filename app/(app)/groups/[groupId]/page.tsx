@@ -319,18 +319,20 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
             height={96}
             className="pointer-events-none absolute -top-4 -right-4 rotate-[-10deg] opacity-[0.12]"
           />
-          <div className="relative flex items-end justify-between gap-4">
-            <div>
-              <p className="text-[10.5px] font-bold tracking-[0.12em] text-honey-400 uppercase">Free to bet</p>
-              <p className="mt-0.5 font-display text-[38px] leading-none font-extrabold tracking-[-0.02em] text-paper-white">
-                {formatTokens(Math.max(0, (membership?.balance ?? 0) - pendingTokens))}
-              </p>
-            </div>
+          {/* In play sits under the free-to-bet total rather than off to its right: the two are
+              the same pile of tokens split in two, so reading down from the headline number to
+              "and this much is already committed" tells that story. Side by side they read as
+              two unrelated figures competing for the same line. */}
+          <div className="relative">
+            <p className="text-[10.5px] font-bold tracking-[0.12em] text-honey-400 uppercase">Free to bet</p>
+            <p className="mt-0.5 font-display text-[38px] leading-none font-extrabold tracking-[-0.02em] text-paper-white">
+              {formatTokens(Math.max(0, (membership?.balance ?? 0) - pendingTokens))}
+            </p>
             {pendingTokens > 0 && (
-              <div className="pb-[3px] text-right">
-                <p className="text-[10.5px] font-bold tracking-[0.12em] text-paper-white/40 uppercase">In play</p>
-                <p className="mt-0.5 text-[19px] leading-none font-bold text-honey-200">{formatTokens(pendingTokens)}</p>
-              </div>
+              <p className="mt-2 flex items-baseline gap-1.5 text-[13px] font-semibold text-paper-white/45">
+                <span className="text-[10.5px] font-bold tracking-[0.12em] uppercase">In play</span>
+                <span className="text-[15px] font-bold text-honey-200">{formatTokens(pendingTokens)}</span>
+              </p>
             )}
           </div>
           <div className="relative mt-3.5 flex items-center justify-between border-t border-white/10 pt-3">

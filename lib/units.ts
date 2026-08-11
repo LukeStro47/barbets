@@ -6,9 +6,6 @@ export const OVER_UNDER_CURRENCY_ALTERNATES = ['£', '€'] as const;
 
 export const OVER_UNDER_UNIT_MAX_LENGTH = 10;
 
-/** A custom unit typed inline next to the line input beyond this length wraps to its own full-width row instead — it stops comfortably fitting the compact inline box. */
-export const OVER_UNDER_UNIT_INLINE_MAX_LENGTH = 6;
-
 /** Currency symbols prefix the number (`$5.5`, `£5.5`, `€5.5`); every other unit trails it (`5.5 min`). */
 const PREFIXED_UNITS = new Set(['$', '£', '€']);
 

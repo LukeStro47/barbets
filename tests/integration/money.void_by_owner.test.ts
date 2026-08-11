@@ -18,6 +18,17 @@ async function membershipRow(groupId: string, userId: string) {
   return data!;
 }
 
+/** Every bonus token the group holds: sitting on its markets, plus whatever is parked at the
+    group level waiting for the next market. Void only ever moves this money between those two
+    places, so the total is the invariant. */
+async function groupBonusTotal(groupId: string): Promise<number> {
+  const { data: markets, error: marketsErr } = await adminClient.from('markets').select('bonus_pool').eq('group_id', groupId);
+  if (marketsErr) throw marketsErr;
+  const { data: group, error: groupErr } = await adminClient.from('groups').select('pending_bonus_pool').eq('id', groupId).single();
+  if (groupErr) throw groupErr;
+  return (markets ?? []).reduce((sum, m) => sum + m.bonus_pool, 0) + group!.pending_bonus_pool;
+}
+
 async function latestEvent(eventType: string, groupId: string) {
   const { data, error } = await adminClient
     .from('notification_events')
@@ -108,6 +119,33 @@ describe('void_market_by_owner', () => {
     expect(recipients).not.toContain(users.owner.id);
     expect(recipients).toContain(users.subject.id);
     expect(recipients.sort()).toEqual([users.sponsor.id, users.a.id, users.b.id, users.subject.id].sort());
+  });
+
+  // Regression: refund_all_bets() used to split a voided market's bonus_pool across "every open
+  // market in the group" without excluding the market being voided. Voiding a still-open market
+  // that was the only open one therefore handed the bonus to itself, and the zeroing step right
+  // after destroyed it. See 20260811130000_refund_all_bets_excludes_self_from_bonus_split.sql.
+  test('voiding a still-open market carrying a bonus pool passes it on rather than destroying it', async () => {
+    const market = await createMarket(users.owner, group.id, { closesInMs: 300000 });
+    await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+
+    const { error: seedErr } = await adminClient.from('markets').update({ bonus_pool: 400 }).eq('id', market.id);
+    expect(seedErr).toBeNull();
+
+    const { data: statusRow } = await adminClient.from('markets').select('status').eq('id', market.id).single();
+    expect(statusRow!.status).toBe('open'); // the condition that triggered the leak
+
+    const bonusBefore = await groupBonusTotal(group.id);
+
+    const { error } = await users.owner.client.rpc('void_market_by_owner', { p_market_id: market.id });
+    expect(error).toBeNull();
+
+    const { data: marketAfter } = await adminClient.from('markets').select('bonus_pool').eq('id', market.id).single();
+    expect(marketAfter!.bonus_pool).toBe(0);
+
+    // Wherever it went (another open market, or the group's holding pool), the group still has
+    // every token. Under the old behaviour the market's share of its own bonus evaporated.
+    expect(await groupBonusTotal(group.id)).toBe(bonusBefore);
   });
 
   test('cannot void a market that has already been settled', async () => {

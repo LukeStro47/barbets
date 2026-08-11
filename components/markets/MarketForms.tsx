@@ -16,7 +16,6 @@ import {
   OVER_UNDER_UNIT_PRESETS,
   OVER_UNDER_CURRENCY_ALTERNATES,
   OVER_UNDER_UNIT_MAX_LENGTH,
-  OVER_UNDER_UNIT_INLINE_MAX_LENGTH,
   formatLine,
   parseLineInput,
   type LineFormat,
@@ -191,7 +190,6 @@ export function CreateMarketForm({
   const [unit, setUnit] = useState('');
   const [otherUnit, setOtherUnit] = useState(false);
   const [lineFormat, setLineFormat] = useState<LineFormat>('number');
-  const unitIsLong = unit.trim().length > OVER_UNDER_UNIT_INLINE_MAX_LENGTH;
   const [showCurrencyAlternates, setShowCurrencyAlternates] = useState(false);
   const currencyPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -353,25 +351,14 @@ export function CreateMarketForm({
               </div>
 
               {lineFormat === 'number' ? (
-                <div className="flex flex-wrap gap-2">
-                  <input
-                    name="line"
-                    type="number"
-                    step="0.5"
-                    placeholder="5.5 (use a half to avoid a push)"
-                    required
-                    className={`${inputClasses} ${otherUnit && !unitIsLong ? 'min-w-0 flex-1' : 'w-full basis-full'}`}
-                  />
-                  {otherUnit && (
-                    <input
-                      value={unit}
-                      onChange={(e) => setUnit(e.target.value)}
-                      maxLength={OVER_UNDER_UNIT_MAX_LENGTH}
-                      placeholder="Unit"
-                      className={`${inputClasses} ${unitIsLong ? 'basis-full' : 'w-24 shrink-0'}`}
-                    />
-                  )}
-                </div>
+                <input
+                  name="line"
+                  type="number"
+                  step="0.5"
+                  placeholder="5.5 (use a half to avoid a push)"
+                  required
+                  className={inputClasses}
+                />
               ) : (
                 <input name="line" type={lineFormat === 'date' ? 'date' : 'time'} required className={inputClasses} />
               )}
@@ -432,7 +419,34 @@ export function CreateMarketForm({
                     Custom
                   </button>
                 </div>
-                {!showCurrencyAlternates && <p className="text-xs text-espresso-400">Hold $ for other currencies.</p>}
+                {/* The custom field lives here under the presets it replaces, not beside the line
+                    input where it used to sit: it is one more way of answering "what unit?", so
+                    it belongs with the other answers. Its own cancel gets you back to the presets
+                    without having to guess that re-tapping Custom would do it. */}
+                {otherUnit && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      autoFocus
+                      value={unit}
+                      onChange={(e) => setUnit(e.target.value)}
+                      maxLength={OVER_UNDER_UNIT_MAX_LENGTH}
+                      placeholder="e.g. laps, pints, minutes"
+                      className={`${inputClasses} min-w-0 flex-1`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOtherUnit(false);
+                        setUnit('');
+                      }}
+                      aria-label="Cancel custom unit"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg text-espresso-400 hover:bg-espresso-50 hover:text-danger-700"
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
+                {!showCurrencyAlternates && !otherUnit && <p className="text-xs text-espresso-400">Hold $ for other currencies.</p>}
               </div>
             )}
           </div>
@@ -631,14 +645,18 @@ function ReviewMarketModal({
         )}
       </ReviewRow>
 
-      <div className="flex items-start gap-2.5 border-t border-espresso-50 bg-honey-50 px-[18px] py-[13px]">
-        <InfoIcon className="mt-px h-[17px] w-[17px] shrink-0 text-honey-800" />
-        <p className="text-[13px] leading-[1.45] text-honey-900">
-          {requireEndorsement
-            ? 'One other member has to endorse this before betting opens. If nobody does within 24 hours, it expires.'
-            : "This group doesn't require endorsement, so betting opens as soon as you create it."}
-        </p>
-      </div>
+      {/* Only when endorsement is actually required. With the setting off, betting simply opens
+          on create, which is what every other confirmation modal in the app already implies —
+          a highlighted callout to say "nothing unusual happens next" is a rule where there
+          isn't one. */}
+      {requireEndorsement && (
+        <div className="flex items-start gap-2.5 border-t border-espresso-50 bg-honey-50 px-[18px] py-[13px]">
+          <InfoIcon className="mt-px h-[17px] w-[17px] shrink-0 text-honey-800" />
+          <p className="text-[13px] leading-[1.45] text-honey-900">
+            One other member has to endorse this before betting opens. If nobody does within 24 hours, it expires.
+          </p>
+        </div>
+      )}
 
       <div className="flex gap-2 border-t border-espresso-100 px-[18px] py-[14px]">
         <Button type="button" variant="outline" className="shrink-0 px-[22px]" onClick={onEdit}>

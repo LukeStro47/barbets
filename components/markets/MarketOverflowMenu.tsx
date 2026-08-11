@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { voidMarket, voidMarketAsCreator } from '@/lib/actions/resolution';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { ConsequenceRow } from '@/components/ui/ConsequenceRow';
 import type { ActionResult } from '@/lib/errors';
 
 interface Props {
@@ -45,7 +46,7 @@ export function MarketOverflowMenu({ groupId, marketId, isOwner, isCreator, owne
         </svg>
       </button>
       {open && (
-        <Modal onClose={() => setOpen(false)}>
+        <Modal onClose={() => setOpen(false)} padded={false} panelClassName="overflow-hidden">
           <VoidAction
             groupId={groupId}
             marketId={marketId}
@@ -95,47 +96,64 @@ function VoidAction({
   }
 
   return (
-    <div className="space-y-3">
-      <p className="font-display font-bold text-espresso-900">{asCreatorFallback ? "Owner can't act on this one" : 'Owner controls'}</p>
-      {error && <p className="text-sm text-danger-700">{error}</p>}
-      {asCreatorFallback && (
-        <p className="text-sm text-espresso-500">
-          The group owner is @mentioned in this market, so it's hidden from them and they can't void it themselves.
-          As the market's creator, you can void it in their place.
+    <>
+      <div className="flex items-center justify-between gap-3 bg-espresso-50 px-[18px] py-[13px]">
+        <p className="text-xs font-extrabold tracking-[0.06em] text-espresso-800 uppercase">
+          {asCreatorFallback ? "Void in the owner's place" : 'Owner controls'}
         </p>
-      )}
-      {!confirming ? (
-        <>
-          <p className="text-sm text-espresso-500">Cancel this market and refund every stake. This can't be undone.</p>
-          <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={onDone}>
-              Close
-            </Button>
-            <Button variant="danger" className="flex-1" onClick={() => setConfirming(true)}>
-              Void this market
-            </Button>
-          </div>
-        </>
-      ) : (
-        <>
-          <p className="text-sm font-semibold text-danger-700">
-            Every bet on this market gets refunded in full and it closes for good. Everyone gets notified.
+        <p className="shrink-0 text-xs font-semibold text-espresso-500">Step {confirming ? 2 : 1} of 2</p>
+      </div>
+
+      <div className="flex flex-col gap-3.5 p-[18px]">
+        <div>
+          <p className="font-display text-[19px] font-extrabold tracking-[-0.01em] text-espresso-900">
+            {confirming ? 'Void it for good?' : 'Void this market'}
           </p>
-          <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={() => setConfirming(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="danger"
-              className="flex-1"
-              disabled={isPending}
-              onClick={() => run(() => (asCreatorFallback ? voidMarketAsCreator(groupId, marketId) : voidMarket(groupId, marketId)))}
-            >
-              Confirm
-            </Button>
+          <p className="mt-1 text-[13.5px] leading-[1.45] text-espresso-500">
+            {asCreatorFallback
+              ? "The group owner is @mentioned in this market, so it's hidden from them and they can't void it themselves. As the market's creator, you can void it in their place."
+              : 'Cancels the market outright. Nobody wins and nobody loses.'}
+          </p>
+        </div>
+
+        {error && <p className="text-sm text-danger-700">{error}</p>}
+
+        <div>
+          <p className="mb-2 text-[11.5px] font-extrabold tracking-[0.08em] text-espresso-400 uppercase">What this does</p>
+          <div className="flex flex-col">
+            <ConsequenceRow dotClassName="bg-danger-500">
+              Every bet on this market is <strong className="font-bold text-danger-700">refunded in full</strong>, right now.
+            </ConsequenceRow>
+            <ConsequenceRow dotClassName="bg-espresso-800">
+              The market closes for good. <strong className="font-bold text-espresso-900">This can't be undone.</strong>
+            </ConsequenceRow>
+            <ConsequenceRow dotClassName="bg-espresso-200" isLast>
+              Everyone in the group gets notified that it was voided.
+            </ConsequenceRow>
           </div>
-        </>
-      )}
-    </div>
+        </div>
+      </div>
+
+      <div className="flex gap-2 border-t border-espresso-50 px-[18px] py-[14px]">
+        <Button type="button" variant="outline" className="flex-1" disabled={isPending} onClick={() => (confirming ? setConfirming(false) : onDone())}>
+          {confirming ? 'Back' : 'Close'}
+        </Button>
+        {!confirming ? (
+          <Button type="button" variant="danger" className="flex-1" onClick={() => setConfirming(true)}>
+            Void this market
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="danger"
+            className="flex-1"
+            disabled={isPending}
+            onClick={() => run(() => (asCreatorFallback ? voidMarketAsCreator(groupId, marketId) : voidMarket(groupId, marketId)))}
+          >
+            Yes, void it
+          </Button>
+        )}
+      </div>
+    </>
   );
 }

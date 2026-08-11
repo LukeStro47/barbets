@@ -268,7 +268,15 @@ export function BetslipBar({
           'fixed inset-x-0 bottom-0 z-50 !m-0 max-h-[85dvh] overflow-y-auto rounded-t-[22px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 pb-[calc(env(safe-area-inset-bottom)+24px)] transition-transform duration-300 ease-out',
           isOpen ? 'translate-y-0' : 'translate-y-full'
         )}
-        style={{ paddingBottom: keyboardOpen ? keyboardInset + 16 : undefined }}
+        // The keyboard's height is *added* to the sheet's normal bottom padding, never swapped
+        // in for it. `keyboardOpen` is focus-driven, so it stays true while the field is focused
+        // with the keyboard swiped away — and on the WebViews that shrink the layout viewport,
+        // `keyboardInset` reads ~0 the whole time regardless. Overriding the padding outright in
+        // that state dropped the sheet's floor to a bare 16px, which is why Place bet sat lower
+        // than it does at rest until you blurred the field.
+        style={{
+          paddingBottom: keyboardOpen && keyboardInset > 0 ? `calc(env(safe-area-inset-bottom) + 24px + ${keyboardInset}px)` : undefined,
+        }}
         aria-hidden={!isOpen}
       >
         <div className="mx-auto my-3 h-1 w-9 rounded-full bg-white/25" />
@@ -502,7 +510,7 @@ function BetConfirmedOverlay({
 
       <div className="mx-auto w-full max-w-sm rounded-[20px] bg-paper-white shadow-[0_22px_44px_-18px_rgba(0,0,0,0.55)]">
         <div className="px-5 pt-5 pb-4">
-          <p className="text-[11px] font-extrabold tracking-[0.12em] text-espresso-400 uppercase">Your ticket</p>
+          <p className="text-[11px] font-extrabold tracking-[0.12em] text-espresso-400 uppercase">Your bet</p>
           <p className="mt-2 font-display text-[19px] leading-[1.25] font-extrabold text-espresso-950 text-pretty">{marketTitle}</p>
           <div className="mt-4 flex items-end justify-between gap-3">
             <div className="min-w-0">
