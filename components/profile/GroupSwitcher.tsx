@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/cn';
 import { GroupAvatar } from '@/components/ui/GroupAvatar';
+import { CaretDownIcon } from '@/components/ui/icons';
 
 export interface SwitcherGroup {
   id: string;
@@ -38,8 +39,16 @@ export function GroupSwitcher({ groups, currentGroupId }: { groups: SwitcherGrou
           <span className="mt-0.5 block truncate text-[19px] font-extrabold tracking-[-0.015em] text-espresso-900">{current.name}</span>
         </span>
         {groups.length > 1 && (
-          <span className={cn('flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-espresso-50 text-[10px] text-espresso-500 transition-transform', open && 'rotate-180')}>
-            ▾
+          // A drawn caret, not a "▾" glyph: the glyph's position inside its em box is the font's
+          // decision, so scaling it up drifts off-centre in the circle. Same reasoning as
+          // MarketOverflowMenu's dots.
+          <span
+            className={cn(
+              'flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-espresso-50 text-espresso-500 transition-transform',
+              open && 'rotate-180'
+            )}
+          >
+            <CaretDownIcon className="h-[17px] w-[17px]" />
           </span>
         )}
       </button>

@@ -132,9 +132,11 @@ export default async function HowItWorksPage({ searchParams }: { searchParams: P
         <Link href="/demo" className="font-medium text-espresso-700 underline">
           Prefer to see it in action? Try the interactive demo
         </Link>
-        <Link href="/help" className="font-medium text-espresso-700 underline">
-          Help
-        </Link>
+        {/* A mailto rather than /feedback: this page is public, and /feedback lives behind the
+            app's auth gate, so a logged-out reader would just get bounced to the login screen. */}
+        <a href="mailto:luke@pathwell.co" className="font-medium text-espresso-700 underline">
+          Questions? Email us
+        </a>
         <Link href="/terms" className="font-medium text-espresso-700 underline">
           Terms of use
         </Link>

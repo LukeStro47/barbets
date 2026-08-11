@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { signOut } from '@/lib/actions/auth';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { ChevronRightIcon } from '@/components/ui/icons';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
@@ -13,11 +14,25 @@ import { MARKET_TYPE_LABEL } from '@/lib/marketType';
 
 const LINKS = [
   { label: 'How it works', href: '/how-it-works' },
-  { label: 'Help', href: '/help' },
-  { label: 'Feedback', href: '/feedback' },
+  { label: 'Send feedback', href: '/feedback' },
   { label: 'Terms', href: '/terms' },
   { label: 'Privacy', href: '/privacy' },
 ];
+
+/** The small print links, as tappable tiles rather than a wrapped row of underlined text — same
+ * card language as the "Account & security" row above them, so the bottom of the page reads as
+ * one set of destinations instead of a card followed by a footer. */
+function QuickLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center justify-between gap-2 rounded-2xl border border-espresso-100 bg-paper-white px-3.5 py-3 text-[13px] font-bold text-espresso-700 transition-colors hover:border-espresso-200 [&:last-child:nth-child(odd)]:col-span-2"
+    >
+      <span className="truncate">{label}</span>
+      <ChevronRightIcon className="h-3 w-3 shrink-0 text-espresso-300" />
+    </Link>
+  );
+}
 
 /** /profile — one group at a time (see README's per-group identity rule: there is no
  * cross-group aggregate anywhere, so a stat with no group attached would be meaningless).
@@ -52,16 +67,10 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
         <span className="shrink-0 text-espresso-300">→</span>
       </Link>
 
-      <div className="flex flex-wrap gap-x-3.5 gap-y-2 px-1 text-[12.5px] font-semibold text-honey-700">
-        {isAdmin && (
-          <Link href="/admin" className="hover:text-honey-800">
-            Admin
-          </Link>
-        )}
+      <div className="grid grid-cols-2 gap-2">
+        {isAdmin && <QuickLink href="/admin" label="Admin" />}
         {LINKS.map((l) => (
-          <Link key={l.label} href={l.href} className="hover:text-honey-800">
-            {l.label}
-          </Link>
+          <QuickLink key={l.label} href={l.href} label={l.label} />
         ))}
       </div>
 
@@ -135,8 +144,9 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   ).length;
   const accuracyPct = (settledBets?.length ?? 0) > 0 ? Math.round((correctCount / settledBets!.length) * 100) : null;
 
-  // Foot line: how long at this table, how many settled markets, and the single best call by
-  // payout multiple (a genuine profit only — a refund or a loss doesn't count as "best").
+  // Card footer. The best call by payout multiple (a genuine profit only — a refund or a loss
+  // doesn't count as "best") is the line worth reading, so it gets its own label and the tenure
+  // sentence it used to be tacked onto shrinks to a caption under it.
   const { data: myClosedBets } = await supabase
     .from('bets')
     .select('amount, payout, market_id, markets!inner(group_id, title)')
@@ -151,21 +161,34 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
     if (!bestCall || multiple > bestCall.multiple) bestCall = { multiple, title: b.markets.title };
   }
   const sinceLabel = new Date(selected.joined_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  let foot = `At this table since ${sinceLabel}`;
-  if (settledMarketCount > 0) foot += `, across ${settledMarketCount} settled market${settledMarketCount === 1 ? '' : 's'}`;
-  foot += '.';
-  if (bestCall) foot += ` Best call: ${bestCall.multiple.toFixed(1)}× on "${bestCall.title}".`;
+  const tenureLine =
+    settledMarketCount > 0 ? `Here since ${sinceLabel} · ${settledMarketCount} settled` : `Here since ${sinceLabel}`;
 
-  // Open bets carousel — only open bets, same as before: settled results live on the market
-  // itself (its reveal ticket), not here.
+  // Open bets carousel — only open bets: settled results live on the market itself (its reveal
+  // ticket), not here. This is the one section of the page that is *not* scoped to the selected
+  // group. Everything above it is a per-group figure that would be meaningless aggregated (see the
+  // per-group identity rule), but an open bet is a thing you have to come back for, and hiding the
+  // ones in your other groups behind a switcher meant the page couldn't answer "what have I got
+  // riding?" without four taps. It stays honest by labelling each card with the group it's in
+  // rather than merging them into a single anonymous total.
+  const allGroupIds = memberships.map((m) => m.group_id);
+  const groupNameById = new Map(memberships.map((m) => [m.group_id, (m.groups as any)?.name ?? '']));
+  const showGroupLabels = memberships.length > 1;
+
   const { data: openBetRows } = await supabase
     .from('bets')
     .select('id, side, option_id, amount, market_id, markets!inner(id, group_id, title, market_type, closes_at)')
     .eq('user_id', user!.id)
-    .eq('markets.group_id', groupId)
+    .in('markets.group_id', allGroupIds)
     .is('settled_at', null);
 
-  const openOptionIds = [...new Set((openBetRows ?? []).map((b) => b.option_id).filter(Boolean))];
+  // Soonest to close first — with several groups in one rail, "what closes next" is the only
+  // ordering that means anything.
+  const openBets = [...((openBetRows ?? []) as any[])].sort(
+    (a, b) => new Date(a.markets.closes_at).getTime() - new Date(b.markets.closes_at).getTime()
+  );
+
+  const openOptionIds = [...new Set(openBets.map((b) => b.option_id).filter(Boolean))];
   const { data: openOptionRows } =
     openOptionIds.length > 0 ? await supabase.from('market_options').select('id, label').in('id', openOptionIds) : { data: [] };
   const openOptionLabelById = new Map((openOptionRows ?? []).map((o) => [o.id, o.label]));
@@ -173,7 +196,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   // "To win" is a live estimate off the pool as it stands right now, using the same parimutuel
   // formula finalize_market() uses for real — not a promise, since the pool (and so the payout)
   // keeps moving until the market actually closes.
-  const openMarketIds = [...new Set((openBetRows ?? []).map((b) => b.market_id))];
+  const openMarketIds = [...new Set(openBets.map((b) => b.market_id))];
   const { data: poolBetRows } =
     openMarketIds.length > 0 ? await supabase.from('bets').select('market_id, side, option_id, amount').in('market_id', openMarketIds) : { data: [] };
   const totalPoolByMarket = new Map<string, number>();
@@ -189,7 +212,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
     return Math.floor((bet.amount * totalPool) / sidePool);
   }
 
-  const openCount = (openBetRows ?? []).length;
+  const openCount = openBets.length;
 
   return (
     <main className="mx-auto max-w-lg space-y-4 px-5 py-8">
@@ -226,37 +249,57 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
               <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-paper-white/50 uppercase">Net here</p>
             </div>
           </div>
-          <p className="relative mt-4 border-t border-white/10 pt-3.5 text-xs leading-[1.5] text-paper-white/55">{foot}</p>
+          <div className="relative mt-4 border-t border-white/10 pt-3.5">
+            <p className="text-[10.5px] font-bold tracking-[0.07em] text-honey-400 uppercase">Best call</p>
+            {bestCall ? (
+              <p className="mt-1 line-clamp-2 text-[13.5px] leading-[1.35] font-bold text-paper-white">
+                {bestCall.multiple.toFixed(1)}&times; on &ldquo;{bestCall.title}&rdquo;
+              </p>
+            ) : (
+              <p className="mt-1 text-[13.5px] leading-[1.35] text-paper-white/50">Nothing settled yet.</p>
+            )}
+            <p className="mt-1.5 text-[11px] text-paper-white/40">{tenureLine}</p>
+          </div>
         </div>
       </ShareRecordCard>
 
       <div>
-        <div className="mb-2 flex items-baseline justify-between px-0.5">
+        {/* No horizontal padding of its own: the rail below breaks out of the page gutter
+            (-mx-5 … px-5), so any inset here would leave the heading a couple of pixels to the
+            right of the card edges it is supposed to sit above. */}
+        <div className="mb-2 flex items-baseline justify-between gap-3">
           <h3 className="text-xs font-extrabold tracking-[0.06em] text-espresso-400 uppercase">Still open</h3>
           {openCount > 0 && (
-            <span className="text-xs text-espresso-400">
-              {openCount} {openCount === 1 ? 'bet' : 'bets'} riding · swipe
+            <span className="shrink-0 text-xs text-espresso-400">
+              {openCount} {openCount === 1 ? 'bet' : 'bets'} riding · {showGroupLabels ? 'every table' : 'swipe'}
             </span>
           )}
         </div>
         {openCount === 0 ? (
-          <EmptyState icon="🎲" title="Nothing riding right now" subtitle="Bets you've got open in this group show up here." />
+          <EmptyState icon="🎲" title="Nothing riding right now" subtitle="Bets you've got open show up here." />
         ) : (
           <div
             className="-mx-5 flex gap-2.5 overflow-x-auto px-5 pb-3 [scroll-snap-type:x_mandatory] [scrollbar-width:none]"
           >
-            {(openBetRows ?? []).map((b: any) => {
+            {openBets.map((b: any) => {
               const market = b.markets;
               const sideLabel = (b.option_id ? openOptionLabelById.get(b.option_id) ?? '' : b.side ?? '').toUpperCase();
               return (
                 <Link
                   key={b.id}
-                  href={`/groups/${groupId}/markets/${market.id}`}
+                  href={`/groups/${market.group_id}/markets/${market.id}`}
                   className="flex w-[228px] shrink-0 flex-col justify-between gap-3.5 rounded-[20px] border border-espresso-100 bg-paper-white p-4 [scroll-snap-align:start]"
                 >
                   <span>
-                    <span className="inline-flex items-center rounded-full bg-espresso-50 px-2.5 py-1 text-[10px] font-extrabold tracking-[0.06em] text-espresso-500 uppercase">
-                      {MARKET_TYPE_LABEL[market.market_type as keyof typeof MARKET_TYPE_LABEL]}
+                    <span className="flex items-center gap-1.5">
+                      <span className="inline-flex shrink-0 items-center rounded-full bg-espresso-50 px-2.5 py-1 text-[10px] font-extrabold tracking-[0.06em] text-espresso-500 uppercase">
+                        {MARKET_TYPE_LABEL[market.market_type as keyof typeof MARKET_TYPE_LABEL]}
+                      </span>
+                      {showGroupLabels && (
+                        <span className="min-w-0 truncate text-[10px] font-extrabold tracking-[0.05em] text-espresso-300 uppercase">
+                          {groupNameById.get(market.group_id)}
+                        </span>
+                      )}
                     </span>
                     <span className="mt-2 block text-balance text-[14.5px] font-bold leading-[1.32] text-espresso-900">{market.title}</span>
                   </span>
