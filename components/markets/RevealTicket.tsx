@@ -1,15 +1,15 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { toBlob } from 'html-to-image';
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/cn';
+import { useShareableImage } from '@/lib/shareImage';
 import { formatTokens, formatPercent } from '@/lib/formatNumber';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { ReactionBar } from '@/components/markets/ReactionBar';
 import { ResolutionProofButton } from '@/components/markets/ResolutionProofButton';
 import { SealedTicketCover } from '@/components/markets/SealedTicketCover';
 import { Button } from '@/components/ui/Button';
-import { CheckIcon, ShareIcon } from '@/components/ui/icons';
+import { CheckIcon, DownloadIcon, ShareIcon } from '@/components/ui/icons';
 import type { ReactionEmoji } from '@/lib/actions/reactions';
 
 export interface TicketCaller {
@@ -89,12 +89,6 @@ export function RevealTicket({
   hasProof,
   sealedForSubject,
 }: RevealTicketProps) {
-  const ticketRef = useRef<HTMLDivElement>(null);
-  const [blob, setBlob] = useState<Blob | null>(null);
-  const [capturing, setCapturing] = useState(true);
-  const [canShareFiles, setCanShareFiles] = useState(false);
-  const [copied, setCopied] = useState(false);
-
   // Plays once: the very first time a subject opens this market after it resolved — but only on
   // tap, not automatically on mount. It used to auto-play, which raced BootSplash's fixed ~3s
   // display on a cold load: the whole ~1.5s tear could finish invisibly underneath it. Loading
@@ -134,93 +128,22 @@ export function RevealTicket({
     };
   }, [tearing]);
 
-  useEffect(() => {
-    try {
-      const probe = new File([new Uint8Array([0])], 'probe.png', { type: 'image/png' });
-      setCanShareFiles(
-        typeof navigator.share === 'function' && typeof navigator.canShare === 'function' && navigator.canShare({ files: [probe] })
-      );
-    } catch {
-      setCanShareFiles(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    // Captured eagerly once the capture gate opens, not lazily on click: html-to-image's toBlob
-    // is async, and an await between a click and navigator.share() risks losing the
-    // user-activation Safari requires for the native share sheet. Pre-capturing means the click
-    // handlers below use an already-ready blob. The gate itself just delays this until any tear
-    // animation has settled (see the effect above) — for every other viewer it opens immediately.
-    if (!captureGateOpen) return;
-    let cancelled = false;
-    const node = ticketRef.current;
-    if (!node) return;
-    document.fonts.ready
-      .then(() => toBlob(node, { pixelRatio: 2, cacheBust: true }))
-      .then((result) => {
-        if (!cancelled) {
-          setBlob(result);
-          setCapturing(false);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setCapturing(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [captureGateOpen]);
-
-  function downloadBlob(b: Blob) {
-    const url = URL.createObjectURL(b);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'barbets-reveal.png';
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  // One button covers every environment instead of splitting on canShareFiles: the richest path
-  // (native share sheet with the actual image attached) is tried first, then a plain url/text
-  // share (works in plenty of browsers that can't share files), and only once neither exists at
-  // all does it fall back to doing the two things a share sheet would've offered itself —
-  // downloading the image and copying the link — in a single tap. That download always happens
-  // in the final fallback regardless of whether the clipboard write succeeds, since a permissions
-  // failure on `navigator.clipboard` (blocked in an insecure/embedded context) shouldn't also
-  // swallow the image save; previously an uncaught rejection there made "Copy link" look like it
-  // silently did nothing.
-  async function handleShare() {
-    const shareTitle = `${groupName} · ${question}`;
-    const shareText = `See how "${question}" resolved.`;
-
-    if (canShareFiles && blob) {
-      const file = new File([blob], 'barbets-reveal.png', { type: 'image/png' });
-      try {
-        await navigator.share({ files: [file], title: shareTitle, text: shareText });
-        return;
-      } catch (err) {
-        if ((err as Error)?.name === 'AbortError') return;
-      }
-    }
-
-    if (typeof navigator.share === 'function') {
-      try {
-        await navigator.share({ title: shareTitle, text: shareText, url: window.location.href });
-        return;
-      } catch (err) {
-        if ((err as Error)?.name === 'AbortError') return;
-      }
-    }
-
-    if (blob) downloadBlob(blob);
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
-    } catch {
-      // Image save above already went through — a blocked clipboard isn't a total failure.
-    }
-  }
+  // Always the image, never a link. There used to be a url/text `navigator.share()` rung in the
+  // middle of this, which is what every Capacitor WebView viewer actually got (no
+  // `navigator.canShare`, so the file rung was skipped) — a bare link to a page nobody outside the
+  // group can open, in place of the one thing this ticket exists to be. `ready` holds the capture
+  // until any tear animation has settled; sharing a half-faded frame would be worse than waiting.
+  const {
+    ref: ticketRef,
+    status: shareStatus,
+    canShare,
+    share: handleShare,
+  } = useShareableImage<HTMLDivElement>({
+    filename: 'barbets-reveal.png',
+    title: `${groupName} · ${question}`,
+    text: `See how "${question}" resolved.`,
+    ready: captureGateOpen,
+  });
 
   const formattedDate = new Date(resolvedAtIso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   // While tearing, the odds bars start at 0% and fill in ~0.75s after the tear begins, same
@@ -419,9 +342,22 @@ export function RevealTicket({
       </div>
 
       <div className="mt-3.5 flex flex-wrap gap-2">
-        <Button onClick={handleShare} disabled={capturing} variant="accent" className="inline-flex flex-1 items-center justify-center gap-2">
-          <ShareIcon className="h-4 w-4" />
-          {capturing ? 'Preparing…' : copied ? 'Copied' : 'Share'}
+        <Button
+          onClick={handleShare}
+          disabled={shareStatus === 'capturing' || shareStatus === 'working'}
+          variant="accent"
+          className="inline-flex flex-1 items-center justify-center gap-2"
+        >
+          {canShare ? <ShareIcon className="h-4 w-4" /> : <DownloadIcon className="h-4 w-4" />}
+          {shareStatus === 'capturing'
+            ? 'Preparing…'
+            : shareStatus === 'working'
+              ? 'Opening…'
+              : shareStatus === 'failed'
+                ? 'Try again'
+                : canShare
+                  ? 'Share'
+                  : 'Save image'}
         </Button>
         {hasProof && <ResolutionProofButton marketId={marketId} variant="action" />}
       </div>
