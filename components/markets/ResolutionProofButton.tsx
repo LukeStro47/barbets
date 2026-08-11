@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { getResolutionProofUrl } from '@/lib/actions/resolution';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { CameraIcon } from '@/components/ui/icons';
+import { CameraIcon, ImageIcon } from '@/components/ui/icons';
 
 /**
  * Fetches the signed photo URL lazily on click rather than eagerly on
@@ -12,7 +12,7 @@ import { CameraIcon } from '@/components/ui/icons';
  * on every load, and most proposals have no photo at all; there's no reason
  * to mint (or even check for) a signed URL until someone actually asks.
  */
-export function ResolutionProofButton({ marketId, variant }: { marketId: string; variant: 'action' | 'icon' }) {
+export function ResolutionProofButton({ marketId, variant }: { marketId: string; variant: 'action' | 'icon' | 'chip' }) {
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -40,6 +40,18 @@ export function ResolutionProofButton({ marketId, variant }: { marketId: string;
           <CameraIcon className="h-4 w-4" />
           {loading ? 'Loading…' : 'Proof'}
         </Button>
+      ) : variant === 'chip' ? (
+        // Sits inline beside the proposed outcome itself, so it reads as an attribute of the
+        // call ("here's what backs it") rather than a second action competing with Challenge.
+        <button
+          type="button"
+          onClick={open}
+          disabled={loading}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-espresso-50 px-[13px] py-[7px] text-[12.5px] font-bold whitespace-nowrap text-espresso-600 transition-colors hover:bg-espresso-100 disabled:opacity-50"
+        >
+          <ImageIcon className="h-3.5 w-3.5" />
+          {loading ? 'Loading…' : 'See the proof'}
+        </button>
       ) : (
         <button
           type="button"

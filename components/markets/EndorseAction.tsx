@@ -3,12 +3,17 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { sponsorMarket } from '@/lib/actions/markets';
-import { Button } from '@/components/ui/Button';
 
-/** The endorse button itself, meant to sit inside the "what happens next" timeline card
- * (step 0 there already explains why a second member's needed) rather than repeat that
- * explanation in a card of its own. */
-export function EndorseAction({ marketId }: { marketId: string }) {
+/**
+ * The endorsement screen's pinned action bar. Endorsing is the one thing this screen exists to
+ * ask for, so it gets the accent colour and the full width of the row; "Not now" shrinks to fit
+ * and stays a ghost, because walking away is a legitimate answer but not the one being proposed.
+ *
+ * Pinned above BottomNav rather than sitting in a card, mirroring where the bet slip lives on an
+ * open market — the committing action is always in the same place on a market screen, whatever
+ * stage it is at.
+ */
+export function EndorseActionBar({ groupId, marketId }: { groupId: string; marketId: string }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -35,13 +40,43 @@ export function EndorseAction({ marketId }: { marketId: string }) {
     });
   }
 
-  return (
-    <div className="space-y-2 border-t border-espresso-50 pt-3.5">
-      {error && <p className="text-sm text-danger-700">{error}</p>}
-      {notice && <p className="text-sm text-espresso-500">{notice}</p>}
-      <Button disabled={isPending} onClick={runSponsor} className="w-full">
-        Endorse this market
-      </Button>
+  const bar = (
+    <div className="mx-auto max-w-lg space-y-2.5">
+      {error && <p className="text-sm font-semibold text-danger-100">{error}</p>}
+      {notice && <p className="text-sm font-semibold text-paper-white/70">{notice}</p>}
+      <div className="flex gap-2.5">
+        <button
+          type="button"
+          disabled={isPending}
+          onClick={runSponsor}
+          className="flex-1 rounded-full bg-honey-500 px-5 py-[13px] text-[15px] font-extrabold whitespace-nowrap text-espresso-950 transition-colors hover:bg-honey-600 disabled:bg-honey-500/30 disabled:text-espresso-950/40"
+        >
+          Endorse it
+        </button>
+        <button
+          type="button"
+          onClick={() => router.push(`/groups/${groupId}`)}
+          className="shrink-0 rounded-full border border-white/18 bg-white/6 px-[18px] py-[13px] text-[15px] font-semibold whitespace-nowrap text-paper-white/75 transition-colors hover:bg-white/12"
+        >
+          Not now
+        </button>
+      </div>
     </div>
+  );
+
+  return (
+    <>
+      {/* Invisible in-flow twin reserving the pinned bar's real height, same trick BetslipBar
+          uses — see the long note there for why a guessed padding value drifts. */}
+      <div aria-hidden="true" className="invisible !m-0 px-5 pt-3.5 pb-4">
+        {bar}
+      </div>
+
+      <div aria-hidden="true" className="fixed inset-x-0 bottom-[var(--bottomnav-height)] z-20 !m-0 bg-espresso-900 pb-5" />
+
+      <div className="fixed inset-x-0 bottom-[var(--bottomnav-height)] z-30 !m-0 rounded-t-[20px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 px-5 pt-3.5 pb-4 shadow-[0_-14px_28px_-10px_rgba(28,19,13,0.4)]">
+        {bar}
+      </div>
+    </>
   );
 }

@@ -1,4 +1,7 @@
-export type ResolutionStage = 'pending_sponsor' | 'open' | 'closed' | 'disputed';
+import { CountdownTimer } from '@/components/ui/CountdownTimer';
+import { Mention } from '@/components/ui/Mention';
+
+export type ResolutionStage = 'pending_sponsor' | 'endorsing' | 'open' | 'closed' | 'proposed' | 'disputed';
 
 /** Static "what happens next" explainer — answers the question every in-flight market raises
  * (so when do I find out?) in one glance, replacing the resolution-window prose that used to
@@ -8,11 +11,24 @@ export type ResolutionStage = 'pending_sponsor' | 'open' | 'closed' | 'disputed'
 export function ResolutionTimeline({
   resolutionWindowHours,
   stage = 'closed',
+  proposerNickname,
+  bettingRunsUntil,
+  children,
 }: {
   resolutionWindowHours: number;
   stage?: ResolutionStage;
+  /** 'proposed' only — names who made the call in step 1 instead of a vague "someone". */
+  proposerNickname?: string;
+  /** 'endorsing' only — markets.closes_at, so step 1 can say how long betting will actually run. */
+  bettingRunsUntil?: string;
+  /** The stage's one action, rendered under a divider below the steps: "Propose result early"
+   * while open, "Challenge this call" once proposed. Never paired with descriptive text and
+   * never sharing a row — the steps above are the explanation. */
+  children?: React.ReactNode;
 }) {
   const windowLabel = resolutionWindowHours < 1 ? `${Math.round(resolutionWindowHours * 60)} minutes` : `${resolutionWindowHours} hours`;
+
+  const bettingWindowLabel = bettingRunsUntil ? <CountdownTimer target={bettingRunsUntil} prefix="" /> : 'a while';
 
   const proposeStep = (
     <>
@@ -41,9 +57,35 @@ export function ResolutionTimeline({
       ];
       currentIndex = 0;
       break;
+    // The same lifecycle as 'pending_sponsor', minus the endorsement step and rewritten from
+    // the endorser's own point of view — on the endorsement screen the viewer *is* step one, so
+    // listing it as something they're waiting on reads as though someone else has to act.
+    case 'endorsing':
+      steps = [
+        <>
+          Betting opens right away and runs for <strong className="text-espresso-900">{bettingWindowLabel}</strong>, unless
+          someone calls it early.
+        </>,
+        <>Someone proposes what happened, with proof if they have it.</>,
+        <>
+          The group gets {windowLabel} to challenge, then the pool pays out and the ticket unseals.
+        </>,
+      ];
+      currentIndex = 0;
+      break;
     case 'open':
       steps = [<>Betting is open until it closes, or someone proposes early.</>, proposeStep, challengeStep, payoutStep];
       currentIndex = 0;
+      break;
+    case 'proposed':
+      steps = [
+        <>
+          {proposerNickname ? <Mention nickname={proposerNickname} /> : 'Someone'} proposed what happened.
+        </>,
+        challengeStep,
+        payoutStep,
+      ];
+      currentIndex = 1;
       break;
     case 'disputed':
       steps = [
@@ -62,7 +104,9 @@ export function ResolutionTimeline({
 
   return (
     <div>
-      <p className="mb-2.5 text-[11.5px] font-extrabold tracking-[0.08em] text-espresso-400 uppercase">What happens next</p>
+      <p className="mb-2.5 text-[11.5px] font-extrabold tracking-[0.08em] text-espresso-400 uppercase">
+        {stage === 'endorsing' ? 'After you endorse' : 'What happens next'}
+      </p>
       <div className="flex flex-col">
         {steps.map((step, i) => {
           const isDone = i < currentIndex;
@@ -81,7 +125,7 @@ export function ResolutionTimeline({
                 {!isLast && <span className="w-[1.5px] flex-1 bg-espresso-100" />}
               </div>
               <p
-                className={`mb-3 text-[13.5px] leading-[1.4] ${
+                className={`text-[13.5px] leading-[1.4] ${isLast ? '' : 'mb-3'} ${
                   isCurrent ? 'text-espresso-700' : isDone ? 'text-espresso-600' : 'text-espresso-500'
                 }`}
               >
@@ -91,6 +135,7 @@ export function ResolutionTimeline({
           );
         })}
       </div>
+      {children && <div className="mt-3 border-t border-espresso-50 pt-3.5">{children}</div>}
     </div>
   );
 }
