@@ -200,3 +200,73 @@ describe('delete_account', () => {
     }
   });
 });
+
+describe('token allocation bounds', () => {
+  let users: Record<string, TestUser>;
+  let group: GroupRow;
+
+  beforeAll(async () => {
+    users = await createTestUsers('tokcap', ['owner']);
+    group = await setupGroup(users.owner, [], { seedAmount: 1000 });
+  });
+
+  afterAll(async () => {
+    await cleanupTestUsers(users);
+  });
+
+  function settingsCall(seedAmount: number) {
+    return users.owner.client.rpc('update_group_settings', {
+      p_group_id: group.id,
+      p_seed_amount: seedAmount,
+      p_seasons_enabled: false,
+      p_season_length: null,
+      p_timezone: 'UTC',
+      p_betting_enabled: true,
+      p_accepting_members: true,
+    });
+  }
+
+  test('create_group rejects an allocation outside 1..1,000,000', async () => {
+    for (const amount of [0, -50, 1_000_001]) {
+      const { error } = await users.owner.client.rpc('create_group', {
+        p_name: `cap ${amount}`,
+        p_seed_amount: amount,
+        p_seasons_enabled: false,
+        p_season_length: null,
+        p_nickname: 'owner',
+        p_timezone: 'UTC',
+      });
+      expect(error?.message).toMatch(/token allocation must be between/);
+    }
+  });
+
+  test('update_group_settings rejects the same values and accepts the cap itself', async () => {
+    const { error: tooBig } = await settingsCall(1_000_001);
+    expect(tooBig?.message).toMatch(/token allocation must be between/);
+
+    const { error: zero } = await settingsCall(0);
+    expect(zero?.message).toMatch(/token allocation must be between/);
+
+    const { error: atCap } = await settingsCall(1_000_000);
+    expect(atCap).toBeNull();
+
+    const { data: settings } = await adminClient.from('group_settings').select('seed_amount').eq('group_id', group.id).single();
+    expect(settings!.seed_amount).toBe(1_000_000);
+  });
+
+  test('a group already stored above the cap can still save its other settings', async () => {
+    // Only reachable by a row that predates the bound, so write it the way one
+    // of those rows got there: straight past the function.
+    await adminClient.from('group_settings').update({ seed_amount: 5_000_000 }).eq('group_id', group.id);
+
+    const { error: unchanged } = await settingsCall(5_000_000);
+    expect(unchanged).toBeNull();
+
+    // ...but it still can't be moved anywhere except back into range.
+    const { error: higher } = await settingsCall(6_000_000);
+    expect(higher?.message).toMatch(/token allocation must be between/);
+
+    const { error: backInRange } = await settingsCall(2000);
+    expect(backInRange).toBeNull();
+  });
+});

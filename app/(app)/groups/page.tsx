@@ -119,7 +119,7 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
                   <GroupAvatar
                     name={g.name}
                     avatarKey={g.avatar_key}
-                    className="h-10 w-10 rounded-[13px] text-[12.5px]"
+                    className="h-10 w-10 text-[12.5px]"
                     fallbackClassName={isLive ? 'bg-espresso-900 text-honey-300' : 'bg-espresso-50 text-espresso-500'}
                   />
                   <span className="min-w-0 flex-1">

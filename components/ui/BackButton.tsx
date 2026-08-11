@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { CaretLeftIcon } from '@/components/ui/icons';
 
 /**
  * Real browser-back, not a hardcoded destination — this page is reachable
@@ -16,9 +17,10 @@ export function BackButton({ fallbackHref = '/' }: { fallbackHref?: string }) {
         if (window.history.length > 1) router.back();
         else router.push(fallbackHref);
       }}
-      className="text-sm font-semibold text-espresso-500 hover:text-espresso-800"
+      className="-ml-1 inline-flex items-center gap-0.5 text-sm font-semibold text-espresso-500 hover:text-espresso-800"
     >
-      ← Back
+      <CaretLeftIcon className="h-4 w-4" />
+      Back
     </button>
   );
 }

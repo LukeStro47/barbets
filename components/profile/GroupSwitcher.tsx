@@ -31,7 +31,7 @@ export function GroupSwitcher({ groups, currentGroupId }: { groups: SwitcherGrou
         <GroupAvatar
           name={current.name}
           avatarKey={current.avatarKey}
-          className="h-11 w-11 rounded-2xl text-sm"
+          className="h-11 w-11 text-sm"
           fallbackClassName="bg-espresso-900 text-honey-300"
         />
         <span className="min-w-0 flex-1">
@@ -74,7 +74,7 @@ export function GroupSwitcher({ groups, currentGroupId }: { groups: SwitcherGrou
                   <GroupAvatar
                     name={g.name}
                     avatarKey={g.avatarKey}
-                    className="h-[30px] w-[30px] rounded-[10px] text-[10.5px]"
+                    className="h-[30px] w-[30px] text-[10.5px]"
                     fallbackClassName="bg-espresso-900 text-honey-300"
                   />
                   <span className="min-w-0 flex-1">

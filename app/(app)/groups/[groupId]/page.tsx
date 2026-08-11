@@ -277,7 +277,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
                 initials tile here would put a redundant "TG" chip next to a heading that already
                 says the group's name in full. */}
             {group!.avatar_key && (
-              <GroupAvatar name={group!.name} avatarKey={group!.avatar_key} className="h-9 w-9 rounded-xl" />
+              <GroupAvatar name={group!.name} avatarKey={group!.avatar_key} className="h-9 w-9" />
             )}
             <h1 className="min-w-0 font-display text-[29px] font-bold tracking-[-0.02em] text-espresso-950">{group!.name}</h1>
           </div>

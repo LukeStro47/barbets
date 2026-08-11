@@ -1,10 +1,14 @@
-/** Length caps on the free-text names people type, shared by the inputs that collect them and
+/** Caps on the free-text values people type, shared by the inputs that collect them and
     mirrored by the Postgres functions that store them (`create_group`/`rename_group`,
-    `create_market`) — the input's `maxLength` is the polite stop, the function's check is the
-    real one. Both count the trimmed string. */
+    `create_market`, `rename_season`, `update_group_settings`) — the input's `maxLength` (or
+    clamp) is the polite stop, the function's check is the real one. Lengths count the trimmed
+    string. */
 
 /** Matches the season name cap, and what the group rename input allowed before the server enforced anything. */
 export const GROUP_NAME_MAX_LENGTH = 60;
+
+/** Same 60 as a group name. Blank is still allowed, and clears back to the "Season N" fallback. */
+export const SEASON_NAME_MAX_LENGTH = 60;
 
 /** Deliberately generous: a title is a question, and the specifics of what counts as a win belong in
     the (uncapped) resolution criteria. Long enough that nobody writing a normal title meets it. */
@@ -14,3 +18,10 @@ export const MARKET_TITLE_MAX_LENGTH = 140;
     under every title from the first keystroke reads as a limit to write up to, which is the opposite
     of what the form asks for. */
 export const MARKET_TITLE_COUNTER_THRESHOLD = MARKET_TITLE_MAX_LENGTH - 30;
+
+/** Ceiling on `group_settings.seed_amount`, the per-member starting balance. Past this, every
+    balance, bet, and payout in the group renders at a scale the cards and push bodies weren't
+    built for. The floor is 1: the allocation input strips non-digits, so an emptied box submits 0,
+    which would seed a group nobody can ever bet in. */
+export const TOKEN_ALLOCATION_MAX = 1_000_000;
+export const TOKEN_ALLOCATION_MIN = 1;

@@ -5,11 +5,15 @@ export function formatTokens(n: number): string {
 
 /** Live comma-formatter for a "token allocation" text input as the user types — strips
  * anything that isn't a digit, then re-inserts thousands commas (e.g. "10a5,00" -> "1,500").
+ * Pass `max` to also clamp, which is what stops the field growing past the allocation cap the
+ * same way `maxLength` stops a name field: the keystroke just doesn't land. The server check in
+ * `update_group_settings`/`create_group` is still the real one.
  * Pair with `.replace(/,/g, '')` wherever the value is actually read/submitted. */
-export function formatTokenInputValue(raw: string): string {
+export function formatTokenInputValue(raw: string, max?: number): string {
   const digits = raw.replace(/\D/g, '');
   if (!digits) return '';
-  return Number(digits).toLocaleString('en-US');
+  const n = Number(digits);
+  return (max !== undefined && n > max ? max : n).toLocaleString('en-US');
 }
 
 /** Signed token amount for a net-gain/loss display — "+240" / "−85" (a real minus sign, not

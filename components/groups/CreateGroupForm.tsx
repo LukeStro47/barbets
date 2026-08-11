@@ -9,8 +9,8 @@ import { Switch } from '@/components/ui/Switch';
 import { JUST_JOINED_GROUP_KEY } from '@/components/pwa/PushReminderModal';
 import { formatSeasonLength, SEASON_LENGTH_HINTS, type SeasonLength } from '@/lib/seasonLength';
 import { COMMON_TIMEZONES, friendlyTimezoneName } from '@/lib/timezone';
-import { formatTokenInputValue } from '@/lib/formatNumber';
-import { GROUP_NAME_MAX_LENGTH } from '@/lib/limits';
+import { formatTokens, formatTokenInputValue } from '@/lib/formatNumber';
+import { GROUP_NAME_MAX_LENGTH, TOKEN_ALLOCATION_MAX } from '@/lib/limits';
 
 const inputClasses =
   'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-espresso-900 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
@@ -133,15 +133,15 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
         <div className="border-t border-espresso-100 pt-4">
           <Field
             label="Token allocation"
-            hint="Every member starts with this many tokens, both when they join and again at the start of each season."
+            hint={`Every member starts with this many tokens, both when they join and again at the start of each season. Up to ${formatTokens(TOKEN_ALLOCATION_MAX)}.`}
           >
             <input
               name="seedAmount"
               type="text"
               inputMode="numeric"
-              defaultValue={formatTokenInputValue(String(initialSeedAmount ?? 1000))}
+              defaultValue={formatTokenInputValue(String(initialSeedAmount ?? 1000), TOKEN_ALLOCATION_MAX)}
               onChange={(e) => {
-                const formatted = formatTokenInputValue(e.target.value);
+                const formatted = formatTokenInputValue(e.target.value, TOKEN_ALLOCATION_MAX);
                 if (formatted !== e.target.value) e.target.value = formatted;
               }}
               required

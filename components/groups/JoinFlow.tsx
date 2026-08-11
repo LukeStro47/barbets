@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/Card';
 import { StackedLogo } from '@/components/ui/StackedLogo';
 import { Modal } from '@/components/ui/Modal';
 import { JUST_JOINED_GROUP_KEY } from '@/components/pwa/PushReminderModal';
+import { CaretLeftIcon } from '@/components/ui/icons';
 
 const inputClasses =
   'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-center text-espresso-900 placeholder:text-espresso-300 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
@@ -117,8 +118,9 @@ export function JoinFlow({
         >
           Join {groupName}
         </Button>
-        <button type="button" onClick={() => setStep('confirm')} className="text-sm font-medium text-espresso-400 hover:text-espresso-700">
-          ← Back
+        <button type="button" onClick={() => setStep('confirm')} className="inline-flex items-center gap-0.5 text-sm font-medium text-espresso-400 hover:text-espresso-700">
+          <CaretLeftIcon className="h-4 w-4" />
+          Back
         </button>
       </Card>
     </div>

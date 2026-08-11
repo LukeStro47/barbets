@@ -5,6 +5,7 @@ import { notFoundIfEmpty } from '@/lib/errors';
 import { Badge } from '@/components/ui/Badge';
 import { RevealSummary } from '@/components/markets/RevealSummary';
 import { Mention } from '@/components/ui/Mention';
+import { CaretLeftIcon } from '@/components/ui/icons';
 import { STATUS_LABEL, STATUS_TONE } from '@/lib/marketStatus';
 import type { Market, MarketOption } from '@/lib/actions/markets';
 import type { ReactionEmoji } from '@/lib/actions/reactions';
@@ -89,8 +90,9 @@ export default async function RevealPage({ params }: { params: Promise<{ groupId
   return (
     <main className="mx-auto max-w-lg space-y-5 px-5 py-8">
       <div className="flex items-center justify-between gap-3">
-        <Link href={`/groups/${groupId}`} className="text-sm font-medium text-espresso-500 hover:text-espresso-700">
-          ← {group?.name ?? 'Group'}
+        <Link href={`/groups/${groupId}`} className="-ml-1 inline-flex min-w-0 items-center gap-0.5 text-sm font-medium text-espresso-500 hover:text-espresso-700">
+          <CaretLeftIcon className="h-4 w-4 shrink-0" />
+          <span className="truncate">{group?.name ?? 'Group'}</span>
         </Link>
         <Badge tone={STATUS_TONE[marketRow.status]}>{STATUS_LABEL[marketRow.status]}</Badge>
       </div>

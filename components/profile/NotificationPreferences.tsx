@@ -47,7 +47,7 @@ function GroupRow({ prefs, onSave }: { prefs: GroupNotificationPrefs; onSave: (n
           <GroupAvatar
             name={prefs.groupName}
             avatarKey={prefs.avatarKey}
-            className="h-8 w-8 rounded-[10px] text-[11px]"
+            className="h-8 w-8 text-[11px]"
             fallbackClassName="bg-espresso-900 text-honey-300"
           />
           <p className="truncate text-sm font-semibold text-espresso-800">{prefs.groupName}</p>

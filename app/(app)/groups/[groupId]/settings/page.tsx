@@ -81,7 +81,7 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
           <GroupAvatar
             name={group!.name}
             avatarKey={group!.avatar_key}
-            className="h-12 w-12 rounded-2xl text-sm"
+            className="h-12 w-12 text-sm"
             fallbackClassName="bg-espresso-900 text-honey-300"
           />
           <div>

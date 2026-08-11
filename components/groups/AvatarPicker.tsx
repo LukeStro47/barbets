@@ -34,7 +34,8 @@ export function AvatarPicker({ groupId, groupName, avatarKey }: { groupId: strin
     });
   }
 
-  const tileClasses = 'flex h-14 w-14 items-center justify-center overflow-hidden rounded-[16px] border-[1.5px] transition-colors';
+  // Circular to match GroupAvatar, so the tile you tap is the shape you get everywhere else.
+  const tileClasses = 'flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-[1.5px] transition-colors';
 
   return (
     <div className="space-y-2.5">

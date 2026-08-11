@@ -125,6 +125,16 @@ export function ChevronRightIcon({ className }: IconProps) {
   );
 }
 
+/** The back affordance in every top-left header. Same caret family as CaretUp/CaretDown rather
+ * than a full arrow glyph, so "back" reads as one consistent shape across the app. */
+export function CaretLeftIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 6l-6 6 6 6" />
+    </svg>
+  );
+}
+
 export function CaretUpIcon({ className }: IconProps) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">

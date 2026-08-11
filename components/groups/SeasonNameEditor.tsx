@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { renameSeason } from '@/lib/actions/seasons';
 import { Button } from '@/components/ui/Button';
+import { SEASON_NAME_MAX_LENGTH } from '@/lib/limits';
 
 /** Owner-only season name control, reused on the group settings page (naming the currently active
     season) and the intermission page (naming the one that's about to start). Blank clears back to
@@ -61,7 +62,7 @@ export function SeasonNameEditor({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder="e.g. Friday Game Night"
-          maxLength={60}
+          maxLength={SEASON_NAME_MAX_LENGTH}
           autoFocus
           className="min-w-0 flex-1 rounded-lg border border-espresso-200 bg-paper-white px-2.5 py-1.5 text-sm text-espresso-900 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200"
         />

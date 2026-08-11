@@ -124,6 +124,14 @@ describe('season naming', () => {
     expect(named!.name).toBe('Friday Game Night');
   });
 
+  test('a name over 60 characters is rejected', async () => {
+    const { error } = await users.owner.client.rpc('rename_season', { p_season_id: seasonId, p_name: 'x'.repeat(61) });
+    expect(error?.message).toMatch(/60 characters or fewer/);
+
+    const { error: atCap } = await users.owner.client.rpc('rename_season', { p_season_id: seasonId, p_name: 'x'.repeat(60) });
+    expect(atCap).toBeNull();
+  });
+
   test('a blank name clears back to the null fallback', async () => {
     const { error } = await users.owner.client.rpc('rename_season', { p_season_id: seasonId, p_name: '   ' });
     expect(error).toBeNull();

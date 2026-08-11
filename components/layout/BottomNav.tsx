@@ -8,6 +8,7 @@ import { PlusIcon } from '@/components/ui/icons';
 import { MARKET_TYPE_LABEL, MARKET_TYPE_DESCRIPTION, MARKET_TYPE_ICON, type MarketType } from '@/lib/marketType';
 import { getActiveNavTab, getRouteGroupId, shouldHideBottomNav, type NavTab } from '@/lib/navRoute';
 import { formatTokenInputValue } from '@/lib/formatNumber';
+import { GROUP_NAME_MAX_LENGTH, TOKEN_ALLOCATION_MAX } from '@/lib/limits';
 import { useKeyboardState } from '@/lib/useKeyboardInset';
 import { cn } from '@/lib/cn';
 import { GroupAvatar } from '@/components/ui/GroupAvatar';
@@ -250,7 +251,7 @@ export function BottomNav({
                     <GroupAvatar
                       name={g.name}
                       avatarKey={g.avatarKey}
-                      className="h-[34px] w-[34px] rounded-[11px] text-[11.5px]"
+                      className="h-[34px] w-[34px] text-[11.5px]"
                       fallbackClassName="bg-espresso-900 text-honey-300"
                     />
                     <span className="min-w-0 flex-1">
@@ -353,6 +354,7 @@ export function BottomNav({
                       value={groupName}
                       onChange={(e) => setGroupName(e.target.value)}
                       placeholder="The Wednesday Wagers"
+                      maxLength={GROUP_NAME_MAX_LENGTH}
                       className="mt-[3px] block w-full border-0 bg-transparent p-0 text-sm font-bold text-paper-white placeholder:text-paper-white/30 focus:outline-none"
                     />
                   </div>
@@ -362,7 +364,7 @@ export function BottomNav({
                       type="text"
                       inputMode="numeric"
                       value={groupSeedAmount}
-                      onChange={(e) => setGroupSeedAmount(formatTokenInputValue(e.target.value))}
+                      onChange={(e) => setGroupSeedAmount(formatTokenInputValue(e.target.value, TOKEN_ALLOCATION_MAX))}
                       className="mt-[3px] block w-full border-0 bg-transparent p-0 text-sm font-bold text-paper-white focus:outline-none"
                     />
                   </div>

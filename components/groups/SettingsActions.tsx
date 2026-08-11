@@ -12,6 +12,7 @@ import { formatSeasonLength, SEASON_LENGTH_HINTS, type SeasonLength } from '@/li
 import { COMMON_TIMEZONES, friendlyTimezoneName } from '@/lib/timezone';
 import { Mention } from '@/components/ui/Mention';
 import { formatTokens, formatTokenInputValue } from '@/lib/formatNumber';
+import { TOKEN_ALLOCATION_MAX } from '@/lib/limits';
 import type { GroupSettings } from '@/lib/actions/groups';
 
 const inputClasses =
@@ -165,16 +166,20 @@ export function EditSettingsForm({
           name="seedAmount"
           type="text"
           inputMode="numeric"
+          // Deliberately not clamped: a group stored above the cap before it existed keeps its
+          // figure here, so opening this form and saving something unrelated doesn't quietly
+          // rewrite the allocation. Typing in the field does clamp, and update_group_settings
+          // only enforces the bound on a value that changed.
           defaultValue={formatTokenInputValue(String(settings.seed_amount))}
           onChange={(e) => {
-            const formatted = formatTokenInputValue(e.target.value);
+            const formatted = formatTokenInputValue(e.target.value, TOKEN_ALLOCATION_MAX);
             if (formatted !== e.target.value) e.target.value = formatted;
           }}
           required
           className={inputClasses}
         />
         <p className="text-xs text-espresso-400">
-          Never changes anyone's current balance. Applies to new members joining from now on
+          Up to {formatTokens(TOKEN_ALLOCATION_MAX)}. Never changes anyone&apos;s current balance. Applies to new members joining from now on
           {settings.seasons_enabled ? ', and to everyone once the next season starts.' : '.'}
         </p>
       </div>

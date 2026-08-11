@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { CaretLeftIcon } from '@/components/ui/icons';
 
 export function PageHeader({
   title,
@@ -20,9 +21,12 @@ export function PageHeader({
     <div className="space-y-1">
       {(backHref || backAction) && (
         <div className="flex items-center justify-between gap-3">
+          {/* -ml-1 pulls the caret glyph's own padding back out, so the label still starts on the
+              page's left margin instead of sitting indented under the title. */}
           {backHref ? (
-            <Link href={backHref} className="text-sm font-medium text-espresso-500 hover:text-espresso-700">
-              ← {backLabel ?? 'Back'}
+            <Link href={backHref} className="-ml-1 inline-flex items-center gap-0.5 text-sm font-medium text-espresso-500 hover:text-espresso-700">
+              <CaretLeftIcon className="h-4 w-4" />
+              {backLabel ?? 'Back'}
             </Link>
           ) : (
             <span />
