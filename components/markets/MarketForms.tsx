@@ -20,6 +20,7 @@ import {
   parseLineInput,
   type LineFormat,
 } from '@/lib/units';
+import { MARKET_TITLE_MAX_LENGTH, MARKET_TITLE_COUNTER_THRESHOLD } from '@/lib/limits';
 
 const inputClasses =
   'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-espresso-900 placeholder:text-espresso-300 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
@@ -184,6 +185,7 @@ export function CreateMarketForm({
   const [isPending, startTransition] = useTransition();
   const [marketType, setMarketType] = useState<'yes_no' | 'over_under' | 'multiple_choice'>(initialMarketType ?? 'yes_no');
   const [subjects, setSubjects] = useState<MemberOption[]>([]);
+  const [titleLength, setTitleLength] = useState(0);
   const [options, setOptions] = useState<OptionDraft[]>(() => [newOption(), newOption()]);
   const [unit, setUnit] = useState('');
   const [otherUnit, setOtherUnit] = useState(false);
@@ -283,9 +285,17 @@ export function CreateMarketForm({
 
       <Card className="space-y-3">
         <div className="space-y-1.5">
-          <label className="block text-sm font-semibold text-espresso-700">Market title</label>
+          <div className="flex items-baseline justify-between gap-2">
+            <label className="block text-sm font-semibold text-espresso-700">Market title</label>
+            {titleLength >= MARKET_TITLE_COUNTER_THRESHOLD && (
+              <span className={`text-xs ${titleLength >= MARKET_TITLE_MAX_LENGTH ? 'text-danger-700' : 'text-espresso-400'}`}>
+                {titleLength}/{MARKET_TITLE_MAX_LENGTH}
+              </span>
+            )}
+          </div>
           <textarea
             name="title"
+            maxLength={MARKET_TITLE_MAX_LENGTH}
             placeholder={
               marketType === 'multiple_choice'
                 ? "Who's first to leave the party?"
@@ -299,6 +309,7 @@ export function CreateMarketForm({
               const el = e.currentTarget;
               el.style.height = 'auto';
               el.style.height = `${el.scrollHeight}px`;
+              setTitleLength(el.value.length);
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') e.preventDefault();

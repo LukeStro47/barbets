@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { renameGroup } from '@/lib/actions/groups';
 import { Button } from '@/components/ui/Button';
+import { GROUP_NAME_MAX_LENGTH } from '@/lib/limits';
 
 /** Owner-only group rename control, a trimmed SeasonNameEditor — a group always has a name
     (no nullable-with-fallback branch needed, unlike a season's "Season N" default). */
@@ -40,7 +41,7 @@ export function GroupNameEditor({ groupId, currentName }: { groupId: string; cur
         <input
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          maxLength={60}
+          maxLength={GROUP_NAME_MAX_LENGTH}
           autoFocus
           className="min-w-0 flex-1 rounded-lg border border-espresso-200 bg-paper-white px-2.5 py-1.5 text-sm text-espresso-900 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200"
         />

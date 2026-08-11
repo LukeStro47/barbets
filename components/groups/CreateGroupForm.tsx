@@ -10,6 +10,7 @@ import { JUST_JOINED_GROUP_KEY } from '@/components/pwa/PushReminderModal';
 import { formatSeasonLength, SEASON_LENGTH_HINTS, type SeasonLength } from '@/lib/seasonLength';
 import { COMMON_TIMEZONES, friendlyTimezoneName } from '@/lib/timezone';
 import { formatTokenInputValue } from '@/lib/formatNumber';
+import { GROUP_NAME_MAX_LENGTH } from '@/lib/limits';
 
 const inputClasses =
   'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-espresso-900 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
@@ -119,7 +120,14 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
 
       <Card className="space-y-4">
         <Field label="Group name" hint="What your friends will see when they get the invite.">
-          <input name="name" placeholder="The Wednesday Wagers" defaultValue={initialName} required className={inputClasses} />
+          <input
+            name="name"
+            placeholder="The Wednesday Wagers"
+            defaultValue={initialName}
+            required
+            maxLength={GROUP_NAME_MAX_LENGTH}
+            className={inputClasses}
+          />
         </Field>
 
         <div className="border-t border-espresso-100 pt-4">

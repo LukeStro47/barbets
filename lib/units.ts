@@ -4,7 +4,7 @@ export const OVER_UNDER_UNIT_PRESETS = ['$', 'min', 'hr', 'pts', '%'] as const;
 /** Long-pressing the `$` preset reveals these as extra one-tap options, instead of cluttering the default row with every currency up front. */
 export const OVER_UNDER_CURRENCY_ALTERNATES = ['£', '€'] as const;
 
-export const OVER_UNDER_UNIT_MAX_LENGTH = 12;
+export const OVER_UNDER_UNIT_MAX_LENGTH = 10;
 
 /** A custom unit typed inline next to the line input beyond this length wraps to its own full-width row instead — it stops comfortably fitting the compact inline box. */
 export const OVER_UNDER_UNIT_INLINE_MAX_LENGTH = 6;
@@ -16,7 +16,7 @@ const PREFIXED_UNITS = new Set(['$', '£', '€']);
     `unit` can still trail or prefix it); 'date'/'time' repurpose `markets.unit` itself as the format
     marker instead of a display suffix — mutually exclusive with a real unit, since a line can't be
     both "a date" and "5.5 min" at once. No schema change: `unit` already accepts arbitrary text up
-    to 12 characters for any over_under market, so these are just two more values it can hold. */
+    to 10 characters for any over_under market, so these are just two more values it can hold. */
 export type LineFormat = 'number' | 'date' | 'time';
 
 export function isLineFormatUnit(unit: string | null | undefined): unit is 'date' | 'time' {
