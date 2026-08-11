@@ -33,10 +33,12 @@ export function ProposeResolutionCard({
   market: Market;
   options: MarketOption[] | null;
   resolutionWindowHours: number;
-  /** 'waiting' — the market-closed screen's dashed "waiting on a result" empty state.
-   * 'embedded' — bare trigger button, no card/copy of its own, meant to sit inside another
-   * card (the "what happens next" timeline already explains what proposing does). Same modal
-   * underneath in every case. */
+  /** 'waiting' — the market-closed screen's dashed "waiting on a result" empty state, where
+   * proposing is the screen's whole job and so gets a filled button.
+   * 'embedded' — bare outlined trigger, no card, divider, or copy of its own, meant to be handed
+   * to ResolutionTimeline as its action. Outlined rather than filled because on an open market
+   * the primary action is betting, and this must never look like it belongs where betting does.
+   * Same modal underneath in every case. */
   variant?: 'default' | 'waiting' | 'embedded';
 }) {
   const router = useRouter();
@@ -192,11 +194,13 @@ export function ProposeResolutionCard({
           </Button>
         </Card>
       ) : variant === 'embedded' ? (
-        <div className="border-t border-espresso-50 pt-3.5">
-          <Button className="w-full" onClick={openModal}>
-            Propose the outcome
-          </Button>
-        </div>
+        <button
+          type="button"
+          onClick={openModal}
+          className="w-full rounded-full border border-espresso-200 px-4 py-2.5 text-sm font-semibold text-espresso-600 transition-colors hover:bg-espresso-50"
+        >
+          Propose result early
+        </button>
       ) : (
         <Card className="space-y-2">
           <p className="text-sm font-semibold text-espresso-700">Know what happened?</p>

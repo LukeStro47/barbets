@@ -169,6 +169,32 @@ describe('resolution criteria clarification requests', () => {
     expect(secondUpdateErr).toBeNull();
   });
 
+  test('both actions work while the market is still waiting on an endorsement', async () => {
+    // The endorsement screen's whole job is checking the question is fair before vouching for
+    // it, which is worth nothing if the endorser can't ask what a vague criterion means until
+    // after they've endorsed. Deliberately no sponsor_market call here.
+    const market = await createMarket(users.creator, group.id, { closesInMs: 3_600_000 });
+
+    const { error: askErr } = await users.asker.client.rpc('request_clarification', {
+      p_market_id: market.id,
+      p_question: 'Does a bar seat count as sitting down?',
+    });
+    expect(askErr).toBeNull();
+
+    const { error: updateErr } = await users.creator.client.rpc('update_resolution_criteria', {
+      p_market_id: market.id,
+      p_description: 'Tightened before anyone endorsed it.',
+    });
+    expect(updateErr).toBeNull();
+
+    const { data: market_after } = await adminClient.from('markets').select('status, description').eq('id', market.id).single();
+    expect(market_after?.status).toBe('pending_sponsor');
+    expect(market_after?.description).toBe('Tightened before anyone endorsed it.');
+
+    const { data: pendingAfter } = await adminClient.from('resolution_clarifications').select('id').eq('market_id', market.id);
+    expect(pendingAfter).toHaveLength(0);
+  });
+
   test('both actions are rejected once the market leaves open, even mid-conversation', async () => {
     const market = await createMarket(users.creator, group.id, { closesInMs: 3_600_000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
@@ -186,13 +212,13 @@ describe('resolution criteria clarification requests', () => {
       p_market_id: market.id,
       p_question: 'Too late now',
     });
-    expect(requestErr?.message).toMatch(/betting is open/);
+    expect(requestErr?.message).toMatch(/before betting closes/);
 
     // A pending request still exists from before the close, but the status gate is checked first.
     const { error: updateErr } = await users.creator.client.rpc('update_resolution_criteria', {
       p_market_id: market.id,
       p_description: 'Too late to edit',
     });
-    expect(updateErr?.message).toMatch(/betting is open/);
+    expect(updateErr?.message).toMatch(/before betting closes/);
   });
 });

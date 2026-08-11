@@ -85,22 +85,22 @@
   }
 }
 
-/* StatTile's "closing soon" state: the border breathes between transparent and
-   danger instead of the tile itself changing color — honey is already this
-   app's one accent (the "Line" tile, buttons), so reusing it here to mean
-   "hurry up" would make one color carry two different meanings. */
+/* The stat strip's "closing soon" state (ClosesInValue): the figure itself breathes
+   between its resting colour and danger. Deliberately not honey — honey is already
+   this app's one accent (money, the committing action), so reusing it here to mean
+   "hurry up" would make one colour carry two different meanings. Reduced motion
+   still gets the signal, just held rather than animated. */
 @keyframes stat-urgent-breathe {
-  0%, 100% { border-color: transparent; }
-  50% { border-color: var(--color-danger-500); }
+  0%, 100% { color: inherit; }
+  50% { color: var(--color-danger-500); }
 }
 .animate-urgent-breathe {
-  border: 1.5px solid transparent;
   animation: stat-urgent-breathe 2.4s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
   .animate-urgent-breathe {
     animation: none;
-    border-color: var(--color-danger-500);
+    color: var(--color-danger-500);
   }
 }
 
