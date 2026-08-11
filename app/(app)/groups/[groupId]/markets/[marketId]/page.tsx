@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/Card';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { PoolStrip } from '@/components/markets/PoolStrip';
 import { ClosesInValue } from '@/components/markets/ClosesInValue';
+import { BonusPoolValue } from '@/components/markets/BonusPoolValue';
 import { FinalOddsCard } from '@/components/markets/FinalOddsCard';
 import {
   YourPositionCard,
@@ -286,18 +287,12 @@ export default async function MarketDetailPage({
     />
   );
 
-  const bonusPoolNote = marketRow.bonus_pool > 0 && (
-    <p className="text-xs font-semibold text-espresso-400">
-      Includes {formatTokens(marketRow.bonus_pool)} bonus tokens from an earlier resolution
-      {marketRow.carried_bonus_pool > 0 && marketRow.carried_bonus_pool !== marketRow.bonus_pool
-        ? ` (${formatTokens(marketRow.carried_bonus_pool)} carried in at creation)`
-        : ''}
-      .
-    </p>
-  );
-
-  const ownerVoidNote =
-    'The group owner can void this market at any time and refund every stake. If the owner is hidden as a subject here, the creator can void it instead.';
+  // Says who can actually void *this* market, not the general rule. The creator-fallback only
+  // exists when the owner is themself a subject here (void_market_by_owner is unreachable for
+  // them), so mentioning it on every other market was small print about a case that didn't apply.
+  const ownerVoidNote = ownerIsSubject
+    ? "The group owner is hidden as a subject here, so only the market's creator can void it and refund every stake."
+    : 'Only the group owner can void this market and refund every stake, at any time.';
 
   // ── Endorsement (1a) ──────────────────────────────────────────────────────────────────────
   // One thing to judge, one thing to do. The creator can't endorse their own market, so they get
@@ -362,6 +357,13 @@ export default async function MarketDetailPage({
   if (isOpen) {
     const stakedRows: PositionTicketRow[] = computeStakedPositions(myBets, optionLabelById);
     const hasPosition = stakedRows.length > 0;
+    const staked = openBetVolume ?? 0;
+
+    // A bonus pool takes the strip's one exception to three cells. get_open_bet_volume sums bets
+    // and nothing else, so the Pool figure has to add the bonus in here — and once the strip
+    // states the true total, the note that used to sit under it explaining the difference has
+    // nothing left to explain. The Bonus cell's own figure carries that story instead.
+    const hasBonus = marketRow.bonus_pool > 0;
 
     return (
       <BetslipProvider>
@@ -369,13 +371,27 @@ export default async function MarketDetailPage({
           {header}
 
           <PoolStrip
-            cells={[
-              { label: 'Pool', value: formatTokens(openBetVolume ?? 0) },
-              { label: 'Bets', value: openBetCount ?? 0 },
-              { label: 'Closes in', value: <ClosesInValue closesAt={marketRow.closes_at} /> },
-            ]}
+            cells={
+              hasBonus
+                ? [
+                    { label: 'Pool', value: formatTokens(staked + marketRow.bonus_pool), flex: 1.15 },
+                    {
+                      label: 'Bonus',
+                      value: <BonusPoolValue bonusPool={marketRow.bonus_pool} staked={staked} />,
+                      tone: 'honey',
+                      highlight: true,
+                      flex: 1,
+                    },
+                    { label: 'Bets', value: openBetCount ?? 0, flex: 0.85 },
+                    { label: 'Closes', value: <ClosesInValue closesAt={marketRow.closes_at} />, flex: 1.25 },
+                  ]
+                : [
+                    { label: 'Pool', value: formatTokens(staked) },
+                    { label: 'Bets', value: openBetCount ?? 0 },
+                    { label: 'Closes in', value: <ClosesInValue closesAt={marketRow.closes_at} /> },
+                  ]
+            }
           />
-          {bonusPoolNote}
 
           {hasPosition ? (
             <PositionTicket
@@ -416,13 +432,13 @@ export default async function MarketDetailPage({
                 market={marketRow}
                 options={marketOptions}
                 resolutionWindowHours={resolutionWindowHours}
-                variant="embedded"
               />
             </ResolutionTimeline>
           </Card>
 
           <BetslipBar
             groupId={groupId}
+            groupName={groupName}
             market={marketRow}
             balance={balance}
             options={marketOptions}
@@ -478,12 +494,11 @@ export default async function MarketDetailPage({
           proposerNickname={proposerNickname}
           justification={proposal.justification}
           hasPhoto={!!proposal.photo_path}
+          positionRows={rows}
           sideOdds={!isMultipleChoice ? (odds ?? undefined) : undefined}
           optionOdds={isMultipleChoice ? (optionOdds ?? undefined) : undefined}
           lineLabel={lineLabel}
         />
-
-        <PositionTicket rows={rows} meta={kindLabel} />
 
         <SettlementCard description={marketRow.description} />
 
@@ -525,15 +540,15 @@ export default async function MarketDetailPage({
             myBets={myBets}
           />
           <SettlementCard description={marketRow.description} />
-          <ProposeResolutionCard
-            groupId={groupId}
-            market={marketRow}
-            options={marketOptions}
-            resolutionWindowHours={resolutionWindowHours}
-            variant="waiting"
-          />
           <Card>
-            <ResolutionTimeline resolutionWindowHours={resolutionWindowHours} />
+            <ResolutionTimeline resolutionWindowHours={resolutionWindowHours}>
+              <ProposeResolutionCard
+                groupId={groupId}
+                market={marketRow}
+                options={marketOptions}
+                resolutionWindowHours={resolutionWindowHours}
+              />
+            </ResolutionTimeline>
           </Card>
         </>
       )}

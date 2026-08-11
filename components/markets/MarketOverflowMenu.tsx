@@ -28,13 +28,21 @@ export function MarketOverflowMenu({ groupId, marketId, isOwner, isCreator, owne
 
   return (
     <>
+      {/* Three drawn dots rather than a "···" text glyph. As text it sat high in its circle and
+          needed a padding nudge to fake centring, which only held for one font at one size —
+          the glyph's own vertical position inside its em box is the font's decision, not ours.
+          An SVG has no baseline to fight. */}
       <button
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Market options"
-        className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-espresso-50 pb-1.5 text-base font-extrabold tracking-[0.06em] text-espresso-500"
+        className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-espresso-50 text-espresso-500 transition-colors hover:bg-espresso-100"
       >
-        ···
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
+          <circle cx="2" cy="7" r="1.5" />
+          <circle cx="7" cy="7" r="1.5" />
+          <circle cx="12" cy="7" r="1.5" />
+        </svg>
       </button>
       {open && (
         <Modal onClose={() => setOpen(false)}>

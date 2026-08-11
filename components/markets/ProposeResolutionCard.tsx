@@ -7,39 +7,38 @@ import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { proposeResolution } from '@/lib/actions/resolution';
 import { compressImage } from '@/lib/compressImage';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
+import { TicketCard } from '@/components/markets/TicketCard';
 import { OptionLabel } from '@/components/markets/OptionLabel';
-import { CameraIcon, ImageIcon, ClockIcon } from '@/components/ui/icons';
+import { CameraIcon, CheckIcon, ImageIcon } from '@/components/ui/icons';
+import { formatLine } from '@/lib/units';
+import { cn } from '@/lib/cn';
 import type { Market, MarketOption } from '@/lib/actions/markets';
 
 const inputClasses =
   'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-espresso-900 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
 
-/** Its own card, deliberately set apart from the resolution-criteria card above it on the market
-    page — proposing is a distinct, consequential action (locks betting immediately, or starts
-    the finalize clock), not just more market metadata to skim past. One button opens a two-step
-    modal, pick the answer, then review a plain-language consequence before confirming, whether
-    the market is still `open` (an early close) or already `closed`; there's no separate inline
-    flow for either case anymore. */
+/**
+ * The "propose what happened" trigger and its two-step modal (pick the answer, then read a
+ * plain-language consequence before confirming). Works the same whether the market is still
+ * `open` (proposing closes betting immediately for everyone) or already `closed`; only the
+ * button's wording changes.
+ *
+ * Renders as a bare outlined button with no card, divider, or copy of its own, because it is
+ * always handed to `ResolutionTimeline` as that stage's one action — the steps directly above it
+ * are the explanation, so repeating them here would say the same thing twice. Outlined rather
+ * than filled so that on an open market it never looks like it belongs where betting does.
+ */
 export function ProposeResolutionCard({
   groupId,
   market,
   options,
   resolutionWindowHours,
-  variant = 'default',
 }: {
   groupId: string;
   market: Market;
   options: MarketOption[] | null;
   resolutionWindowHours: number;
-  /** 'waiting' — the market-closed screen's dashed "waiting on a result" empty state, where
-   * proposing is the screen's whole job and so gets a filled button.
-   * 'embedded' — bare outlined trigger, no card, divider, or copy of its own, meant to be handed
-   * to ResolutionTimeline as its action. Outlined rather than filled because on an open market
-   * the primary action is betting, and this must never look like it belongs where betting does.
-   * Same modal underneath in every case. */
-  variant?: 'default' | 'waiting' | 'embedded';
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -121,9 +120,22 @@ export function ProposeResolutionCard({
   }
 
   const sides = market.market_type === 'yes_no' ? (['yes', 'no'] as const) : (['over', 'under'] as const);
-  const choiceLabels: { value: string; label: string }[] = isMultipleChoice
-    ? [...(options ?? []).map((o) => ({ value: o.id, label: o.label })), { value: 'void', label: 'VOID' }]
-    : [...sides.map((s) => ({ value: s, label: s.toUpperCase() })), { value: 'void', label: 'VOID' }];
+  const lineLabel = market.market_type === 'over_under' ? formatLine(market.line, market.unit) : null;
+  /** VOID is deliberately not in this list — it is a real choice but not a real outcome, so it
+   * renders under its own divider rather than as a fourth peer. */
+  const outcomeChoices: { value: string; label: string }[] = isMultipleChoice
+    ? (options ?? []).map((o) => ({ value: o.id, label: o.label }))
+    : sides.map((s) => ({ value: s, label: `${s.toUpperCase()}${lineLabel ? ` ${lineLabel}` : ''}` }));
+  const choiceLabels = [...outcomeChoices, { value: 'void', label: 'VOID' }];
+
+  const kindLabel = isMultipleChoice
+    ? `One of ${(options ?? []).length} options`
+    : market.market_type === 'over_under'
+      ? `Over / Under · line ${lineLabel}`
+      : 'Yes / No';
+
+  // Same rule ResolutionTimeline uses, so the two never disagree about the same window.
+  const windowLabel = resolutionWindowHours < 1 ? `${Math.round(resolutionWindowHours * 60)} minutes` : `${resolutionWindowHours} hours`;
 
   function proposalChoiceFor(value: string) {
     return isMultipleChoice && value !== 'void'
@@ -176,140 +188,176 @@ export function ProposeResolutionCard({
 
   return (
     <>
-      {variant === 'waiting' ? (
-        <Card className="space-y-3.5 !rounded-[20px] !border !border-dashed !border-espresso-200">
-          <div className="flex items-start gap-2.5">
-            <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] bg-espresso-50 text-espresso-600">
-              <ClockIcon className="h-[17px] w-[17px]" />
-            </span>
-            <div className="flex-1 space-y-0.5">
-              <p className="text-[15.5px] font-extrabold text-espresso-950">Waiting on a result</p>
-              <p className="text-[13.5px] leading-[1.45] text-espresso-500">
-                Nobody's said how it went yet. Anyone who knows can call it, including you.
-              </p>
-            </div>
-          </div>
-          <Button className="w-full" onClick={openModal}>
-            Propose the outcome
-          </Button>
-        </Card>
-      ) : variant === 'embedded' ? (
-        <button
-          type="button"
-          onClick={openModal}
-          className="w-full rounded-full border border-espresso-200 px-4 py-2.5 text-sm font-semibold text-espresso-600 transition-colors hover:bg-espresso-50"
-        >
-          Propose result early
-        </button>
-      ) : (
-        <Card className="space-y-2">
-          <p className="text-sm font-semibold text-espresso-700">Know what happened?</p>
-          <p className="text-xs text-espresso-500">
-            {market.status === 'open'
-              ? 'Proposing now closes betting immediately for everyone, then starts the clock for a challenge.'
-              : `Propose what happened and other members get ${resolutionWindowHours}h to challenge it before it's final.`}
-          </p>
-          <Button variant="outline" className="w-full" onClick={openModal}>
-            Propose the outcome
-          </Button>
-        </Card>
-      )}
+      {/* "early" only while betting is still open, where proposing is what closes it. On an
+          already-closed market there is nothing early about it — it is just the next step. */}
+      <button
+        type="button"
+        onClick={openModal}
+        className="w-full rounded-full border border-espresso-200 px-4 py-2.5 text-sm font-semibold text-espresso-600 transition-colors hover:bg-espresso-50"
+      >
+        {market.status === 'open' ? 'Propose result early' : 'Propose the outcome'}
+      </button>
 
       {modalOpen && (
-        <Modal onClose={closeModal}>
+        <Modal onClose={closeModal} padded={false} panelClassName="max-h-[85dvh] overflow-x-hidden overflow-y-auto">
+          <div className="flex items-center justify-between gap-3 bg-espresso-50 px-[18px] py-[13px]">
+            <p className="text-xs font-extrabold tracking-[0.06em] text-espresso-800 uppercase">Call the result</p>
+            <p className="shrink-0 text-xs font-semibold text-espresso-500">Step {step === 'choose' ? 1 : 2} of 2</p>
+          </div>
+
           {step === 'choose' ? (
             <>
-              <p className="font-display text-lg font-bold text-espresso-900">What actually happened?</p>
-              {error && <p className="text-sm text-danger-700">{error}</p>}
-              <div className="flex flex-wrap gap-2">
-                {choiceLabels.map((c) => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    onClick={() => setProposeOutcome(c.value)}
-                    className={`rounded-full border px-4 py-1.5 text-sm font-semibold uppercase ${
-                      proposeOutcome === c.value ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-600'
-                    }`}
-                  >
-                    <OptionLabel label={c.label} />
-                  </button>
-                ))}
-              </div>
-              <textarea
-                value={justification}
-                onChange={(e) => setJustification(e.target.value)}
-                placeholder="Short justification (optional, but helps everyone trust the call)"
-                rows={2}
-                className={inputClasses}
-              />
-
-              <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
-              <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoChange} className="hidden" />
-              {photoPreview ? (
-                <div className="flex items-center gap-3">
-                  <img src={photoPreview} alt="Proof preview" className="h-16 w-16 rounded-lg object-cover" />
-                  <Button type="button" variant="outline" size="sm" onClick={removePhoto}>
-                    Remove photo
-                  </Button>
+              <div className="flex flex-col gap-3.5 p-[18px]">
+                <div>
+                  <p className="font-display text-[19px] font-extrabold tracking-[-0.01em] text-espresso-900">
+                    What actually happened?
+                  </p>
+                  <p className="mt-1 text-[13.5px] leading-[1.45] text-espresso-500">
+                    This is the result, not a bet. Pick what the group should settle on.
+                  </p>
                 </div>
-              ) : (
-                <div className="space-y-1.5">
-                  <p className="text-xs text-espresso-400">Proof photo (optional)</p>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={photoBusy}
-                      onClick={handleTakePhotoClick}
-                      className="inline-flex flex-1 items-center justify-center gap-2"
+
+                {error && <p className="text-sm text-danger-700">{error}</p>}
+
+                {/* Rows rather than a wrap of pills: this is the one irreversible choice in the
+                    flow, and a row per outcome makes "which one is selected" readable without
+                    hunting for a colour change on a small chip. */}
+                <div className="flex flex-col gap-2">
+                  {outcomeChoices.map((c) => (
+                    <OutcomeRow
+                      key={c.value}
+                      selected={proposeOutcome === c.value}
+                      onClick={() => setProposeOutcome(c.value)}
                     >
-                      <CameraIcon className="h-4 w-4" />
-                      {photoBusy ? 'Processing…' : 'Take a photo'}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={photoBusy}
-                      onClick={handleChoosePhotoClick}
-                      className="inline-flex flex-1 items-center justify-center gap-2"
-                    >
-                      <ImageIcon className="h-4 w-4" />
-                      Choose photo
-                    </Button>
+                      <span className="min-w-0 flex-1 text-left text-[15.5px] font-extrabold tracking-[0.02em]">
+                        <OptionLabel label={c.label} />
+                      </span>
+                    </OutcomeRow>
+                  ))}
+
+                  {/* VOID refunds everyone rather than settling anything, so it sits under a
+                      divider and in a dashed outline: available, but never mistaken for one of
+                      the market's own answers. */}
+                  <div className="border-t border-espresso-50 pt-2.5">
+                    <OutcomeRow selected={proposeOutcome === 'void'} onClick={() => setProposeOutcome('void')} dashed>
+                      <span className="min-w-0 flex-1 text-left">
+                        <span className="block text-sm font-extrabold tracking-[0.02em]">VOID</span>
+                        <span className="block text-xs text-espresso-400">Refunds bets</span>
+                      </span>
+                    </OutcomeRow>
                   </div>
                 </div>
-              )}
 
-              <div className="flex gap-2 pt-1">
+                <div className="flex flex-col gap-1.5">
+                  <p className="text-[11.5px] font-extrabold tracking-[0.08em] text-espresso-400 uppercase">Why, optional</p>
+                  <textarea
+                    value={justification}
+                    onChange={(e) => setJustification(e.target.value)}
+                    placeholder="Helps everyone trust the call"
+                    rows={2}
+                    className={inputClasses}
+                  />
+
+                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
+                  <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoChange} className="hidden" />
+                  {photoPreview ? (
+                    <div className="flex items-center gap-3">
+                      <img src={photoPreview} alt="Proof preview" className="h-16 w-16 rounded-lg object-cover" />
+                      <Button type="button" variant="outline" size="sm" onClick={removePhoto}>
+                        Remove photo
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={photoBusy}
+                        onClick={handleTakePhotoClick}
+                        className="inline-flex flex-1 items-center justify-center gap-2"
+                      >
+                        <CameraIcon className="h-4 w-4" />
+                        {photoBusy ? 'Processing…' : 'Take a photo'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={photoBusy}
+                        onClick={handleChoosePhotoClick}
+                        className="inline-flex flex-1 items-center justify-center gap-2"
+                      >
+                        <ImageIcon className="h-4 w-4" />
+                        Choose photo
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-2 border-t border-espresso-50 px-[18px] py-[14px]">
                 <Button type="button" variant="outline" className="flex-1" onClick={closeModal}>
                   Cancel
                 </Button>
                 <Button type="button" className="flex-1" disabled={!proposeOutcome || photoBusy} onClick={() => setStep('review')}>
-                  Review
+                  Review the call
                 </Button>
               </div>
             </>
           ) : (
             <>
-              <p className="font-display text-lg font-bold text-espresso-900">Review your proposal</p>
-              <p className="text-sm text-espresso-600">
-                You're proposing <OptionLabel label={chosenLabel} /> is what actually happened, not placing a bet.
-              </p>
-              {justification && <p className="rounded-lg bg-espresso-50 p-2.5 text-sm text-espresso-600">{justification}</p>}
-              {photoPreview && <img src={photoPreview} alt="Proof preview" className="h-16 w-16 rounded-lg object-cover" />}
-              {error && <p className="text-sm text-danger-700">{error}</p>}
-              <p className="text-xs font-semibold text-danger-700">
-                {market.status === 'open'
-                  ? 'Betting is still open, so this locks it for everyone right now. '
-                  : 'Betting is already closed. '}
-                Other members get {resolutionWindowHours}h to challenge it before it's final.
-              </p>
-              <div className="flex gap-2 pt-1">
+              <div className="flex flex-col gap-3.5 p-[18px]">
+                <div>
+                  <p className="font-display text-[19px] font-extrabold tracking-[-0.01em] text-espresso-900">
+                    Confirm what you're calling
+                  </p>
+                  <p className="mt-1 text-[13.5px] leading-[1.45] text-espresso-500">{market.title}</p>
+                </div>
+
+                {/* The call restated as the same outlined ticket the market page uses for "the
+                    thing you're deciding about", stock shell and all — reusing that exact outline
+                    is the whole point, so what you confirm looks like what the group will read. */}
+                <TicketCard label="You're calling it" meta={kindLabel} bodyClassName="flex flex-col gap-2.5">
+                  <p className="font-display text-[30px] leading-none font-extrabold tracking-[-0.02em] text-espresso-950">
+                    <OptionLabel label={chosenLabel} />
+                  </p>
+                  {justification && (
+                    <p className="border-l-2 border-espresso-100 pl-2.5 text-[13.5px] leading-[1.45] text-espresso-600">
+                      {justification}
+                    </p>
+                  )}
+                  {photoPreview && <img src={photoPreview} alt="Proof preview" className="h-14 w-14 rounded-[10px] object-cover" />}
+                </TicketCard>
+
+                {error && <p className="text-sm text-danger-700">{error}</p>}
+
+                <div>
+                  <p className="mb-2 text-[11.5px] font-extrabold tracking-[0.08em] text-espresso-400 uppercase">What this does</p>
+                  <div className="flex flex-col gap-2">
+                    <ConsequenceRow dotClassName="bg-danger-500">
+                      {market.status === 'open' ? (
+                        <>
+                          Betting is still open, so this <strong className="font-bold text-danger-700">locks it for everyone right now</strong>.
+                        </>
+                      ) : (
+                        <>Betting is already closed, so nothing changes for bettors.</>
+                      )}
+                    </ConsequenceRow>
+                    <ConsequenceRow dotClassName="bg-espresso-800">
+                      The group gets <strong className="font-bold text-espresso-900">{windowLabel} to challenge</strong> your call.
+                    </ConsequenceRow>
+                    <ConsequenceRow dotClassName="bg-espresso-200">
+                      No challenge and it's final: the pool pays out and the ticket unseals.
+                    </ConsequenceRow>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2 border-t border-espresso-50 px-[18px] py-[14px]">
                 <Button type="button" variant="outline" className="flex-1" disabled={isPending} onClick={() => setStep('choose')}>
                   Back
                 </Button>
-                <Button type="button" className="flex-1" disabled={isPending} onClick={submit}>
-                  Confirm
+                <Button type="button" className="flex-1 truncate" disabled={isPending} onClick={submit}>
+                  Confirm {chosenLabel}
                 </Button>
               </div>
             </>
@@ -317,5 +365,54 @@ export function ProposeResolutionCard({
         </Modal>
       )}
     </>
+  );
+}
+
+/** One selectable outcome in step 1. Selection is carried by the filled honey radio *and* the
+ * row's own border/background, so it survives a glance rather than needing a second look. */
+function OutcomeRow({
+  selected,
+  onClick,
+  dashed,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  dashed?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex w-full items-center gap-3 rounded-[14px] border-[1.5px] px-3.5 transition-colors',
+        dashed ? 'border-dashed py-[11px]' : 'py-[13px]',
+        selected
+          ? 'border-honey-500 bg-honey-50 text-espresso-900'
+          : `bg-paper-white text-espresso-600 ${dashed ? 'border-espresso-200' : 'border-espresso-100'}`
+      )}
+    >
+      <span
+        className={cn(
+          'flex h-5 w-5 shrink-0 items-center justify-center rounded-full',
+          selected ? 'bg-honey-500' : 'border-[1.5px] border-espresso-200'
+        )}
+      >
+        {selected && <CheckIcon className="h-[13px] w-[13px] text-espresso-950" />}
+      </span>
+      {children}
+    </button>
+  );
+}
+
+/** A single ranked consequence on step 2. The dot's colour is the ranking: red for the thing
+ * that happens to other people immediately, dark for the window, faint for the eventual end. */
+function ConsequenceRow({ dotClassName, children }: { dotClassName: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <span className={cn('mt-[5px] h-[7px] w-[7px] shrink-0 rounded-full', dotClassName)} />
+      <p className="text-[13.5px] leading-[1.4] text-espresso-700">{children}</p>
+    </div>
   );
 }

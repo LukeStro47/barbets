@@ -10,6 +10,7 @@ import { SubjectPicker, type MemberOption } from '@/components/markets/SubjectPi
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { TimezoneCaption } from '@/components/ui/TimezoneCaption';
 import { Mention } from '@/components/ui/Mention';
+import { InfoIcon } from '@/components/ui/icons';
 import { MARKET_TYPE_ICON, MARKET_TYPE_LABEL, MARKET_TYPE_DESCRIPTION } from '@/lib/marketType';
 import {
   OVER_UNDER_UNIT_PRESETS,
@@ -481,11 +482,6 @@ export function CreateMarketForm({
       <Button type="submit" disabled={isPending} className="w-full" size="lg">
         {isPending ? 'Creating…' : 'Create market'}
       </Button>
-      <p className="text-center text-xs text-espresso-400">
-        {requireEndorsement
-          ? 'One other member needs to endorse this before it opens. Unendorsed markets expire after 24 hours.'
-          : "This group doesn't require endorsement, so it opens for betting immediately."}
-      </p>
 
       {pendingFormData && (
         <ReviewMarketModal
@@ -496,6 +492,7 @@ export function CreateMarketForm({
           unit={unit}
           lineFormat={lineFormat}
           timezone={timezone}
+          requireEndorsement={requireEndorsement}
           onEdit={() => setPendingFormData(null)}
           onConfirm={() => {
             const formData = pendingFormData;
@@ -508,6 +505,26 @@ export function CreateMarketForm({
   );
 }
 
+/** One divided field row in the review ticket. Rows are separated rather than stacked so a long
+ * criteria paragraph can't visually merge with the close time under it. */
+function ReviewRow({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`border-t border-espresso-50 px-[18px] py-[13px] ${className ?? ''}`}>
+      <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase">{label}</p>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * The last check before `createMarket`, shaped as the ticket the market is about to become: the
+ * same outlined shell, header band and title treatment the group will see on the market page, so
+ * what you confirm resembles what you're publishing rather than a form summary of it.
+ *
+ * The endorsement rule lives here too. It used to be small print under the submit button, where
+ * it explained a consequence of an action nobody had taken yet; on the confirmation step it is
+ * the last thing read before the market exists.
+ */
 function ReviewMarketModal({
   formData,
   marketType,
@@ -516,6 +533,7 @@ function ReviewMarketModal({
   unit,
   lineFormat,
   timezone,
+  requireEndorsement,
   onEdit,
   onConfirm,
 }: {
@@ -526,6 +544,7 @@ function ReviewMarketModal({
   unit: string;
   lineFormat: LineFormat;
   timezone: string;
+  requireEndorsement: boolean;
   onEdit: () => void;
   onConfirm: () => void;
 }) {
@@ -537,98 +556,97 @@ function ReviewMarketModal({
   const displayUnit = lineFormat === 'number' ? unit.trim() || null : lineFormat;
   const lineIsWholeNumber = lineFormat === 'number' && line !== null && Number.isInteger(line);
 
+  const kindLabel =
+    marketType === 'yes_no' ? 'Yes / No' : marketType === 'over_under' ? 'Over / Under' : `One of ${options.length} options`;
+
+  const subjectChips = subjects.map((s) => (
+    <span key={s.userId} className="inline-flex items-center rounded-full bg-espresso-50 px-[11px] py-[5px] text-[13px] font-semibold">
+      <Mention nickname={s.nickname} />
+    </span>
+  ));
+
   return (
-    <Modal onClose={onEdit}>
-      <div className="space-y-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">Review your market</p>
-          <p className="mt-1 font-display text-lg font-bold text-espresso-900">{title}</p>
-        </div>
+    <Modal
+      onClose={onEdit}
+      padded={false}
+      panelClassName="max-h-[85dvh] overflow-x-hidden overflow-y-auto border-[1.5px] border-espresso-800"
+    >
+      <div className="flex items-center justify-between gap-3 bg-espresso-50 px-[18px] py-[11px]">
+        <p className="text-xs font-extrabold tracking-[0.06em] text-espresso-800 uppercase">Review your market</p>
+        <p className="shrink-0 text-xs font-semibold text-espresso-500">{kindLabel}</p>
+      </div>
 
-        <div className="space-y-2 text-sm">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">Resolution criteria</p>
-            <p className="text-espresso-700">{description}</p>
-          </div>
+      <div className="px-[18px] pt-4 pb-1">
+        <p className="font-display text-[21px] leading-[1.2] font-extrabold tracking-[-0.01em] text-espresso-950 text-pretty">
+          {title}
+        </p>
+      </div>
 
-          {marketType === 'over_under' && (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">Line</p>
-              <p className="text-espresso-700">{formatLine(line, displayUnit)}</p>
-              {lineIsWholeNumber && (
-                <p className="mt-1 rounded-lg bg-honey-50 px-2.5 py-1.5 text-xs text-honey-800">
-                  A whole number can land on an exact tie, which the group would have to resolve as VOID. A half
-                  (like 3.5) avoids that entirely.
-                </p>
-              )}
-            </div>
-          )}
+      <ReviewRow label="How it settles">
+        <p className="mt-1 text-sm leading-[1.45] text-espresso-700 text-pretty">{description}</p>
+      </ReviewRow>
 
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">Betting closes</p>
-            <p className="text-espresso-700">
-              {closesAtDate.toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+      {marketType === 'over_under' && (
+        <ReviewRow label="The line">
+          <p className="mt-1 text-[15px] font-extrabold text-espresso-950">{formatLine(line, displayUnit)}</p>
+          {lineIsWholeNumber && (
+            <p className="mt-1.5 rounded-lg bg-honey-50 px-2.5 py-1.5 text-xs text-honey-800">
+              A whole number can land on an exact tie, which the group would have to resolve as VOID. A half (like 3.5)
+              avoids that entirely.
             </p>
-            <TimezoneCaption groupTimezone={timezone} />
-          </div>
-
-          {marketType === 'multiple_choice' ? (
-            <>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">Options</p>
-                <ul className="mt-1 space-y-1">
-                  {options.map((o) => (
-                    <li key={o.key} className="text-espresso-700">
-                      <OptionLabel label={o.label.trim()} />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              {subjects.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">About</p>
-                  <p className="text-espresso-700">
-                    Hidden from{' '}
-                    {subjects.map((s, i) => (
-                      <span key={s.userId}>
-                        {i > 0 && ', '}
-                        <Mention nickname={s.nickname} />
-                      </span>
-                    ))}
-                  </p>
-                </div>
-              )}
-            </>
-          ) : (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-espresso-400">About</p>
-              <p className="text-espresso-700">
-                {subjects.length === 0 ? (
-                  'Nobody, this market is not about anyone in particular.'
-                ) : (
-                  <>
-                    Hidden from{' '}
-                    {subjects.map((s, i) => (
-                      <span key={s.userId}>
-                        {i > 0 && ', '}
-                        <Mention nickname={s.nickname} />
-                      </span>
-                    ))}
-                  </>
-                )}
-              </p>
-            </div>
           )}
-        </div>
+        </ReviewRow>
+      )}
 
-        <div className="flex gap-2">
-          <Button type="button" variant="outline" className="flex-1" onClick={onEdit}>
-            Edit
-          </Button>
-          <Button type="button" className="flex-1" onClick={onConfirm}>
-            Create
-          </Button>
-        </div>
+      <ReviewRow label="Betting closes">
+        <p className="mt-1 text-[15px] font-extrabold text-espresso-950">
+          {closesAtDate.toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+        </p>
+        <TimezoneCaption groupTimezone={timezone} />
+      </ReviewRow>
+
+      {marketType === 'multiple_choice' && (
+        <ReviewRow label="Options">
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {options.map((o) => (
+              <span
+                key={o.key}
+                className="inline-flex items-center rounded-full bg-espresso-50 px-[11px] py-[5px] text-[13px] font-semibold text-espresso-800"
+              >
+                <OptionLabel label={o.label.trim()} />
+              </span>
+            ))}
+          </div>
+        </ReviewRow>
+      )}
+
+      <ReviewRow label="Hidden from">
+        {subjects.length === 0 ? (
+          <p className="mt-1 text-sm text-espresso-700">Nobody, this market is not about anyone in particular.</p>
+        ) : (
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            {subjectChips}
+            <span className="text-[12.5px] text-espresso-400">won't see this market until it resolves</span>
+          </div>
+        )}
+      </ReviewRow>
+
+      <div className="flex items-start gap-2.5 border-t border-espresso-50 bg-honey-50 px-[18px] py-[13px]">
+        <InfoIcon className="mt-px h-[17px] w-[17px] shrink-0 text-honey-800" />
+        <p className="text-[13px] leading-[1.45] text-honey-900">
+          {requireEndorsement
+            ? 'One other member has to endorse this before betting opens. If nobody does within 24 hours, it expires.'
+            : "This group doesn't require endorsement, so betting opens as soon as you create it."}
+        </p>
+      </div>
+
+      <div className="flex gap-2 border-t border-espresso-100 px-[18px] py-[14px]">
+        <Button type="button" variant="outline" className="shrink-0 px-[22px]" onClick={onEdit}>
+          Edit
+        </Button>
+        <Button type="button" className="flex-1" onClick={onConfirm}>
+          Create market
+        </Button>
       </div>
     </Modal>
   );

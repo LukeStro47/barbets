@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { placeBet } from '@/lib/actions/bets';
+import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { useBetslip } from '@/components/markets/BetslipContext';
 import { cn } from '@/lib/cn';
@@ -35,6 +36,7 @@ function roundToFive(n: number): number {
  */
 export function BetslipBar({
   groupId,
+  groupName,
   market,
   balance,
   options,
@@ -45,6 +47,9 @@ export function BetslipBar({
   betVolume,
 }: {
   groupId: string;
+  /** Only the post-bet confirmation needs it: the ticket names the group the stake was spent in,
+   * since that is where the balance it just moved actually lives. */
+  groupName: string;
   market: Market;
   balance: number;
   options: MarketOption[] | null;
@@ -163,8 +168,12 @@ export function BetslipBar({
     });
   }
 
+  /** Leaves for the group's market list rather than back to this market: the bet is placed, odds
+   * stay sealed until close, so there is nothing left to watch here. Still refreshes, so the list
+   * and the balance it shows are current when it lands. */
   function dismissConfirmation() {
     setConfirmed(null);
+    router.push(`/groups/${groupId}`);
     router.refresh();
   }
 
@@ -294,26 +303,37 @@ export function BetslipBar({
                 ))}
           </div>
 
-          {/* Stake reads as the drawn 30px display, but is a real input so free entry lives here
-              rather than only in the quick amounts — a group whose seed is 200 needs to be able
-              to type 37, and the chips below are derived from that seed rather than fixed. */}
-          <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-white/12 pt-4">
-            <label htmlFor="betslip-stake" className="text-[11.5px] font-extrabold tracking-[0.1em] text-paper-white/50 uppercase">
-              Stake
-            </label>
-            <input
-              id="betslip-stake"
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={balance}
-              value={betAmount}
-              onChange={(e) => setBetAmount(e.target.value)}
-              className="w-32 bg-transparent text-right font-display text-[30px] leading-none font-extrabold tracking-[-0.02em] text-paper-white tabular-nums focus:outline-none"
-            />
+          {/* A real, obviously-editable field, not a display that happens to accept typing. The
+              quick amounts below are shortcuts into it — they're derived from the group's seed,
+              so they can't cover every group, and someone who wants to stake 37 must be able to
+              just say 37. The field is the control; the chips fill it in. */}
+          <div className="mt-4 border-t border-white/12 pt-4">
+            <div className="flex items-baseline justify-between gap-3">
+              <label htmlFor="betslip-stake" className="text-[11.5px] font-extrabold tracking-[0.1em] text-paper-white/50 uppercase">
+                Stake
+              </label>
+              <span className="text-[11.5px] font-semibold text-paper-white/45">You have {formatTokens(balance)}</span>
+            </div>
+            <div className="relative mt-2">
+              <input
+                id="betslip-stake"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={balance}
+                placeholder="0"
+                value={betAmount}
+                onChange={(e) => setBetAmount(e.target.value)}
+                onFocus={(e) => e.target.select()}
+                className="w-full rounded-2xl border-[1.5px] border-white/22 bg-white/6 py-3 pr-[86px] pl-4 font-display text-[30px] leading-none font-extrabold tracking-[-0.02em] text-paper-white tabular-nums placeholder:text-paper-white/25 focus:border-honey-500 focus:outline-none"
+              />
+              <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-xs font-semibold text-paper-white/50">
+                tokens
+              </span>
+            </div>
           </div>
 
-          <div className="mt-3 flex gap-2">
+          <div className="mt-2.5 flex gap-2">
             {chipAmounts.map((amt) => (
               <QuickAmount
                 key={amt}
@@ -357,7 +377,17 @@ export function BetslipBar({
         </div>
       </div>
 
-      {confirmed && <BetConfirmedOverlay amount={confirmed.amount} label={confirmed.label} onClose={dismissConfirmation} />}
+      {confirmed && (
+        <BetConfirmedOverlay
+          amount={confirmed.amount}
+          label={confirmed.label}
+          marketTitle={market.title}
+          groupName={groupName}
+          closesAt={market.closes_at}
+          balanceAfter={Math.max(0, balance - confirmed.amount)}
+          onClose={dismissConfirmation}
+        />
+      )}
     </>
   );
 }
@@ -417,34 +447,116 @@ function QuickAmount({
   );
 }
 
-function BetConfirmedOverlay({ amount, label, onClose }: { amount: number; label: string; onClose: () => void }) {
+/**
+ * What replaces the drawer once `placeBet` succeeds: the stake as a real torn ticket stub, plus
+ * exactly the facts a bettor wants in the two seconds after committing — what they backed, on
+ * which market, in which group, when it closes, what they have left.
+ *
+ * No odds and no projected payout, for the same reason the slip above carries none: the split
+ * stays sealed while betting is open, and a payout figure is a live odds readout by another name.
+ * Dismissing goes to the group's market list rather than back to this market — the bet is done,
+ * and the next thing anyone wants is the next market.
+ */
+function BetConfirmedOverlay({
+  amount,
+  label,
+  marketTitle,
+  groupName,
+  closesAt,
+  balanceAfter,
+  onClose,
+}: {
+  amount: number;
+  label: string;
+  marketTitle: string;
+  groupName: string;
+  closesAt: string;
+  balanceAfter: number;
+  onClose: () => void;
+}) {
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-6 bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 px-8 text-center">
-      <svg width="76" height="76" viewBox="0 0 76 76" fill="none" className="animate-bet-check-circle">
-        <circle cx="38" cy="38" r="36" className="fill-honey-500" />
-        <path
-          d="M24 39l9 9 19-19"
-          className="animate-bet-check-mark"
-          stroke="#1c130d"
-          strokeWidth="5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          fill="none"
-        />
-      </svg>
-      <div className="space-y-1.5">
-        <p className="font-display text-2xl font-bold text-paper-white">Bet placed</p>
-        <p className="text-base text-paper-white/70">
-          {formatTokens(amount)} tokens on <OptionLabel label={label.toUpperCase()} />
-        </p>
+    <div
+      className="fixed inset-0 z-[60] flex flex-col justify-between bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700"
+      style={{
+        padding: 'calc(env(safe-area-inset-top) + 56px) calc(env(safe-area-inset-right) + 24px) calc(env(safe-area-inset-bottom) + 40px) calc(env(safe-area-inset-left) + 24px)',
+      }}
+    >
+      <div className="flex flex-col items-center gap-5">
+        <svg width="64" height="64" viewBox="0 0 76 76" fill="none" className="animate-bet-check-circle">
+          <circle cx="38" cy="38" r="38" className="fill-honey-500" />
+          <path
+            d="M24 39l9 9 19-19"
+            className="animate-bet-check-mark"
+            stroke="#1c130d"
+            strokeWidth="5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          />
+        </svg>
+        <div className="text-center">
+          <p className="font-display text-[26px] font-extrabold tracking-[-0.01em] text-paper-white">Bet placed</p>
+          <p className="mt-1 text-[13px] font-bold tracking-[0.1em] text-paper-white/45 uppercase">{groupName}</p>
+        </div>
       </div>
-      <button
-        type="button"
-        onClick={onClose}
-        className="mt-4 w-full max-w-xs rounded-full bg-honey-500 py-3.5 text-base font-bold text-espresso-950 transition-colors hover:bg-honey-600"
-      >
-        Close
-      </button>
+
+      <div className="mx-auto w-full max-w-sm rounded-[20px] bg-paper-white shadow-[0_22px_44px_-18px_rgba(0,0,0,0.55)]">
+        <div className="px-5 pt-5 pb-4">
+          <p className="text-[11px] font-extrabold tracking-[0.12em] text-espresso-400 uppercase">Your ticket</p>
+          <p className="mt-2 font-display text-[19px] leading-[1.25] font-extrabold text-espresso-950 text-pretty">{marketTitle}</p>
+          <div className="mt-4 flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase">Staked</p>
+              <p className="mt-1 font-display text-[38px] leading-none font-extrabold tracking-[-0.02em] text-espresso-950 tabular-nums">
+                {formatTokens(amount)}
+              </p>
+            </div>
+            <div className="min-w-0 text-right">
+              <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase">On</p>
+              <p className="mt-1 truncate font-display text-[38px] leading-none font-extrabold tracking-[-0.02em] text-honey-700">
+                <OptionLabel label={label.toUpperCase()} />
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* The tear. The notches are circles filled with the backdrop's colour at this height,
+            not real cutouts, which no amount of border-radius can produce on a solid card. */}
+        <div className="relative h-[22px]">
+          <div
+            className="absolute top-1/2 right-0 left-0 h-px"
+            style={{ backgroundImage: 'repeating-linear-gradient(to right, #cbb6a2 0 6px, transparent 6px 12px)' }}
+          />
+          <div className="absolute top-1/2 -left-[11px] h-[22px] w-[22px] -translate-y-1/2 rounded-full bg-espresso-900" />
+          <div className="absolute top-1/2 -right-[11px] h-[22px] w-[22px] -translate-y-1/2 rounded-full bg-espresso-900" />
+        </div>
+
+        <div className="flex px-5 pb-5">
+          <div className="flex-1">
+            <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase">Closes in</p>
+            <p className="mt-[3px] text-base font-extrabold text-espresso-900 tabular-nums">
+              <CountdownTimer target={closesAt} prefix="" />
+            </p>
+          </div>
+          <div className="flex-1 text-right">
+            <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase">Balance after</p>
+            <p className="mt-[3px] text-base font-extrabold text-espresso-900 tabular-nums">{formatTokens(balanceAfter)}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto flex w-full max-w-sm flex-col gap-3">
+        <p className="text-center text-[13px] leading-[1.45] text-paper-white/55">
+          Nobody sees the odds until betting closes. You can add to this bet any time before then.
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full rounded-full bg-honey-500 py-[15px] text-[15px] font-extrabold text-espresso-950 transition-colors hover:bg-honey-600"
+        >
+          All markets
+        </button>
+      </div>
     </div>
   );
 }
