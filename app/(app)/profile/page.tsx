@@ -2,7 +2,17 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { signOut } from '@/lib/actions/auth';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { ChevronRightIcon } from '@/components/ui/icons';
+import {
+  ChevronRightIcon,
+  ShieldCheckIcon,
+  ShieldAlertIcon,
+  BellIcon,
+  InfoIcon,
+  ChatIcon,
+  DocumentIcon,
+  LockIcon,
+  SignOutIcon,
+} from '@/components/ui/icons';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
@@ -13,23 +23,53 @@ import { formatTokens, formatOrdinal } from '@/lib/formatNumber';
 import { MARKET_TYPE_LABEL } from '@/lib/marketType';
 
 const LINKS = [
-  { label: 'How it works', href: '/how-it-works' },
-  { label: 'Send feedback', href: '/feedback' },
-  { label: 'Terms', href: '/terms' },
-  { label: 'Privacy', href: '/privacy' },
+  { label: 'How it works', href: '/how-it-works', Icon: InfoIcon },
+  { label: 'Feedback', href: '/feedback', Icon: ChatIcon },
+  { label: 'Terms', href: '/terms', Icon: DocumentIcon },
+  { label: 'Privacy', href: '/privacy', Icon: LockIcon },
 ];
 
-/** The small print links, as tappable tiles rather than a wrapped row of underlined text — same
- * card language as the "Account & security" row above them, so the bottom of the page reads as
- * one set of destinations instead of a card followed by a footer. */
-function QuickLink({ href, label }: { href: string; label: string }) {
+/** The two real destinations: everything about the account itself, and everything about what
+ * reaches your phone. Deliberately identical in weight — notifications used to be a clause inside
+ * the account row's subtitle, which made the one setting people actually go looking for the one
+ * setting with no row of its own. */
+function SettingsRow({
+  href,
+  label,
+  sub,
+  Icon,
+}: {
+  href: string;
+  label: string;
+  sub: string;
+  Icon: (props: { className?: string }) => React.ReactNode;
+}) {
   return (
     <Link
       href={href}
-      className="flex items-center justify-between gap-2 rounded-2xl border border-espresso-100 bg-paper-white px-3.5 py-3 text-[13px] font-bold text-espresso-700 transition-colors hover:border-espresso-200 [&:last-child:nth-child(odd)]:col-span-2"
+      className="flex items-center gap-3 rounded-[20px] border border-espresso-100 bg-paper-white px-4 py-3.5 transition-colors hover:border-espresso-200"
     >
-      <span className="truncate">{label}</span>
-      <ChevronRightIcon className="h-3 w-3 shrink-0 text-espresso-300" />
+      <Icon className="h-[19px] w-[19px] shrink-0 text-espresso-700" />
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-extrabold text-espresso-800">{label}</span>
+        <span className="mt-0.5 block text-[11.5px] text-espresso-400">{sub}</span>
+      </span>
+      <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-espresso-300" />
+    </Link>
+  );
+}
+
+/** The small print links, as tappable tiles rather than a wrapped row of underlined text — same
+ * card language as the rows above them, so the bottom of the page reads as one set of
+ * destinations instead of a card followed by a footer. */
+function QuickLink({ href, label, Icon }: { href: string; label: string; Icon: (props: { className?: string }) => React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-2.5 rounded-2xl border border-espresso-100 bg-paper-white px-3 py-[13px] transition-colors hover:border-espresso-200"
+    >
+      <Icon className="h-4 w-4 shrink-0 text-espresso-500" />
+      <span className="min-w-0 flex-1 truncate text-[12.5px] font-extrabold text-espresso-700">{label}</span>
     </Link>
   );
 }
@@ -55,31 +95,50 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
     .order('joined_at', { ascending: false });
 
   const accountLinks = (
-    <>
-      <Link
-        href="/profile/account"
-        className="flex items-center justify-between gap-3 rounded-[20px] border border-espresso-100 bg-paper-white px-4 py-3.5"
-      >
-        <span>
-          <span className="block text-sm font-bold text-espresso-800">Account &amp; security</span>
-          <span className="mt-0.5 block text-xs text-espresso-400">Email, password, notifications, delete account</span>
-        </span>
-        <span className="shrink-0 text-espresso-300">→</span>
-      </Link>
+    <div className="space-y-3.5">
+      <div className="space-y-2">
+        <SettingsRow
+          href="/profile/account"
+          label="Account & security"
+          sub="Email, password, delete account"
+          Icon={ShieldCheckIcon}
+        />
+        <SettingsRow
+          href="/profile/notifications"
+          label="Notifications"
+          sub="What each group can ping you about"
+          Icon={BellIcon}
+        />
+      </div>
 
       <div className="grid grid-cols-2 gap-2">
-        {isAdmin && <QuickLink href="/admin" label="Admin" />}
         {LINKS.map((l) => (
-          <QuickLink key={l.label} href={l.href} label={l.label} />
+          <QuickLink key={l.label} href={l.href} label={l.label} Icon={l.Icon} />
         ))}
       </div>
 
+      {/* Solid, and sitting with Sign out rather than among the small-print tiles: it's the one
+          destination here that leaves this account's own world entirely. */}
+      {isAdmin && (
+        <Link
+          href="/admin"
+          className="flex h-[52px] items-center justify-center gap-2.5 rounded-full bg-espresso-900 text-[14.5px] font-extrabold text-paper-white"
+        >
+          <ShieldAlertIcon className="h-[18px] w-[18px] text-honey-300" />
+          Admin
+        </Link>
+      )}
+
       <form action={signOut}>
-        <Button type="submit" variant="outline" className="w-full">
+        <button
+          type="submit"
+          className="flex h-[50px] w-full items-center justify-center gap-2.5 rounded-full border-[1.5px] border-espresso-200 bg-transparent text-sm font-extrabold text-espresso-700 transition-colors hover:bg-espresso-50"
+        >
+          <SignOutIcon className="h-[17px] w-[17px]" />
           Sign out
-        </Button>
+        </button>
       </form>
-    </>
+    </div>
   );
 
   if (!memberships || memberships.length === 0) {

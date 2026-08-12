@@ -71,6 +71,23 @@ export async function openSeasonBetting(groupId: string, seasonId: string): Prom
   return result;
 }
 
+/** Names whichever season is currently running, without the caller having to know its id — what
+ * the create-group flow needs, since it collects a name for a season that `create_group()` only
+ * brings into existence a moment later. Falls through to `rename_season`, so the same ownership
+ * check applies; a group with no active season is a no-op rather than an error, since the only
+ * caller is offering the name optionally. */
+export async function nameActiveSeason(groupId: string, name: string): Promise<ActionResult<Season | null>> {
+  const supabase = await createClient();
+  const { data: season } = await supabase
+    .from('seasons')
+    .select('id')
+    .eq('group_id', groupId)
+    .eq('status', 'active')
+    .maybeSingle();
+  if (!season) return { data: null };
+  return renameSeason(groupId, season.id, name);
+}
+
 export async function renameSeason(groupId: string, seasonId: string, name: string): Promise<ActionResult<Season>> {
   const supabase = await createClient();
   const result = await runRpc<Season>(await supabase.rpc('rename_season', { p_season_id: seasonId, p_name: name }));

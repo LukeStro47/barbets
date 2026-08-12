@@ -2,18 +2,35 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { createGroup, updateGroupSettings } from '@/lib/actions/groups';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
+import { createGroup, updateGroupSettings, setGroupAvatar } from '@/lib/actions/groups';
+import { nameActiveSeason } from '@/lib/actions/seasons';
 import { Switch } from '@/components/ui/Switch';
-import { JUST_JOINED_GROUP_KEY } from '@/components/pwa/PushReminderModal';
-import { formatSeasonLength, SEASON_LENGTH_HINTS, type SeasonLength } from '@/lib/seasonLength';
+import { CaretLeftIcon, CaretDownIcon, CheckIcon, ClockIcon, PencilIcon } from '@/components/ui/icons';
+import { GROUP_AVATARS } from '@/lib/avatars';
+import { SEASON_LENGTH_SHORT_LABEL, SEASON_LENGTH_HINTS, type SeasonLength } from '@/lib/seasonLength';
 import { COMMON_TIMEZONES, friendlyTimezoneName } from '@/lib/timezone';
 import { formatTokens, formatTokenInputValue } from '@/lib/formatNumber';
-import { GROUP_NAME_MAX_LENGTH, TOKEN_ALLOCATION_MAX } from '@/lib/limits';
+import { GROUP_NAME_MAX_LENGTH, SEASON_NAME_MAX_LENGTH, TOKEN_ALLOCATION_MAX } from '@/lib/limits';
+import { JUST_JOINED_GROUP_KEY } from '@/components/pwa/PushReminderModal';
+import { cn } from '@/lib/cn';
 
-const inputClasses =
-  'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-espresso-900 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
+const SEASON_LENGTHS: SeasonLength[] = ['1m', '2m', '3m', 'manual', 'custom'];
+
+/** The one-or-two sentence form of a length's explanation, shown inside the locked-in card. The
+ * full hints in lib/seasonLength.ts are written for a list where every option is visible at once
+ * and needs distinguishing from its neighbours; here only the chosen one is on screen, so the
+ * comparison clause is dropped. */
+const SEASON_LENGTH_SUMMARY: Record<SeasonLength, string> = {
+  '1m': 'A short run that refreshes often. Good for a fast-moving group that wants frequent fresh starts, like a monthly pickup league.',
+  '2m': 'A couple of months of play between resets. Long enough for standings to matter, short enough to keep moving.',
+  '3m': 'Long enough to feel like a real summer or semester. Works well for something tied to a real season, like a sports league or a school term.',
+  manual: "Runs until you end it yourself, no clock. Good for a laid-back group that doesn't want a deadline hanging over it.",
+  custom: 'Ends on the exact day and time you pick. Good for a single weekend, a summer with a specific end, or a one-night event.',
+};
+
+const cardClasses = 'rounded-[20px] border border-espresso-100 bg-paper-white p-4';
+const footerButtonClasses =
+  'flex h-[52px] w-full items-center justify-center rounded-full border-0 bg-espresso-800 text-[15px] font-extrabold text-paper-white disabled:opacity-45';
 
 /** datetime-local wants "YYYY-MM-DDTHH:mm" in the browser's local time, not UTC. */
 function toLocalDatetimeInputValue(date: Date): string {
@@ -21,11 +38,29 @@ function toLocalDatetimeInputValue(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-function Field({ label, hint, children }: { label: string; hint: string; children: React.ReactNode }) {
+/** Back caret, progress pills, step counter — the only chrome the wizard steps carry, in place of
+ * a page title they'd otherwise repeat under the heading. */
+function StepBar({ step, total, label, onBack }: { step: number; total: number; label: string; onBack: () => void }) {
   return (
-    <div className="space-y-1.5">
-      <label className="block font-semibold text-espresso-800">{label}</label>
-      <p className="text-sm text-espresso-500">{hint}</p>
+    <div className="flex items-center gap-3">
+      <button type="button" onClick={onBack} aria-label="Back" className="-ml-1.5 border-0 bg-transparent p-0 text-espresso-300">
+        <CaretLeftIcon className="h-[18px] w-[18px]" />
+      </button>
+      <span className="flex flex-1 gap-[5px]">
+        {Array.from({ length: total }, (_, i) => (
+          <span key={i} className={cn('h-1 flex-1 rounded-full', i < step ? 'bg-honey-500' : 'bg-espresso-100')} />
+        ))}
+      </span>
+      <span className="text-[11px] font-extrabold tracking-[0.06em] text-espresso-400 uppercase">{label}</span>
+    </div>
+  );
+}
+
+function SectionCard({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div className={cardClasses}>
+      <p className="text-[13px] font-extrabold text-espresso-800">{title}</p>
+      {hint && <p className="mt-0.5 text-[11.5px] text-espresso-400">{hint}</p>}
       {children}
     </div>
   );
@@ -35,15 +70,36 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const [view, setView] = useState<'wizard' | 'advanced'>('wizard');
+  const [step, setStep] = useState<1 | 2>(1);
+
+  // Carried in from the bottom nav's drawer, which already asked for both. Editable here rather
+  // than only there, so "wrong name" doesn't mean backing all the way out of the flow — the Edit
+  // pill on the ticket reopens the same two fields as a sheet.
+  const [name, setName] = useState(initialName ?? '');
+  const [seedAmount, setSeedAmount] = useState(formatTokenInputValue(String(initialSeedAmount ?? 1000), TOKEN_ALLOCATION_MAX));
+  // Open from the start only when the drawer didn't supply a name (a direct link to /groups/new),
+  // so the flow never shows a ticket for a group with no name and no obvious way to give it one.
+  const [editingTicket, setEditingTicket] = useState(!initialName);
+
+  const [avatarKey, setAvatarKey] = useState<string>(GROUP_AVATARS[0].key);
+  const [nickname, setNickname] = useState('');
+
   const [seasonsEnabled, setSeasonsEnabled] = useState(false);
   const [seasonLength, setSeasonLength] = useState<SeasonLength>('manual');
+  // Separate from `seasonLength` having a value: 'manual' is a real default, so "have they chosen
+  // yet?" can't be read off the value itself. Locking is what collapses the list to one card.
+  const [seasonLocked, setSeasonLocked] = useState(false);
+  const [seasonName, setSeasonName] = useState('');
   const [seasonCustomEndsAt, setSeasonCustomEndsAt] = useState(() =>
     toLocalDatetimeInputValue(new Date(Date.now() + 24 * 60 * 60_000))
   );
   const [minSeasonEndsAt] = useState(() => toLocalDatetimeInputValue(new Date(Date.now() + 60_000)));
-  // Starts at 'UTC' (matches server render) then snaps to the browser's own
-  // zone once mounted — detecting it during the initial render would read
-  // the server's time zone during SSR and mismatch on hydration.
+
+  // Starts at 'UTC' (matches server render) then snaps to the browser's own zone once mounted —
+  // detecting it during the initial render would read the server's time zone during SSR and
+  // mismatch on hydration.
   const [timezone, setTimezone] = useState('UTC');
   useEffect(() => {
     try {
@@ -53,298 +109,426 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
     }
   }, []);
 
-  // Advanced settings — every one of these is independently editable later via
-  // Settings, so create_group() doesn't need to know about them at all: on
-  // success we just fire a follow-up updateGroupSettings() call with whatever
-  // was chosen here. Three of these start-here defaults deliberately diverge
-  // from group_settings' own column defaults (see
-  // supabase/migrations/*_group_settings*.sql): requireEndorsement off (DB
-  // default: on) so a brand-new market doesn't wait on a second approver,
-  // allowHedgedBets off (DB default: on) since a fresh, small group hasn't
-  // opted into that risk yet, and resolutionWindowHours 2h (DB default: 8h)
-  // for a snappier first few resolutions. distributePayout/creatorPayoutPct
-  // match the DB defaults as-is.
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  // Advanced settings — every one of these is independently editable later via Settings, so
+  // create_group() doesn't need to know about them at all: on success we just fire a follow-up
+  // updateGroupSettings() call with whatever was chosen here. Three of these start-here defaults
+  // deliberately diverge from group_settings' own column defaults (see
+  // supabase/migrations/*_group_settings*.sql): requireEndorsement off (DB default: on) so a
+  // brand-new market doesn't wait on a second approver, allowHedgedBets off (DB default: on)
+  // since a fresh, small group hasn't opted into that risk yet, and resolutionWindowHours 2h (DB
+  // default: 8h) for a snappier first few resolutions. creatorPayoutPct keeps the DB default and
+  // has no control here — it only means anything once "Keep universal losses" is on, and asking
+  // for a split percentage while starting a group is a question ahead of its own answer.
   const [requireEndorsement, setRequireEndorsement] = useState(false);
   const [allowHedgedBets, setAllowHedgedBets] = useState(false);
   const [distributePayout, setDistributePayout] = useState(false);
-  const [creatorPayoutPct, setCreatorPayoutPct] = useState(25);
   const [resolutionWindowHours, setResolutionWindowHours] = useState(2);
 
-  const creatorPctValid = Number.isFinite(creatorPayoutPct) && creatorPayoutPct >= 0 && creatorPayoutPct <= 100;
+  function resetAdvanced() {
+    setRequireEndorsement(false);
+    setAllowHedgedBets(false);
+    setDistributePayout(false);
+    setResolutionWindowHours(2);
+  }
 
-  function handleSubmit(formData: FormData) {
+  const seedAmountNumber = Number(seedAmount.replace(/,/g, ''));
+  const step1Valid = name.trim().length > 0 && nickname.trim().length > 0 && seedAmountNumber > 0;
+
+  function handleCreate() {
     setError(null);
-    const seedAmount = Number(String(formData.get('seedAmount')).replace(/,/g, ''));
     startTransition(async () => {
       const result = await createGroup({
-        name: String(formData.get('name')),
-        seedAmount,
+        name: name.trim(),
+        seedAmount: seedAmountNumber,
         seasonsEnabled,
         seasonLength: seasonsEnabled ? seasonLength : null,
         seasonCustomEndsAt: seasonsEnabled && seasonLength === 'custom' ? new Date(seasonCustomEndsAt).toISOString() : null,
-        nickname: String(formData.get('nickname')).trim(),
+        nickname: nickname.trim(),
         timezone,
       });
       if (result.error) {
         setError(result.error);
         return;
       }
+      const groupId = result.data!.id;
 
-      // Best-effort: the group already exists at this point, and every one of
-      // these stays editable from Settings, so a failure here shouldn't block
-      // navigation the way a real createGroup() failure does.
-      await updateGroupSettings(result.data!.id, {
-        seedAmount,
-        seasonsEnabled,
-        seasonLength: seasonsEnabled ? seasonLength : null,
-        seasonCustomEndsAt: seasonsEnabled && seasonLength === 'custom' ? new Date(seasonCustomEndsAt).toISOString() : null,
-        timezone,
-        bettingEnabled: false,
-        acceptingMembers: true,
-        distributePayout,
-        creatorPayoutPct,
-        allowHedgedBets,
-        resolutionWindowHours,
-        requireEndorsement,
-      });
+      // Best-effort from here down: the group already exists, and every one of these stays
+      // editable from Settings, so a failure shouldn't block navigation the way a real
+      // createGroup() failure does.
+      await Promise.all([
+        updateGroupSettings(groupId, {
+          seedAmount: seedAmountNumber,
+          seasonsEnabled,
+          seasonLength: seasonsEnabled ? seasonLength : null,
+          seasonCustomEndsAt: seasonsEnabled && seasonLength === 'custom' ? new Date(seasonCustomEndsAt).toISOString() : null,
+          timezone,
+          bettingEnabled: false,
+          acceptingMembers: true,
+          distributePayout,
+          creatorPayoutPct: 25,
+          allowHedgedBets,
+          resolutionWindowHours,
+          requireEndorsement,
+        }),
+        setGroupAvatar(groupId, avatarKey),
+        seasonsEnabled && seasonName.trim() ? nameActiveSeason(groupId, seasonName.trim()) : Promise.resolve(),
+      ]);
 
       localStorage.setItem(JUST_JOINED_GROUP_KEY, '1');
-      router.push(`/groups/${result.data!.id}`);
+      router.push(`/groups/${groupId}`);
     });
   }
 
-  return (
-    <form action={handleSubmit} className="space-y-5">
-      {error && <p className="text-sm text-danger-700">{error}</p>}
+  const identity = (
+    <div className="flex items-center gap-[11px]">
+      <img src={`/avatars/${avatarKey}.png`} alt="" className="h-[38px] w-[38px] shrink-0 rounded-full border border-espresso-100 object-cover" />
+      <span className="min-w-0">
+        <span className="block truncate text-[13.5px] font-extrabold text-espresso-950">{name || 'Your group'}</span>
+        <span className="block text-[11.5px] text-espresso-400">
+          @{nickname || 'you'} · {formatTokens(seedAmountNumber || 0)} tokens each
+        </span>
+      </span>
+    </div>
+  );
 
-      <Card className="space-y-4">
-        <Field label="Group name" hint="What your friends will see when they get the invite.">
-          <input
-            name="name"
-            placeholder="The Wednesday Wagers"
-            defaultValue={initialName}
-            required
-            maxLength={GROUP_NAME_MAX_LENGTH}
-            className={inputClasses}
-          />
-        </Field>
-
-        <div className="border-t border-espresso-100 pt-4">
-          <Field
-            label="Token allocation"
-            hint={`Every member starts with this many tokens, both when they join and again at the start of each season. Up to ${formatTokens(TOKEN_ALLOCATION_MAX)}.`}
-          >
-            <input
-              name="seedAmount"
-              type="text"
-              inputMode="numeric"
-              defaultValue={formatTokenInputValue(String(initialSeedAmount ?? 1000), TOKEN_ALLOCATION_MAX)}
-              onChange={(e) => {
-                const formatted = formatTokenInputValue(e.target.value, TOKEN_ALLOCATION_MAX);
-                if (formatted !== e.target.value) e.target.value = formatted;
-              }}
-              required
-              className={inputClasses}
-            />
-          </Field>
-        </div>
-
-        <div className="border-t border-espresso-100 pt-4">
-          <Field label="Your nickname" hint="This is what you'll be @mentioned as in this group. One word: letters, numbers, and underscores only.">
-            <input
-              name="nickname"
-              placeholder="e.g. dan"
-              required
-              maxLength={20}
-              onChange={(e) => {
-                const lower = e.target.value.toLowerCase();
-                if (lower !== e.target.value) e.target.value = lower;
-              }}
-              className={inputClasses}
-            />
-          </Field>
-        </div>
-
-        <div className="border-t border-espresso-100 pt-4">
-          <Field label="Time zone" hint="Shown next to betting-closes times so everyone knows what zone you meant.">
-            <select value={timezone} onChange={(e) => setTimezone(e.target.value)} className={inputClasses}>
-              {!(COMMON_TIMEZONES as readonly string[]).includes(timezone) && (
-                <option value={timezone}>{friendlyTimezoneName(timezone)}</option>
-              )}
-              {COMMON_TIMEZONES.map((tz) => (
-                <option key={tz} value={tz}>
-                  {friendlyTimezoneName(tz)}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
-
-        <div className="border-t border-espresso-100 pt-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h3 className="font-semibold text-espresso-800">Seasons</h3>
-              <p className="text-sm text-espresso-500">
-                Seasons reset everyone's balance and crown a champion. Leave this off to just let the economy run
-                forever.
-              </p>
-            </div>
-            <Switch checked={seasonsEnabled} onChange={() => setSeasonsEnabled((v) => !v)} />
-          </div>
-
-          {seasonsEnabled && (
-            <div className="space-y-1.5 border-t border-espresso-100 mt-4 pt-4">
-              <label className="block font-semibold text-espresso-800">Season length</label>
-              <div className="flex flex-wrap gap-2">
-                {(['1m', '2m', '3m', 'manual', 'custom'] as SeasonLength[]).map((len) => (
-                  <button
-                    type="button"
-                    key={len}
-                    onClick={() => setSeasonLength(len)}
-                    className={`rounded-full border px-4 py-1.5 text-sm font-semibold ${
-                      seasonLength === len
-                        ? 'border-honey-500 bg-honey-50 text-honey-800'
-                        : 'border-espresso-200 text-espresso-600'
-                    }`}
-                  >
-                    {formatSeasonLength(len)}
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-espresso-400">{SEASON_LENGTH_HINTS[seasonLength]}</p>
-
-              {seasonLength === 'custom' && (
-                <input
-                  type="datetime-local"
-                  min={minSeasonEndsAt}
-                  value={seasonCustomEndsAt}
-                  onChange={(e) => setSeasonCustomEndsAt(e.target.value)}
-                  required
-                  className={`${inputClasses} mt-1`}
-                />
-              )}
-            </div>
-          )}
-        </div>
-      </Card>
-
-      <Card className="space-y-4">
+  if (view === 'advanced') {
+    return (
+      <div className="flex min-h-[calc(100dvh-4rem)] flex-col gap-[15px]">
         <button
           type="button"
-          onClick={() => setShowAdvanced((v) => !v)}
-          className="flex w-full items-center justify-between text-left"
+          onClick={() => setView('wizard')}
+          className="-ml-1 inline-flex items-center gap-0.5 self-start border-0 bg-transparent p-0 text-[12.5px] font-bold text-espresso-400"
         >
-          <div>
-            <h3 className="font-semibold text-espresso-800">Advanced settings</h3>
-            <p className="text-sm text-espresso-500">
-              Optional house rules. Everything here can also be changed later from Settings.
-            </p>
-          </div>
-          <span className={`text-espresso-400 transition-transform ${showAdvanced ? 'rotate-180' : ''}`}>▾</span>
+          <CaretLeftIcon className="h-4 w-4 text-espresso-300" />
+          Step 2
         </button>
 
-        {showAdvanced && (
-          <div className="space-y-4 border-t border-espresso-100 pt-4">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold text-espresso-700">Require endorsement</p>
-                <p className="text-xs text-espresso-400">
-                  {requireEndorsement
-                    ? "A second member has to endorse a market before it opens for betting. Turn this off for a small, high-trust group where waiting on someone else to endorse is just friction, not a real check on anyone."
-                    : "Markets open for betting the moment they're created, no second person needed. Recommended to start, most new groups are small enough that this isn't a real check."}
-                </p>
-              </div>
-              <Switch checked={requireEndorsement} onChange={() => setRequireEndorsement((v) => !v)} />
+        <div>
+          <h1 className="font-display text-[26px] font-extrabold tracking-[-0.02em] text-espresso-950">Advanced settings</h1>
+          <p className="mt-1.5 text-[13px] leading-[1.5] text-espresso-500">
+            Defaults suit a small group. All of it stays editable later.
+          </p>
+        </div>
+
+        <div className="rounded-[20px] border border-espresso-100 bg-paper-white px-4">
+          {[
+            {
+              label: 'Second pair of eyes',
+              description: 'Someone else endorses a market before betting opens.',
+              checked: requireEndorsement,
+              onChange: () => setRequireEndorsement((v) => !v),
+            },
+            {
+              label: 'Bet both sides',
+              description: 'Members can hold a position on more than one option.',
+              checked: allowHedgedBets,
+              onChange: () => setAllowHedgedBets((v) => !v),
+            },
+            {
+              label: 'Keep universal losses',
+              description: 'When everyone loses, the pool moves on instead of being refunded.',
+              checked: distributePayout,
+              onChange: () => setDistributePayout((v) => !v),
+            },
+          ].map((t, i) => (
+            <div key={t.label} className={cn('flex items-start gap-3 py-3.5', i < 2 && 'border-b border-espresso-100')}>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13.5px] font-extrabold text-espresso-800">{t.label}</span>
+                <span className="mt-0.5 block text-[11.5px] leading-[1.45] text-espresso-400">{t.description}</span>
+              </span>
+              <Switch checked={t.checked} onChange={t.onChange} />
+            </div>
+          ))}
+        </div>
+
+        <div className={cardClasses}>
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-[13.5px] font-extrabold text-espresso-800">Time to challenge a result</span>
+            <span className="shrink-0 text-sm font-extrabold tabular-nums text-honey-700">
+              {resolutionWindowHours} {resolutionWindowHours === 1 ? 'hour' : 'hours'}
+            </span>
+          </div>
+          <input
+            type="range"
+            min={0.5}
+            max={10}
+            step={0.5}
+            value={resolutionWindowHours}
+            onChange={(e) => setResolutionWindowHours(Number(e.target.value))}
+            className="mt-3.5 w-full accent-honey-500"
+          />
+          <div className="mt-2 flex justify-between text-[11px] text-espresso-400">
+            <span>30 min</span>
+            <span>10 hours</span>
+          </div>
+          <p className="mt-2.5 text-[11.5px] leading-[1.45] text-espresso-400">
+            How long the group has to dispute a proposed outcome, and to vote on one that is disputed.
+          </p>
+        </div>
+
+        <div className="mt-auto flex flex-col gap-2.5 pt-6">
+          <button type="button" onClick={() => setView('wizard')} className={footerButtonClasses}>
+            Done
+          </button>
+          <button
+            type="button"
+            onClick={resetAdvanced}
+            className="border-0 bg-transparent p-0 text-center text-xs text-espresso-400"
+          >
+            Reset to defaults
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-[calc(100dvh-4rem)] flex-col gap-4">
+      {error && <p className="text-sm text-danger-700">{error}</p>}
+
+      {step === 1 ? (
+        <>
+          <StepBar step={1} total={2} label="1 of 2" onBack={() => router.push('/groups')} />
+
+          {/* The drawer's answers, carried up as the thing being built rather than re-asked as two
+              more fields. */}
+          <div className="flex items-center gap-3 rounded-[18px] bg-gradient-to-br from-espresso-900 to-espresso-700 px-4 py-3.5">
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-display text-[16.5px] font-extrabold tracking-[-0.015em] text-paper-white">
+                {name || 'Your group'}
+              </span>
+              <span className="mt-0.5 block text-xs text-paper-white/55">{formatTokens(seedAmountNumber || 0)} tokens each</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setEditingTicket((v) => !v)}
+              className="flex shrink-0 items-center gap-1.5 rounded-full border-0 bg-paper-white/12 px-[13px] py-[7px]"
+            >
+              <PencilIcon className="h-[13px] w-[13px] text-honey-300" />
+              <span className="text-[11.5px] font-extrabold text-honey-300">Edit</span>
+            </button>
+          </div>
+
+          {editingTicket && (
+            <div className="flex flex-col gap-2 rounded-[18px] border border-espresso-100 bg-paper-white p-4">
+              <label className="block">
+                <span className="block text-[10px] font-bold tracking-[0.07em] text-espresso-400 uppercase">Group name</span>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  maxLength={GROUP_NAME_MAX_LENGTH}
+                  placeholder="The Wednesday Wagers"
+                  className="mt-1 block w-full rounded-xl border border-espresso-200 bg-paper-white px-3 py-2.5 text-sm font-bold text-espresso-950 focus:border-honey-500 focus:outline-none"
+                />
+              </label>
+              <label className="block">
+                <span className="block text-[10px] font-bold tracking-[0.07em] text-espresso-400 uppercase">Token allocation</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={seedAmount}
+                  onChange={(e) => setSeedAmount(formatTokenInputValue(e.target.value, TOKEN_ALLOCATION_MAX))}
+                  className="mt-1 block w-full rounded-xl border border-espresso-200 bg-paper-white px-3 py-2.5 text-sm font-bold text-espresso-950 focus:border-honey-500 focus:outline-none"
+                />
+              </label>
+            </div>
+          )}
+
+          <div>
+            <h1 className="font-display text-[28px] leading-[1.1] font-extrabold tracking-[-0.025em] text-espresso-950">
+              Who's at this table?
+            </h1>
+            <p className="mt-2 text-[13.5px] leading-[1.5] text-espresso-500">
+              A picture for the group and a name for you. That's step one.
+            </p>
+          </div>
+
+          <SectionCard title="Group picture">
+            <div className="mt-3 flex flex-wrap gap-2">
+              {GROUP_AVATARS.map((a) => (
+                <button
+                  key={a.key}
+                  type="button"
+                  onClick={() => setAvatarKey(a.key)}
+                  aria-pressed={avatarKey === a.key}
+                  title={a.label}
+                  className={cn(
+                    'h-11 w-11 shrink-0 overflow-hidden rounded-full bg-transparent p-0',
+                    avatarKey === a.key ? 'border-2 border-honey-500' : 'border border-espresso-100 opacity-90'
+                  )}
+                >
+                  <img src={`/avatars/${a.key}.png`} alt={a.label} className="h-full w-full object-cover" />
+                </button>
+              ))}
+            </div>
+            <p className="mt-2.5 text-[11.5px] text-espresso-400">Pick the one that fits the group.</p>
+          </SectionCard>
+
+          <SectionCard title="Your nickname here" hint="One word. This is how you get @mentioned.">
+            <div className="mt-2.5 flex items-center gap-1 rounded-[14px] border-[1.5px] border-honey-500 px-[15px] py-3">
+              <span className="text-xl font-extrabold text-honey-700">@</span>
+              <input
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value.toLowerCase())}
+                maxLength={20}
+                placeholder="dan"
+                className="min-w-0 flex-1 border-0 bg-transparent p-0 text-xl font-extrabold tracking-[-0.01em] text-espresso-950 placeholder:text-espresso-200 focus:outline-none"
+              />
+            </div>
+          </SectionCard>
+
+          <div className="mt-auto flex flex-col gap-2.5 pt-6">
+            <button type="button" disabled={!step1Valid} onClick={() => setStep(2)} className={footerButtonClasses}>
+              Next
+            </button>
+            <p className="text-center text-xs text-espresso-400">Seasons and time zone come next.</p>
+          </div>
+        </>
+      ) : (
+        <>
+          <StepBar step={2} total={2} label="2 of 2" onBack={() => setStep(1)} />
+          {identity}
+
+          <h1 className="font-display text-[28px] leading-[1.1] font-extrabold tracking-[-0.025em] text-espresso-950">
+            How should it run?
+          </h1>
+
+          <div className={cardClasses}>
+            <div className="flex items-start gap-3">
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13px] font-extrabold text-espresso-800">Run it in seasons</span>
+                <span className="mt-0.5 block text-[11.5px] leading-[1.45] text-espresso-400">
+                  Balances reset, a champion gets crowned. Off means the economy just runs.
+                </span>
+              </span>
+              <Switch checked={seasonsEnabled} onChange={() => setSeasonsEnabled((v) => !v)} />
             </div>
 
-            <div className="space-y-2 border-t border-espresso-100 pt-4">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-espresso-700">Split universal losses</p>
-                  <p className="text-xs text-espresso-400">
-                    {distributePayout
-                      ? "When everyone loses in a market, split that pool between the creator and the group's other open markets instead of refunding it."
-                      : 'Off by default: when everyone loses in a market, everyone gets their stake back.'}
-                  </p>
-                </div>
-                <Switch checked={distributePayout} onChange={() => setDistributePayout((v) => !v)} />
-              </div>
+            {seasonsEnabled && (
+              <div className="mt-3 border-t border-espresso-100 pt-3">
+                {!seasonLocked ? (
+                  <div className="flex flex-col gap-1.5">
+                    {SEASON_LENGTHS.map((len) => {
+                      const on = seasonLength === len;
+                      return (
+                        <button
+                          key={len}
+                          type="button"
+                          onClick={() => {
+                            setSeasonLength(len);
+                            setSeasonLocked(true);
+                          }}
+                          className={cn(
+                            'flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left',
+                            on ? 'border-[1.5px] border-honey-500 bg-honey-50' : 'border border-espresso-100 bg-transparent'
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              'h-3.5 w-3.5 shrink-0 rounded-full bg-paper-white',
+                              on ? 'border-4 border-honey-500' : 'border-[1.5px] border-espresso-200'
+                            )}
+                          />
+                          <span className={cn('text-[13px] font-extrabold', on ? 'text-honey-800' : 'text-espresso-800')}>
+                            {SEASON_LENGTH_SHORT_LABEL[len]}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="rounded-[14px] border-[1.5px] border-honey-500 bg-honey-50 px-3.5 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <CheckIcon className="h-4 w-4 shrink-0 text-honey-800" />
+                      <span className="min-w-0 flex-1 text-[14.5px] font-extrabold text-honey-800">
+                        {SEASON_LENGTH_SHORT_LABEL[seasonLength]}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSeasonLocked(false)}
+                        className="shrink-0 border-0 border-b border-honey-800/40 bg-transparent p-0 text-[11.5px] font-extrabold text-honey-900"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    <p className="mt-2.5 text-xs leading-[1.45] text-honey-900">{SEASON_LENGTH_SUMMARY[seasonLength]}</p>
 
-              {distributePayout && (
-                <div className="flex gap-3 pt-1">
-                  <label className="flex-1 space-y-1">
-                    <span className="text-xs font-semibold text-espresso-500">Creator %</span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={creatorPayoutPct}
-                      onChange={(e) => setCreatorPayoutPct(Number(e.target.value))}
-                      className={inputClasses}
-                    />
-                  </label>
-                  <div className="flex-1 space-y-1">
-                    <span className="block text-xs font-semibold text-espresso-500">Open markets %</span>
-                    <div
-                      aria-readonly
-                      className="w-full rounded-xl border border-espresso-100 bg-espresso-50 px-4 py-2.5 font-semibold text-espresso-500"
-                    >
-                      {creatorPctValid ? 100 - creatorPayoutPct : '—'}
+                    {seasonLength === 'custom' && (
+                      <input
+                        type="datetime-local"
+                        min={minSeasonEndsAt}
+                        value={seasonCustomEndsAt}
+                        onChange={(e) => setSeasonCustomEndsAt(e.target.value)}
+                        required
+                        className="mt-2.5 w-full rounded-xl border-[1.5px] border-honey-500 bg-paper-white px-3 py-2.5 text-[13px] font-bold text-espresso-950 focus:outline-none"
+                      />
+                    )}
+
+                    <div className="mt-3 border-t border-honey-800/20 pt-3">
+                      <span className="block text-[10.5px] font-extrabold tracking-[0.08em] text-honey-800 uppercase">
+                        Name this season
+                      </span>
+                      <input
+                        value={seasonName}
+                        onChange={(e) => setSeasonName(e.target.value)}
+                        maxLength={SEASON_NAME_MAX_LENGTH}
+                        placeholder="The August Run"
+                        className="mt-[7px] w-full rounded-xl border-[1.5px] border-honey-500 bg-paper-white px-3 py-2.5 text-[14.5px] font-bold text-espresso-950 placeholder:text-espresso-200 focus:outline-none"
+                      />
+                      <span className="mt-[7px] block text-[11px] text-honey-900">
+                        Optional. We'll call it Season 1 otherwise.
+                      </span>
                     </div>
                   </div>
-                </div>
-              )}
-              {distributePayout && !creatorPctValid && (
-                <p className="text-xs text-danger-700">The creator percentage has to be between 0 and 100.</p>
-              )}
-            </div>
-
-            <div className="flex items-center justify-between gap-4 border-t border-espresso-100 pt-4">
-              <div>
-                <p className="text-sm font-semibold text-espresso-700">Hedging</p>
-                <p className="text-xs text-espresso-400">
-                  {allowHedgedBets
-                    ? 'Members can bet on more than one side or option of the same market.'
-                    : "Members can only hold a bet on one side per market. Adding more to that same side is still fine."}
-                </p>
+                )}
               </div>
-              <Switch checked={allowHedgedBets} onChange={() => setAllowHedgedBets((v) => !v)} />
-            </div>
-
-            <div className="space-y-1.5 border-t border-espresso-100 pt-4">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-semibold text-espresso-700">Challenge/resolution window</label>
-                <span className="font-display text-sm font-bold text-honey-700">
-                  {resolutionWindowHours} {resolutionWindowHours === 1 ? 'hour' : 'hours'}
-                </span>
-              </div>
-              <input
-                type="range"
-                min={0.5}
-                max={10}
-                step={0.5}
-                value={resolutionWindowHours}
-                onChange={(e) => setResolutionWindowHours(Number(e.target.value))}
-                className="w-full accent-honey-500"
-              />
-              <p className="text-xs text-espresso-400">
-                How long a proposed resolution can be challenged, and how long a challenged one stays open for voting. We
-                recommend at least 2 hours so people have a real chance to weigh in.
-              </p>
-            </div>
+            )}
           </div>
-        )}
-      </Card>
 
-      <Button
-        type="submit"
-        disabled={isPending || (distributePayout && !creatorPctValid)}
-        className="w-full"
-        size="lg"
-      >
-        {isPending ? 'Creating…' : 'Create group'}
-      </Button>
-    </form>
+          <SectionCard title="Time zone" hint="Shown next to every closing time.">
+            <div className="relative mt-2.5 flex items-center gap-2.5 rounded-[14px] border border-espresso-200 px-[15px] py-3">
+              <ClockIcon className="h-[17px] w-[17px] shrink-0 text-espresso-500" />
+              <span className="min-w-0 flex-1 truncate text-[14.5px] font-bold text-espresso-950">
+                {friendlyTimezoneName(timezone)}
+              </span>
+              <CaretDownIcon className="h-[15px] w-[15px] shrink-0 text-espresso-400" />
+              <select
+                value={timezone}
+                onChange={(e) => setTimezone(e.target.value)}
+                aria-label="Time zone"
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              >
+                {!(COMMON_TIMEZONES as readonly string[]).includes(timezone) && (
+                  <option value={timezone}>{friendlyTimezoneName(timezone)}</option>
+                )}
+                {COMMON_TIMEZONES.map((tz) => (
+                  <option key={tz} value={tz}>
+                    {friendlyTimezoneName(tz)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="mt-2 text-[11.5px] text-espresso-400">Matched to this phone.</p>
+          </SectionCard>
+
+          {/* Label only, no preview of what's inside: the whole point of the row is that nobody
+              starting a group has to have an opinion on any of it. */}
+          <button
+            type="button"
+            onClick={() => setView('advanced')}
+            className="flex items-center justify-between rounded-[18px] border border-dashed border-espresso-200 bg-transparent px-4 py-3.5"
+          >
+            <span className="text-[13px] font-extrabold text-espresso-700">Advanced settings</span>
+            <CaretDownIcon className="h-[15px] w-[15px] text-espresso-400 -rotate-90" />
+          </button>
+
+          <div className="mt-auto pt-6">
+            <button type="button" disabled={isPending} onClick={handleCreate} className={footerButtonClasses}>
+              {isPending ? 'Creating…' : 'Create group'}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
