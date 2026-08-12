@@ -1,7 +1,5 @@
 import { RevealTicket, type TicketOddsEntry } from '@/components/markets/RevealTicket';
-import { OptionLabel } from '@/components/markets/OptionLabel';
-import { Mention } from '@/components/ui/Mention';
-import { Card } from '@/components/ui/Card';
+import { SettlementLedger } from '@/components/markets/SettlementLedger';
 import type { PayoutBreakdown } from '@/lib/actions/markets';
 import type { ReactionEmoji } from '@/lib/actions/reactions';
 import { formatLine } from '@/lib/units';
@@ -14,16 +12,6 @@ export interface RevealBet {
   payout: number | null;
   /** Precomputed by the caller by comparing this bet's side/option to the market's actual outcome — not inferred from payout, since a winning bet can still floor to a $0 payout. */
   isWinner: boolean;
-}
-
-function BreakdownRow({ label, amount }: { label: React.ReactNode; amount: number }) {
-  if (amount <= 0) return null;
-  return (
-    <div className="flex items-center justify-between">
-      <span>{label}</span>
-      <span className="font-semibold text-espresso-800">{amount} tokens</span>
-    </div>
-  );
 }
 
 export function RevealSummary({
@@ -158,94 +146,19 @@ export function RevealSummary({
         sealedForSubject={isSubjectOfThisMarket}
       />
 
-      {!!carriedBonusPool && carriedBonusPool > 0 && (
-        <Card className="flex items-start gap-2.5">
-          <span className="text-lg leading-none">🎁</span>
-          <p className="text-sm text-espresso-600">
-            This market's pool started with {carriedBonusPool} bonus tokens carried over from another market that
-            had no winners, before this market was even created.
-          </p>
-        </Card>
-      )}
-
-      {payoutBreakdown && (
-        <Card className="space-y-2">
-          <p className="text-sm font-semibold text-espresso-800">Nobody predicted this one, so the pool was split</p>
-          <div className="space-y-1 text-sm text-espresso-600">
-            <BreakdownRow
-              label={<>Creator {creatorNickname && <Mention nickname={creatorNickname} />}</>}
-              amount={payoutBreakdown.creator_cut}
-            />
-            {/* The endorser's cut was removed (see 20260810130000), so this is always 0 on anything
-                resolved since. Kept because BreakdownRow hides a zero anyway and markets that
-                resolved before that change still carry a real number here. */}
-            <BreakdownRow
-              label={<>Endorser {sponsorNickname && <Mention nickname={sponsorNickname} />}</>}
-              amount={payoutBreakdown.endorser_cut}
-            />
-            <BreakdownRow label="Split into the group's other open markets" amount={payoutBreakdown.other_markets_cut} />
-            <BreakdownRow label="Held for a future market" amount={payoutBreakdown.held_in_group_pool} />
-          </div>
-        </Card>
-      )}
-
-      <div className="space-y-2">
-        <div className="mx-0.5 flex items-baseline justify-between">
-          <h2 className="text-[13px] font-extrabold tracking-[0.06em] text-espresso-400 uppercase">Full ledger</h2>
-          {bets.length > 0 && <span className="text-xs text-espresso-400">{bets.length} bet{bets.length === 1 ? '' : 's'}</span>}
-        </div>
-        {sorted.length === 0 && <p className="text-sm text-espresso-400">Nobody bet on this one.</p>}
-        {sorted.length > 0 && (
-          <ul className="overflow-hidden rounded-[20px] border border-espresso-100 bg-paper-white">
-            {sorted.map((b, i) => {
-              const won = !refundish && b.isWinner;
-              const lost = !refundish && !b.isWinner;
-              const winnings = won ? (b.payout ?? 0) - b.amount : 0;
-
-              return (
-                <li
-                  key={i}
-                  className={`flex items-center justify-between gap-2.5 px-4 py-3 ${i > 0 ? 'border-t border-espresso-100' : ''}`}
-                >
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${won ? 'bg-success-500' : 'bg-espresso-200'}`} />
-                    <div className="min-w-0">
-                      <Mention nickname={b.nickname} className="text-[14.5px] font-bold text-espresso-800" />
-                      <p className="truncate text-[12.5px] text-espresso-400">
-                        Bet {b.amount} on <OptionLabel label={b.choiceLabel.toUpperCase()} />
-                      </p>
-                    </div>
-                  </div>
-                  <div className="shrink-0 text-right text-[14.5px] font-extrabold">
-                    {refundish && (
-                      <span className="text-espresso-500">
-                        {b.payout === b.amount ? `↩ refunded ${b.payout}` : b.payout && b.payout > 0 ? `↩ ${b.payout} back` : '0 back'}
-                      </span>
-                    )}
-                    {/* A win that pays out exactly the stake means nobody took the other side, so
-                        there were no losing stakes to split. "+0 won" read as a bug and "you won
-                        your bet back" read like a consolation prize, when in fact the call was
-                        right and the money simply comes back untouched. */}
-                    {won && winnings === 0 && (
-                      <>
-                        <p className="text-success-700">Won</p>
-                        <p className="text-[11px] font-semibold text-espresso-400">{b.payout} returned</p>
-                      </>
-                    )}
-                    {won && winnings > 0 && (
-                      <>
-                        <p className="text-success-700">+{winnings} won</p>
-                        <p className="text-[11px] font-semibold text-espresso-400">{b.payout} back total</p>
-                      </>
-                    )}
-                    {lost && <span className="font-bold text-espresso-300">−{b.amount} lost</span>}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
+      {/* One row, not three cards. The carried-bonus note, the no-winner breakdown, and the list
+          of bets were each a fragment of the same question ("where did the money go?"), and none
+          of them explained how the figures were reached. SettlementLedger holds all of it,
+          rounding rule included, one tap away. */}
+      <SettlementLedger
+        bets={bets}
+        payoutBreakdown={payoutBreakdown}
+        carriedBonusPool={carriedBonusPool}
+        creatorNickname={creatorNickname}
+        sponsorNickname={sponsorNickname}
+        voided={voided}
+        refundish={refundish}
+      />
     </div>
   );
 }

@@ -442,7 +442,99 @@ async function processEvent(event: NotificationEvent) {
   }
 }
 
+// Error reporting, same Slack Incoming Webhook idea as the Next.js side (lib/errorReporter.ts)
+// but standalone: an Edge Function shares no code with the app bundle, and this file has always
+// preferred a few lines of its own over a dependency. A failure in here is invisible otherwise -
+// the whole function runs on a cron with nobody watching its logs, so a broken push run used to
+// mean silence in both senses. Optional and best-effort: unset, or unreachable, changes nothing.
+const SLACK_ERROR_WEBHOOK_URL = Deno.env.get('SLACK_ERROR_WEBHOOK_URL');
+const reportedThisRun = new Set<string>();
+
+// Plain-English triage, same idea as lib/errorReporter.ts's. The failure surface here is much
+// narrower (read the queue, build copy, hand off to a push service), so a handful of cases
+// covers it.
+function triage(message: string): { meaning: string; fix: string } {
+  const t = message.toLowerCase();
+  if (t.includes('does not exist') || t.includes('schema cache')) {
+    return {
+      meaning:
+        'The push job asked the database for a column or function that is not there. Usually means a migration went live without this function being redeployed, or the other way round.',
+      fix: 'Run `npx supabase functions deploy send-push --no-verify-jwt` and `npx supabase db push`. These are two separate steps and neither happens on a Vercel deploy.',
+    };
+  }
+  if (t.includes('fcm') || t.includes('unregistered') || t.includes('oauth') || t.includes('invalid_grant')) {
+    return {
+      meaning: 'Sending to the native Android/iOS app failed. Browser and installed-PWA notifications are unaffected.',
+      fix: 'Usually the Firebase service account secret. Re-set it with `npx supabase secrets set FCM_SERVICE_ACCOUNT_JSON_B64=...` (base64, not raw JSON) and redeploy the function.',
+    };
+  }
+  if (t.includes('fetch failed') || t.includes('timeout') || t.includes('socket')) {
+    return {
+      meaning: 'A call out to a push service did not get through. Often a blip.',
+      fix: 'Nothing to do if it happens once. The affected notifications are skipped, not retried, so a burst of these means some people missed a push.',
+    };
+  }
+  return {
+    meaning: 'The background job that sends push notifications hit something it did not expect while working through the queue.',
+    fix: 'Paste this card into Claude Code. The queue keeps draining either way, so this is not urgent unless it keeps repeating: the one event that failed is marked processed and skipped, so somebody missed one notification.',
+  };
+}
+
+async function reportToSlack(label: string, err: unknown, context?: Record<string, string>) {
+  const message = err instanceof Error ? err.message : String(err);
+  const stack = err instanceof Error ? (err.stack ?? '') : '';
+  console.error(label, message, stack);
+  if (!SLACK_ERROR_WEBHOOK_URL) return;
+  // One Slack line per distinct failure per run: a bad event or a dead FCM config fails
+  // identically for all 50 events in the batch, and 50 identical cards is not 50x the signal.
+  const key = `${label}|${message}`;
+  if (reportedThisRun.has(key)) return;
+  reportedThisRun.add(key);
+
+  try {
+    // Slack answers a malformed Block Kit payload with 400 and a body naming the bad block
+    // rather than failing the request, so an unchecked response means silent silence.
+    const response = await fetch(SLACK_ERROR_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: `🚨 send-push: ${message.slice(0, 200)}`,
+        blocks: [
+          { type: 'header', text: { type: 'plain_text', text: '🚨 send-push', emoji: true } },
+          { type: 'section', text: { type: 'mrkdwn', text: `*${label}*\n${message.slice(0, 800)}` } },
+          {
+            type: 'section',
+            fields: [
+              { type: 'mrkdwn', text: '*Where:*\nEdge Function (send-push)' },
+              ...Object.entries(context ?? {}).map(([k, v]) => ({ type: 'mrkdwn', text: `*${k}:*\n${v}` })),
+            ].slice(0, 10),
+          },
+          { type: 'section', text: { type: 'mrkdwn', text: `*What's happening*\n${triage(message).meaning}` } },
+          { type: 'section', text: { type: 'mrkdwn', text: `*What to do*\n${triage(message).fix}` } },
+          ...(stack ? [{ type: 'section', text: { type: 'mrkdwn', text: `\`\`\`${stack.slice(0, 2600)}\`\`\`` } }] : []),
+          {
+            type: 'context',
+            elements: [
+              {
+                type: 'mrkdwn',
+                text: 'This job only sends notifications, it never moves tokens, so no balance can be affected by anything here. One card per distinct failure per run.',
+              },
+            ],
+          },
+        ],
+      }),
+    });
+    if (!response.ok) {
+      console.error('Slack rejected the error report:', response.status, await response.text().catch(() => ''));
+    }
+  } catch (slackErr) {
+    console.error('reportToSlack failed:', slackErr);
+  }
+}
+
 Deno.serve(async (req) => {
+  reportedThisRun.clear();
+
   const { data: events, error } = await admin
     .from('notification_events')
     .select('*')
@@ -451,6 +543,7 @@ Deno.serve(async (req) => {
     .limit(50);
 
   if (error) {
+    await reportToSlack('could not read the notification queue', error);
     return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 
@@ -459,7 +552,7 @@ Deno.serve(async (req) => {
     try {
       await processEvent(event);
     } catch (err) {
-      console.error('event processing failed', event.id, err);
+      await reportToSlack('event processing failed', err, { Event: `${event.event_type} \`${event.id}\`` });
     }
     // Marked processed after an attempt regardless of per-recipient send
     // failures (those are logged, not retried) — an event that crashed
