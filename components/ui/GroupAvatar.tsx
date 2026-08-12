@@ -14,20 +14,26 @@ export function GroupAvatar({
   className,
   /** Applied only to the initials fallback — an avatar image fills the chip itself. */
   fallbackClassName,
+  radiusClassName = 'rounded-full',
 }: {
   name: string;
   avatarKey?: string | null;
-  /** Size and colors only. The circular shape is owned here, not by the caller: `cn()` is a plain
-      join, not a tailwind-merge, so a `rounded-*` passed in would collide rather than override. */
+  /** Size and colors only. The chip's shape is owned here, not by the caller: `cn()` is a plain
+      join, not a tailwind-merge, so a `rounded-*` passed in via className would collide rather
+      than override — pass `radiusClassName` instead. */
   className?: string;
   fallbackClassName?: string;
+  /** The one exception to "avatars are circles": the groups hub squares them off to a soft
+      rounded tile, so a stack of cards reads as a list of places rather than a row of faces. */
+  radiusClassName?: string;
 }) {
   const src = groupAvatarSrc(avatarKey);
 
   return (
     <span
       className={cn(
-        'flex shrink-0 items-center justify-center overflow-hidden rounded-full font-extrabold',
+        'flex shrink-0 items-center justify-center overflow-hidden font-extrabold',
+        radiusClassName,
         !src && fallbackClassName,
         className
       )}

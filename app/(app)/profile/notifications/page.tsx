@@ -1,12 +1,12 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { PushSetup } from '@/components/pwa/PushSetup';
 import { NotificationPreferences, type GroupNotificationPrefs } from '@/components/profile/NotificationPreferences';
 
-/** /profile/notifications — the one place every push preference lives, one tap deeper than the
- * account page. Device-level opt-in (PushSetup) sits at the top because nothing below it matters
- * until this device is actually subscribed. */
+/** /profile/notifications — the one place every push preference lives, one tap from the settings
+ * block on the profile page. The device-level opt-in is the "All notifications" master at the top
+ * of NotificationPreferences rather than a card of its own, because nothing below it matters until
+ * this device is actually subscribed. */
 export default async function NotificationSettingsPage() {
   const supabase = await createClient();
   const {
@@ -35,10 +35,8 @@ export default async function NotificationSettingsPage() {
   groups.sort((a, b) => a.groupName.localeCompare(b.groupName));
 
   return (
-    <main className="mx-auto max-w-lg space-y-6 px-5 py-8">
-      <PageHeader title="Notifications" backHref="/profile/account" backLabel="Account" />
-
-      <PushSetup />
+    <main className="mx-auto max-w-lg space-y-3.5 px-5 py-8">
+      <PageHeader title="Notifications" backHref="/profile" backLabel="Profile" />
 
       <NotificationPreferences
         groups={groups}

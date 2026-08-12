@@ -6,9 +6,9 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/Button';
 import { InviteCodeBoxes } from '@/components/groups/InviteCodeBoxes';
 import { OnboardingCarousel } from '@/components/groups/OnboardingCarousel';
-import { PlusIcon } from '@/components/ui/icons';
+import { PlusIcon, ChevronRightIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/cn';
-import { formatSignedTokens, formatOrdinal } from '@/lib/formatNumber';
+import { formatSignedTokens, formatOrdinal, numberWord, numberWordCapitalized } from '@/lib/formatNumber';
 import { GroupAvatar } from '@/components/ui/GroupAvatar';
 import { getGroupTaskCounts } from '@/lib/tasks';
 
@@ -80,9 +80,28 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
 
   const hasGroups = (groups ?? []).length > 0;
 
+  // A group between seasons isn't a table you can sit down at right now, so it's counted (and
+  // listed) separately from the ones that are actually running.
+  const activeGroups = sortedGroups.filter((g: any) => !intermissionGroupIds.has(g.id));
+  const intermissionGroups = sortedGroups.filter((g: any) => intermissionGroupIds.has(g.id));
+  const groupsWantingYou = activeGroups.filter((g: any) => (taskCounts.get(g.id) ?? 0) > 0).length;
+
+  const headerCaption = [
+    `${numberWordCapitalized(activeGroups.length)} ${activeGroups.length === 1 ? 'table' : 'tables'}`,
+    // Dropped entirely at zero rather than rendered as "none want something from you" — an
+    // all-clear stated out loud reads as a reminder that there could have been something.
+    groupsWantingYou > 0 &&
+      `${numberWord(groupsWantingYou)} want${groupsWantingYou === 1 ? 's' : ''} something from you`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
   return (
-    <main className="mx-auto max-w-lg space-y-6 px-5 py-8">
-      <PageHeader title="Your groups" />
+    <main className="mx-auto max-w-lg space-y-[18px] px-5 py-8">
+      <PageHeader
+        title="Your groups"
+        subtitle={hasGroups ? <span className="text-[12.5px] text-espresso-400">{headerCaption}</span> : undefined}
+      />
 
       {!hasGroups ? (
         <div className="space-y-3">
@@ -90,47 +109,46 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
           <EmptyState title="No groups yet" subtitle="Start one, or join with a friend's invite code below." />
         </div>
       ) : (
-        <div className="space-y-3">
-          <div className="overflow-hidden rounded-[20px] border border-espresso-100 bg-paper-white">
-            {sortedGroups.map((g: any, i) => {
-              // Same rank definition the leaderboard page uses: currently-playing members
-              // (active or dormant, i.e. not removed or left) sorted by balance descending,
-              // rank = array index + 1 — no RPC/window function needed for a row badge.
-              const ranked = (g.memberships ?? [])
-                .filter((m: { status: string }) => m.status === 'active' || m.status === 'dormant')
-                .sort((a: { balance: number }, b: { balance: number }) => b.balance - a.balance);
-              const myIndex = ranked.findIndex((m: { user_id: string }) => m.user_id === user?.id);
-              const myRank = myIndex + 1;
-              const myNet = netByGroup.get(g.id) ?? 0;
-              const inIntermission = intermissionGroupIds.has(g.id);
-              const needsYou = taskCounts.get(g.id) ?? 0;
-              const openCount = openCountByGroup.get(g.id) ?? 0;
-              const isLive = needsYou > 0;
+        <>
+          {activeGroups.length > 0 && (
+            <div className="flex flex-col gap-2.5">
+              {activeGroups.map((g: any) => {
+                // Same rank definition the leaderboard page uses: currently-playing members
+                // (active or dormant, i.e. not removed or left) sorted by balance descending,
+                // rank = array index + 1 — no RPC/window function needed for a row badge.
+                const ranked = (g.memberships ?? [])
+                  .filter((m: { status: string }) => m.status === 'active' || m.status === 'dormant')
+                  .sort((a: { balance: number }, b: { balance: number }) => b.balance - a.balance);
+                const myIndex = ranked.findIndex((m: { user_id: string }) => m.user_id === user?.id);
+                const myRank = myIndex + 1;
+                const myNet = netByGroup.get(g.id) ?? 0;
+                const needsYou = taskCounts.get(g.id) ?? 0;
+                const openCount = openCountByGroup.get(g.id) ?? 0;
 
-              return (
-                <Link
-                  key={g.id}
-                  href={`/groups/${g.id}`}
-                  className={cn(
-                    'flex items-center gap-3 px-4 py-[15px] transition-colors hover:bg-espresso-50/25',
-                    i < sortedGroups.length - 1 && 'border-b border-espresso-50'
-                  )}
-                >
-                  <GroupAvatar
-                    name={g.name}
-                    avatarKey={g.avatar_key}
-                    className="h-10 w-10 text-[12.5px]"
-                    fallbackClassName={isLive ? 'bg-espresso-900 text-honey-300' : 'bg-espresso-50 text-espresso-500'}
-                  />
-                  <span className="min-w-0 flex-1">
-                    <p className="truncate font-display text-[15.5px] font-extrabold leading-[1.25] text-espresso-950">{g.name}</p>
-                    {inIntermission ? (
-                      <p className="mt-0.5 text-[12.5px] text-espresso-500">Season ended</p>
-                    ) : (
-                      <p className="mt-0.5 flex items-center gap-1.5 text-[12.5px] text-espresso-500">
+                return (
+                  <Link
+                    key={g.id}
+                    href={`/groups/${g.id}`}
+                    className={cn(
+                      // The lift is the whole signal: a card asking for something sits slightly
+                      // proud of the ones that aren't, without needing a second accent colour.
+                      'flex items-center gap-3 rounded-[20px] border border-espresso-100 bg-paper-white p-3.5 transition-colors hover:border-espresso-200',
+                      needsYou > 0 && 'shadow-sm shadow-espresso-900/5'
+                    )}
+                  >
+                    <GroupAvatar
+                      name={g.name}
+                      avatarKey={g.avatar_key}
+                      radiusClassName="rounded-[14px]"
+                      className="h-11 w-11 text-[13px]"
+                      fallbackClassName={needsYou > 0 ? 'bg-espresso-900 text-honey-300' : 'bg-espresso-50 text-espresso-500'}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <p className="truncate font-display text-[15.5px] font-extrabold tracking-[-0.01em] text-espresso-950">{g.name}</p>
+                      <p className="mt-[3px] flex items-center gap-1.5 text-[12.5px] text-espresso-500">
                         {needsYou > 0 && (
                           <>
-                            <span className="inline-flex items-center gap-1 font-bold text-danger-700">
+                            <span className="inline-flex items-center gap-[5px] font-extrabold text-danger-700">
                               <span className="h-1.5 w-1.5 rounded-full bg-danger-500" />
                               {needsYou} need{needsYou === 1 ? 's' : ''} you
                             </span>
@@ -139,23 +157,47 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
                         )}
                         <span>{openCount > 0 ? `${openCount} open` : 'Nothing open right now'}</span>
                       </p>
-                    )}
-                    {g.deletion_scheduled_at && <p className="mt-0.5 text-xs font-semibold text-danger-700">Being deleted</p>}
-                  </span>
-                  {!inIntermission && (
+                      {g.deletion_scheduled_at && <p className="mt-0.5 text-xs font-semibold text-danger-700">Being deleted</p>}
+                    </span>
                     <span className="shrink-0 text-right">
-                      <span className={cn('block text-sm font-extrabold', myNet >= 0 ? 'text-success-700' : 'text-danger-700')}>
+                      <span className={cn('block text-[15px] font-extrabold tabular-nums', myNet >= 0 ? 'text-success-700' : 'text-danger-700')}>
                         {formatSignedTokens(myNet)}
                       </span>
-                      <span className="mt-px block text-[11px] text-espresso-400">
+                      <span className="mt-0.5 block text-[11px] text-espresso-400">
                         {formatOrdinal(myRank)} of {ranked.length}
                       </span>
                     </span>
-                  )}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+
+          {intermissionGroups.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <p className="ml-1 text-[10.5px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">Between seasons</p>
+              {intermissionGroups.map((g: any) => (
+                <Link
+                  key={g.id}
+                  href={`/groups/${g.id}`}
+                  className="flex items-center gap-[11px] rounded-2xl bg-paper-dim px-3.5 py-[11px]"
+                >
+                  <GroupAvatar
+                    name={g.name}
+                    avatarKey={g.avatar_key}
+                    radiusClassName="rounded-[11px]"
+                    className="h-[34px] w-[34px] text-[11.5px]"
+                    fallbackClassName="bg-espresso-100 text-espresso-400"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[13.5px] font-extrabold text-espresso-700">{g.name}</span>
+                    <span className="block text-[11.5px] text-espresso-400">Season ended · champion crowned</span>
+                  </span>
+                  <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-espresso-300" />
                 </Link>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          )}
 
           <Link
             href="/groups/new"
@@ -164,12 +206,12 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
             <PlusIcon className="h-4 w-4 text-honey-300" />
             Start a group
           </Link>
-        </div>
+        </>
       )}
 
       <div className="rounded-[22px] bg-gradient-to-br from-espresso-900 to-espresso-700 p-[18px]">
         <p className="text-[15.5px] font-extrabold text-paper-white">Got an invite code?</p>
-        <p className="mt-0.5 text-[13px] text-paper-white/55">Four characters from whoever runs the group.</p>
+        <p className="mt-0.5 text-[12.5px] text-paper-white/55">Four characters from whoever runs the group.</p>
         <div className="mt-3.5">
           <InviteCodeBoxes />
         </div>

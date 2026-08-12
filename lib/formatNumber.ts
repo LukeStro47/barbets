@@ -28,6 +28,36 @@ export function formatPercent(n: number): string {
   return (Math.round(n * 10) / 10).toString();
 }
 
+const NUMBER_WORDS = [
+  'zero',
+  'one',
+  'two',
+  'three',
+  'four',
+  'five',
+  'six',
+  'seven',
+  'eight',
+  'nine',
+  'ten',
+  'eleven',
+  'twelve',
+];
+
+/** Spelled-out small counts for the sentences that read as prose rather than as data — "Three
+ * tables", "You hold three of eight titles". Only the sentence copy uses this; anything that is a
+ * figure to be scanned (a token balance, a rank, a market count in a row's meta line) stays a
+ * numeral. Past twelve the numeral is easier to read than the word, so it falls back. */
+export function numberWord(n: number): string {
+  return NUMBER_WORDS[n] ?? formatTokens(n);
+}
+
+/** `numberWord` with its first letter capitalised, for the start of a sentence. */
+export function numberWordCapitalized(n: number): string {
+  const word = numberWord(n);
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
 /** "1st"/"2nd"/"3rd"/"4th"... standard English ordinal suffix, including the 11th-13th exception. */
 export function formatOrdinal(n: number): string {
   const mod100 = n % 100;

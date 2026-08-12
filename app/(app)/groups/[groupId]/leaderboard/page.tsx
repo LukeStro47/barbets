@@ -5,8 +5,10 @@ import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Mention } from '@/components/ui/Mention';
 import { LeaderboardLenses } from '@/components/groups/LeaderboardLenses';
-import { formatTokens } from '@/lib/formatNumber';
-import { titlesByUser, type GroupTitleRow } from '@/lib/titles';
+import { AwardGlyph } from '@/components/groups/AwardGlyph';
+import { ChevronRightIcon } from '@/components/ui/icons';
+import { formatTokens, formatOrdinal, numberWord } from '@/lib/formatNumber';
+import { titlesByUser, TITLE_ORDER, type GroupTitleRow } from '@/lib/titles';
 
 function medal(rank: number): string {
   return rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : `${rank + 1}.`;
@@ -39,7 +41,7 @@ export default async function LeaderboardPage({
 
   const { data: activeMembers } = await supabase
     .from('memberships')
-    .select('user_id, balance, status, nickname')
+    .select('id, user_id, balance, status, nickname')
     .eq('group_id', groupId)
     .in('status', ['active', 'dormant']);
 
@@ -71,6 +73,80 @@ export default async function LeaderboardPage({
 
   const { data: titleRows } = await supabase.from('group_titles').select('title_key, user_id, stat_value').eq('group_id', groupId);
   const badges = titlesByUser((titleRows ?? []) as GroupTitleRow[]);
+  const yourTitleCount = ((titleRows ?? []) as GroupTitleRow[]).filter((r) => r.user_id && r.user_id === user?.id).length;
+
+  // ---- The hero: who's in front, and where you are relative to them. Both figures already exist
+  // in `members`; the only extra reads are the season this is all happening in and the leader's
+  // last seven days, which is what turns a standing into a direction of travel.
+  const { data: heroSeason } = settings?.seasons_enabled
+    ? await supabase.from('seasons').select('number, name, started_at').eq('group_id', groupId).eq('status', 'active').maybeSingle()
+    : { data: null };
+
+  const leader = members[0];
+  const you = members.find((m: any) => m.user_id === user?.id);
+  const yourRank = members.findIndex((m: any) => m.user_id === user?.id) + 1;
+
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60_000).toISOString();
+  const { data: leaderWeekRows } = leader?.id
+    ? await supabase.from('ledger').select('amount').eq('membership_id', leader.id).neq('reason', 'seed').gte('created_at', weekAgo)
+    : { data: [] };
+  const leaderWeekDelta = (leaderWeekRows ?? []).reduce((sum, r) => sum + r.amount, 0);
+  const leaderTrend =
+    leaderWeekDelta > 0
+      ? `up ${formatTokens(leaderWeekDelta)} this week`
+      : leaderWeekDelta < 0
+        ? `down ${formatTokens(Math.abs(leaderWeekDelta))} this week`
+        : 'level this week';
+
+  const seasonLine = heroSeason
+    ? `${heroSeason.name ?? `Season ${heroSeason.number}`} · day ${Math.max(
+        1,
+        Math.floor((Date.now() - new Date(heroSeason.started_at).getTime()) / (24 * 60 * 60_000)) + 1
+      )}`
+    : null;
+
+  // Leading the board makes "behind the leader" a zero that says nothing, so the third stat flips
+  // to the lead you're actually defending.
+  const youLead = !!you && yourRank === 1;
+  const gapValue = youLead
+    ? leader.balance - (members[1]?.balance ?? leader.balance)
+    : Math.max(0, (leader?.balance ?? 0) - (you?.balance ?? 0));
+
+  const hero = leader && (
+    <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-espresso-900 to-espresso-700 p-[18px]">
+      <div className="pointer-events-none absolute inset-0 opacity-50 [background:radial-gradient(circle_at_90%_0%,rgba(232,163,61,0.3),rgba(232,163,61,0)_60%)]" />
+      <div className="relative flex items-center gap-3.5">
+        <span className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-honey-300/50 bg-honey-500/[0.18] text-[15px] font-extrabold text-honey-300">
+          {leader.nickname.slice(0, 2).toUpperCase()}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[10px] font-extrabold tracking-[0.1em] text-honey-300 uppercase">Out in front</span>
+          <Mention nickname={leader.nickname} className="mt-0.5 block truncate text-[19px] font-extrabold tracking-[-0.015em] text-paper-white" />
+          <span className="mt-0.5 block text-xs text-paper-white/55">
+            {formatTokens(leader.balance)} tokens · {leaderTrend}
+          </span>
+        </span>
+      </div>
+      <div className="relative mt-[15px] flex gap-3 border-t border-white/10 pt-3.5">
+        <span className="flex-1">
+          <span className="block text-xl font-extrabold tabular-nums text-paper-white">{you ? formatOrdinal(yourRank) : '—'}</span>
+          <span className="mt-px block text-[10px] font-extrabold tracking-[0.07em] text-paper-white/45 uppercase">
+            {you ? `you, of ${members.length}` : `${members.length} playing`}
+          </span>
+        </span>
+        <span className="flex-1">
+          <span className="block text-xl font-extrabold tabular-nums text-honey-300">{formatTokens(you?.balance ?? 0)}</span>
+          <span className="mt-px block text-[10px] font-extrabold tracking-[0.07em] text-paper-white/45 uppercase">your tokens</span>
+        </span>
+        <span className="flex-1">
+          <span className="block text-xl font-extrabold tabular-nums text-paper-white">{formatTokens(gapValue)}</span>
+          <span className="mt-px block text-[10px] font-extrabold tracking-[0.07em] text-paper-white/45 uppercase">
+            {youLead ? 'clear of 2nd' : 'behind the leader'}
+          </span>
+        </span>
+      </div>
+    </div>
+  );
 
   const standingsSection = (
     <Card className="space-y-2">
@@ -266,8 +342,13 @@ export default async function LeaderboardPage({
   }
 
   return (
-    <main className="mx-auto max-w-lg space-y-6 px-5 py-8">
-      <PageHeader title="Leaderboard" />
+    <main className="mx-auto max-w-lg space-y-3.5 px-5 py-8">
+      <PageHeader
+        title="Leaderboard"
+        action={seasonLine && <span className="shrink-0 text-[11.5px] font-extrabold text-espresso-400">{seasonLine}</span>}
+      />
+
+      {hero}
 
       {settings?.seasons_enabled ? (
         <LeaderboardLenses initialLens={lensParam === 'alltime' ? 'alltime' : 'current'} current={standingsSection} allTime={allTimeSection} />
@@ -279,12 +360,18 @@ export default async function LeaderboardPage({
         href={`/groups/${groupId}/awards`}
         className="flex items-center gap-3 rounded-[18px] border border-espresso-100 bg-paper-white px-3.5 py-3"
       >
-        <span className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full bg-honey-50 text-xl">🏆</span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[14px] font-extrabold text-espresso-900">Awards</span>
-          <span className="mt-0.5 block text-[11.5px] text-espresso-400">See who holds each standing title</span>
+        <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-honey-50">
+          <AwardGlyph titleKey="oracle" stroke="var(--color-honey-700)" size={20} />
         </span>
-        <span className="shrink-0 text-espresso-300">→</span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[13.5px] font-extrabold text-espresso-950">Awards</span>
+          <span className="mt-0.5 block text-[11.5px] text-espresso-400">
+            {yourTitleCount > 0
+              ? `You hold ${numberWord(yourTitleCount)} of ${numberWord(TITLE_ORDER.length)} titles`
+              : 'See who holds each standing title'}
+          </span>
+        </span>
+        <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-espresso-300" />
       </Link>
     </main>
   );

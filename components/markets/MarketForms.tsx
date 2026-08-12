@@ -3,15 +3,10 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createMarket } from '@/lib/actions/markets';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Modal } from '@/components/ui/Modal';
-import { SubjectPicker, type MemberOption } from '@/components/markets/SubjectPicker';
 import { OptionLabel } from '@/components/markets/OptionLabel';
-import { TimezoneCaption } from '@/components/ui/TimezoneCaption';
 import { Mention } from '@/components/ui/Mention';
-import { InfoIcon } from '@/components/ui/icons';
-import { MARKET_TYPE_ICON, MARKET_TYPE_LABEL, MARKET_TYPE_DESCRIPTION } from '@/lib/marketType';
+import { InfoIcon, CalendarIcon, CaretLeftIcon } from '@/components/ui/icons';
+import { MARKET_TYPE_LABEL, type MarketType } from '@/lib/marketType';
 import {
   OVER_UNDER_UNIT_PRESETS,
   OVER_UNDER_CURRENCY_ALTERNATES,
@@ -20,15 +15,29 @@ import {
   parseLineInput,
   type LineFormat,
 } from '@/lib/units';
+import { friendlyTimezoneName } from '@/lib/timezone';
 import { MARKET_TITLE_MAX_LENGTH, MARKET_TITLE_COUNTER_THRESHOLD } from '@/lib/limits';
+import { cn } from '@/lib/cn';
 
-const inputClasses =
-  'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-espresso-900 placeholder:text-espresso-300 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
+const cardClasses = 'rounded-[18px] border border-espresso-100 bg-paper-white p-4';
+const focusCardClasses = 'rounded-[18px] border-[1.5px] border-honey-500 bg-paper-white p-4';
+const headingClasses = 'font-display text-[30px] leading-[1.08] font-extrabold tracking-[-0.025em] text-espresso-950';
+const footerButtonClasses =
+  'flex h-[52px] w-full items-center justify-center rounded-full border-0 bg-espresso-800 text-[15px] font-extrabold text-paper-white disabled:opacity-45';
+const eyebrowClasses = 'text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase';
 
 /** datetime-local wants "YYYY-MM-DDTHH:mm" in the browser's local time, not UTC. */
 function toLocalDatetimeInputValue(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** One member as the create-market form needs them: enough to render an @mention chip and to send
+ * a subject id. Lived in SubjectPicker until the typeahead it belonged to was replaced by the
+ * chip strip below. */
+export interface MemberOption {
+  userId: string;
+  nickname: string;
 }
 
 interface OptionDraft {
@@ -40,6 +49,22 @@ let optionKeySeq = 0;
 function newOption(label = ''): OptionDraft {
   optionKeySeq += 1;
   return { key: `opt-${optionKeySeq}`, label };
+}
+
+function StepBar({ step, label, onBack }: { step: 1 | 2 | 3; label: string; onBack: () => void }) {
+  return (
+    <div className="flex items-center gap-3">
+      <button type="button" onClick={onBack} aria-label="Back" className="-ml-1.5 border-0 bg-transparent p-0 text-espresso-300">
+        <CaretLeftIcon className="h-[18px] w-[18px]" />
+      </button>
+      <span className="flex flex-1 gap-[5px]">
+        {[1, 2, 3].map((i) => (
+          <span key={i} className={cn('h-1 flex-1 rounded-full', i <= step ? 'bg-honey-500' : 'bg-espresso-100')} />
+        ))}
+      </span>
+      <span className="text-[11px] font-extrabold tracking-[0.06em] text-espresso-400 uppercase">{label}</span>
+    </div>
+  );
 }
 
 /** One option row: a single field, either plain text or a leading @mention. Typing "@" shows a nickname autocomplete; picking a suggestion fills in the exact "@nickname". */
@@ -77,11 +102,12 @@ function OptionRow({
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 150)}
           placeholder={`Option ${index + 1}, or @nickname`}
-          className={`w-full rounded-xl border px-4 py-2.5 text-[15px] placeholder:text-espresso-300 focus:outline-none focus:ring-2 ${
+          className={cn(
+            'w-full rounded-xl border px-3.5 py-2.5 text-[15px] placeholder:text-espresso-300 focus:outline-none',
             isMention
-              ? 'border-honey-400 bg-paper-white italic font-semibold text-honey-700 focus:border-honey-500 focus:ring-honey-200'
-              : 'border-espresso-200 bg-paper-white text-espresso-900 focus:border-honey-500 focus:ring-honey-200'
-          }`}
+              ? 'border-honey-400 bg-paper-white font-semibold text-honey-700 italic focus:border-honey-500'
+              : 'border-espresso-200 bg-paper-white text-espresso-900 focus:border-honey-500'
+          )}
         />
         {suggestions.length > 0 && (
           <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-xl border border-espresso-100 bg-paper-white shadow-lg">
@@ -113,57 +139,64 @@ function OptionRow({
   );
 }
 
-function MultipleChoiceOptionsEditor({
+/** The chip strip that replaced the typeahead: a group small enough to bet in is a group small
+ * enough to list, and "who is this about?" is a question you answer by recognising a name rather
+ * than by recalling one. "Nobody" is a real chip rather than the absence of a choice, so the
+ * unanswered and the deliberately-nobody cases stop looking identical. */
+function SubjectChips({
   members,
-  options,
-  setOptions,
+  selected,
+  onChange,
+  maxSubjects,
 }: {
   members: MemberOption[];
-  options: OptionDraft[];
-  setOptions: (next: OptionDraft[]) => void;
+  selected: MemberOption[];
+  onChange: (next: MemberOption[]) => void;
+  maxSubjects: number;
 }) {
-  function updateOption(key: string, label: string) {
-    setOptions(options.map((o) => (o.key === key ? { ...o, label } : o)));
-  }
-
-  function removeOption(key: string) {
-    setOptions(options.filter((o) => o.key !== key));
-  }
+  const atCap = selected.length >= maxSubjects;
+  const nobody = selected.length === 0;
 
   return (
-    <div className="space-y-3">
-      {options.map((option, i) => (
-        <OptionRow
-          key={option.key}
-          index={i}
-          option={option}
-          members={members}
-          removable={options.length > 2}
-          onChange={(label) => updateOption(option.key, label)}
-          onRemove={() => removeOption(option.key)}
-        />
-      ))}
-
-      {options.length < 10 && (
-        <button
-          type="button"
-          onClick={() => setOptions([...options, newOption()])}
-          className="w-full rounded-xl border border-dashed border-espresso-200 py-2.5 text-sm font-semibold text-espresso-500 hover:border-honey-400 hover:text-honey-700"
-        >
-          + Add option
-        </button>
-      )}
-
-      <p className="text-xs text-espresso-400">
-        Each field is an option. Write whatever you want or type @ and pick a member to make the option about them.
-        Mentioning someone hides the whole market from them until it resolves.
-      </p>
+    <div className="mt-2.5 flex flex-wrap gap-[7px]">
+      {members.map((m) => {
+        const on = selected.some((s) => s.userId === m.userId);
+        return (
+          <button
+            key={m.userId}
+            type="button"
+            disabled={!on && atCap}
+            onClick={() => onChange(on ? selected.filter((s) => s.userId !== m.userId) : [...selected, m])}
+            className={cn(
+              'rounded-full px-3.5 py-2 text-[13px] disabled:opacity-40',
+              on
+                ? 'border-[1.5px] border-honey-500 bg-honey-50 font-extrabold text-honey-800'
+                : 'border border-espresso-200 bg-transparent font-bold text-espresso-600'
+            )}
+          >
+            <Mention nickname={m.nickname} />
+          </button>
+        );
+      })}
+      <button
+        type="button"
+        onClick={() => onChange([])}
+        className={cn(
+          'rounded-full px-3.5 py-2 text-[13px]',
+          nobody
+            ? 'border-[1.5px] border-honey-500 bg-honey-50 font-extrabold text-honey-800'
+            : 'border border-espresso-200 bg-transparent font-bold text-espresso-600'
+        )}
+      >
+        Nobody
+      </button>
     </div>
   );
 }
 
 export function CreateMarketForm({
   groupId,
+  groupName,
   members,
   totalMemberCount,
   timezone,
@@ -171,27 +204,36 @@ export function CreateMarketForm({
   initialMarketType,
 }: {
   groupId: string;
+  groupName: string;
   members: MemberOption[];
   totalMemberCount: number;
   timezone: string;
   requireEndorsement: boolean;
-  /** Pre-selects the type step — set when arriving from BottomNav's create-market sheet, which
-   * already asked "how should it settle?" before handing off here. Still just the initial value;
-   * the picker below stays fully changeable. */
-  initialMarketType?: 'yes_no' | 'over_under' | 'multiple_choice';
+  /** The market type, chosen in BottomNav's create sheet before this page opened — the reason
+   * there's no type picker here any more. Falls back to a yes/no market for anyone who reaches
+   * the route directly without one. */
+  initialMarketType?: MarketType;
 }) {
   const router = useRouter();
+  const marketType: MarketType = initialMarketType ?? 'yes_no';
+
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [marketType, setMarketType] = useState<'yes_no' | 'over_under' | 'multiple_choice'>(initialMarketType ?? 'yes_no');
-  const [subjects, setSubjects] = useState<MemberOption[]>([]);
-  const [titleLength, setTitleLength] = useState(0);
-  const [options, setOptions] = useState<OptionDraft[]>(() => [newOption(), newOption()]);
+
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [line, setLine] = useState('');
   const [unit, setUnit] = useState('');
-  const [otherUnit, setOtherUnit] = useState(false);
   const [lineFormat, setLineFormat] = useState<LineFormat>('number');
+  const [unitPickerOpen, setUnitPickerOpen] = useState(false);
+  const [customUnit, setCustomUnit] = useState(false);
   const [showCurrencyAlternates, setShowCurrencyAlternates] = useState(false);
   const currencyPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [subjects, setSubjects] = useState<MemberOption[]>([]);
+  const [options, setOptions] = useState<OptionDraft[]>(() => [newOption(), newOption()]);
+  const [minCloseTime] = useState(() => toLocalDatetimeInputValue(new Date(Date.now() + 60_000)));
+  const [closesAt, setClosesAt] = useState(() => toLocalDatetimeInputValue(new Date(Date.now() + 60 * 60_000)));
 
   function startCurrencyPress() {
     currencyPressTimer.current = setTimeout(() => setShowCurrencyAlternates(true), 450);
@@ -202,98 +244,81 @@ export function CreateMarketForm({
       currencyPressTimer.current = null;
     }
   }
-  const [minCloseTime] = useState(() => toLocalDatetimeInputValue(new Date(Date.now() + 60_000)));
-  const [defaultCloseTime] = useState(() => toLocalDatetimeInputValue(new Date(Date.now() + 60 * 60_000)));
-  const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
 
-  // A multiple choice market can only be "about" someone one way at a time: an
-  // @mentioned option, or this general About field, never both. Once an option
-  // names its own subject, any general subjects picked earlier no longer apply.
+  // A multiple choice market can only be "about" someone one way at a time: an @mentioned option,
+  // or the About chips, never both. Once an option names its own subject, any subjects picked
+  // earlier no longer apply.
   const hasOptionSubject = marketType === 'multiple_choice' && options.some((o) => o.label.trim().startsWith('@'));
   useEffect(() => {
     if (hasOptionSubject) setSubjects([]);
   }, [hasOptionSubject]);
 
-  function submitMarket(formData: FormData) {
-    const closesAtLocal = String(formData.get('closesAt'));
+  const isOverUnder = marketType === 'over_under';
+  const displayUnit = lineFormat === 'number' ? unit.trim() || null : lineFormat;
+  const parsedLine = isOverUnder && line !== '' ? parseLineInput(line, lineFormat) : null;
+  const closesAtDate = new Date(closesAt);
+
+  function goToStep2() {
+    setError(null);
+    if (!title.trim()) return setError('Every market needs a question.');
+    if (isOverUnder && line === '') return setError('Set the line this market is bet against.');
+    if (marketType === 'multiple_choice') {
+      const trimmed = options.map((o) => o.label.trim());
+      if (trimmed.some((l) => l === '')) return setError('Every option needs a label.');
+      if (new Set(trimmed).size !== trimmed.length) return setError('Option labels must be unique.');
+    }
+    setStep(2);
+  }
+
+  function goToStep3() {
+    setError(null);
+    if (!description.trim()) return setError('Say what counts as a win.');
+    if (!closesAt) return setError('Set when betting closes.');
+    setStep(3);
+  }
+
+  function submitMarket() {
+    setError(null);
     startTransition(async () => {
       const result = await createMarket({
         groupId,
-        title: String(formData.get('title')),
-        description: String(formData.get('description')),
+        title: title.trim(),
+        description: description.trim(),
         marketType,
-        closesAt: new Date(closesAtLocal).toISOString(),
-        line: marketType === 'over_under' ? parseLineInput(String(formData.get('line')), lineFormat) : null,
-        unit: marketType === 'over_under' ? (lineFormat === 'number' ? unit.trim() || null : lineFormat) : null,
+        closesAt: new Date(closesAt).toISOString(),
+        line: isOverUnder ? parseLineInput(line, lineFormat) : null,
+        unit: isOverUnder ? displayUnit : null,
         subjectUserIds: hasOptionSubject ? [] : subjects.map((s) => s.userId),
         options: marketType === 'multiple_choice' ? options.map((o) => o.label.trim()) : undefined,
       });
       if (result.error) {
         setError(result.error);
+        setStep(1);
       } else {
         router.push(`/groups/${groupId}/markets/${result.data!.id}`);
       }
     });
   }
 
-  function handleCreate(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError(null);
-    const formData = new FormData(e.currentTarget);
+  const errorLine = error && <p className="text-sm text-danger-700">{error}</p>;
 
-    if (marketType === 'multiple_choice') {
-      const trimmed = options.map((o) => o.label.trim());
-      if (trimmed.some((l) => l === '')) {
-        setError('Every option needs a label.');
-        return;
-      }
-      if (new Set(trimmed).size !== trimmed.length) {
-        setError('Option labels must be unique.');
-        return;
-      }
-    }
+  if (step === 1) {
+    return (
+      <div className="flex min-h-[calc(100dvh-4rem)] flex-col gap-[18px]">
+        <StepBar step={1} label="Ask" onBack={() => router.push(`/groups/${groupId}`)} />
+        {errorLine}
 
-    setPendingFormData(formData);
-  }
-
-  return (
-    <form onSubmit={handleCreate} className="space-y-5">
-      {error && <p className="text-sm text-danger-700">{error}</p>}
-
-      <div className="space-y-1.5">
-        <label className="block text-sm font-semibold text-espresso-700">Market type</label>
-        <div className="flex gap-1 rounded-xl bg-espresso-50 p-1">
-          {(['yes_no', 'over_under', 'multiple_choice'] as const).map((t) => (
-            <button
-              type="button"
-              key={t}
-              onClick={() => setMarketType(t)}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-colors ${
-                marketType === t ? 'bg-paper-white text-espresso-900 shadow-sm' : 'text-espresso-400 hover:text-espresso-600'
-              }`}
-            >
-              <span aria-hidden className="text-sm">
-                {MARKET_TYPE_ICON[t]}
-              </span>
-              {MARKET_TYPE_LABEL[t]}
-            </button>
-          ))}
+        <div>
+          <p className="text-[11px] font-extrabold tracking-[0.1em] text-honey-700 uppercase">
+            {MARKET_TYPE_LABEL[marketType]} · {groupName}
+          </p>
+          <h1 className={cn(headingClasses, 'mt-2')}>What&apos;s the question?</h1>
         </div>
-        <p className="text-xs text-espresso-400">{MARKET_TYPE_DESCRIPTION[marketType]}</p>
-      </div>
 
-      <Card className="space-y-3">
-        <div className="space-y-1.5">
-          <div className="flex items-baseline justify-between gap-2">
-            <label className="block text-sm font-semibold text-espresso-700">Market title</label>
-            {titleLength >= MARKET_TITLE_COUNTER_THRESHOLD && (
-              <span className={`text-xs ${titleLength >= MARKET_TITLE_MAX_LENGTH ? 'text-danger-700' : 'text-espresso-400'}`}>
-                {titleLength}/{MARKET_TITLE_MAX_LENGTH}
-              </span>
-            )}
-          </div>
+        <div className={focusCardClasses}>
           <textarea
-            name="title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
             maxLength={MARKET_TITLE_MAX_LENGTH}
             placeholder={
               marketType === 'multiple_choice'
@@ -302,229 +327,315 @@ export function CreateMarketForm({
                   ? 'How many drinks will Jake have tonight?'
                   : 'Will Jake finish the marathon?'
             }
-            required
             rows={2}
             onInput={(e) => {
               const el = e.currentTarget;
               el.style.height = 'auto';
               el.style.height = `${el.scrollHeight}px`;
-              setTitleLength(el.value.length);
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') e.preventDefault();
             }}
-            className={`${inputClasses} min-h-[4.5rem] resize-none overflow-hidden`}
+            className="block w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-[19px] leading-[1.3] font-bold text-espresso-950 placeholder:text-espresso-200 focus:outline-none"
           />
+          {title.length >= MARKET_TITLE_COUNTER_THRESHOLD && (
+            <p className={cn('mt-2.5 text-right text-[11px]', title.length >= MARKET_TITLE_MAX_LENGTH ? 'text-danger-700' : 'text-espresso-300')}>
+              {title.length} / {MARKET_TITLE_MAX_LENGTH}
+            </p>
+          )}
         </div>
 
-        <div className="space-y-1.5">
-          <label className="block text-sm font-semibold text-espresso-700">Resolution criteria</label>
-          <p className="text-xs text-espresso-400">
-            Keep the title short. Save the specifics of what counts as a win, and how it'll be judged, for here.
-          </p>
-          <textarea
-            name="description"
-            placeholder="Be specific about what counts, e.g. the exact source or measurement used."
-            required
-            rows={3}
-            className={inputClasses}
-          />
-        </div>
+        {isOverUnder && (
+          <div className={cardClasses}>
+            <p className="text-[13px] font-extrabold text-espresso-800">The line</p>
+            <div className="mt-2.5 flex items-center gap-2.5">
+              {lineFormat === 'number' ? (
+                <input
+                  value={line}
+                  onChange={(e) => setLine(e.target.value)}
+                  type="number"
+                  step="0.5"
+                  inputMode="decimal"
+                  placeholder="5.5"
+                  className="min-w-0 flex-1 rounded-[14px] border-[1.5px] border-espresso-200 bg-paper-white px-3.5 py-3 text-xl font-extrabold text-espresso-950 placeholder:text-espresso-200 focus:border-honey-500 focus:outline-none"
+                />
+              ) : (
+                <input
+                  value={line}
+                  onChange={(e) => setLine(e.target.value)}
+                  type={lineFormat === 'date' ? 'date' : 'time'}
+                  className="min-w-0 flex-1 rounded-[14px] border-[1.5px] border-espresso-200 bg-paper-white px-3.5 py-3 text-base font-extrabold text-espresso-950 focus:border-honey-500 focus:outline-none"
+                />
+              )}
+              {/* The unit is a chip beside the number, not a row of presets under it: for most
+                  markets it is already right, and the ones that need it changed only need one tap
+                  to open the choices. The two non-numeric line formats live in the same picker,
+                  since "what is this line measured in?" is the question they answer too. */}
+              <button
+                type="button"
+                onClick={() => setUnitPickerOpen((v) => !v)}
+                className="shrink-0 rounded-[14px] border-0 bg-espresso-50 px-4 py-3 text-sm font-extrabold text-espresso-700"
+              >
+                {lineFormat === 'number' ? unit.trim() || 'unit' : lineFormat === 'date' ? 'a date' : 'a time'}
+              </button>
+            </div>
 
-        {marketType === 'over_under' && (
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <label className="block text-sm font-semibold text-espresso-700">The line</label>
-              <div className="flex flex-wrap gap-2">
-                {(['number', 'date', 'time'] as const).map((f) => (
+            {unitPickerOpen && (
+              <div className="mt-3 flex flex-wrap gap-2 border-t border-espresso-50 pt-3">
+                {OVER_UNDER_UNIT_PRESETS.map((preset) => (
+                  <button
+                    type="button"
+                    key={preset}
+                    onPointerDown={preset === '$' ? startCurrencyPress : undefined}
+                    onPointerUp={preset === '$' ? endCurrencyPress : undefined}
+                    onPointerLeave={preset === '$' ? endCurrencyPress : undefined}
+                    onClick={() => {
+                      setLineFormat('number');
+                      setUnit(preset);
+                      setCustomUnit(false);
+                    }}
+                    className={cn(
+                      'rounded-full border px-3 py-1 text-sm font-semibold',
+                      lineFormat === 'number' && unit === preset && !customUnit
+                        ? 'border-honey-500 bg-honey-50 text-honey-800'
+                        : 'border-espresso-200 text-espresso-600'
+                    )}
+                  >
+                    {preset}
+                  </button>
+                ))}
+                {showCurrencyAlternates &&
+                  OVER_UNDER_CURRENCY_ALTERNATES.map((alt) => (
+                    <button
+                      type="button"
+                      key={alt}
+                      onClick={() => {
+                        setLineFormat('number');
+                        setUnit(alt);
+                        setCustomUnit(false);
+                      }}
+                      className={cn(
+                        'rounded-full border px-3 py-1 text-sm font-semibold',
+                        lineFormat === 'number' && unit === alt && !customUnit
+                          ? 'border-honey-500 bg-honey-50 text-honey-800'
+                          : 'border-espresso-200 text-espresso-600'
+                      )}
+                    >
+                      {alt}
+                    </button>
+                  ))}
+                {(['date', 'time'] as const).map((f) => (
                   <button
                     type="button"
                     key={f}
-                    onClick={() => setLineFormat(f)}
-                    className={`rounded-full border px-3 py-1 text-sm font-semibold capitalize ${
+                    onClick={() => {
+                      setLineFormat(f);
+                      setUnit('');
+                      setCustomUnit(false);
+                      setLine('');
+                    }}
+                    className={cn(
+                      'rounded-full border px-3 py-1 text-sm font-semibold',
                       lineFormat === f ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-600'
-                    }`}
+                    )}
                   >
-                    {f}
+                    {f === 'date' ? 'a date' : 'a time'}
                   </button>
                 ))}
-              </div>
-
-              {lineFormat === 'number' ? (
-                <input
-                  name="line"
-                  type="number"
-                  step="0.5"
-                  placeholder="5.5 (use a half to avoid a push)"
-                  required
-                  className={inputClasses}
-                />
-              ) : (
-                <input name="line" type={lineFormat === 'date' ? 'date' : 'time'} required className={inputClasses} />
-              )}
-            </div>
-
-            {lineFormat === 'number' && (
-              <div className="space-y-1.5">
-                <label className="block text-sm font-semibold text-espresso-700">Unit (optional)</label>
-                <div className="flex flex-wrap gap-2">
-                  {OVER_UNDER_UNIT_PRESETS.map((preset) => (
-                    <button
-                      type="button"
-                      key={preset}
-                      onPointerDown={preset === '$' ? startCurrencyPress : undefined}
-                      onPointerUp={preset === '$' ? endCurrencyPress : undefined}
-                      onPointerLeave={preset === '$' ? endCurrencyPress : undefined}
-                      onClick={() => {
-                        setUnit(preset);
-                        setOtherUnit(false);
-                      }}
-                      className={`rounded-full border px-3 py-1 text-sm font-semibold ${
-                        unit === preset && !otherUnit
-                          ? 'border-honey-500 bg-honey-50 text-honey-800'
-                          : 'border-espresso-200 text-espresso-600'
-                      }`}
-                    >
-                      {preset}
-                    </button>
-                  ))}
-                  {showCurrencyAlternates &&
-                    OVER_UNDER_CURRENCY_ALTERNATES.map((alt) => (
-                      <button
-                        type="button"
-                        key={alt}
-                        onClick={() => {
-                          setUnit(alt);
-                          setOtherUnit(false);
-                        }}
-                        className={`rounded-full border px-3 py-1 text-sm font-semibold ${
-                          unit === alt && !otherUnit
-                            ? 'border-honey-500 bg-honey-50 text-honey-800'
-                            : 'border-espresso-200 text-espresso-600'
-                        }`}
-                      >
-                        {alt}
-                      </button>
-                    ))}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOtherUnit(true);
-                      setUnit('');
-                    }}
-                    className={`rounded-full border px-3 py-1 text-sm font-semibold ${
-                      otherUnit ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-600'
-                    }`}
-                  >
-                    Custom
-                  </button>
-                </div>
-                {/* The custom field lives here under the presets it replaces, not beside the line
-                    input where it used to sit: it is one more way of answering "what unit?", so
-                    it belongs with the other answers. Its own cancel gets you back to the presets
-                    without having to guess that re-tapping Custom would do it. */}
-                {otherUnit && (
-                  <div className="flex items-center gap-2">
-                    <input
-                      autoFocus
-                      value={unit}
-                      onChange={(e) => setUnit(e.target.value)}
-                      maxLength={OVER_UNDER_UNIT_MAX_LENGTH}
-                      placeholder="e.g. laps, pints, minutes"
-                      className={`${inputClasses} min-w-0 flex-1`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOtherUnit(false);
-                        setUnit('');
-                      }}
-                      aria-label="Cancel custom unit"
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-lg text-espresso-400 hover:bg-espresso-50 hover:text-danger-700"
-                    >
-                      ×
-                    </button>
-                  </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLineFormat('number');
+                    setCustomUnit(true);
+                    setUnit('');
+                  }}
+                  className={cn(
+                    'rounded-full border px-3 py-1 text-sm font-semibold',
+                    customUnit ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-600'
+                  )}
+                >
+                  Custom
+                </button>
+                {customUnit && (
+                  <input
+                    autoFocus
+                    value={unit}
+                    onChange={(e) => setUnit(e.target.value)}
+                    maxLength={OVER_UNDER_UNIT_MAX_LENGTH}
+                    placeholder="e.g. laps, pints, minutes"
+                    className="w-full rounded-xl border border-espresso-200 bg-paper-white px-3.5 py-2.5 text-sm text-espresso-900 placeholder:text-espresso-300 focus:border-honey-500 focus:outline-none"
+                  />
                 )}
-                {!showCurrencyAlternates && !otherUnit && <p className="text-xs text-espresso-400">Hold $ for other currencies.</p>}
+                {!showCurrencyAlternates && !customUnit && (
+                  <p className="w-full text-[11.5px] text-espresso-400">Hold $ for other currencies.</p>
+                )}
               </div>
             )}
+
+            <p className="mt-2.5 text-[11.5px] text-espresso-400">
+              {lineFormat === 'number' ? 'A half avoids a tie.' : 'Bets settle either side of this exact point.'}
+            </p>
           </div>
         )}
 
-        <div className="space-y-1.5">
-          <label className="text-sm font-semibold text-espresso-600">Betting closes</label>
-          <p className="text-xs text-espresso-400">
-            Set this to the earliest reasonable time the outcome could actually be known, not a generous buffer, so
-            bets stay live as long as possible.
-          </p>
-          <input
-            name="closesAt"
-            type="datetime-local"
-            min={minCloseTime}
-            defaultValue={defaultCloseTime}
-            required
-            className={inputClasses}
-          />
-          <TimezoneCaption groupTimezone={timezone} />
+        {marketType === 'multiple_choice' && (
+          <div className={cardClasses}>
+            <p className="text-[13px] font-extrabold text-espresso-800">The options</p>
+            <div className="mt-3 space-y-2.5">
+              {options.map((option, i) => (
+                <OptionRow
+                  key={option.key}
+                  index={i}
+                  option={option}
+                  members={members}
+                  removable={options.length > 2}
+                  onChange={(label) => setOptions(options.map((o) => (o.key === option.key ? { ...o, label } : o)))}
+                  onRemove={() => setOptions(options.filter((o) => o.key !== option.key))}
+                />
+              ))}
+              {options.length < 10 && (
+                <button
+                  type="button"
+                  onClick={() => setOptions([...options, newOption()])}
+                  className="w-full rounded-xl border border-dashed border-espresso-200 bg-transparent py-2.5 text-sm font-semibold text-espresso-500"
+                >
+                  + Add option
+                </button>
+              )}
+            </div>
+            <p className="mt-2.5 text-[11.5px] leading-[1.45] text-espresso-400">
+              Type @ and pick a member to make an option about them. That hides the whole market from them until it
+              resolves.
+            </p>
+          </div>
+        )}
+
+        {!hasOptionSubject && (
+          <div className={cardClasses}>
+            <p className="text-[13px] font-extrabold text-espresso-800">About someone?</p>
+            <SubjectChips
+              members={members}
+              selected={subjects}
+              onChange={setSubjects}
+              maxSubjects={Math.max(0, totalMemberCount - 2)}
+            />
+            <p className="mt-2.5 text-[11.5px] leading-[1.45] text-espresso-400">
+              {subjects.length === 0 ? (
+                'Anyone you pick here stays in the dark until this market resolves.'
+              ) : (
+                <>
+                  <Mention nickname={subjects[0].nickname} />
+                  {subjects.length > 1 && ` and ${subjects.length - 1} more`} won&apos;t see this market until it resolves.
+                </>
+              )}
+            </p>
+          </div>
+        )}
+
+        <div className="mt-auto pt-6">
+          <button type="button" onClick={goToStep2} className={footerButtonClasses}>
+            Next · how it settles
+          </button>
         </div>
-      </Card>
+      </div>
+    );
+  }
 
-      {marketType === 'multiple_choice' ? (
-        <>
-          <Card>
-            <h3 className="mb-2 font-semibold text-espresso-800">Options</h3>
-            <MultipleChoiceOptionsEditor members={members} options={options} setOptions={setOptions} />
-          </Card>
-          {!hasOptionSubject && (
-            <Card>
-              <h3 className="mb-2 font-semibold text-espresso-800">About (optional)</h3>
-              <p className="mb-2 text-xs text-espresso-400">
-                None of your options name a member, but this market can still be hidden from someone.
-              </p>
-              <SubjectPicker members={members} selected={subjects} onChange={setSubjects} totalMemberCount={totalMemberCount} />
-            </Card>
-          )}
-        </>
-      ) : (
-        <Card>
-          <h3 className="mb-2 font-semibold text-espresso-800">About (optional)</h3>
-          <SubjectPicker members={members} selected={subjects} onChange={setSubjects} totalMemberCount={totalMemberCount} />
-        </Card>
-      )}
+  if (step === 2) {
+    return (
+      <div className="flex min-h-[calc(100dvh-4rem)] flex-col gap-[18px]">
+        <StepBar step={2} label="Settle" onBack={() => setStep(1)} />
+        {errorLine}
 
-      <Button type="submit" disabled={isPending} className="w-full" size="lg">
-        {isPending ? 'Creating…' : 'Create market'}
-      </Button>
+        <h1 className={headingClasses}>How does it settle?</h1>
 
-      {pendingFormData && (
-        <ReviewMarketModal
-          formData={pendingFormData}
-          marketType={marketType}
-          subjects={subjects}
-          options={options}
-          unit={unit}
-          lineFormat={lineFormat}
-          timezone={timezone}
-          requireEndorsement={requireEndorsement}
-          onEdit={() => setPendingFormData(null)}
-          onConfirm={() => {
-            const formData = pendingFormData;
-            setPendingFormData(null);
-            submitMarket(formData);
-          }}
-        />
-      )}
-    </form>
+        <div className={focusCardClasses}>
+          <p className={eyebrowClasses}>What counts as a win</p>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Be specific about what counts, e.g. the exact source or measurement used."
+            rows={3}
+            onInput={(e) => {
+              const el = e.currentTarget;
+              el.style.height = 'auto';
+              el.style.height = `${el.scrollHeight}px`;
+            }}
+            className="mt-2 block w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-[15px] leading-[1.45] text-espresso-950 placeholder:text-espresso-300 focus:outline-none"
+          />
+        </div>
+
+        <div className={cardClasses}>
+          <p className="text-[13px] font-extrabold text-espresso-800">Betting closes</p>
+          <div className="relative mt-2.5 flex items-center gap-2.5 rounded-[14px] border-[1.5px] border-honey-500 px-3.5 py-3">
+            <CalendarIcon className="h-[17px] w-[17px] shrink-0 text-honey-700" />
+            <input
+              type="datetime-local"
+              min={minCloseTime}
+              value={closesAt}
+              onChange={(e) => setClosesAt(e.target.value)}
+              className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[15px] font-extrabold text-espresso-950 focus:outline-none"
+            />
+          </div>
+          <p className="mt-2.5 text-[11.5px] leading-[1.45] text-espresso-400">
+            Group time, {friendlyTimezoneName(timezone).replace(/ time$/, '')}. Set it to the earliest the outcome could
+            be known.
+          </p>
+        </div>
+
+        {requireEndorsement && (
+          <div className="flex items-start gap-2.5 rounded-2xl bg-honey-50 px-4 py-3.5">
+            <InfoIcon className="mt-px h-[17px] w-[17px] shrink-0 text-honey-800" />
+            <p className="text-[12.5px] leading-[1.45] text-honey-900">
+              One other member endorses this before betting opens. Nobody in 24 hours and it expires.
+            </p>
+          </div>
+        )}
+
+        <div className="mt-auto pt-6">
+          <button type="button" onClick={goToStep3} className={footerButtonClasses}>
+            Review the ticket
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-[calc(100dvh-4rem)] flex-col gap-[18px]">
+      <StepBar step={3} label="Review" onBack={() => setStep(2)} />
+      {errorLine}
+
+      <ReviewTicket
+        title={title}
+        description={description}
+        marketType={marketType}
+        options={options}
+        subjects={subjects}
+        hasOptionSubject={hasOptionSubject}
+        line={parsedLine}
+        displayUnit={displayUnit}
+        lineFormat={lineFormat}
+        closesAtDate={closesAtDate}
+        timezone={timezone}
+        requireEndorsement={requireEndorsement}
+      />
+
+      <div className="mt-auto pt-6">
+        <button type="button" disabled={isPending} onClick={submitMarket} className={footerButtonClasses}>
+          {isPending ? 'Creating…' : 'Create market'}
+        </button>
+      </div>
+    </div>
   );
 }
 
 /** One divided field row in the review ticket. Rows are separated rather than stacked so a long
  * criteria paragraph can't visually merge with the close time under it. */
-function ReviewRow({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+function ReviewRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className={`border-t border-espresso-50 px-[18px] py-[13px] ${className ?? ''}`}>
-      <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase">{label}</p>
+    <div className="border-t border-espresso-50 px-[18px] py-[13px]">
+      <p className={eyebrowClasses}>{label}</p>
       {children}
     </div>
   );
@@ -539,52 +650,39 @@ function ReviewRow({ label, children, className }: { label: string; children: Re
  * it explained a consequence of an action nobody had taken yet; on the confirmation step it is
  * the last thing read before the market exists.
  */
-function ReviewMarketModal({
-  formData,
+function ReviewTicket({
+  title,
+  description,
   marketType,
-  subjects,
   options,
-  unit,
+  subjects,
+  hasOptionSubject,
+  line,
+  displayUnit,
   lineFormat,
+  closesAtDate,
   timezone,
   requireEndorsement,
-  onEdit,
-  onConfirm,
 }: {
-  formData: FormData;
-  marketType: 'yes_no' | 'over_under' | 'multiple_choice';
-  subjects: MemberOption[];
+  title: string;
+  description: string;
+  marketType: MarketType;
   options: OptionDraft[];
-  unit: string;
+  subjects: MemberOption[];
+  hasOptionSubject: boolean;
+  line: number | null;
+  displayUnit: string | null;
   lineFormat: LineFormat;
+  closesAtDate: Date;
   timezone: string;
   requireEndorsement: boolean;
-  onEdit: () => void;
-  onConfirm: () => void;
 }) {
-  const title = String(formData.get('title'));
-  const description = String(formData.get('description'));
-  const closesAtLocal = String(formData.get('closesAt'));
-  const closesAtDate = new Date(closesAtLocal);
-  const line = marketType === 'over_under' ? parseLineInput(String(formData.get('line')), lineFormat) : null;
-  const displayUnit = lineFormat === 'number' ? unit.trim() || null : lineFormat;
   const lineIsWholeNumber = lineFormat === 'number' && line !== null && Number.isInteger(line);
-
   const kindLabel =
     marketType === 'yes_no' ? 'Yes / No' : marketType === 'over_under' ? 'Over / Under' : `One of ${options.length} options`;
 
-  const subjectChips = subjects.map((s) => (
-    <span key={s.userId} className="inline-flex items-center rounded-full bg-espresso-50 px-[11px] py-[5px] text-[13px] font-semibold">
-      <Mention nickname={s.nickname} />
-    </span>
-  ));
-
   return (
-    <Modal
-      onClose={onEdit}
-      padded={false}
-      panelClassName="max-h-[85dvh] overflow-x-hidden overflow-y-auto border-[1.5px] border-espresso-800"
-    >
+    <div className="overflow-hidden rounded-[20px] border-[1.5px] border-espresso-800 bg-paper-white">
       <div className="flex items-center justify-between gap-3 bg-espresso-50 px-[18px] py-[11px]">
         <p className="text-xs font-extrabold tracking-[0.06em] text-espresso-800 uppercase">Review your market</p>
         <p className="shrink-0 text-xs font-semibold text-espresso-500">{kindLabel}</p>
@@ -616,7 +714,7 @@ function ReviewMarketModal({
         <p className="mt-1 text-[15px] font-extrabold text-espresso-950">
           {closesAtDate.toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
         </p>
-        <TimezoneCaption groupTimezone={timezone} />
+        <p className="mt-1 text-xs text-espresso-400">Group time, {friendlyTimezoneName(timezone).replace(/ time$/, '')}.</p>
       </ReviewRow>
 
       {marketType === 'multiple_choice' && (
@@ -635,20 +733,26 @@ function ReviewMarketModal({
       )}
 
       <ReviewRow label="Hidden from">
-        {subjects.length === 0 ? (
+        {hasOptionSubject ? (
+          <p className="mt-1 text-sm text-espresso-700">Every member an option names, until this resolves.</p>
+        ) : subjects.length === 0 ? (
           <p className="mt-1 text-sm text-espresso-700">Nobody, this market is not about anyone in particular.</p>
         ) : (
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            {subjectChips}
-            <span className="text-[12.5px] text-espresso-400">won't see this market until it resolves</span>
+            {subjects.map((s) => (
+              <span key={s.userId} className="inline-flex items-center rounded-full bg-espresso-50 px-[11px] py-[5px] text-[13px] font-semibold">
+                <Mention nickname={s.nickname} />
+              </span>
+            ))}
+            <span className="text-[12.5px] text-espresso-400">won&apos;t see this market until it resolves</span>
           </div>
         )}
       </ReviewRow>
 
       {/* Only when endorsement is actually required. With the setting off, betting simply opens
-          on create, which is what every other confirmation modal in the app already implies —
-          a highlighted callout to say "nothing unusual happens next" is a rule where there
-          isn't one. */}
+          on create, which is what every other confirmation step in the app already implies — a
+          highlighted callout to say "nothing unusual happens next" is a rule where there isn't
+          one. */}
       {requireEndorsement && (
         <div className="flex items-start gap-2.5 border-t border-espresso-50 bg-honey-50 px-[18px] py-[13px]">
           <InfoIcon className="mt-px h-[17px] w-[17px] shrink-0 text-honey-800" />
@@ -657,15 +761,6 @@ function ReviewMarketModal({
           </p>
         </div>
       )}
-
-      <div className="flex gap-2 border-t border-espresso-100 px-[18px] py-[14px]">
-        <Button type="button" variant="outline" className="shrink-0 px-[22px]" onClick={onEdit}>
-          Edit
-        </Button>
-        <Button type="button" className="flex-1" onClick={onConfirm}>
-          Create market
-        </Button>
-      </div>
-    </Modal>
+    </div>
   );
 }

@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server';
-import { PageHeader } from '@/components/ui/PageHeader';
 import { CreateMarketForm } from '@/components/markets/MarketForms';
 import type { MarketType } from '@/lib/marketType';
 
@@ -21,9 +20,10 @@ export default async function NewMarketPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: members }, { data: settings }] = await Promise.all([
+  const [{ data: members }, { data: settings }, { data: group }] = await Promise.all([
     supabase.from('memberships').select('user_id, nickname').eq('group_id', groupId).eq('status', 'active'),
     supabase.from('group_settings').select('timezone, require_endorsement').eq('group_id', groupId).single(),
+    supabase.from('groups').select('name').eq('id', groupId).single(),
   ]);
 
   // A market's creator can never be its own subject, so they're not a valid @mention target here.
@@ -32,10 +32,10 @@ export default async function NewMarketPage({
     .map((m) => ({ userId: m.user_id, nickname: m.nickname }));
 
   return (
-    <main className="mx-auto max-w-lg space-y-6 px-5 py-8">
-      <PageHeader title="New market" backHref={`/groups/${groupId}`} backLabel="Group" />
+    <main className="mx-auto max-w-lg px-5 pt-5 pb-8">
       <CreateMarketForm
         groupId={groupId}
+        groupName={group?.name ?? ''}
         members={memberOptions}
         totalMemberCount={(members ?? []).length}
         timezone={settings?.timezone ?? 'UTC'}
