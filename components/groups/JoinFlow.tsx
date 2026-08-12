@@ -5,14 +5,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { joinGroup } from '@/lib/actions/groups';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { StackedLogo } from '@/components/ui/StackedLogo';
+import { GroupAvatar } from '@/components/ui/GroupAvatar';
 import { Modal } from '@/components/ui/Modal';
 import { JUST_JOINED_GROUP_KEY } from '@/components/pwa/PushReminderModal';
 import { CaretLeftIcon } from '@/components/ui/icons';
 
-const inputClasses =
-  'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-center text-espresso-900 placeholder:text-espresso-300 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
+const NICKNAME_MAX_LENGTH = 20;
 
 const BLOCKED_COPY: Record<'removed' | 'not_accepting', { title: string; body: string }> = {
   removed: {
@@ -32,6 +30,9 @@ const BLOCKED_COPY: Record<'removed' | 'not_accepting', { title: string; body: s
  * still render normally (so there's always something to look at and a way
  * back) — clicking Join just surfaces a dismissible modal explaining why it
  * won't work, instead of a dead-end page with no way out.
+ *
+ * The confirm step carries no Barbets mark: the group is the subject of this screen, and a
+ * visitor arriving on a friend's link is being introduced to the group, not to the product.
  */
 export function JoinFlow({
   inviteCode,
@@ -51,22 +52,40 @@ export function JoinFlow({
 
   if (step === 'confirm') {
     return (
-      <div className="w-full max-w-sm space-y-6 text-center">
-        <StackedLogo height={100} />
-        <Card>
-          <p className="text-espresso-600">You've been invited to join</p>
-          <p className="font-display text-2xl font-bold text-espresso-900">{groupName}</p>
+      <div className="flex flex-1 flex-col items-center justify-center px-7 py-11 pt-[calc(env(safe-area-inset-top)+2.75rem)] text-center">
+        <span className="text-xs font-bold tracking-[2px] text-honey-700 uppercase">You're invited</span>
+
+        <div className="mt-5 w-full rounded-[24px] border border-espresso-100 bg-paper-white px-5 pt-8 pb-[34px]">
+          {/* Always the initials monogram in practice: get_group_by_invite_code deliberately
+              reveals only id/name/accepting_members/my_status to a non-member, so the group's
+              chosen avatar isn't available here. GroupAvatar still owns the fallback. */}
+          <GroupAvatar
+            name={groupName}
+            radiusClassName="rounded-[20px]"
+            fallbackClassName="bg-espresso-50 text-[26px] text-honey-700"
+            className="mx-auto h-16 w-16"
+          />
+          {/* balance, not pretty: a long group name has to wrap evenly across two lines here
+              rather than leave one orphaned word under a full first line. */}
+          <p className="mt-5 font-display text-[26px]/[34px] font-extrabold tracking-[-0.02em] text-balance text-espresso-900">
+            {groupName}
+          </p>
+        </div>
+
+        <div className="mt-7 flex w-full flex-col gap-3">
           <Button
-            size="lg"
-            className="mt-4 w-full"
+            variant="accent"
+            size="xl"
+            className="w-full truncate"
             onClick={() => (blockedReason ? setShowBlockedModal(true) : setStep('nickname'))}
           >
             Join {groupName}
           </Button>
-        </Card>
-        <Link href="/groups" className="inline-block text-sm font-medium text-espresso-400 hover:text-espresso-700">
-          Not looking to join this group? Go to your groups →
-        </Link>
+          <Link href="/groups" className="text-sm text-espresso-500 hover:text-espresso-800">
+            Not your group? Go to your groups →
+          </Link>
+        </div>
+
         {showBlockedModal && blockedReason && (
           <Modal onClose={() => setShowBlockedModal(false)}>
             <p className="font-display font-bold text-espresso-900">{BLOCKED_COPY[blockedReason].title}</p>
@@ -81,48 +100,64 @@ export function JoinFlow({
   }
 
   return (
-    <div className="w-full max-w-sm space-y-6 text-center">
-      <StackedLogo height={100} />
-      <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight text-espresso-900">Choose your nickname</h1>
-        <p className="mt-1 text-espresso-500">
-          This is what you'll be @mentioned as in {groupName}. One word, just for this group — letters, numbers,
-          and underscores only.
-        </p>
-      </div>
-      <Card className="space-y-3">
-        {error && <p className="text-sm text-danger-700">{error}</p>}
-        <input
-          value={nickname}
-          onChange={(e) => setNickname(e.target.value.toLowerCase())}
-          placeholder="e.g. dan"
-          maxLength={20}
-          autoFocus
-          className={inputClasses}
-        />
-        <Button
-          size="lg"
-          className="w-full"
-          disabled={isPending || nickname.trim() === ''}
-          onClick={() =>
-            startTransition(async () => {
-              const result = await joinGroup(inviteCode, nickname.trim());
-              if (result.error) {
-                setError(result.error);
-              } else {
-                localStorage.setItem(JUST_JOINED_GROUP_KEY, '1');
-                router.push(`/groups/${result.data!.group_id}`);
-              }
-            })
-          }
+    <div className="flex flex-1 flex-col px-7 pb-8 pt-[calc(env(safe-area-inset-top)+3.25rem)]">
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => setStep('confirm')}
+          className="-ml-1 inline-flex items-center gap-0.5 text-sm font-semibold text-espresso-500 hover:text-espresso-800"
         >
-          Join {groupName}
-        </Button>
-        <button type="button" onClick={() => setStep('confirm')} className="inline-flex items-center gap-0.5 text-sm font-medium text-espresso-400 hover:text-espresso-700">
           <CaretLeftIcon className="h-4 w-4" />
           Back
         </button>
-      </Card>
+        <span className="text-xs font-bold tracking-[1.6px] text-espresso-500 uppercase">Step 2 of 2</span>
+      </div>
+
+      <h1 className="mt-11 font-display text-[34px]/[38px] font-extrabold tracking-[-0.03em] text-espresso-900">
+        Pick your name.
+      </h1>
+      <p className="mt-2.5 text-base/6 text-espresso-500">
+        This is what {groupName} will @mention you as. One word, letters, numbers and underscores.
+      </p>
+
+      {error && <p className="mt-6 text-sm text-danger-700">{error}</p>}
+
+      {/* The nickname is the whole point of this screen, so it's set at display size rather than
+          in a boxed input the eye skims past. The "@" is a static prefix, not part of the value. */}
+      <div className="mt-10 flex items-baseline gap-1 border-b-2 border-honey-500 pb-3">
+        <span className="font-display text-[32px] font-extrabold text-espresso-400">@</span>
+        <input
+          value={nickname}
+          onChange={(e) => setNickname(e.target.value.toLowerCase())}
+          maxLength={NICKNAME_MAX_LENGTH}
+          autoFocus
+          aria-label="Nickname"
+          className="w-full min-w-0 bg-transparent font-display text-[32px] font-extrabold text-espresso-900 caret-honey-500 focus:outline-none"
+        />
+      </div>
+      <span className="mt-3 text-[13px] text-espresso-500">
+        {nickname.length} / {NICKNAME_MAX_LENGTH}
+      </span>
+
+      <Button
+        variant="accent"
+        size="xl"
+        className="mt-9 w-full truncate"
+        disabled={isPending || nickname.trim() === ''}
+        onClick={() =>
+          startTransition(async () => {
+            const result = await joinGroup(inviteCode, nickname.trim());
+            if (result.error) {
+              setError(result.error);
+            } else {
+              localStorage.setItem(JUST_JOINED_GROUP_KEY, '1');
+              router.push(`/groups/${result.data!.group_id}`);
+            }
+          })
+        }
+      >
+        Join {groupName}
+      </Button>
     </div>
   );
 }

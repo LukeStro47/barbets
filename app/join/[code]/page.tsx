@@ -36,8 +36,11 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
   const blockedReason =
     group.my_status === 'removed' ? 'removed' : group.my_status === null && !group.accepting_members ? 'not_accepting' : null;
 
+  // No padding or centering here: JoinFlow's two steps are laid out differently (the confirm
+  // step centers on the group, the nickname step is a top-aligned form screen), so each owns
+  // its own gutters and safe-area inset.
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-paper px-5 py-12">
+    <main className="flex min-h-dvh flex-col bg-paper">
       <JoinFlow inviteCode={code} groupName={group.name} blockedReason={blockedReason} />
     </main>
   );

@@ -32,48 +32,51 @@
         padding-top: calc(env(safe-area-inset-top) + 40px);
       }
       img {
-        height: 128px;
+        height: 96px;
         width: auto;
-        margin-bottom: 32px;
+        opacity: 0.5;
+        filter: grayscale(1);
       }
       h1 {
-        font-size: 28px;
-        font-weight: 700;
-        letter-spacing: -0.02em;
+        font-size: 30px;
+        line-height: 34px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
         color: #2c1f17;
-        margin: 0;
+        margin: 28px 0 0;
       }
       p {
-        max-width: 340px;
-        font-size: 17px;
-        line-height: 1.5;
-        margin: 16px 0 0;
+        max-width: 310px;
+        font-size: 16px;
+        line-height: 24px;
+        margin: 12px 0 0;
       }
+      /* Outline, not the filled CTA every other screen uses: this is the one action the app
+         can't promise will work. Matches OfflineRetryButton on the web page. */
       button {
-        margin-top: 32px;
+        margin-top: 28px;
         width: 100%;
-        max-width: 260px;
-        padding: 12px 24px;
-        border: none;
+        max-width: 330px;
+        padding: 16px 24px;
+        border: 1px solid #cbb6a2;
         border-radius: 999px;
-        background: #3b2a20;
-        color: #fffdf9;
-        font-size: 15px;
-        font-weight: 600;
+        background: transparent;
+        color: #2c1f17;
+        font-size: 17px;
+        font-weight: 700;
         font-family: inherit;
         cursor: pointer;
       }
       button:active {
-        background: #2c1f17;
+        background: #f2eae1;
       }
     </style>
   </head>
   <body>
-    <img src="/barbets-lockup-tall.png" alt="Barbets" />
-    <h1>You're offline</h1>
+    <img src="/barbets-coin.png" alt="" />
+    <h1>You're offline.</h1>
     <p>
-      Barbets needs a connection to load anything. Odds and balances change too often to show you a guess.
-      Reconnect, and we'll pick back up where you left off.
+      Odds and balances move too fast to show you a guess. Reconnect and we'll pick up where you left off.
     </p>
     <button id="retry">Try again</button>
     <script>

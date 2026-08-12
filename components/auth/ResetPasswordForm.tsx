@@ -4,9 +4,7 @@ import { useActionState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { updatePassword } from '@/lib/actions/auth';
 import { Button } from '@/components/ui/Button';
-
-const inputClasses =
-  'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-espresso-900 placeholder:text-espresso-300 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
+import { Field } from '@/components/ui/Field';
 
 /** Reuses the existing updatePassword action (already used by ChangePasswordForm on /profile) —
     the recovery link's verifyOtp call already established a real session via cookies, so setting
@@ -20,11 +18,20 @@ export function ResetPasswordForm() {
   }, [state?.success, router]);
 
   return (
-    <form action={formAction} className="space-y-3">
-      {state?.error && <p className="text-sm text-danger-700">{state.error}</p>}
-      <input name="password" type="password" placeholder="New password" required className={inputClasses} />
-      <input name="confirmPassword" type="password" placeholder="Confirm new password" required className={inputClasses} />
-      <Button type="submit" disabled={isPending} className="w-full">
+    <form action={formAction} className="mt-9">
+      {state?.error && <p className="mb-4 text-sm text-danger-700">{state.error}</p>}
+      <div className="flex flex-col gap-6">
+        <Field label="New password" name="password" type="password" autoComplete="new-password" required />
+        <Field
+          label="Confirm it"
+          name="confirmPassword"
+          type="password"
+          placeholder="Type it again"
+          autoComplete="new-password"
+          required
+        />
+      </div>
+      <Button type="submit" variant="accent" size="xl" disabled={isPending} className="mt-9 w-full">
         {isPending ? 'Saving…' : 'Set new password'}
       </Button>
     </form>

@@ -4,8 +4,12 @@
 // an already-placed bet would be actively misleading, so we'd rather show
 // nothing offline than something wrong), plus push notification handling.
 
-const CACHE_NAME = 'barbets-shell-v6';
-const SHELL_URLS = ['/', '/offline', '/icon-192.png', '/icon-512.png', '/barbets-lockup-tall.png', '/badge-mono.png'];
+// The offline fallback's artwork is precached by raw path because that page renders it as a plain
+// <img> (next/image's optimizer endpoint is a network request that isn't cached, so it would break
+// offline). It's the coin, not the lockup, since the redesign — bump CACHE_NAME whenever this list
+// changes or an already-installed worker keeps serving the old set.
+const CACHE_NAME = 'barbets-shell-v7';
+const SHELL_URLS = ['/', '/offline', '/icon-192.png', '/icon-512.png', '/barbets-coin.png', '/badge-mono.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
