@@ -338,7 +338,10 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           <EmptyState icon="🎲" title="Nothing riding right now" subtitle="Bets you've got open show up here." />
         ) : (
           <div
-            className="-mx-5 flex gap-2.5 overflow-x-auto px-5 pb-3 [scroll-snap-type:x_mandatory] [scrollbar-width:none]"
+            // scroll-pl-5 matches the px-5: without it, mandatory snapping aligns the first card
+            // to the scrollport's border edge and immediately scrolls the padding away, parking
+            // every card 20px left of the "Still open" heading above them.
+            className="-mx-5 flex scroll-pl-5 gap-2.5 overflow-x-auto px-5 pb-3 [scroll-snap-type:x_mandatory] [scrollbar-width:none]"
           >
             {openBets.map((b: any) => {
               const market = b.markets;
@@ -347,7 +350,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
                 <Link
                   key={b.id}
                   href={`/groups/${market.group_id}/markets/${market.id}`}
-                  className="flex w-[228px] shrink-0 flex-col justify-between gap-3.5 rounded-[20px] border border-espresso-100 bg-paper-white p-4 [scroll-snap-align:start]"
+                  className="flex w-[calc((100%-10px)/2)] shrink-0 flex-col justify-between gap-3 rounded-[20px] border border-espresso-100 bg-paper-white p-3.5 [scroll-snap-align:start]"
                 >
                   <span>
                     <span className="flex items-center gap-1.5">
@@ -364,7 +367,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
                   </span>
                   <span className="flex items-center justify-between gap-2.5 border-t border-espresso-50 pt-3">
                     <span className="min-w-0">
-                      <span className="block text-[13px] font-extrabold text-honey-700">
+                      <span className="block truncate text-[13px] font-extrabold text-honey-700">
                         <OptionLabel label={sideLabel} />
                       </span>
                       <span className="mt-0.5 block text-[11px] text-espresso-400">

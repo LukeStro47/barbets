@@ -138,9 +138,11 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
   const [nickname, setNickname] = useState('');
 
   const [seasonsEnabled, setSeasonsEnabled] = useState(false);
-  const [seasonLength, setSeasonLength] = useState<SeasonLength>('manual');
-  // Separate from `seasonLength` having a value: 'manual' is a real default, so "have they chosen
-  // yet?" can't be read off the value itself. Locking is what collapses the list to one card.
+  // Null, not 'manual': a preselected length is a length nobody chose, and 'manual' quietly
+  // becomes the answer for anyone who turns seasons on and scrolls past the list.
+  const [seasonLength, setSeasonLength] = useState<SeasonLength | null>(null);
+  // Picking a length locks it, which collapses the list to one card; Cancel reopens the list with
+  // the previous choice intact, so this stays separate from `seasonLength` being set.
   const [seasonLocked, setSeasonLocked] = useState(false);
   const [seasonName, setSeasonName] = useState('');
   const [seasonCustomEndsAt, setSeasonCustomEndsAt] = useState(() =>
@@ -187,6 +189,9 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
 
   const seedAmountNumber = Number(seedAmount.replace(/,/g, ''));
   const step1Valid = name.trim().length > 0 && nickname.trim().length > 0 && seedAmountNumber > 0;
+  // With no length preselected, turning seasons on is only half an answer — the group can't be
+  // created until the second half is given.
+  const step2Valid = creatorPctValid && (!seasonsEnabled || seasonLength !== null);
 
   function handleCreate() {
     setError(null);
@@ -320,7 +325,7 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
           />
           <ToggleRow
             label="Split universal losses"
-            description="When everyone loses, that pool is split instead of refunded."
+            description="When everyone loses, split the pool instead of refunding everyone."
             checked={distributePayout}
             onChange={() => setDistributePayout((v) => !v)}
             last
@@ -470,7 +475,7 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
               <span className="min-w-0 flex-1">
                 <span className="block text-[13px] font-extrabold text-espresso-800">Run it in seasons</span>
                 <span className="mt-0.5 block text-[11.5px] leading-[1.45] text-espresso-400">
-                  Balances reset, a champion gets crowned. Off means the economy just runs.
+                  Balances reset, a champion gets crowned. Off means the group runs indefinitely.
                 </span>
               </span>
               <Switch checked={seasonsEnabled} onChange={() => setSeasonsEnabled((v) => !v)} />
@@ -478,7 +483,7 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
 
             {seasonsEnabled && (
               <div className="mt-3 border-t border-espresso-100 pt-3">
-                {!seasonLocked ? (
+                {!(seasonLocked && seasonLength) ? (
                   <div className="flex flex-col gap-1.5">
                     {SEASON_LENGTHS.map((len) => {
                       const on = seasonLength === len;
@@ -595,7 +600,7 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
           </button>
 
           <div className="mt-auto pt-6">
-            <button type="button" disabled={isPending || !creatorPctValid} onClick={handleCreate} className={footerButtonClasses}>
+            <button type="button" disabled={isPending || !step2Valid} onClick={handleCreate} className={footerButtonClasses}>
               {isPending ? 'Creating…' : 'Create group'}
             </button>
           </div>

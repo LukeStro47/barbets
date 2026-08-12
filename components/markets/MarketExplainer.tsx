@@ -13,17 +13,32 @@ import type { MarketOption } from '@/lib/actions/markets';
  * explanation, and a card restating "Yes / No" would be pure furniture.
  */
 
-/** over_under: the line, big, with a hint that the two sides live in the slip below. */
+/**
+ * over_under: the line, big, next to the way into the slip.
+ *
+ * "Pick a side" opens the drawer with *neither* side chosen (the empty `{}` pick, see
+ * `BetslipContext`) rather than landing on OVER — this is the one opener that hasn't been told
+ * which way you're leaning, and pre-selecting for someone who only said "I want to bet" puts a
+ * side under their thumb that they never chose. The two `SideButton`s in the bar still open primed,
+ * because tapping one of those *is* saying which side.
+ */
 export function LineTicket({ lineLabel }: { lineLabel: string }) {
+  const betslip = useBetslip();
+
   return (
     <TicketCard label="The line" meta="Over / Under" bodyClassName="px-[18px] py-4">
       <div className="flex items-center justify-between gap-3">
         <p className="min-w-0 truncate font-display text-[34px] leading-none font-extrabold tracking-[-0.02em] text-espresso-950 tabular-nums">
           {lineLabel}
         </p>
-        <span className="shrink-0 rounded-full border border-espresso-200 px-3 py-[7px] text-[12.5px] font-bold whitespace-nowrap text-espresso-600">
+        <button
+          type="button"
+          onClick={() => betslip?.open({})}
+          disabled={!betslip}
+          className="shrink-0 rounded-full border border-espresso-200 bg-transparent px-3 py-[7px] text-[12.5px] font-bold whitespace-nowrap text-espresso-600 transition-colors hover:border-espresso-800 hover:bg-espresso-50 disabled:hover:border-espresso-200 disabled:hover:bg-transparent"
+        >
           Pick a side
-        </span>
+        </button>
       </div>
     </TicketCard>
   );

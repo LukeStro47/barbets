@@ -8,7 +8,7 @@ import { useShareableImage } from '@/lib/shareImage';
  * ticket" convention RevealTicket established. All of the capture/share mechanics live in
  * `lib/shareImage.ts`, shared with the reveal ticket. */
 export function ShareRecordCard({ groupName, handle, children }: { groupName: string; handle: string; children: React.ReactNode }) {
-  const { ref, status, canShare, share } = useShareableImage<HTMLDivElement>({
+  const { ref, status, reason, canShare, share } = useShareableImage<HTMLDivElement>({
     filename: 'barbets-record.png',
     title: `${groupName} record`,
     text: `My record at ${groupName} (@${handle}).`,
@@ -37,6 +37,7 @@ export function ShareRecordCard({ groupName, handle, children }: { groupName: st
         {canShare ? <ShareIcon className="h-4 w-4" /> : <DownloadIcon className="h-4 w-4" />}
         {label}
       </Button>
+      {status === 'failed' && reason && <p className="mt-1.5 text-center text-[11.5px] text-espresso-400">{reason}</p>}
     </div>
   );
 }

@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { RefreshIcon } from '@/components/ui/icons';
+import { isCreateFlow } from '@/lib/navRoute';
 
 const TRIGGER_PX = 72;
 const MAX_PULL_PX = 110;
@@ -16,9 +17,18 @@ const RESISTANCE = 0.5;
  * while a modal/sheet has body scroll locked (BetslipBar's existing
  * `document.body.style.overflow = 'hidden'` signal) so a stray drag on an
  * open sheet can't also trigger a refresh underneath it.
+ *
+ * It also doesn't arm at all inside the two create wizards (`isCreateFlow`).
+ * "Scrolled to the very top" is the whole arming condition, and those screens
+ * are sized to fit the viewport, so they're at scrollY 0 for their entire
+ * life — a downward drag anywhere on the form would pull the refresh
+ * indicator instead of doing nothing. There's nothing to re-fetch there
+ * either: the flow's answers live in client state, and its only server data
+ * is the group and member list it was handed on entry.
  */
 export function PullToRefresh({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
   const [pull, setPull] = useState(0);
   const [triggered, setTriggered] = useState(false);
@@ -33,7 +43,7 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (isPending || triggered) return;
+    if (isPending || triggered || isCreateFlow(pathname)) return;
 
     function onTouchStart(e: TouchEvent) {
       if (window.scrollY > 0) return;
@@ -81,7 +91,7 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
       document.removeEventListener('touchmove', onTouchMove);
       document.removeEventListener('touchend', onTouchEnd);
     };
-  }, [isPending, triggered, router]);
+  }, [isPending, triggered, router, pathname]);
 
   useEffect(() => {
     if (triggered && !isPending) {

@@ -68,7 +68,9 @@ export function BetslipBar({
   const existingSide = existingBets.find((b) => b.side)?.side as (typeof sides)[number] | undefined;
   const existingOptionId = existingBets.find((b) => b.option_id)?.option_id;
 
-  const [betSide, setBetSide] = useState<(typeof sides)[number]>(existingSide ?? sides[0]);
+  // Nullable, because the line ticket's "Pick a side" opens this with nothing chosen. Every other
+  // opener names a side, so in practice null is only ever on screen for that one entry point.
+  const [betSide, setBetSide] = useState<(typeof sides)[number] | null>(existingSide ?? null);
   const [betOptionId, setBetOptionId] = useState<string | null>(existingOptionId ?? options?.[0]?.id ?? null);
   const defaultAmount = Math.min(balance, roundToFive(seedAmount * 0.05));
   const [betAmount, setBetAmount] = useState(defaultAmount > 0 ? String(defaultAmount) : '');
@@ -83,10 +85,13 @@ export function BetslipBar({
   // The provider carries only "which pick was tapped"; the side/option that actually gets
   // submitted still lives here alongside the stake. This is the one wire between them, so a row
   // in the options card and a chip inside the drawer end up setting the same thing.
+  // An empty pick object clears the selection rather than leaving the last one in place — that is
+  // how "Pick a side" opens the drawer neutral. Omitting the argument entirely doesn't change
+  // `pick`, so this doesn't re-run and the previous choice survives (what the Bet pill wants).
   useEffect(() => {
     if (!pick) return;
-    if (pick.optionId) setBetOptionId(pick.optionId);
-    if (pick.side) setBetSide(pick.side as (typeof sides)[number]);
+    if (isMultipleChoice) setBetOptionId(pick.optionId ?? null);
+    else setBetSide((pick.side as (typeof sides)[number] | undefined) ?? null);
   }, [pick]);
 
   // The amount input's numeric keyboard pushes this sheet up just enough to reveal the input
@@ -97,7 +102,11 @@ export function BetslipBar({
   const balanceAfter = Math.max(0, balance - betAmountNum);
   const hasExisting = existingBets.length > 0;
 
-  const conflictsWithExisting = existingBets.some((b) => (isMultipleChoice ? b.option_id !== betOptionId : b.side !== betSide));
+  // Nothing picked yet can't conflict with anything — without this guard the hedge warning fires
+  // the moment the drawer opens neutral for someone who already has a bet.
+  const hasPick = isMultipleChoice ? !!betOptionId : !!betSide;
+  const conflictsWithExisting =
+    hasPick && existingBets.some((b) => (isMultipleChoice ? b.option_id !== betOptionId : b.side !== betSide));
   const blockedByHedgeSetting = !allowHedgedBets && hasExisting && conflictsWithExisting;
 
   const chipAmounts = [0.01, 0.05, 0.1].map((pct) => roundToFive(seedAmount * pct));
@@ -108,7 +117,7 @@ export function BetslipBar({
       ? 'Be the first to bet'
       : `${betCount} ${betCount === 1 ? 'bet' : 'bets'} · ${formatTokens(betVolume ?? 0)} tokens in`;
 
-  const selectedLabel = isMultipleChoice ? (options?.find((o) => o.id === betOptionId)?.label ?? '') : betSide.toUpperCase();
+  const selectedLabel = isMultipleChoice ? (options?.find((o) => o.id === betOptionId)?.label ?? '') : (betSide?.toUpperCase() ?? '');
   const lineLabel = market.market_type === 'over_under' && market.line != null ? formatLine(market.line, market.unit) : null;
 
   useEffect(() => {
@@ -158,7 +167,7 @@ export function BetslipBar({
   function submit() {
     setError(null);
     startTransition(async () => {
-      const result = await placeBet(groupId, market.id, betAmountNum, isMultipleChoice ? { optionId: betOptionId! } : { side: betSide });
+      const result = await placeBet(groupId, market.id, betAmountNum, isMultipleChoice ? { optionId: betOptionId! } : { side: betSide! });
       if (result.error) {
         setError(result.error);
         return;
@@ -367,7 +376,13 @@ export function BetslipBar({
               the slip commits to the one number it can state honestly. */}
           <div className="mt-3.5 flex items-baseline justify-between gap-3">
             <span className="text-[13px] font-semibold text-paper-white/60">
-              Betting on <OptionLabel label={selectedLabel.toUpperCase()} className="text-honey-200" />
+              {hasPick ? (
+                <>
+                  Betting on <OptionLabel label={selectedLabel.toUpperCase()} className="text-honey-200" />
+                </>
+              ) : (
+                <span className="text-honey-200">Pick a side above</span>
+              )}
             </span>
             <span className="shrink-0 text-[13px] font-semibold text-paper-white/60">
               Balance after <strong className="font-extrabold text-honey-200">{formatTokens(balanceAfter)}</strong>
@@ -376,7 +391,7 @@ export function BetslipBar({
 
           <button
             type="button"
-            disabled={isPending || betAmountNum < 1 || betAmountNum > balance || (isMultipleChoice && !betOptionId) || blockedByHedgeSetting}
+            disabled={isPending || betAmountNum < 1 || betAmountNum > balance || !hasPick || blockedByHedgeSetting}
             onClick={submit}
             className="mt-3.5 w-full rounded-full bg-honey-500 px-5 py-3.5 text-[15px] font-extrabold text-espresso-950 transition-colors hover:bg-honey-600 disabled:bg-honey-500/30 disabled:text-espresso-950/40"
           >

@@ -136,6 +136,7 @@ export function RevealTicket({
   const {
     ref: ticketRef,
     status: shareStatus,
+    reason: shareReason,
     canShare,
     share: handleShare,
   } = useShareableImage<HTMLDivElement>({
@@ -361,6 +362,9 @@ export function RevealTicket({
         </Button>
         {hasProof && <ResolutionProofButton marketId={marketId} variant="action" />}
       </div>
+      {shareStatus === 'failed' && shareReason && (
+        <p className="mt-1.5 text-center text-[11.5px] text-espresso-400">{shareReason}</p>
+      )}
     </div>
   );
 }

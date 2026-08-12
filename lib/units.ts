@@ -1,5 +1,7 @@
-/** Common over/under units shown as one-tap presets; anything else goes through the "custom" free-text field. */
-export const OVER_UNDER_UNIT_PRESETS = ['$', 'min', 'hr', 'pts', '%'] as const;
+/** Common over/under units shown as one-tap presets; anything else goes through the "custom" free-text field.
+    Plural because a line is almost never exactly one of anything ("5.5 mins", not "5.5 min"); markets created
+    before this read back with whatever singular they were stored with, since `unit` is free text. */
+export const OVER_UNDER_UNIT_PRESETS = ['$', 'mins', 'hrs', 'pts', '%'] as const;
 
 /** Long-pressing the `$` preset reveals these as extra one-tap options, instead of cluttering the default row with every currency up front. */
 export const OVER_UNDER_CURRENCY_ALTERNATES = ['£', '€'] as const;
@@ -8,6 +10,13 @@ export const OVER_UNDER_UNIT_MAX_LENGTH = 10;
 
 /** Currency symbols prefix the number (`$5.5`, `£5.5`, `€5.5`); every other unit trails it (`5.5 min`). */
 const PREFIXED_UNITS = new Set(['$', '£', '€']);
+
+/** True for the units that read before the number rather than after it. Exported so the create
+    form can put its unit chip on the correct side of the line input, and so the field you fill in
+    is laid out the way the line will read everywhere else. */
+export function isPrefixedUnit(unit: string | null | undefined): boolean {
+  return !!unit && PREFIXED_UNITS.has(unit);
+}
 
 /** How an over/under line is entered and stored. A number is the ordinary case (a free-text/preset
     `unit` can still trail or prefix it); 'date'/'time' repurpose `markets.unit` itself as the format

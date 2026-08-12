@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { createMarket } from '@/lib/actions/markets';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { Mention } from '@/components/ui/Mention';
-import { InfoIcon, CalendarIcon, CaretLeftIcon } from '@/components/ui/icons';
+import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
+import { InfoIcon, CalendarIcon, CaretLeftIcon, CaretDownIcon } from '@/components/ui/icons';
 import { MARKET_TYPE_LABEL, type MarketType } from '@/lib/marketType';
 import {
   OVER_UNDER_UNIT_PRESETS,
@@ -13,6 +15,7 @@ import {
   OVER_UNDER_UNIT_MAX_LENGTH,
   formatLine,
   parseLineInput,
+  isPrefixedUnit,
   type LineFormat,
 } from '@/lib/units';
 import { friendlyTimezoneName } from '@/lib/timezone';
@@ -26,10 +29,25 @@ const footerButtonClasses =
   'flex h-[52px] w-full items-center justify-center rounded-full border-0 bg-espresso-800 text-[15px] font-extrabold text-paper-white disabled:opacity-45';
 const eyebrowClasses = 'text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase';
 
+const pad = (n: number) => String(n).padStart(2, '0');
+
 /** datetime-local wants "YYYY-MM-DDTHH:mm" in the browser's local time, not UTC. */
 function toLocalDatetimeInputValue(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** `<input type="date">` wants "YYYY-MM-DD", also in local time. */
+function toLocalDateInputValue(date: Date): string {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/** Switching the line to a date or a time lands on a plausible answer rather than an empty field:
+ * a week out, or midday. Both are far more often the right ballpark than "now" would be, and an
+ * empty date input is the one control people reliably walk past without filling in. */
+function defaultLineFor(format: LineFormat): string {
+  if (format === 'date') return toLocalDateInputValue(new Date(Date.now() + 7 * 24 * 60 * 60_000));
+  if (format === 'time') return '12:00';
+  return '';
 }
 
 /** One member as the create-market form needs them: enough to render an @mention chip and to send
@@ -51,11 +69,28 @@ function newOption(label = ''): OptionDraft {
   return { key: `opt-${optionKeySeq}`, label };
 }
 
-function StepBar({ step, label, onBack }: { step: 1 | 2 | 3; label: string; onBack: () => void }) {
+function StepBar({
+  step,
+  label,
+  backLabel,
+  onBack,
+}: {
+  step: 1 | 2 | 3;
+  label: string;
+  /** Named only on the step where "back" means leaving the flow; deeper in, the caret alone is unambiguous. */
+  backLabel?: string;
+  onBack: () => void;
+}) {
   return (
     <div className="flex items-center gap-3">
-      <button type="button" onClick={onBack} aria-label="Back" className="-ml-1.5 border-0 bg-transparent p-0 text-espresso-300">
+      <button
+        type="button"
+        onClick={onBack}
+        aria-label={backLabel ?? 'Back'}
+        className="-ml-1.5 inline-flex shrink-0 items-center gap-0.5 border-0 bg-transparent p-0 text-espresso-300"
+      >
         <CaretLeftIcon className="h-[18px] w-[18px]" />
+        {backLabel && <span className="text-[12.5px] font-bold text-espresso-400">{backLabel}</span>}
       </button>
       <span className="flex flex-1 gap-[5px]">
         {[1, 2, 3].map((i) => (
@@ -143,6 +178,8 @@ function OptionRow({
  * enough to list, and "who is this about?" is a question you answer by recognising a name rather
  * than by recalling one. "Nobody" is a real chip rather than the absence of a choice, so the
  * unanswered and the deliberately-nobody cases stop looking identical. */
+const SUBJECT_PAGE_SIZE = 20;
+
 function SubjectChips({
   members,
   selected,
@@ -154,43 +191,72 @@ function SubjectChips({
   onChange: (next: MemberOption[]) => void;
   maxSubjects: number;
 }) {
+  const [visibleCount, setVisibleCount] = useState(SUBJECT_PAGE_SIZE);
   const atCap = selected.length >= maxSubjects;
   const nobody = selected.length === 0;
 
+  // A big group would otherwise put a hundred chips between the question and the footer. Anyone
+  // already picked stays on screen regardless of which page they fall on — paging away someone's
+  // own choice would read as having lost it.
+  const isSelected = (m: MemberOption) => selected.some((s) => s.userId === m.userId);
+  const shown = [...members.slice(0, visibleCount), ...members.slice(visibleCount).filter(isSelected)];
+  const remaining = members.length - visibleCount;
+
   return (
-    <div className="mt-2.5 flex flex-wrap gap-[7px]">
-      {members.map((m) => {
-        const on = selected.some((s) => s.userId === m.userId);
-        return (
-          <button
-            key={m.userId}
-            type="button"
-            disabled={!on && atCap}
-            onClick={() => onChange(on ? selected.filter((s) => s.userId !== m.userId) : [...selected, m])}
-            className={cn(
-              'rounded-full px-3.5 py-2 text-[13px] disabled:opacity-40',
-              on
-                ? 'border-[1.5px] border-honey-500 bg-honey-50 font-extrabold text-honey-800'
-                : 'border border-espresso-200 bg-transparent font-bold text-espresso-600'
-            )}
-          >
-            <Mention nickname={m.nickname} />
-          </button>
-        );
-      })}
-      <button
-        type="button"
-        onClick={() => onChange([])}
-        className={cn(
-          'rounded-full px-3.5 py-2 text-[13px]',
-          nobody
-            ? 'border-[1.5px] border-honey-500 bg-honey-50 font-extrabold text-honey-800'
-            : 'border border-espresso-200 bg-transparent font-bold text-espresso-600'
-        )}
-      >
-        Nobody
-      </button>
-    </div>
+    <>
+      <div className="mt-2.5 flex flex-wrap gap-[7px]">
+        {shown.map((m) => {
+          const on = isSelected(m);
+          return (
+            <button
+              key={m.userId}
+              type="button"
+              disabled={!on && atCap}
+              onClick={() => onChange(on ? selected.filter((s) => s.userId !== m.userId) : [...selected, m])}
+              className={cn(
+                'rounded-full px-3.5 py-2 text-[13px] disabled:opacity-40',
+                on
+                  ? 'border-[1.5px] border-honey-500 bg-honey-50 font-extrabold text-honey-800'
+                  : 'border border-espresso-200 bg-transparent font-bold text-espresso-600'
+              )}
+            >
+              <Mention nickname={m.nickname} />
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => onChange([])}
+          className={cn(
+            'rounded-full px-3.5 py-2 text-[13px]',
+            nobody
+              ? 'border-[1.5px] border-honey-500 bg-honey-50 font-extrabold text-honey-800'
+              : 'border border-espresso-200 bg-transparent font-bold text-espresso-600'
+          )}
+        >
+          Nobody
+        </button>
+      </div>
+
+      {remaining > 0 && (
+        <button
+          type="button"
+          onClick={() => setVisibleCount((c) => c + SUBJECT_PAGE_SIZE)}
+          className="mt-2.5 border-0 bg-transparent p-0 text-[12.5px] font-extrabold text-honey-700"
+        >
+          Show {Math.min(remaining, SUBJECT_PAGE_SIZE)} more
+        </button>
+      )}
+      {remaining <= 0 && members.length > SUBJECT_PAGE_SIZE && (
+        <button
+          type="button"
+          onClick={() => setVisibleCount(SUBJECT_PAGE_SIZE)}
+          className="mt-2.5 border-0 bg-transparent p-0 text-[12.5px] font-extrabold text-honey-700"
+        >
+          Show fewer
+        </button>
+      )}
+    </>
   );
 }
 
@@ -298,21 +364,56 @@ export function CreateMarketForm({
         options: marketType === 'multiple_choice' ? options.map((o) => o.label.trim()) : undefined,
       });
       if (result.error) {
+        // Stays on the review step: the alert says what's wrong over the ticket it's about, and
+        // throwing someone back to step 1 to read it would lose their place for no reason.
         setError(result.error);
-        setStep(1);
       } else {
         router.push(`/groups/${groupId}/markets/${result.data!.id}`);
       }
     });
   }
 
-  const errorLine = error && <p className="text-sm text-danger-700">{error}</p>;
+  /** Switching what the line *is* resets what it says, but only on a real change — retyping a
+   * number just because the unit next to it changed would be maddening. */
+  function chooseFormat(next: LineFormat) {
+    if (next !== lineFormat) setLine(defaultLineFor(next));
+    setLineFormat(next);
+  }
+
+  const hasUnit = lineFormat !== 'number' || !!unit.trim();
+  const unitButton = (
+    <button
+      type="button"
+      onClick={() => setUnitPickerOpen((v) => !v)}
+      aria-expanded={unitPickerOpen}
+      className={cn(
+        'flex shrink-0 items-center gap-1.5 rounded-[14px] border-[1.5px] px-3.5 py-3 text-sm font-extrabold',
+        hasUnit ? 'border-espresso-200 bg-espresso-50 text-espresso-700' : 'border-dashed border-espresso-200 bg-transparent text-espresso-500'
+      )}
+    >
+      {lineFormat === 'date' ? 'A date' : lineFormat === 'time' ? 'A time' : unit.trim() || 'Add unit'}
+      <CaretDownIcon className={cn('h-3.5 w-3.5 text-espresso-400 transition-transform', unitPickerOpen && 'rotate-180')} />
+    </button>
+  );
+
+  /** A blocked step is an interruption, so it interrupts. The same message as a red line above the
+   * heading was reliably missed: it sits at the top of a screen whose action is pinned to the
+   * bottom, which is exactly where you are looking when you press Next. */
+  const errorAlert = error && (
+    <Modal onClose={() => setError(null)}>
+      <p className="font-display font-bold text-espresso-900">Not quite there</p>
+      <p className="text-sm leading-[1.5] text-espresso-600">{error}</p>
+      <Button className="w-full" onClick={() => setError(null)}>
+        Got it
+      </Button>
+    </Modal>
+  );
 
   if (step === 1) {
     return (
       <div className="flex flex-1 flex-col gap-[18px]">
-        <StepBar step={1} label="Ask" onBack={() => router.push(`/groups/${groupId}`)} />
-        {errorLine}
+        <StepBar step={1} label="Ask" backLabel="All markets" onBack={() => router.push(`/groups/${groupId}`)} />
+        {errorAlert}
 
         <div>
           <p className="text-[11px] font-extrabold tracking-[0.1em] text-honey-700 uppercase">
@@ -355,6 +456,10 @@ export function CreateMarketForm({
           <div className={cardClasses}>
             <p className="text-[13px] font-extrabold text-espresso-800">The line</p>
             <div className="mt-2.5 flex items-center gap-2.5">
+              {/* Currencies read before the number everywhere else in the app (formatLine's
+                  PREFIXED_UNITS), so the field you fill in is laid out the way the line will
+                  actually read rather than "5.5 $". */}
+              {isPrefixedUnit(unit) && lineFormat === 'number' && unitButton}
               {lineFormat === 'number' ? (
                 <input
                   value={line}
@@ -373,21 +478,28 @@ export function CreateMarketForm({
                   className="min-w-0 flex-1 rounded-[14px] border-[1.5px] border-espresso-200 bg-paper-white px-3.5 py-3 text-base font-extrabold text-espresso-950 focus:border-honey-500 focus:outline-none"
                 />
               )}
-              {/* The unit is a chip beside the number, not a row of presets under it: for most
-                  markets it is already right, and the ones that need it changed only need one tap
-                  to open the choices. The two non-numeric line formats live in the same picker,
-                  since "what is this line measured in?" is the question they answer too. */}
-              <button
-                type="button"
-                onClick={() => setUnitPickerOpen((v) => !v)}
-                className="shrink-0 rounded-[14px] border-0 bg-espresso-50 px-4 py-3 text-sm font-extrabold text-espresso-700"
-              >
-                {lineFormat === 'number' ? unit.trim() || 'unit' : lineFormat === 'date' ? 'a date' : 'a time'}
-              </button>
+              {!(isPrefixedUnit(unit) && lineFormat === 'number') && unitButton}
             </div>
 
             {unitPickerOpen && (
               <div className="mt-3 flex flex-wrap gap-2 border-t border-espresso-50 pt-3">
+                {/* First, and always available: the way back out of a unit you didn't want. */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    chooseFormat('number');
+                    setUnit('');
+                    setCustomUnit(false);
+                  }}
+                  className={cn(
+                    'rounded-full border px-3 py-1 text-sm font-semibold',
+                    lineFormat === 'number' && !unit.trim() && !customUnit
+                      ? 'border-honey-500 bg-honey-50 text-honey-800'
+                      : 'border-espresso-200 text-espresso-600'
+                  )}
+                >
+                  No unit
+                </button>
                 {OVER_UNDER_UNIT_PRESETS.map((preset) => (
                   <button
                     type="button"
@@ -396,7 +508,7 @@ export function CreateMarketForm({
                     onPointerUp={preset === '$' ? endCurrencyPress : undefined}
                     onPointerLeave={preset === '$' ? endCurrencyPress : undefined}
                     onClick={() => {
-                      setLineFormat('number');
+                      chooseFormat('number');
                       setUnit(preset);
                       setCustomUnit(false);
                     }}
@@ -416,7 +528,7 @@ export function CreateMarketForm({
                       type="button"
                       key={alt}
                       onClick={() => {
-                        setLineFormat('number');
+                        chooseFormat('number');
                         setUnit(alt);
                         setCustomUnit(false);
                       }}
@@ -435,10 +547,9 @@ export function CreateMarketForm({
                     type="button"
                     key={f}
                     onClick={() => {
-                      setLineFormat(f);
+                      chooseFormat(f);
                       setUnit('');
                       setCustomUnit(false);
-                      setLine('');
                     }}
                     className={cn(
                       'rounded-full border px-3 py-1 text-sm font-semibold',
@@ -451,7 +562,7 @@ export function CreateMarketForm({
                 <button
                   type="button"
                   onClick={() => {
-                    setLineFormat('number');
+                    chooseFormat('number');
                     setCustomUnit(true);
                     setUnit('');
                   }}
@@ -478,9 +589,9 @@ export function CreateMarketForm({
               </div>
             )}
 
-            <p className="mt-2.5 text-[11.5px] text-espresso-400">
-              {lineFormat === 'number' ? 'A half avoids a tie.' : 'Bets settle either side of this exact point.'}
-            </p>
+            {lineFormat !== 'number' && (
+              <p className="mt-2.5 text-[11.5px] text-espresso-400">Bets settle either side of this exact point.</p>
+            )}
           </div>
         )}
 
@@ -531,7 +642,8 @@ export function CreateMarketForm({
               ) : (
                 <>
                   <Mention nickname={subjects[0].nickname} />
-                  {subjects.length > 1 && ` and ${subjects.length - 1} more`} won&apos;t see this market until it resolves.
+                  {subjects.length > 1 && ` and ${subjects.length - 1} more`}
+                  {' won’t see this market until it resolves.'}
                 </>
               )}
             </p>
@@ -540,7 +652,7 @@ export function CreateMarketForm({
 
         <div className="mt-auto pt-6">
           <button type="button" onClick={goToStep2} className={footerButtonClasses}>
-            Next · how it settles
+            Next · How it settles
           </button>
         </div>
       </div>
@@ -551,7 +663,7 @@ export function CreateMarketForm({
     return (
       <div className="flex flex-1 flex-col gap-[18px]">
         <StepBar step={2} label="Settle" onBack={() => setStep(1)} />
-        {errorLine}
+        {errorAlert}
 
         <h1 className={headingClasses}>How does it settle?</h1>
 
@@ -610,7 +722,7 @@ export function CreateMarketForm({
   return (
     <div className="flex flex-1 flex-col gap-[18px]">
       <StepBar step={3} label="Review" onBack={() => setStep(2)} />
-      {errorLine}
+      {errorAlert}
 
       <ReviewTicket
         title={title}
@@ -709,8 +821,7 @@ function ReviewTicket({
           <p className="mt-1 text-[15px] font-extrabold text-espresso-950">{formatLine(line, displayUnit)}</p>
           {lineIsWholeNumber && (
             <p className="mt-1.5 rounded-lg bg-honey-50 px-2.5 py-1.5 text-xs text-honey-800">
-              A whole number can land on an exact tie, which the group would have to resolve as VOID. A half (like 3.5)
-              avoids that entirely.
+              A whole number can land on an exact tie, which the group would have to resolve as VOID.
             </p>
           )}
         </ReviewRow>
