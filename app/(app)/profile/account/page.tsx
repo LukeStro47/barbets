@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient, requireUser } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { ChangeEmailForm, ChangePasswordForm } from '@/components/profile/AccountForms';
@@ -10,9 +10,7 @@ import { InstallPrompt } from '@/components/pwa/InstallPrompt';
  * notifications, deletion. Nothing here is group-scoped. */
 export default async function AccountPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await requireUser(supabase);
 
   return (
     <main className="mx-auto max-w-lg space-y-6 px-5 py-8">

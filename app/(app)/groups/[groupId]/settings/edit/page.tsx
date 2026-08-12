@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, requireUser } from '@/lib/supabase/server';
 import { notFoundIfEmpty } from '@/lib/errors';
 import { EditSettingsForm } from '@/components/groups/SettingsActions';
 import type { GroupSettings } from '@/lib/actions/groups';
@@ -16,9 +16,7 @@ export default async function EditGroupSettingsPage({ params }: { params: Promis
   const { data: group } = await supabase.from('groups').select('id, name, owner_id').eq('id', groupId).single();
   notFoundIfEmpty(group);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await requireUser(supabase);
   if (group!.owner_id !== user?.id) notFound();
 
   const { data: settings } = await supabase.from('group_settings').select('*').eq('group_id', groupId).single();

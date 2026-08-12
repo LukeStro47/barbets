@@ -1,5 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import type { User } from '@supabase/supabase-js';
 
 /**
  * Per-request Supabase client built from the caller's session cookies —
@@ -28,4 +30,28 @@ export async function createClient() {
       },
     },
   });
+}
+
+/**
+ * The signed-in user, or a redirect to /login. **Every page under `app/(app)` must call this
+ * rather than `getUser()` directly.**
+ *
+ * `app/(app)/layout.tsx` already redirects when there's no user, and it is tempting to treat
+ * that as the guard for everything beneath it — that assumption is exactly the bug this
+ * exists to prevent. A layout and its page render **in parallel** in the App Router, so the
+ * layout's `redirect()` cannot stop the page from running: both are already in flight. A page
+ * that read `user!.id` on the strength of the layout's check threw
+ * `TypeError: Cannot read properties of null (reading 'id')` in production every time a
+ * session had quietly expired, which is invisible in development (where sessions rarely
+ * lapse mid-session) and intermittent in production.
+ *
+ * The non-null assertion is the tell. If a page needs `user!.id`, it needs this instead.
+ */
+export async function requireUser(supabase: Awaited<ReturnType<typeof createClient>>): Promise<User> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  // redirect() throws NEXT_REDIRECT, so nothing after this line runs for a signed-out caller.
+  if (!user) redirect('/login');
+  return user;
 }

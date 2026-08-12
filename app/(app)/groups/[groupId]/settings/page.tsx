@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, requireUser } from '@/lib/supabase/server';
 import { notFoundIfEmpty } from '@/lib/errors';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SettingsCard, SettingRow, SectionLabel } from '@/components/ui/SettingsList';
@@ -25,15 +25,13 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
     .single();
   notFoundIfEmpty(group);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await requireUser(supabase);
   const isOwner = group!.owner_id === user?.id;
 
   const [{ data: settings }, { data: members }, { data: myMembership }, { data: activeSeasonRow }] = await Promise.all([
     supabase.from('group_settings').select('*').eq('group_id', groupId).single(),
     supabase.from('memberships').select('user_id, status, nickname').eq('group_id', groupId).in('status', ['active', 'dormant']),
-    supabase.from('memberships').select('nickname').eq('group_id', groupId).eq('user_id', user!.id).single(),
+    supabase.from('memberships').select('nickname').eq('group_id', groupId).eq('user_id', user.id).single(),
     supabase.from('seasons').select('id, number, name, betting_open').eq('group_id', groupId).eq('status', 'active').single(),
   ]);
 

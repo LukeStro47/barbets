@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, requireUser } from '@/lib/supabase/server';
 import { signOut } from '@/lib/actions/auth';
 import { PageHeader } from '@/components/ui/PageHeader';
 import {
@@ -81,16 +81,14 @@ function QuickLink({ href, label, Icon }: { href: string; label: string; Icon: (
 export default async function ProfilePage({ searchParams }: { searchParams: Promise<{ group?: string }> }) {
   const { group: groupParam } = await searchParams;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await requireUser(supabase);
 
   const { data: isAdmin } = await supabase.rpc('is_platform_admin');
 
   const { data: memberships } = await supabase
     .from('memberships')
     .select('group_id, nickname, balance, joined_at, groups(name, avatar_key)')
-    .eq('user_id', user!.id)
+    .eq('user_id', user.id)
     .neq('status', 'removed')
     .order('joined_at', { ascending: false });
 
@@ -173,14 +171,14 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
     .eq('group_id', groupId)
     .in('status', ['active', 'dormant']);
   const ranked = [...(groupMembers ?? [])].sort((a, b) => b.balance - a.balance);
-  const myRankIndex = ranked.findIndex((m) => m.user_id === user!.id);
+  const myRankIndex = ranked.findIndex((m) => m.user_id === user.id);
   const standing = myRankIndex >= 0 ? `${formatOrdinal(myRankIndex + 1)} of ${ranked.length}` : `Sitting out of ${ranked.length}`;
 
   const { data: myMembership } = await supabase
     .from('memberships')
     .select('id')
     .eq('group_id', groupId)
-    .eq('user_id', user!.id)
+    .eq('user_id', user.id)
     .single();
 
   // Same "every ledger entry but the seed" net definition the leaderboard's all-time card and
@@ -195,7 +193,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   const { data: settledBets } = await supabase
     .from('bets')
     .select('side, option_id, markets!inner(group_id, status, outcome, outcome_option_id)')
-    .eq('user_id', user!.id)
+    .eq('user_id', user.id)
     .eq('markets.group_id', groupId)
     .eq('markets.status', 'resolved');
   const correctCount = (settledBets ?? []).filter((b: any) =>
@@ -209,7 +207,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   const { data: myClosedBets } = await supabase
     .from('bets')
     .select('amount, payout, market_id, markets!inner(group_id, title)')
-    .eq('user_id', user!.id)
+    .eq('user_id', user.id)
     .eq('markets.group_id', groupId)
     .not('settled_at', 'is', null);
   const settledMarketCount = new Set((myClosedBets ?? []).map((b) => b.market_id)).size;
@@ -237,7 +235,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   const { data: openBetRows } = await supabase
     .from('bets')
     .select('id, side, option_id, amount, market_id, markets!inner(id, group_id, title, market_type, closes_at)')
-    .eq('user_id', user!.id)
+    .eq('user_id', user.id)
     .in('markets.group_id', allGroupIds)
     .is('settled_at', null);
 

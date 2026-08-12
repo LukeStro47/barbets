@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, requireUser } from '@/lib/supabase/server';
 import { notFoundIfEmpty } from '@/lib/errors';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Badge } from '@/components/ui/Badge';
@@ -76,9 +76,7 @@ export default async function MarketDetailPage({
     redirect(`/groups/${groupId}/markets/${marketId}/reveal`);
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await requireUser(supabase);
   const isCreator = marketRow.creator_id === user?.id;
   const isPendingSponsor = marketRow.status === 'pending_sponsor';
 
@@ -91,7 +89,7 @@ export default async function MarketDetailPage({
     { data: groupSettings },
     { count: tableSize },
   ] = await Promise.all([
-    supabase.from('memberships').select('balance').eq('group_id', groupId).eq('user_id', user!.id).single(),
+    supabase.from('memberships').select('balance').eq('group_id', groupId).eq('user_id', user.id).single(),
     supabase.from('market_subjects').select('user_id').eq('market_id', marketId),
     isMultipleChoice
       ? supabase.from('market_options').select('id, market_id, label, sort_order').eq('market_id', marketId).order('sort_order')
@@ -156,7 +154,7 @@ export default async function MarketDetailPage({
   let myVote: { outcome: string | null; voted_option_id: string | null } | null = null;
 
   if (!isPendingSponsor) {
-    const { data: bets } = await supabase.from('bets').select('side, option_id, amount').eq('market_id', marketId).eq('user_id', user!.id);
+    const { data: bets } = await supabase.from('bets').select('side, option_id, amount').eq('market_id', marketId).eq('user_id', user.id);
     myBets = bets ?? [];
   }
   if (marketRow.status === 'open') {
@@ -208,7 +206,7 @@ export default async function MarketDetailPage({
       .from('votes')
       .select('outcome, voted_option_id')
       .eq('market_id', marketId)
-      .eq('voter_id', user!.id)
+      .eq('voter_id', user.id)
       .maybeSingle();
     myVote = vote;
 
@@ -509,7 +507,7 @@ export default async function MarketDetailPage({
               marketId={marketId}
               proposedAt={proposal.proposed_at}
               resolutionWindowHours={resolutionWindowHours}
-              iAmProposer={proposal.proposer_id === user!.id}
+              iAmProposer={proposal.proposer_id === user.id}
             />
           </ResolutionTimeline>
         </Card>
@@ -578,7 +576,7 @@ export default async function MarketDetailPage({
             proposal={proposal}
             challenge={challenge}
             myVote={myVote}
-            currentUserId={user!.id}
+            currentUserId={user.id}
             proposerNickname={proposerNickname}
             options={marketOptions}
             resolutionWindowHours={resolutionWindowHours}

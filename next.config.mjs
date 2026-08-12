@@ -5,6 +5,13 @@ const nextConfig = {
   // build only, no effect on `next build`/production.
   devIndicators: { position: 'top-left' },
 
+  // Server stacks in production are otherwise minified to a single unreadable frame
+  // ("at s (.next/server/chunks/ssr/[root-of-the-server]__1s6o8a3._.js:1:12574)"), which makes
+  // the stack in a Slack error card worth nothing: it names no file, no function, no line.
+  // This emits maps for the server bundle; instrumentation.ts turns on Node's consumption of
+  // them, and the two together are what make a reported error point at real source.
+  experimental: { serverSourceMaps: true },
+
   async redirects() {
     return [
       // /help was a page whose entire content was "email us". /feedback is the same conversation

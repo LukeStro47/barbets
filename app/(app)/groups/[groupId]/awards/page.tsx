@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient, requireUser } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Mention } from '@/components/ui/Mention';
@@ -22,9 +22,7 @@ function holderList(nicknames: string[]): string {
 export default async function AwardsPage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await requireUser(supabase);
 
   const [{ data: settings }, { data: titleRows }, { data: members }] = await Promise.all([
     supabase.from('group_settings').select('seasons_enabled').eq('group_id', groupId).single(),

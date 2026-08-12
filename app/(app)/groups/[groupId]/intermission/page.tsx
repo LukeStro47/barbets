@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient, requireUser } from '@/lib/supabase/server';
 import { notFoundIfEmpty } from '@/lib/errors';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
@@ -26,9 +26,7 @@ export default async function IntermissionPage({ params }: { params: Promise<{ g
     .single();
   notFoundIfEmpty(group);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await requireUser(supabase);
 
   const { data: season } = await supabase
     .from('seasons')

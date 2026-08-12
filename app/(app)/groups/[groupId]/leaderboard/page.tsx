@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, requireUser } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -33,9 +33,7 @@ export default async function LeaderboardPage({
   const { page: pageParam, lens: lensParam } = await searchParams;
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await requireUser(supabase);
 
   const { data: settings } = await supabase.from('group_settings').select('seasons_enabled').eq('group_id', groupId).single();
 
@@ -208,7 +206,7 @@ export default async function LeaderboardPage({
       .from('memberships')
       .select('id')
       .eq('group_id', groupId)
-      .eq('user_id', user!.id)
+      .eq('user_id', user.id)
       .single();
 
     const [{ data: ledgerRows }, { data: settledBets }, { data: resultsPage }] = await Promise.all([
@@ -218,7 +216,7 @@ export default async function LeaderboardPage({
       supabase
         .from('bets')
         .select('side, option_id, markets!inner(group_id, status, outcome, outcome_option_id)')
-        .eq('user_id', user!.id)
+        .eq('user_id', user.id)
         .eq('markets.group_id', groupId)
         .eq('markets.status', 'resolved'),
       supabase

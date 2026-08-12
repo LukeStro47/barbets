@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, requireUser } from '@/lib/supabase/server';
 import { notFoundIfEmpty } from '@/lib/errors';
 import { Badge } from '@/components/ui/Badge';
 import { RevealSummary } from '@/components/markets/RevealSummary';
@@ -14,9 +14,7 @@ export default async function RevealPage({ params }: { params: Promise<{ groupId
   const { groupId, marketId } = await params;
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await requireUser(supabase);
 
   const { data: market } = await supabase.from('visible_markets').select('*').eq('id', marketId).single();
   const marketRow = notFoundIfEmpty<Market>(market);

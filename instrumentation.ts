@@ -1,6 +1,25 @@
 import type { Instrumentation } from 'next';
 
 /**
+ * Runs once per server process, before anything else.
+ *
+ * Node does not apply source maps to `Error.stack` unless asked, so a production stack came
+ * back as a single minified frame naming a chunk file and nothing else. Paired with
+ * `experimental.serverSourceMaps` in next.config.mjs (which emits the maps), this is what
+ * makes the stack in a Slack card point at a real file and line.
+ *
+ * The call lives in its own Node-only module, reached by dynamic import behind a NEXT_RUNTIME
+ * check: this hook is bundled for the edge runtime too, and Turbopack statically flags a
+ * `process.setSourceMapsEnabled` reference there as unsupported even when it is unreachable
+ * at runtime. The separate file is what keeps it out of the edge bundle entirely.
+ */
+export async function register() {
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+    await import('./instrumentation.node');
+  }
+}
+
+/**
  * Next.js calls this for every error thrown out of server-side rendering, a
  * Server Action, a route handler or middleware — including the ones the user
  * only ever sees as a redacted digest. It is the single hook that catches

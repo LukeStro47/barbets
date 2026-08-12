@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, requireUser } from '@/lib/supabase/server';
 import { notFoundIfEmpty } from '@/lib/errors';
 import { type MarketCardData } from '@/components/markets/MarketCard';
 import { SeasonBanner } from '@/components/groups/SeasonBanner';
@@ -44,24 +44,22 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
     .single();
   notFoundIfEmpty(group);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await requireUser(supabase);
   const isOwner = group!.owner_id === user?.id;
 
   const { data: membership } = await supabase
     .from('memberships')
     .select('balance, nickname')
     .eq('group_id', groupId)
-    .eq('user_id', user!.id)
+    .eq('user_id', user.id)
     .single();
 
-  const { tasks } = await getGroupTasks(supabase, groupId, user!.id);
+  const { tasks } = await getGroupTasks(supabase, groupId, user.id);
 
   const { data: openBetRows } = await supabase
     .from('bets')
     .select('market_id, side, option_id, amount, markets!inner(group_id)')
-    .eq('user_id', user!.id)
+    .eq('user_id', user.id)
     .eq('markets.group_id', groupId)
     .is('settled_at', null);
   const pendingTokens = (openBetRows ?? []).reduce((sum, b) => sum + b.amount, 0);
@@ -110,7 +108,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
     .from('markets')
     .select('id, resolution_clarifications!inner(id)')
     .eq('group_id', groupId)
-    .eq('creator_id', user!.id);
+    .eq('creator_id', user.id);
   const needsClarificationMarketIds = new Set((needsClarificationRows ?? []).map((m) => m.id));
 
   const revealedMarketIds = (markets ?? []).filter((m) => ['resolved', 'voided'].includes(m.status)).map((m) => m.id);
@@ -133,7 +131,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
       ? await supabase
           .from('bets')
           .select('market_id, side, option_id, amount, payout')
-          .eq('user_id', user!.id)
+          .eq('user_id', user.id)
           .in('market_id', revealedMarketIds)
       : { data: [] };
   const myBetsByMarket = new Map<string, { side: string | null; option_id: string | null; amount: number; payout: number | null }[]>();

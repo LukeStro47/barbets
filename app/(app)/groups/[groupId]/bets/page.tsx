@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, requireUser } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { OptionLabel } from '@/components/markets/OptionLabel';
@@ -22,14 +22,12 @@ const rowClass = 'flex items-center justify-between gap-2.5 px-4 py-3 text-sm tr
 export default async function MyBetsPage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await requireUser(supabase);
 
   const { data: bets } = await supabase
     .from('bets')
     .select('id, side, option_id, amount, payout, settled_at, market_id, markets!inner(title, outcome, group_id)')
-    .eq('user_id', user!.id)
+    .eq('user_id', user.id)
     .eq('markets.group_id', groupId)
     .order('created_at', { ascending: false });
 

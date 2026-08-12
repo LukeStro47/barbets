@@ -1,5 +1,4 @@
-import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, requireUser } from '@/lib/supabase/server';
 import { BottomNav, type NavGroup } from '@/components/layout/BottomNav';
 import { BottomNavSpacer } from '@/components/layout/BottomNavSpacer';
 import { PullToRefresh } from '@/components/layout/PullToRefresh';
@@ -10,10 +9,10 @@ import { getGroupTaskCounts } from '@/lib/tasks';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  // This redirect is the layout's own protection, never the page's underneath it: a layout and
+  // its page render in parallel, so this cannot stop one from running. Every page calls
+  // requireUser() for itself. See the note on requireUser.
+  const user = await requireUser(supabase);
 
   const { data: groupRows } = await supabase
     .from('groups')

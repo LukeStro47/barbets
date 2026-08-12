@@ -107,6 +107,23 @@ export async function submitFeedback(
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  // The durable row is already saved by this point (submit_feedback would have rejected an
+  // unauthenticated caller outright), so a session that lapsed between the RPC and here costs
+  // the Slack card its name and email, not the feedback. Never worth throwing over: a thrown
+  // Server Action error would show the submitter a generic failure for something that
+  // actually succeeded.
+  if (!user) {
+    await postToSlack({
+      message: feedback.message,
+      category: feedback.category,
+      wantsFollowup: feedback.wants_followup,
+      nickname: null,
+      email: null,
+      groupId: feedback.group_id,
+      groupName: null,
+    });
+    return { data: null };
+  }
 
   let nickname: string | null = null;
   let groupName: string | null = null;
@@ -115,7 +132,7 @@ export async function submitFeedback(
       .from('memberships')
       .select('nickname, groups(name)')
       .eq('group_id', feedback.group_id)
-      .eq('user_id', user!.id)
+      .eq('user_id', user.id)
       .maybeSingle();
     nickname = m?.nickname ?? null;
     groupName = (m as any)?.groups?.name ?? null;
@@ -123,7 +140,7 @@ export async function submitFeedback(
     const { data: m } = await supabase
       .from('memberships')
       .select('nickname')
-      .eq('user_id', user!.id)
+      .eq('user_id', user.id)
       .neq('status', 'removed')
       .limit(1)
       .maybeSingle();

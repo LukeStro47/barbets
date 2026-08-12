@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient, requireUser } from '@/lib/supabase/server';
 import { CreateMarketForm } from '@/components/markets/MarketForms';
 import type { MarketType } from '@/lib/marketType';
 
@@ -16,9 +16,7 @@ export default async function NewMarketPage({
   const initialType = VALID_TYPES.includes(type as MarketType) ? (type as MarketType) : undefined;
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await requireUser(supabase);
 
   const [{ data: members }, { data: settings }, { data: group }] = await Promise.all([
     supabase.from('memberships').select('user_id, nickname').eq('group_id', groupId).eq('status', 'active'),

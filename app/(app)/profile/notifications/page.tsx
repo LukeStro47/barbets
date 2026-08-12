@@ -1,5 +1,4 @@
-import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, requireUser } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { NotificationPreferences, type GroupNotificationPrefs } from '@/components/profile/NotificationPreferences';
 
@@ -9,10 +8,7 @@ import { NotificationPreferences, type GroupNotificationPrefs } from '@/componen
  * this device is actually subscribed. */
 export default async function NotificationSettingsPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  const user = await requireUser(supabase);
 
   const [{ data: memberships }, { data: profile }] = await Promise.all([
     supabase

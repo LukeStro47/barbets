@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, requireUser } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/Button';
@@ -16,9 +16,7 @@ import { getGroupTaskCounts } from '@/lib/tasks';
 export default async function GroupsHubPage({ searchParams }: { searchParams: Promise<{ all?: string }> }) {
   const { all } = await searchParams;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await requireUser(supabase);
   const { data: groups } = await supabase
     .from('groups')
     .select('id, name, avatar_key, deletion_scheduled_at, memberships(user_id, balance, status)')

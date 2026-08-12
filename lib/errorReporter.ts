@@ -161,11 +161,21 @@ const TRIAGE: { match: (text: string, name: string) => boolean; meaning: string;
     fix: 'Run `npx supabase db push` from the repo. Migrations do not ship with a Vercel deploy, they are a separate step. If it reports nothing pending, paste this card into Claude Code.',
   },
   {
+    // This exact shape hit production once already, and the cause is structural rather than
+    // local: pages under app/(app) must call requireUser(), because the layout's redirect
+    // does not stop a page from rendering alongside it. Worth its own entry so the next
+    // occurrence names the cause instead of pointing at a symptom.
+    match: (t) => t.includes("reading 'id'"),
+    meaning:
+      'Something asked for an id and got nothing back. Most often this is the logged-in user on a signed-in page, after a session quietly expired mid-request.',
+    fix: 'Check the route above. If it is a page you have to be signed in to see, it is probably reading the user without going through `requireUser()` in lib/supabase/server.ts, which is the guard for exactly this. Paste this card into Claude Code and say so.',
+  },
+  {
     match: (t, name) =>
       name === 'TypeError' && (t.includes('reading') || t.includes('of null') || t.includes('of undefined')),
     meaning:
       'Something the page expected to find came back empty, and the code used it anyway. Usually a market, group, or bet that was deleted or hidden, or a field that is allowed to be blank and was not checked for.',
-    fix: 'The first line of the stack below is the exact file and line. Paste this card into Claude Code and ask it to handle the empty case there.',
+    fix: 'The stack below names the file and line it happened in. Paste this card into Claude Code and ask it to handle the empty case there.',
   },
   {
     match: (t) => t.includes('is not a function') || t.includes('is not defined') || t.includes('cannot find module'),
