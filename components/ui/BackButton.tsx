@@ -9,7 +9,7 @@ import { CaretLeftIcon } from '@/components/ui/icons';
  * fixed href would send people "home" instead of back to whichever one they
  * actually came from.
  */
-export function BackButton({ fallbackHref = '/' }: { fallbackHref?: string }) {
+export function BackButton({ fallbackHref = '/', label = 'Back' }: { fallbackHref?: string; label?: string }) {
   const router = useRouter();
   return (
     <button
@@ -17,10 +17,10 @@ export function BackButton({ fallbackHref = '/' }: { fallbackHref?: string }) {
         if (window.history.length > 1) router.back();
         else router.push(fallbackHref);
       }}
-      className="-ml-1 inline-flex items-center gap-0.5 text-sm font-semibold text-espresso-500 hover:text-espresso-800"
+      className="-ml-1 inline-flex items-center gap-0.5 text-[13px] font-bold text-espresso-500 hover:text-espresso-800"
     >
-      <CaretLeftIcon className="h-4 w-4" />
-      Back
+      <CaretLeftIcon className="h-[15px] w-[15px]" />
+      {label}
     </button>
   );
 }

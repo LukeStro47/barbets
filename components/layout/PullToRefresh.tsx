@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { RefreshIcon } from '@/components/ui/icons';
-import { isCreateFlow } from '@/lib/navRoute';
+import { shouldDisablePullToRefresh } from '@/lib/navRoute';
 
 const TRIGGER_PX = 72;
 const MAX_PULL_PX = 110;
@@ -18,13 +18,15 @@ const RESISTANCE = 0.5;
  * `document.body.style.overflow = 'hidden'` signal) so a stray drag on an
  * open sheet can't also trigger a refresh underneath it.
  *
- * It also doesn't arm at all inside the two create wizards (`isCreateFlow`).
- * "Scrolled to the very top" is the whole arming condition, and those screens
+ * It also doesn't arm at all on the draft-holding routes
+ * (`shouldDisablePullToRefresh`). For the two create wizards that's because
+ * "scrolled to the very top" is the whole arming condition and those screens
  * are sized to fit the viewport, so they're at scrollY 0 for their entire
  * life — a downward drag anywhere on the form would pull the refresh
- * indicator instead of doing nothing. There's nothing to re-fetch there
- * either: the flow's answers live in client state, and its only server data
- * is the group and member list it was handed on entry.
+ * indicator instead of doing nothing. For all of them, including the group
+ * settings editor, refreshing is actively destructive rather than merely
+ * useless: the answers live in client state, so a re-fetch throws away
+ * everything typed since the page loaded and re-renders the same server data.
  */
 export function PullToRefresh({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -43,7 +45,7 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (isPending || triggered || isCreateFlow(pathname)) return;
+    if (isPending || triggered || shouldDisablePullToRefresh(pathname)) return;
 
     function onTouchStart(e: TouchEvent) {
       if (window.scrollY > 0) return;

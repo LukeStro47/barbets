@@ -575,10 +575,6 @@ export default async function MarketDetailPage({
           <MarketActions
             groupId={groupId}
             market={marketRow}
-            isCreator={isCreator}
-            isSponsor={marketRow.sponsor_id === user?.id}
-            isOwner={isOwner}
-            ownerIsSubject={ownerIsSubject}
             proposal={proposal}
             challenge={challenge}
             myVote={myVote}
@@ -588,7 +584,6 @@ export default async function MarketDetailPage({
             resolutionWindowHours={resolutionWindowHours}
             votesCast={votesCast}
             eligibleVoters={eligibleVoters}
-            hideVoidCard
           />
           <YourPositionCard
             myBets={myBets}

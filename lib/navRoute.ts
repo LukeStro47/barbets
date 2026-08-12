@@ -21,6 +21,14 @@ export function shouldHideBottomNav(pathname: string): boolean {
   return isCreateFlow(pathname);
 }
 
+/** Routes whose whole state is an unsaved draft, so a pull-to-refresh would silently throw the
+ * user's typing away rather than re-fetching anything useful. Broader than `isCreateFlow` on
+ * purpose: the group settings editor holds a draft too, but unlike the create wizards it is an
+ * ordinary scrolling page that keeps the bottom bar, so the two conditions can't be the same one. */
+export function shouldDisablePullToRefresh(pathname: string): boolean {
+  return isCreateFlow(pathname) || /^\/groups\/[^/]+\/settings\/edit\/?$/.test(pathname);
+}
+
 /** The groupId a route is scoped to, or null when the route isn't under a specific group
  * (the all-groups hub, /groups/new, /profile, admin/feedback, ...). */
 export function getRouteGroupId(pathname: string): string | null {

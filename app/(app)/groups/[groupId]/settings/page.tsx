@@ -2,23 +2,13 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { notFoundIfEmpty } from '@/lib/errors';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Card } from '@/components/ui/Card';
-import {
-  OwnerSettingsPanel,
-  ReadOnlySettings,
-  RegenerateCodeButton,
-  RemoveMemberButton,
-  EndSeasonButton,
-  TransferOwnershipForm,
-  DeleteGroupButton,
-} from '@/components/groups/SettingsActions';
-import { CopyInviteLink } from '@/components/groups/CopyInviteLink';
+import { SettingsCard, SettingRow, SectionLabel } from '@/components/ui/SettingsList';
+import { InviteCodeActions, RemoveMemberButton, OwnerOnlySection } from '@/components/groups/SettingsActions';
+import { GroupPlaysCard, seasonLabel, type ActiveSeasonSummary } from '@/components/groups/GroupPlaysCard';
+import { GroupIdentitySheet } from '@/components/groups/GroupIdentitySheet';
 import { NicknameEditor } from '@/components/groups/NicknameEditor';
 import { LeaveGroupButton } from '@/components/groups/LeaveGroupButton';
 import { GroupDeletionBanner } from '@/components/groups/GroupDeletionBanner';
-import { SeasonNameEditor } from '@/components/groups/SeasonNameEditor';
-import { GroupNameEditor } from '@/components/groups/GroupNameEditor';
-import { AvatarPicker } from '@/components/groups/AvatarPicker';
 import { GroupAvatar } from '@/components/ui/GroupAvatar';
 import { Mention } from '@/components/ui/Mention';
 import { InfoIcon, ChevronRightIcon } from '@/components/ui/icons';
@@ -40,165 +30,193 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
   } = await supabase.auth.getUser();
   const isOwner = group!.owner_id === user?.id;
 
-  const [{ data: settings }, { data: members }, { data: myMembership }, { data: activeSeason }] = await Promise.all([
+  const [{ data: settings }, { data: members }, { data: myMembership }, { data: activeSeasonRow }] = await Promise.all([
     supabase.from('group_settings').select('*').eq('group_id', groupId).single(),
     supabase.from('memberships').select('user_id, status, nickname').eq('group_id', groupId).in('status', ['active', 'dormant']),
     supabase.from('memberships').select('nickname').eq('group_id', groupId).eq('user_id', user!.id).single(),
     supabase.from('seasons').select('id, number, name, betting_open').eq('group_id', groupId).eq('status', 'active').single(),
   ]);
 
+  const groupSettings = settings as GroupSettings | null;
+  const season: ActiveSeasonSummary | null = activeSeasonRow
+    ? { number: activeSeasonRow.number, name: activeSeasonRow.name, bettingOpen: activeSeasonRow.betting_open }
+    : null;
+
+  const roster = members ?? [];
+  const memberCount = roster.length;
+  const ownerNickname = roster.find((m) => m.user_id === group!.owner_id)?.nickname ?? null;
+  const metaLine = [`${memberCount} member${memberCount === 1 ? '' : 's'}`, season ? seasonLabel(season) : null]
+    .filter(Boolean)
+    .join(' · ');
+
   return (
-    <main className="mx-auto max-w-lg space-y-6 px-5 py-8">
-      <PageHeader title={isOwner ? 'Group settings' : 'Group info'} backHref={`/groups/${groupId}`} backLabel={group!.name} />
+    <main className="mx-auto flex max-w-lg flex-col gap-[26px] px-5 pb-7 pt-[30px]">
+      <PageHeader
+        title={isOwner ? 'Settings' : 'Group info'}
+        backHref={`/groups/${groupId}`}
+        backLabel={group!.name}
+        action={
+          <span className="shrink-0 rounded-full bg-espresso-50 px-2.5 py-1 text-[11px] font-bold text-espresso-600">
+            {isOwner ? "You're the owner" : 'Member'}
+          </span>
+        }
+      />
 
       {group!.deletion_scheduled_at && (
         <GroupDeletionBanner groupId={groupId} deletionScheduledAt={group!.deletion_scheduled_at} isOwner={isOwner} />
       )}
 
+      {/* Name and logo used to be two always-open cards at the top of this page. They're one
+          decision, edited rarely, so they collapse into this row's Edit control instead. */}
+      <div className="flex items-center gap-3.5">
+        <GroupAvatar
+          name={group!.name}
+          avatarKey={group!.avatar_key}
+          className="h-13 w-13 shrink-0 text-sm"
+          fallbackClassName="bg-espresso-900 text-honey-300"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-display text-[17px] font-extrabold tracking-[-0.01em] text-espresso-950">{group!.name}</p>
+          <p className="mt-px truncate text-[12.5px] text-espresso-400">{metaLine}</p>
+        </div>
+        {isOwner && <GroupIdentitySheet groupId={groupId} groupName={group!.name} avatarKey={group!.avatar_key} />}
+      </div>
+
       <Link
         href={`/how-it-works?group=${groupId}`}
-        className="flex items-center gap-3 rounded-2xl border-2 border-honey-300 bg-honey-50 px-5 py-4 transition-colors hover:bg-honey-100"
+        className="flex items-center gap-3 rounded-[14px] border border-honey-300 bg-honey-50 px-4 py-3.5 transition-colors hover:bg-honey-100"
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-honey-500 text-espresso-900">
-          <InfoIcon className="h-5 w-5" />
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-honey-500 text-espresso-900">
+          <InfoIcon className="h-[18px] w-[18px]" />
         </span>
         <span className="flex-1">
-          <p className="font-display font-bold text-espresso-900">How it works</p>
-          <p className="text-xs text-espresso-500">The house rules, in plain English.</p>
+          <span className="block text-sm font-bold text-espresso-900">How it works</span>
+          <span className="block text-xs text-espresso-500">The house rules, in plain English.</span>
         </span>
-        <ChevronRightIcon className="h-4 w-3 shrink-0 text-espresso-400" />
+        <ChevronRightIcon className="h-[15px] w-[11px] shrink-0 text-espresso-400" />
       </Link>
 
-      {isOwner && (
-        <Card className="space-y-2">
-          <h2 className="font-semibold text-espresso-800">Group name</h2>
-          <GroupNameEditor groupId={groupId} currentName={group!.name} />
-        </Card>
-      )}
-
-      <Card className="space-y-3">
-        <div className="flex items-center gap-3">
-          <GroupAvatar
-            name={group!.name}
-            avatarKey={group!.avatar_key}
-            className="h-12 w-12 text-sm"
-            fallbackClassName="bg-espresso-900 text-honey-300"
-          />
-          <div>
-            <h2 className="font-semibold text-espresso-800">Group logo</h2>
-            <p className="text-xs text-espresso-400">
-              {isOwner ? 'Pick one, or keep the initials.' : 'Only the group owner can change this.'}
-            </p>
-          </div>
-        </div>
-        {isOwner && <AvatarPicker groupId={groupId} groupName={group!.name} avatarKey={group!.avatar_key} />}
-      </Card>
-
-      <Card className="space-y-2">
-        <h2 className="font-semibold text-espresso-800">Your nickname</h2>
-        {myMembership && <NicknameEditor groupId={groupId} nickname={myMembership.nickname} />}
-      </Card>
-
-      <Card className="space-y-3">
-        <h2 className="font-semibold text-espresso-800">Invite code</h2>
-        <p className="font-display text-2xl font-bold text-honey-700">{group!.invite_code}</p>
-        <CopyInviteLink inviteCode={group!.invite_code} />
-        {isOwner && (
-          <>
-            <RegenerateCodeButton groupId={groupId} />
-            <p className="text-xs text-espresso-400">This code rotates automatically whenever you remove a member.</p>
-          </>
-        )}
-        {!isOwner && settings && !(settings as GroupSettings).accepting_members && (
-          <p className="text-xs font-semibold text-espresso-500">This group isn't accepting new members right now.</p>
-        )}
-      </Card>
-
-      <Card>
-        <h2 className="mb-3 font-semibold text-espresso-800">Members</h2>
-        <ul className="space-y-2">
-          {(members ?? []).map((m: any) => (
-            <li key={m.user_id} className="flex items-center justify-between">
-              <span className="text-espresso-700">
-                <Mention nickname={m.nickname} /> {m.status === 'dormant' && <span className="text-xs text-espresso-400">(dormant)</span>}
-              </span>
-              {isOwner && m.user_id !== group!.owner_id && (
-                <RemoveMemberButton groupId={groupId} userId={m.user_id} nickname={m.nickname ?? ''} />
-              )}
-            </li>
-          ))}
-        </ul>
-      </Card>
-
       {isOwner ? (
-        settings && (
-          <Card>
-            <h2 className="mb-3 font-semibold text-espresso-800">Betting & token settings</h2>
-            <OwnerSettingsPanel
-              groupId={groupId}
-              settings={settings as GroupSettings}
-              hasActiveSeason={!!activeSeason}
-              seasonBettingOpen={activeSeason?.betting_open}
-            />
-          </Card>
-        )
+        <section>
+          <SectionLabel>Getting in</SectionLabel>
+          <SettingsCard>
+            <div className="px-4 py-3.5">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-sm font-semibold text-espresso-800">Invite code</span>
+                <span className="font-display text-[19px] font-extrabold tracking-[0.06em] text-honey-700">
+                  {group!.invite_code}
+                </span>
+              </div>
+              <p className="mt-[3px] text-xs leading-[1.45] text-espresso-400">
+                Rotates automatically whenever you remove a member.
+              </p>
+              <InviteCodeActions groupId={groupId} inviteCode={group!.invite_code} canRegenerate />
+            </div>
+            {groupSettings && (
+              <SettingRow
+                label="Accepting new members"
+                consequence={
+                  groupSettings.accepting_members
+                    ? 'Anyone holding the code can join.'
+                    : 'The code stays live, but nobody new can join with it.'
+                }
+                value={groupSettings.accepting_members ? 'Yes' : 'Paused'}
+              />
+            )}
+          </SettingsCard>
+        </section>
       ) : (
-        settings && (
-          <Card>
-            <h2 className="mb-1 font-semibold text-espresso-800">Group settings</h2>
-            <p className="mb-2 text-xs text-espresso-400">Set by the group owner.</p>
-            <ReadOnlySettings settings={settings as GroupSettings} hasActiveSeason={!!activeSeason} seasonBettingOpen={activeSeason?.betting_open} />
-          </Card>
-        )
+        <SettingsCard>
+          <div className="px-4 py-3.5">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-sm font-semibold text-espresso-800">Invite code</span>
+              <span className="font-display text-[19px] font-extrabold tracking-[0.06em] text-honey-700">
+                {group!.invite_code}
+              </span>
+            </div>
+            <p className="mt-[3px] text-xs leading-[1.45] text-espresso-400">
+              {groupSettings && !groupSettings.accepting_members
+                ? "This group isn't accepting new members right now."
+                : 'Share this with anyone the group wants in.'}
+            </p>
+            <InviteCodeActions groupId={groupId} inviteCode={group!.invite_code} canRegenerate={false} />
+          </div>
+        </SettingsCard>
       )}
 
-      {isOwner && activeSeason && (
-        <Card>
-          <h2 className="mb-2 font-semibold text-espresso-800">Season controls</h2>
-          <SeasonNameEditor
-            groupId={groupId}
-            seasonId={activeSeason.id}
-            currentName={activeSeason.name}
-            seasonNumber={activeSeason.number}
-            className="mb-3"
-          />
-          <p className="mb-3 text-sm text-espresso-500">
-            Voids and refunds any market that hasn't had a resolution proposed yet. A market already awaiting a vote
-            or challenge gets up to {(settings as GroupSettings)?.resolution_window_hours ?? 8} more hours to finish before
-            intermission opens.
-          </p>
-          <EndSeasonButton groupId={groupId} />
-        </Card>
+      {groupSettings && (
+        <section>
+          <SectionLabel
+            action={
+              isOwner ? (
+                <Link href={`/how-it-works?group=${groupId}&tab=your-group`} className="text-[11.5px] font-bold text-honey-700">
+                  Explain the rules ›
+                </Link>
+              ) : ownerNickname ? (
+                <span className="text-[11px] text-espresso-300">
+                  Set by <Mention nickname={ownerNickname} />
+                </span>
+              ) : (
+                <span className="text-[11px] text-espresso-300">Set by the owner</span>
+              )
+            }
+          >
+            How this group plays
+          </SectionLabel>
+          <GroupPlaysCard settings={groupSettings} season={season} isOwner={isOwner} />
+          {isOwner && (
+            <Link
+              href={`/groups/${groupId}/settings/edit`}
+              className="mt-2.5 block rounded-full border border-espresso-200 px-4 py-[11px] text-center text-sm font-bold text-espresso-800 transition-colors hover:bg-espresso-50"
+            >
+              Edit how this group plays
+            </Link>
+          )}
+        </section>
       )}
+
+      <section>
+        <SectionLabel>Members · {memberCount}</SectionLabel>
+        <SettingsCard>
+          {roster.map((m) => (
+            <div key={m.user_id} className="flex items-center justify-between gap-3 px-4 py-3">
+              <span className="min-w-0 truncate text-sm text-espresso-800">
+                <Mention nickname={m.nickname ?? ''} className="font-semibold" />
+                {m.user_id === group!.owner_id && <span className="ml-1.5 text-[11.5px] font-bold text-honey-700">owner</span>}
+                {m.status === 'dormant' && <span className="ml-1.5 text-[11.5px] text-espresso-400">dormant</span>}
+              </span>
+              {isOwner && m.user_id !== group!.owner_id ? (
+                <RemoveMemberButton groupId={groupId} userId={m.user_id} nickname={m.nickname ?? ''} />
+              ) : m.user_id === user?.id ? (
+                <span className="shrink-0 text-[12.5px] text-espresso-300">you</span>
+              ) : null}
+            </div>
+          ))}
+        </SettingsCard>
+      </section>
+
+      <section>
+        <SectionLabel>You in this group</SectionLabel>
+        <SettingsCard>
+          <div className="px-4 py-3.5">
+            <p className="mb-2 text-xs text-espresso-400">Your nickname is how everyone sees you here.</p>
+            {myMembership && <NicknameEditor groupId={groupId} nickname={myMembership.nickname} />}
+          </div>
+          {!isOwner && <LeaveGroupButton groupId={groupId} groupName={group!.name} />}
+        </SettingsCard>
+      </section>
 
       {isOwner && (
-        <Card className="space-y-5">
-          <h2 className="font-semibold text-danger-700">Danger zone</h2>
-
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-espresso-800">Transfer ownership</h3>
-            <TransferOwnershipForm
-              groupId={groupId}
-              members={(members ?? [])
-                .filter((m) => m.status === 'active' && m.user_id !== group!.owner_id)
-                .map((m) => ({ userId: m.user_id, nickname: m.nickname ?? '' }))}
-            />
-          </div>
-
-          {!group!.deletion_scheduled_at && (
-            <div className="space-y-2 border-t border-espresso-100 pt-4">
-              <h3 className="text-sm font-semibold text-espresso-800">Delete group</h3>
-              <DeleteGroupButton groupId={groupId} groupName={group!.name} />
-            </div>
-          )}
-        </Card>
-      )}
-
-      {!isOwner && (
-        <Card>
-          <h2 className="mb-3 font-semibold text-danger-700">Danger zone</h2>
-          <LeaveGroupButton groupId={groupId} groupName={group!.name} />
-        </Card>
+        <OwnerOnlySection
+          groupId={groupId}
+          groupName={group!.name}
+          resolutionWindowHours={groupSettings?.resolution_window_hours ?? 8}
+          activeSeason={activeSeasonRow ? { id: activeSeasonRow.id, number: activeSeasonRow.number, name: activeSeasonRow.name } : null}
+          members={roster
+            .filter((m) => m.status === 'active' && m.user_id !== group!.owner_id)
+            .map((m) => ({ userId: m.user_id, nickname: m.nickname ?? '' }))}
+          deletionScheduled={!!group!.deletion_scheduled_at}
+        />
       )}
     </main>
   );

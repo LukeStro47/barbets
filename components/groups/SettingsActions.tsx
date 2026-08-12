@@ -2,13 +2,16 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { updateGroupSettings, regenerateInviteCode, removeMember, transferOwnership, deleteGroup } from '@/lib/actions/groups';
+import { regenerateInviteCode, removeMember, transferOwnership, deleteGroup, updateGroupSettings } from '@/lib/actions/groups';
 import { endSeason } from '@/lib/actions/seasons';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { Switch } from '@/components/ui/Switch';
 import { Modal } from '@/components/ui/Modal';
-import { formatSeasonLength, SEASON_LENGTH_HINTS, type SeasonLength } from '@/lib/seasonLength';
+import { ConsequenceRow } from '@/components/ui/ConsequenceRow';
+import { SectionLabel, SettingsCard, NavRowContent, settingsNavRowClasses } from '@/components/ui/SettingsList';
+import { AlertTriangleIcon, LockIcon } from '@/components/ui/icons';
+import { SeasonNameEditor } from '@/components/groups/SeasonNameEditor';
+import { SEASON_LENGTH_HINTS, SEASON_LENGTH_SHORT_LABEL, type SeasonLength } from '@/lib/seasonLength';
 import { COMMON_TIMEZONES, friendlyTimezoneName } from '@/lib/timezone';
 import { Mention } from '@/components/ui/Mention';
 import { formatTokens, formatTokenInputValue } from '@/lib/formatNumber';
@@ -16,7 +19,14 @@ import { TOKEN_ALLOCATION_MAX } from '@/lib/limits';
 import type { GroupSettings } from '@/lib/actions/groups';
 
 const inputClasses =
-  'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-espresso-900 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
+  'w-full rounded-[10px] border border-espresso-200 bg-paper-white px-3.5 py-2.5 text-[15px] font-bold text-espresso-950 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
+
+const selectClasses =
+  'w-full rounded-[10px] border border-espresso-200 bg-paper-white px-3.5 py-2.5 text-[15px] font-semibold text-espresso-950 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
+
+const rowClasses = 'px-4 py-3.5';
+const rowLabelClasses = 'block text-sm font-semibold text-espresso-800';
+const rowHelpClasses = 'text-xs leading-[1.45] text-espresso-400';
 
 /** datetime-local wants "YYYY-MM-DDTHH:mm" in the browser's local time, not UTC. */
 function toLocalDatetimeInputValue(date: Date): string {
@@ -24,19 +34,53 @@ function toLocalDatetimeInputValue(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+/** A toggle row: the setting, the sentence saying what the *current* position of the switch does, and the switch. */
+function ToggleRow({
+  label,
+  help,
+  checked,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  help: React.ReactNode;
+  checked: boolean;
+  onChange: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className={`${rowClasses} flex items-start justify-between gap-3.5`}>
+      <span className="min-w-0">
+        <span className={rowLabelClasses}>{label}</span>
+        <span className={`mt-0.5 block ${rowHelpClasses}`}>{help}</span>
+      </span>
+      <Switch checked={checked} onChange={onChange} disabled={disabled} className="mt-0.5" />
+    </div>
+  );
+}
+
+/**
+ * The owner's edit view for how the group plays, at /groups/[groupId]/settings/edit.
+ *
+ * A separate screen rather than an expansion inside the settings list, and four labelled groups
+ * rather than one flat column: the previous version dumped nine unrelated controls into a single
+ * card, so "how much does everyone start with" sat directly above "how long is a challenge window"
+ * with nothing saying they were different kinds of decision. No autosave — every change is a draft
+ * until Save, which is what makes Cancel mean something.
+ */
 export function EditSettingsForm({
   groupId,
+  groupName,
   settings,
-  onDone,
 }: {
   groupId: string;
+  groupName: string;
   settings: GroupSettings;
-  /** Renders a "Done" button next to Save that returns to the read-only view, whether or not anything was saved first. */
-  onDone?: () => void;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [seedAmount, setSeedAmount] = useState(() => formatTokenInputValue(String(settings.seed_amount)));
   const [seasonsEnabled, setSeasonsEnabled] = useState(settings.seasons_enabled);
   const [seasonLength, setSeasonLength] = useState<SeasonLength>(settings.season_length ?? 'manual');
   const [seasonCustomEndsAt, setSeasonCustomEndsAt] = useState(() =>
@@ -56,11 +100,15 @@ export function EditSettingsForm({
   const creatorPctValid = Number.isFinite(creatorPayoutPct) && creatorPayoutPct >= 0 && creatorPayoutPct <= 100;
   const openMarketsPct = creatorPctValid ? 100 - creatorPayoutPct : '—';
 
-  function handleSubmit(formData: FormData) {
+  function back() {
+    router.push(`/groups/${groupId}/settings`);
+  }
+
+  function save() {
     setError(null);
     startTransition(async () => {
       const result = await updateGroupSettings(groupId, {
-        seedAmount: Number(String(formData.get('seedAmount')).replace(/,/g, '')),
+        seedAmount: Number(seedAmount.replace(/,/g, '')),
         seasonsEnabled,
         seasonLength: seasonsEnabled ? seasonLength : null,
         seasonCustomEndsAt: seasonsEnabled && seasonLength === 'custom' ? new Date(seasonCustomEndsAt).toISOString() : null,
@@ -76,60 +124,289 @@ export function EditSettingsForm({
       if (result.error) {
         setError(result.error);
       } else {
+        router.push(`/groups/${groupId}/settings`);
         router.refresh();
-        onDone?.();
       }
     });
   }
 
   return (
-    <form action={handleSubmit} className="space-y-4">
-      {error && <p className="text-sm text-danger-700">{error}</p>}
-
-      <div className="flex items-center justify-between rounded-xl bg-honey-50 px-4 py-3">
+    <>
+      {/* The sticky bar is fixed, so the scrolling column has to reserve its height itself. */}
+      <div className="flex flex-col gap-[22px] pb-24">
         <div>
-          <p className="text-sm font-semibold text-espresso-800">Accepting new members</p>
-          <p className="text-xs text-espresso-500">
-            {acceptingMembers ? 'Anyone with the invite code can join.' : 'The invite code is live but joining is paused.'}
+          <p className="text-[12.5px] font-bold text-espresso-400">{groupName}</p>
+          <h1 className="font-display text-2xl font-extrabold tracking-[-0.02em] text-espresso-950">How this group plays</h1>
+          <p className="mt-1 text-[13px] leading-[1.5] text-espresso-500">
+            Changes apply the moment you save. Members see the same list, read-only.
           </p>
         </div>
-        <Switch checked={acceptingMembers} onChange={() => setAcceptingMembers((v) => !v)} />
+
+        {error && <p className="text-sm text-danger-700">{error}</p>}
+
+        <section>
+          <SectionLabel>Money</SectionLabel>
+          <SettingsCard>
+            <div className={rowClasses}>
+              <label className={rowLabelClasses} htmlFor="seed-amount">
+                Token allocation
+              </label>
+              <p className={`mb-2 mt-0.5 ${rowHelpClasses}`}>
+                What each member starts with, up to {formatTokens(TOKEN_ALLOCATION_MAX)}. Never touches a current balance, it
+                applies to people joining from now on{seasonsEnabled ? ', and to everyone at the next season.' : '.'}
+              </p>
+              <input
+                id="seed-amount"
+                type="text"
+                inputMode="numeric"
+                // Deliberately not clamped on mount: a group stored above the cap before it existed
+                // keeps its figure here, so opening this form for an unrelated change and saving
+                // doesn't quietly rewrite the allocation. Typing does clamp, and
+                // update_group_settings only enforces the bound on a value that actually changed.
+                value={seedAmount}
+                onChange={(e) => setSeedAmount(formatTokenInputValue(e.target.value, TOKEN_ALLOCATION_MAX))}
+                required
+                className={inputClasses}
+              />
+            </div>
+
+            <div>
+              <ToggleRow
+                label="Split universal losses"
+                help={
+                  distributePayout
+                    ? "On: when nobody calls it right, the creator takes a cut and the rest tops up the group's other open markets."
+                    : 'Off: when nobody calls it right, every stake goes back to whoever placed it.'
+                }
+                checked={distributePayout}
+                onChange={() => setDistributePayout((v) => !v)}
+              />
+              {/* Only one number is actually a choice. What's left over is arithmetic, so it's
+                  shown rather than asked for: two editable fields could be set to sum past 100,
+                  and the second one was never the interesting decision anyway. */}
+              {distributePayout && (
+                <div className="space-y-2 px-4 pb-3.5">
+                  <div className="flex gap-3">
+                    <label className="flex-1 space-y-1">
+                      <span className="block text-xs font-bold text-espresso-500">Creator %</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={creatorPayoutPct}
+                        onChange={(e) => setCreatorPayoutPct(Number(e.target.value))}
+                        className={inputClasses}
+                      />
+                    </label>
+                    <div className="flex-1 space-y-1">
+                      <span className="block text-xs font-bold text-espresso-500">Open markets %</span>
+                      <div
+                        aria-readonly
+                        className="w-full rounded-[10px] border border-espresso-100 bg-espresso-50 px-3.5 py-2.5 text-[15px] font-bold text-espresso-400"
+                      >
+                        {openMarketsPct}
+                      </div>
+                    </div>
+                  </div>
+                  {!creatorPctValid && <p className="text-xs text-danger-700">The creator percentage has to be between 0 and 100.</p>}
+                </div>
+              )}
+            </div>
+          </SettingsCard>
+        </section>
+
+        <section>
+          <SectionLabel>Starting a market</SectionLabel>
+          <SettingsCard>
+            <ToggleRow
+              label="Require endorsement"
+              help={
+                requireEndorsement
+                  ? 'On: a second member has to endorse a market before betting opens.'
+                  : "Off: markets open for betting the moment they're created, no second person needed."
+              }
+              checked={requireEndorsement}
+              onChange={() => setRequireEndorsement((v) => !v)}
+            />
+            <ToggleRow
+              label="Hedging"
+              help={
+                allowHedgedBets
+                  ? 'On: members can back more than one side of the same market.'
+                  : 'Off: one side per market. Adding more to that same side is still fine.'
+              }
+              checked={allowHedgedBets}
+              onChange={() => setAllowHedgedBets((v) => !v)}
+            />
+            <ToggleRow
+              label="Accepting new members"
+              help={
+                acceptingMembers
+                  ? 'On: anyone holding the invite code can join.'
+                  : 'Off: the invite code stays live but joining is paused.'
+              }
+              checked={acceptingMembers}
+              onChange={() => setAcceptingMembers((v) => !v)}
+            />
+            {/* Only meaningful while seasons are off. Once they're on, each season carries its own
+                betting switch and this one stops being the real gate. */}
+            {!seasonsEnabled && (
+              <ToggleRow
+                label="Betting"
+                help={
+                  bettingEnabled
+                    ? "On: members can start markets. This one can't be turned back off."
+                    : 'Off by default. Turn it on when your group is ready.'
+                }
+                checked={bettingEnabled}
+                onChange={() => {
+                  if (!bettingEnabled) setConfirmingBetting(true);
+                }}
+                disabled={settings.betting_enabled}
+              />
+            )}
+          </SettingsCard>
+        </section>
+
+        <section>
+          <SectionLabel>Settling it</SectionLabel>
+          <SettingsCard>
+            <div className={rowClasses}>
+              <div className="flex items-baseline justify-between gap-3">
+                <label className="text-sm font-semibold text-espresso-800" htmlFor="resolution-window">
+                  Challenge window
+                </label>
+                <span className="font-display text-[15px] font-extrabold text-honey-700">
+                  {resolutionWindowHours} {resolutionWindowHours === 1 ? 'hour' : 'hours'}
+                </span>
+              </div>
+              <p className={`mb-2.5 mt-0.5 ${rowHelpClasses}`}>
+                How long a called result can be disputed, and how long a vote stays open. Under 2 hours, people miss it.
+              </p>
+              <input
+                id="resolution-window"
+                type="range"
+                min={0.5}
+                max={10}
+                step={0.5}
+                value={resolutionWindowHours}
+                onChange={(e) => setResolutionWindowHours(Number(e.target.value))}
+                className="w-full accent-honey-500"
+              />
+              <div className="mt-0.5 flex justify-between text-[11px] text-espresso-300">
+                <span>30 min</span>
+                <span>10 hours</span>
+              </div>
+            </div>
+          </SettingsCard>
+        </section>
+
+        <section>
+          <SectionLabel>Seasons &amp; time</SectionLabel>
+          <SettingsCard>
+            <div className={rowClasses}>
+              <div className="flex items-center justify-between gap-3">
+                <span className={rowLabelClasses}>Season length</span>
+                {/* Already-on seasons get a padlock pill instead of a disabled switch: a greyed-out
+                    switch reads as "not available yet" rather than "this decision is final". */}
+                {settings.seasons_enabled ? (
+                  <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-espresso-50 px-2.5 py-[3px] text-[11px] font-bold text-espresso-500">
+                    <LockIcon className="h-[11px] w-[11px]" />
+                    Seasons stay on
+                  </span>
+                ) : (
+                  <Switch checked={seasonsEnabled} onChange={() => setSeasonsEnabled((v) => !v)} />
+                )}
+              </div>
+              <p className={`mt-0.5 ${rowHelpClasses}`}>
+                {seasonsEnabled
+                  ? 'At the end of each one, standings archive to Awards and everyone is reseeded.'
+                  : 'Off: the board never resets. Turning seasons on is permanent.'}
+              </p>
+
+              {seasonsEnabled && (
+                <>
+                  <div className="mt-2.5 flex flex-wrap gap-[7px]">
+                    {(['1m', '2m', '3m', 'manual', 'custom'] as SeasonLength[]).map((len) => (
+                      <button
+                        type="button"
+                        key={len}
+                        onClick={() => setSeasonLength(len)}
+                        aria-pressed={seasonLength === len}
+                        className={`rounded-full border-[1.5px] px-3 py-[5px] text-[13px] ${
+                          seasonLength === len
+                            ? 'border-honey-500 bg-honey-50 font-bold text-honey-800'
+                            : 'border-espresso-200 font-semibold text-espresso-600'
+                        }`}
+                      >
+                        {SEASON_LENGTH_SHORT_LABEL[len]}
+                      </button>
+                    ))}
+                  </div>
+                  <p className={`mt-2 ${rowHelpClasses}`}>{SEASON_LENGTH_HINTS[seasonLength]}</p>
+
+                  {seasonLength === 'custom' && (
+                    <input
+                      type="datetime-local"
+                      min={minSeasonEndsAt}
+                      value={seasonCustomEndsAt}
+                      onChange={(e) => setSeasonCustomEndsAt(e.target.value)}
+                      required
+                      className={`${inputClasses} mt-2`}
+                    />
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className={rowClasses}>
+              <label className={rowLabelClasses} htmlFor="group-timezone">
+                Time zone
+              </label>
+              <p className={`mb-2 mt-0.5 ${rowHelpClasses}`}>
+                Shown beside every betting-closes time so nobody guesses what you meant.
+              </p>
+              <select id="group-timezone" value={timezone} onChange={(e) => setTimezone(e.target.value)} className={selectClasses}>
+                {!(COMMON_TIMEZONES as readonly string[]).includes(timezone) && (
+                  <option value={timezone}>{friendlyTimezoneName(timezone)}</option>
+                )}
+                {COMMON_TIMEZONES.map((tz) => (
+                  <option key={tz} value={tz}>
+                    {friendlyTimezoneName(tz)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </SettingsCard>
+        </section>
+
+        <p className="px-0.5 text-xs leading-[1.5] text-espresso-400">
+          {seasonsEnabled
+            ? "Betting itself is opened per season from the group page, not here. Seasons can't be switched off once they're on."
+            : 'Betting can only be switched on once. After that, pausing play is what ending a season is for.'}
+        </p>
       </div>
 
-      {seasonsEnabled ? (
-        <div className="border-t border-espresso-100 pt-4">
-          <p className="text-sm font-semibold text-espresso-700">Betting</p>
-          <p className="text-xs text-espresso-400">
-            Seasons have their own betting switch instead of this one, every season starts paused so you can review
-            who's playing first. Open it from the group page once a season is active.
-          </p>
+      <div className="fixed inset-x-0 bottom-[var(--bottomnav-height)] z-20 border-t border-espresso-100 bg-paper-white/95 px-5 pb-5 pt-3 backdrop-blur-sm">
+        <div className="mx-auto flex max-w-lg gap-2.5">
+          <Button type="button" variant="outline" className="flex-1" disabled={isPending} onClick={back}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            className="flex-[1.4]"
+            disabled={isPending || (distributePayout && !creatorPctValid)}
+            onClick={save}
+          >
+            Save changes
+          </Button>
         </div>
-      ) : (
-        <div className="flex items-center justify-between border-t border-espresso-100 pt-4">
-          <div>
-            <p className="text-sm font-semibold text-espresso-700">Betting</p>
-            <p className="text-xs text-espresso-400">
-              {bettingEnabled
-                ? "Members can create markets. Can't be turned back off here."
-                : 'Off by default. Turn on when your group is ready.'}
-            </p>
-          </div>
-          <Switch
-            checked={bettingEnabled}
-            onChange={() => {
-              if (!bettingEnabled) setConfirmingBetting(true);
-            }}
-            disabled={settings.betting_enabled}
-          />
-        </div>
-      )}
+      </div>
 
       {confirmingBetting && (
         <Modal onClose={() => setConfirmingBetting(false)}>
           <p className="font-display text-lg font-bold text-espresso-900">Turn betting on?</p>
-          <p className="text-sm text-espresso-600">
-            Once betting is on, it can't be turned back off from here.
-          </p>
+          <p className="text-sm text-espresso-600">Once betting is on, it can&apos;t be turned back off from here.</p>
           <div className="flex gap-2 pt-1">
             <Button type="button" variant="outline" className="flex-1" onClick={() => setConfirmingBetting(false)}>
               Cancel
@@ -147,488 +424,387 @@ export function EditSettingsForm({
           </div>
         </Modal>
       )}
+    </>
+  );
+}
 
-      <div className="flex items-center justify-between border-t border-espresso-100 pt-4">
-        <div>
-          <p className="text-sm font-semibold text-espresso-700">Require endorsement</p>
-          <p className="text-xs text-espresso-400">
-            {requireEndorsement
-              ? "A second member has to endorse a market before it opens for betting. Turn this off for a small, high-trust group where waiting on someone else to endorse is just friction, not a real check on anyone."
-              : 'Markets open for betting the moment they\'re created, no second person needed.'}
-          </p>
-        </div>
-        <Switch checked={requireEndorsement} onChange={() => setRequireEndorsement((v) => !v)} />
-      </div>
+/** The two pills under the invite code. Regenerating kills every link already sent, so it asks first. */
+export function InviteCodeActions({ groupId, inviteCode, canRegenerate }: { groupId: string; inviteCode: string; canRegenerate: boolean }) {
+  const router = useRouter();
+  const [copied, setCopied] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
-      <div className="space-y-1.5 border-t border-espresso-100 pt-4">
-        <label className="block text-sm font-semibold text-espresso-700">Token allocation</label>
-        <input
-          name="seedAmount"
-          type="text"
-          inputMode="numeric"
-          // Deliberately not clamped: a group stored above the cap before it existed keeps its
-          // figure here, so opening this form and saving something unrelated doesn't quietly
-          // rewrite the allocation. Typing in the field does clamp, and update_group_settings
-          // only enforces the bound on a value that changed.
-          defaultValue={formatTokenInputValue(String(settings.seed_amount))}
-          onChange={(e) => {
-            const formatted = formatTokenInputValue(e.target.value, TOKEN_ALLOCATION_MAX);
-            if (formatted !== e.target.value) e.target.value = formatted;
-          }}
-          required
-          className={inputClasses}
-        />
-        <p className="text-xs text-espresso-400">
-          Up to {formatTokens(TOKEN_ALLOCATION_MAX)}. Never changes anyone&apos;s current balance. Applies to new members joining from now on
-          {settings.seasons_enabled ? ', and to everyone once the next season starts.' : '.'}
-        </p>
-      </div>
+  const pillClasses =
+    'flex-1 rounded-full border border-espresso-200 px-3 py-[7px] text-[12.5px] font-bold text-espresso-800 transition-colors hover:bg-espresso-50 disabled:cursor-not-allowed disabled:text-espresso-300';
 
-      <div className="space-y-2 border-t border-espresso-100 pt-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-semibold text-espresso-700">Split universal losses</p>
-            <p className="text-xs text-espresso-400">
-              {distributePayout
-                ? "When everyone loses in a market, split that pool between the creator and the group's other open markets instead of refunding it."
-                : "Off by default: when everyone loses in a market, everyone gets their stake back."}
-            </p>
-          </div>
-          <Switch checked={distributePayout} onChange={() => setDistributePayout((v) => !v)} />
-        </div>
-
-        {/* Only one number is actually a choice. What's left over is arithmetic, so it's shown
-            rather than asked for: two editable fields could be set to sum past 100, and the second
-            one was never the interesting decision anyway. */}
-        {distributePayout && (
-          <div className="flex gap-3 pt-1">
-            <label className="flex-1 space-y-1">
-              <span className="text-xs font-semibold text-espresso-500">Creator %</span>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={creatorPayoutPct}
-                onChange={(e) => setCreatorPayoutPct(Number(e.target.value))}
-                className={inputClasses}
-              />
-            </label>
-            <div className="flex-1 space-y-1">
-              <span className="block text-xs font-semibold text-espresso-500">Open markets %</span>
-              <div
-                aria-readonly
-                className="w-full rounded-xl border border-espresso-100 bg-espresso-50 px-4 py-2.5 font-semibold text-espresso-500"
-              >
-                {openMarketsPct}
-              </div>
-            </div>
-          </div>
-        )}
-        {distributePayout && (
-          <p className="text-xs text-espresso-400">
-            Whatever the creator doesn't take is split across the group's other open markets, or held for the next
-            market if there aren't any.
-          </p>
-        )}
-        {distributePayout && !creatorPctValid && (
-          <p className="text-xs text-danger-700">The creator percentage has to be between 0 and 100.</p>
-        )}
-      </div>
-
-      <div className="flex items-center justify-between border-t border-espresso-100 pt-4">
-        <div>
-          <p className="text-sm font-semibold text-espresso-700">Hedging</p>
-          <p className="text-xs text-espresso-400">
-            {allowHedgedBets
-              ? 'Members can bet on more than one side or option of the same market.'
-              : "Members can only hold a bet on one side per market. Adding more to that same side is still fine."}
-          </p>
-        </div>
-        <Switch checked={allowHedgedBets} onChange={() => setAllowHedgedBets((v) => !v)} />
-      </div>
-
-      <div className="space-y-1.5 border-t border-espresso-100 pt-4">
-        <div className="flex items-center justify-between">
-          <label className="text-sm font-semibold text-espresso-700">Challenge/resolution window</label>
-          <span className="font-display text-sm font-bold text-honey-700">
-            {resolutionWindowHours} {resolutionWindowHours === 1 ? 'hour' : 'hours'}
-          </span>
-        </div>
-        <input
-          type="range"
-          min={0.5}
-          max={10}
-          step={0.5}
-          value={resolutionWindowHours}
-          onChange={(e) => setResolutionWindowHours(Number(e.target.value))}
-          className="w-full accent-honey-500"
-        />
-        <p className="text-xs text-espresso-400">
-          How long a proposed resolution can be challenged, and how long a challenged one stays open for voting. We
-          recommend at least 2 hours so people have a real chance to weigh in.
-        </p>
-      </div>
-
-      <div className="space-y-1.5 border-t border-espresso-100 pt-4">
-        <label className="block text-sm font-semibold text-espresso-700">Time zone</label>
-        <select value={timezone} onChange={(e) => setTimezone(e.target.value)} className={inputClasses}>
-          {!(COMMON_TIMEZONES as readonly string[]).includes(timezone) && (
-            <option value={timezone}>{friendlyTimezoneName(timezone)}</option>
-          )}
-          {COMMON_TIMEZONES.map((tz) => (
-            <option key={tz} value={tz}>
-              {friendlyTimezoneName(tz)}
-            </option>
-          ))}
-        </select>
-        <p className="text-xs text-espresso-400">Shown next to betting-closes times so everyone knows what zone you meant.</p>
-      </div>
-
-      <div className="space-y-2 border-t border-espresso-100 pt-4">
-        <div className="flex items-center justify-between">
-          <label className="text-sm font-semibold text-espresso-700">Seasons</label>
-          <Switch checked={seasonsEnabled} onChange={() => setSeasonsEnabled((v) => !v)} disabled={settings.seasons_enabled} />
-        </div>
-        {settings.seasons_enabled && <p className="text-xs text-espresso-400">Seasons can't be turned off once enabled.</p>}
-
-        {seasonsEnabled && (
-          <>
-            <div className="flex flex-wrap gap-2 pt-1">
-              {(['1m', '2m', '3m', 'manual', 'custom'] as SeasonLength[]).map((len) => (
-                <button
-                  type="button"
-                  key={len}
-                  onClick={() => setSeasonLength(len)}
-                  className={`rounded-full border px-3 py-1 text-sm font-semibold ${
-                    seasonLength === len ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-600'
-                  }`}
-                >
-                  {formatSeasonLength(len)}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-espresso-400">{SEASON_LENGTH_HINTS[seasonLength]}</p>
-
-            {seasonLength === 'custom' && (
-              <input
-                type="datetime-local"
-                min={minSeasonEndsAt}
-                value={seasonCustomEndsAt}
-                onChange={(e) => setSeasonCustomEndsAt(e.target.value)}
-                required
-                className={`${inputClasses} mt-1`}
-              />
-            )}
-          </>
-        )}
-      </div>
-
+  return (
+    <div className="mt-2.5 space-y-2">
+      {error && <p className="text-xs text-danger-700">{error}</p>}
       <div className="flex gap-2">
-        {onDone && (
-          <Button type="button" variant="outline" onClick={onDone} className="flex-1">
-            Done
-          </Button>
-        )}
-        <Button
-          type="submit"
-          disabled={isPending || (distributePayout && !creatorPctValid)}
-          className="flex-1"
+        <button
+          type="button"
+          className={pillClasses}
+          onClick={async () => {
+            // window is only available client-side, so the absolute URL is built at click time
+            // rather than held in state that would have to match a server render first.
+            await navigator.clipboard.writeText(`${window.location.origin}/join/${inviteCode}`);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          }}
         >
-          Save
-        </Button>
-      </div>
-    </form>
-  );
-}
-
-const readOnlyRowClasses = 'flex items-center justify-between gap-4 py-2';
-
-/** Read-only view of the same settings the owner sees, used both for non-owners and as the owner's default (pre-Edit) view. `seasonBettingOpen` is the current active season's own gate (null when there's no active season right now) — for a seasons-enabled group this replaces settings.betting_enabled, which stops being the real gate once seasons are on. */
-export function ReadOnlySettings({
-  settings,
-  hasActiveSeason,
-  seasonBettingOpen,
-}: {
-  settings: GroupSettings;
-  hasActiveSeason: boolean;
-  seasonBettingOpen?: boolean | null;
-}) {
-  const bettingLabel = settings.seasons_enabled
-    ? hasActiveSeason
-      ? seasonBettingOpen
-        ? 'Open'
-        : 'Not open yet'
-      : 'Paused (between seasons)'
-    : settings.betting_enabled
-      ? 'Open'
-      : 'Not open yet';
-
-  return (
-    <div className="divide-y divide-espresso-100 text-sm">
-      <div className={readOnlyRowClasses}>
-        <span className="text-espresso-500">Accepting new members</span>
-        <span className="font-semibold text-espresso-800">{settings.accepting_members ? 'Yes' : 'Paused'}</span>
-      </div>
-      <div className={readOnlyRowClasses}>
-        <span className="text-espresso-500">Betting</span>
-        <span className="font-semibold text-espresso-800">{bettingLabel}</span>
-      </div>
-      <div className={readOnlyRowClasses}>
-        <span className="text-espresso-500">Token allocation</span>
-        <span className="font-semibold text-espresso-800">{formatTokens(settings.seed_amount)}</span>
-      </div>
-      <div className={readOnlyRowClasses}>
-        <span className="text-espresso-500">Time zone</span>
-        <span className="font-semibold text-espresso-800">{friendlyTimezoneName(settings.timezone)}</span>
-      </div>
-      <div className={readOnlyRowClasses}>
-        <span className="text-espresso-500">Seasons</span>
-        <span className="font-semibold text-espresso-800">
-          {settings.seasons_enabled
-            ? `${formatSeasonLength((settings.season_length ?? 'manual') as SeasonLength)}${hasActiveSeason ? '' : ' (between seasons)'}`
-            : 'Off'}
-        </span>
-      </div>
-      <div className={`${readOnlyRowClasses} ${settings.distribute_payout ? 'items-start' : ''}`}>
-        <span className="text-espresso-500">Payout on universal losses</span>
-        {settings.distribute_payout ? (
-          <span className="text-right font-semibold text-espresso-800">
-            <span className="block">Creator {settings.creator_payout_pct}%</span>
-            <span className="block">Open markets {100 - settings.creator_payout_pct}%</span>
-          </span>
-        ) : (
-          <span className="font-semibold text-espresso-800">Refunded to everyone</span>
+          {copied ? 'Copied' : 'Copy link'}
+        </button>
+        {canRegenerate && (
+          <button type="button" className={pillClasses} disabled={isPending} onClick={() => setConfirming(true)}>
+            Regenerate
+          </button>
         )}
       </div>
-      <div className={readOnlyRowClasses}>
-        <span className="text-espresso-500">Hedging</span>
-        <span className="font-semibold text-espresso-800">{settings.allow_hedged_bets ? 'Allowed' : 'One side only'}</span>
-      </div>
-      <div className={readOnlyRowClasses}>
-        <span className="text-espresso-500">Require endorsement</span>
-        <span className="font-semibold text-espresso-800">{settings.require_endorsement ? 'Yes' : 'No, markets open immediately'}</span>
-      </div>
-      <div className={readOnlyRowClasses}>
-        <span className="text-espresso-500">Challenge/resolution window</span>
-        <span className="font-semibold text-espresso-800">
-          {settings.resolution_window_hours} {settings.resolution_window_hours === 1 ? 'hour' : 'hours'}
-        </span>
-      </div>
-    </div>
-  );
-}
 
-/** The owner's settings card: view-only by default (same component non-owners see), with an Edit button that swaps in the form. */
-export function OwnerSettingsPanel({
-  groupId,
-  settings,
-  hasActiveSeason,
-  seasonBettingOpen,
-}: {
-  groupId: string;
-  settings: GroupSettings;
-  hasActiveSeason: boolean;
-  seasonBettingOpen?: boolean | null;
-}) {
-  const [isEditing, setIsEditing] = useState(false);
-
-  if (!isEditing) {
-    return (
-      <div className="space-y-3">
-        <ReadOnlySettings settings={settings} hasActiveSeason={hasActiveSeason} seasonBettingOpen={seasonBettingOpen} />
-        <Button variant="outline" className="w-full" onClick={() => setIsEditing(true)}>
-          Edit settings
-        </Button>
-      </div>
-    );
-  }
-
-  return <EditSettingsForm groupId={groupId} settings={settings} onDone={() => setIsEditing(false)} />;
-}
-
-export function RegenerateCodeButton({ groupId }: { groupId: string }) {
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
-
-  return (
-    <div>
-      {error && <p className="mb-2 text-sm text-danger-700">{error}</p>}
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={isPending}
-        onClick={() =>
-          startTransition(async () => {
-            const result = await regenerateInviteCode(groupId);
-            if (result.error) {
-              setError(result.error);
-            } else {
-              router.refresh();
-            }
-          })
-        }
-      >
-        Regenerate code
-      </Button>
-    </div>
-  );
-}
-
-export function RemoveMemberButton({ groupId, userId, nickname }: { groupId: string; userId: string; nickname: string }) {
-  const [isPending, startTransition] = useTransition();
-  const [confirming, setConfirming] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
-
-  if (!confirming) {
-    return (
-      <button onClick={() => setConfirming(true)} className="text-sm font-medium text-danger-700 hover:underline">
-        Remove
-      </button>
-    );
-  }
-
-  return (
-    <div className="flex items-center gap-2 text-sm">
-      {error && <span className="text-danger-700">{error}</span>}
-      <span className="text-espresso-500">
-        Remove <Mention nickname={nickname} />?
-      </span>
-      <button
-        disabled={isPending}
-        onClick={() =>
-          startTransition(async () => {
-            const result = await removeMember(groupId, userId);
-            if (result.error) {
-              setError(result.error);
-              setConfirming(false);
-            } else {
-              router.refresh();
-            }
-          })
-        }
-        className="font-semibold text-danger-700"
-      >
-        Confirm
-      </button>
-      <button onClick={() => setConfirming(false)} className="text-espresso-400">
-        Cancel
-      </button>
-    </div>
-  );
-}
-
-export function TransferOwnershipForm({ groupId, members }: { groupId: string; members: { userId: string; nickname: string }[] }) {
-  const router = useRouter();
-  const [selected, setSelected] = useState('');
-  const [confirming, setConfirming] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-
-  if (members.length === 0) {
-    return <p className="text-sm text-espresso-400">No other active members to hand this off to yet.</p>;
-  }
-
-  const selectedNickname = members.find((m) => m.userId === selected)?.nickname;
-
-  return (
-    <div className="space-y-2">
-      {error && <p className="text-sm text-danger-700">{error}</p>}
-      <select
-        value={selected}
-        onChange={(e) => {
-          setSelected(e.target.value);
-          setConfirming(false);
-        }}
-        className={inputClasses}
-      >
-        <option value="">Choose a member…</option>
-        {members.map((m) => (
-          <option key={m.userId} value={m.userId}>
-            @{m.nickname}
-          </option>
-        ))}
-      </select>
-
-      {selected && !confirming && (
-        <Button variant="outline" className="w-full" onClick={() => setConfirming(true)}>
-          Make <Mention nickname={selectedNickname ?? ''} /> the owner
-        </Button>
-      )}
-
-      {selected && confirming && (
-        <div className="space-y-2 rounded-xl bg-danger-50 p-3">
-          <p className="text-sm text-danger-700">
-            You'll become a regular member of your own group. Only <Mention nickname={selectedNickname ?? ''} /> could
-            transfer it back.
+      {confirming && (
+        <Modal onClose={() => setConfirming(false)}>
+          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">Regenerate the invite code?</p>
+          <p className="text-sm leading-[1.5] text-espresso-600">
+            Every link and code you&apos;ve already shared stops working. Anyone already in the group stays in.
           </p>
-          <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={() => setConfirming(false)}>
+          <div className="flex gap-2 pt-1">
+            <Button type="button" variant="outline" className="flex-1" onClick={() => setConfirming(false)}>
               Cancel
             </Button>
             <Button
-              variant="danger"
+              type="button"
               className="flex-1"
               disabled={isPending}
               onClick={() =>
                 startTransition(async () => {
-                  const result = await transferOwnership(groupId, selected);
+                  const result = await regenerateInviteCode(groupId);
                   if (result.error) {
                     setError(result.error);
                     setConfirming(false);
                   } else {
+                    setConfirming(false);
                     router.refresh();
                   }
                 })
               }
             >
-              Confirm
+              Regenerate
             </Button>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );
 }
 
-export function DeleteGroupButton({ groupId, groupName }: { groupId: string; groupName: string }) {
+export function RemoveMemberButton({ groupId, userId, nickname }: { groupId: string; userId: string; nickname: string }) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  return (
+    <>
+      <button type="button" onClick={() => setConfirming(true)} className="text-[13px] font-semibold text-danger-700 hover:underline">
+        Remove
+      </button>
+
+      {confirming && (
+        <Modal onClose={() => setConfirming(false)}>
+          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">
+            Remove <Mention nickname={nickname} />?
+          </p>
+          {error && <p className="text-sm text-danger-700">{error}</p>}
+          <div className="pt-0.5">
+            <ConsequenceRow dotClassName="bg-danger-500">Their open bets are refunded and they lose access straight away.</ConsequenceRow>
+            <ConsequenceRow dotClassName="bg-espresso-800">The invite code rotates, so their copy of it stops working.</ConsequenceRow>
+            <ConsequenceRow dotClassName="bg-espresso-200" isLast>
+              Being removed is permanent. They can&apos;t rejoin with a new code.
+            </ConsequenceRow>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <Button type="button" variant="outline" className="flex-1" onClick={() => setConfirming(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              className="flex-1"
+              disabled={isPending}
+              onClick={() =>
+                startTransition(async () => {
+                  const result = await removeMember(groupId, userId);
+                  if (result.error) {
+                    setError(result.error);
+                  } else {
+                    setConfirming(false);
+                    router.refresh();
+                  }
+                })
+              }
+            >
+              Remove
+            </Button>
+          </div>
+        </Modal>
+      )}
+    </>
+  );
+}
+
+/** The three owner-only rows, each a whole-row button that opens its own sheet. */
+export function OwnerOnlySection({
+  groupId,
+  groupName,
+  resolutionWindowHours,
+  activeSeason,
+  members,
+  deletionScheduled,
+}: {
+  groupId: string;
+  groupName: string;
+  resolutionWindowHours: number;
+  activeSeason: { id: string; number: number; name: string | null } | null;
+  members: { userId: string; nickname: string }[];
+  deletionScheduled: boolean;
+}) {
+  const [openSheet, setOpenSheet] = useState<null | 'end-season' | 'transfer' | 'delete'>(null);
+
+  return (
+    <section>
+      <SectionLabel>Owner only</SectionLabel>
+      <SettingsCard>
+        {activeSeason && (
+          <button type="button" className={settingsNavRowClasses} onClick={() => setOpenSheet('end-season')}>
+            <NavRowContent
+              label="End season now"
+              consequence={`Voids anything without a proposed result. Anything mid-vote gets ${resolutionWindowHours} more hours.`}
+            />
+          </button>
+        )}
+        <button type="button" className={settingsNavRowClasses} onClick={() => setOpenSheet('transfer')}>
+          <NavRowContent label="Transfer ownership" consequence="You stay in the group as a regular member." />
+        </button>
+        {!deletionScheduled && (
+          <button type="button" className={settingsNavRowClasses} onClick={() => setOpenSheet('delete')}>
+            <NavRowContent
+              label="Delete this group"
+              consequence="Every open market is voided and refunded, then it's gone for everyone."
+              danger
+            />
+          </button>
+        )}
+      </SettingsCard>
+
+      {openSheet === 'end-season' && activeSeason && (
+        <EndSeasonSheet
+          groupId={groupId}
+          season={activeSeason}
+          resolutionWindowHours={resolutionWindowHours}
+          onClose={() => setOpenSheet(null)}
+        />
+      )}
+      {openSheet === 'transfer' && <TransferOwnershipSheet groupId={groupId} members={members} onClose={() => setOpenSheet(null)} />}
+      {openSheet === 'delete' && <DeleteGroupSheet groupId={groupId} groupName={groupName} onClose={() => setOpenSheet(null)} />}
+    </section>
+  );
+}
+
+/** Naming the season lives here rather than on the settings list: the name is what gets archived to
+ *  Awards, so the moment you're about to end it is the last chance to make it read as anything
+ *  other than "Season 3". */
+function EndSeasonSheet({
+  groupId,
+  season,
+  resolutionWindowHours,
+  onClose,
+}: {
+  groupId: string;
+  season: { id: string; number: number; name: string | null };
+  resolutionWindowHours: number;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  return (
+    <Modal onClose={onClose}>
+      <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">
+        End {season.name ?? `Season ${season.number}`}?
+      </p>
+      {error && <p className="text-sm text-danger-700">{error}</p>}
+      <div className="pt-0.5">
+        <ConsequenceRow dotClassName="bg-danger-500">
+          Every market without a proposed result is voided and refunded.
+        </ConsequenceRow>
+        <ConsequenceRow dotClassName="bg-espresso-800">
+          Anything already awaiting a challenge or a vote gets up to {resolutionWindowHours} more hours to finish.
+        </ConsequenceRow>
+        <ConsequenceRow dotClassName="bg-espresso-200" isLast>
+          Standings archive to Awards, then intermission opens and everyone is reseeded for the next one.
+        </ConsequenceRow>
+      </div>
+
+      <div className="rounded-[10px] border border-espresso-100 bg-paper p-3">
+        <p className="mb-1.5 text-xs font-bold text-espresso-500">This season&apos;s name is what shows up in Awards.</p>
+        <SeasonNameEditor groupId={groupId} seasonId={season.id} currentName={season.name} seasonNumber={season.number} />
+      </div>
+
+      <div className="flex gap-2 pt-1">
+        <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
+          Not yet
+        </Button>
+        <Button
+          type="button"
+          variant="danger"
+          className="flex-1"
+          disabled={isPending}
+          onClick={() =>
+            startTransition(async () => {
+              const result = await endSeason(groupId);
+              if (result.error) {
+                setError(result.error);
+              } else {
+                router.push(`/groups/${groupId}/intermission`);
+              }
+            })
+          }
+        >
+          End season
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
+function TransferOwnershipSheet({
+  groupId,
+  members,
+  onClose,
+}: {
+  groupId: string;
+  members: { userId: string; nickname: string }[];
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const [selected, setSelected] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const selectedNickname = members.find((m) => m.userId === selected)?.nickname;
+
+  return (
+    <Modal onClose={onClose}>
+      <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">
+        {selectedNickname ? (
+          <>
+            Hand the group to <Mention nickname={selectedNickname} />?
+          </>
+        ) : (
+          'Hand the group to someone else?'
+        )}
+      </p>
+      {error && <p className="text-sm text-danger-700">{error}</p>}
+
+      {members.length === 0 ? (
+        <>
+          <p className="text-sm leading-[1.55] text-espresso-600">
+            There&apos;s nobody to hand it to yet. Only active members other than you can take it on.
+          </p>
+          <Button type="button" variant="outline" className="w-full" onClick={onClose}>
+            Close
+          </Button>
+        </>
+      ) : (
+        <>
+          <p className="text-sm leading-[1.55] text-espresso-600">
+            You stay in the group as a regular member. From then on only{' '}
+            {selectedNickname ? <Mention nickname={selectedNickname} /> : 'they'} can change how the group plays, remove people,
+            or transfer it back.
+          </p>
+          <select value={selected} onChange={(e) => setSelected(e.target.value)} className={selectClasses}>
+            <option value="">Choose a member…</option>
+            {members.map((m) => (
+              <option key={m.userId} value={m.userId}>
+                @{m.nickname}
+              </option>
+            ))}
+          </select>
+          <div className="flex gap-2 pt-1">
+            <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              className="flex-1"
+              disabled={isPending || !selected}
+              onClick={() =>
+                startTransition(async () => {
+                  const result = await transferOwnership(groupId, selected);
+                  if (result.error) {
+                    setError(result.error);
+                  } else {
+                    onClose();
+                    router.refresh();
+                  }
+                })
+              }
+            >
+              Transfer
+            </Button>
+          </div>
+        </>
+      )}
+    </Modal>
+  );
+}
+
+function DeleteGroupSheet({ groupId, groupName, onClose }: { groupId: string; groupName: string; onClose: () => void }) {
+  const router = useRouter();
   const [typed, setTyped] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  if (!confirming) {
-    return (
-      <Button variant="danger" className="w-full" onClick={() => setConfirming(true)}>
-        Delete this group
-      </Button>
-    );
-  }
-
   return (
-    <div className="space-y-2">
+    <Modal onClose={onClose}>
+      <span className="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-danger-100">
+        <AlertTriangleIcon className="h-5 w-5 text-danger-700" />
+      </span>
+      <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">Delete {groupName}?</p>
       {error && <p className="text-sm text-danger-700">{error}</p>}
-      <p className="text-sm text-espresso-600">
-        This immediately and permanently deletes {groupName} for everyone — every open market is voided and
-        refunded first, then the group is gone. This can't be undone. Type the group name to confirm.
-      </p>
-      <input value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={groupName} className={inputClasses} />
-      <div className="flex gap-2">
-        <Button
-          variant="outline"
-          className="flex-1"
-          onClick={() => {
-            setConfirming(false);
-            setTyped('');
-          }}
-        >
+      <div className="pt-0.5">
+        <ConsequenceRow dotClassName="bg-danger-500">Every open market is voided and refunded first.</ConsequenceRow>
+        <ConsequenceRow dotClassName="bg-espresso-800">Everyone keeps read access for 5 days, then it&apos;s gone.</ConsequenceRow>
+        <ConsequenceRow dotClassName="bg-espresso-200" isLast>
+          Awards, seasons and history go with it. This can&apos;t be undone.
+        </ConsequenceRow>
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="block text-xs font-bold text-espresso-500" htmlFor="delete-confirm">
+          Type the group name to confirm
+        </label>
+        <input
+          id="delete-confirm"
+          value={typed}
+          onChange={(e) => setTyped(e.target.value)}
+          placeholder={groupName}
+          className="w-full rounded-[10px] border border-espresso-200 bg-paper-white px-3.5 py-2.5 text-sm text-espresso-950 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200"
+        />
+      </div>
+
+      <div className="flex gap-2 pt-1">
+        <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
           Cancel
         </Button>
         <Button
+          type="button"
           variant="danger"
-          className="flex-1"
+          className="flex-1 disabled:bg-danger-100 disabled:text-danger-500"
           disabled={isPending || typed !== groupName}
           onClick={() =>
             startTransition(async () => {
@@ -644,34 +820,6 @@ export function DeleteGroupButton({ groupId, groupName }: { groupId: string; gro
           Delete
         </Button>
       </div>
-    </div>
-  );
-}
-
-export function EndSeasonButton({ groupId }: { groupId: string }) {
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
-
-  return (
-    <div>
-      {error && <p className="mb-2 text-sm text-danger-700">{error}</p>}
-      <Button
-        variant="danger"
-        disabled={isPending}
-        onClick={() =>
-          startTransition(async () => {
-            const result = await endSeason(groupId);
-            if (result.error) {
-              setError(result.error);
-            } else {
-              router.push(`/groups/${groupId}/intermission`);
-            }
-          })
-        }
-      >
-        End season now
-      </Button>
-    </div>
+    </Modal>
   );
 }

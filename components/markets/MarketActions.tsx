@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { challengeResolution, castVote, finalizeMarket, voidMarket, voidMarketAsCreator } from '@/lib/actions/resolution';
+import { challengeResolution, castVote, finalizeMarket } from '@/lib/actions/resolution';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
@@ -40,14 +40,18 @@ interface Challenge {
   created_at: string;
 }
 
+/**
+ * The stage's own action on an in-flight market: challenge a proposal, cast a ballot, finalize once
+ * a window has run out. **Voiding is deliberately not here** — it lives in `MarketOverflowMenu`'s
+ * "···" at the top of the page, because a permanently-visible danger card competed with the one
+ * thing the screen is actually asking you to do. This component therefore takes no owner/creator
+ * identity at all. (It used to carry `isOwner`/`isCreator`/`ownerIsSubject`/`isSponsor` and a
+ * `hideVoidCard` escape hatch for two void cards; the page passed `hideVoidCard` unconditionally
+ * from the day the overflow menu landed, so all of it was unreachable and has been removed.)
+ */
 interface Props {
   groupId: string;
   market: Market;
-  isCreator: boolean;
-  isSponsor: boolean;
-  isOwner: boolean;
-  /** True when the group owner is themself a subject of this market, so void_market_by_owner is unreachable for them. Only meaningful alongside isCreator. */
-  ownerIsSubject: boolean;
   proposal: Proposal | null;
   challenge: Challenge | null;
   myVote: { outcome: string | null; voted_option_id: string | null } | null;
@@ -61,16 +65,11 @@ interface Props {
   /** disputed only: ballots cast so far vs. eligible voters, for the "N of M voted" count. */
   votesCast?: number;
   eligibleVoters?: number;
-  /** Suppresses the owner/creator void card below — the page renders MarketOverflowMenu's "···" instead for the closed/disputed screens, where a permanently-visible danger card competed with the page's one real job. */
-  hideVoidCard?: boolean;
 }
 
 export function MarketActions({
   groupId,
   market,
-  isCreator,
-  isOwner,
-  ownerIsSubject,
   proposal,
   challenge,
   myVote,
@@ -80,7 +79,6 @@ export function MarketActions({
   resolutionWindowHours,
   votesCast,
   eligibleVoters,
-  hideVoidCard = false,
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -91,8 +89,6 @@ export function MarketActions({
   // the page after having voted) or one just cast this session — expands back out only via
   // "Switch vote," instead of always showing all three options once a ballot's already in.
   const [ballotExpanded, setBallotExpanded] = useState(voteChoice === null);
-  const [confirmingVoid, setConfirmingVoid] = useState(false);
-  const [confirmingCreatorVoid, setConfirmingCreatorVoid] = useState(false);
   const [confirmingChallenge, setConfirmingChallenge] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
 
@@ -294,75 +290,6 @@ export function MarketActions({
         </Modal>
       )}
 
-      {!hideVoidCard && isOwner && (
-        <Card className="space-y-2 border border-danger-200">
-          <p className="text-sm font-semibold text-danger-700">Owner controls</p>
-          {!confirmingVoid ? (
-            <>
-              <p className="text-xs text-espresso-500">Cancel this market and refund every stake. This can't be undone.</p>
-              <Button variant="outline" className="w-full" onClick={() => setConfirmingVoid(true)}>
-                Void this market
-              </Button>
-            </>
-          ) : (
-            <>
-              <p className="text-xs font-semibold text-danger-700">
-                Every bet on this market gets refunded in full and it closes for good. Everyone gets notified.
-              </p>
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setConfirmingVoid(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  variant="danger"
-                  className="flex-1"
-                  disabled={isPending}
-                  onClick={() => run(() => voidMarket(groupId, market.id))}
-                >
-                  Confirm
-                </Button>
-              </div>
-            </>
-          )}
-        </Card>
-      )}
-
-      {!hideVoidCard && isCreator && ownerIsSubject && (
-        <Card className="space-y-2 border border-danger-200">
-          <p className="text-sm font-semibold text-danger-700">Owner can't act on this one</p>
-          {!confirmingCreatorVoid ? (
-            <>
-              <p className="text-xs text-espresso-500">
-                The group owner is @mentioned in this market, so it's hidden from them and they can't void it
-                themselves. As the market's creator, you can void it in their place. Every bet gets refunded in
-                full and it closes for good.
-              </p>
-              <Button variant="outline" className="w-full" onClick={() => setConfirmingCreatorVoid(true)}>
-                Void this market
-              </Button>
-            </>
-          ) : (
-            <>
-              <p className="text-xs font-semibold text-danger-700">
-                Every bet on this market gets refunded in full and it closes for good. Everyone gets notified.
-              </p>
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setConfirmingCreatorVoid(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  variant="danger"
-                  className="flex-1"
-                  disabled={isPending}
-                  onClick={() => run(() => voidMarketAsCreator(groupId, market.id))}
-                >
-                  Confirm
-                </Button>
-              </div>
-            </>
-          )}
-        </Card>
-      )}
     </div>
   );
 }

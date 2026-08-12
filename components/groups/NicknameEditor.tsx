@@ -6,7 +6,7 @@ import { updateNickname } from '@/lib/actions/groups';
 import { Button } from '@/components/ui/Button';
 
 const inputClasses =
-  'w-full rounded-xl border border-espresso-200 bg-paper-white pl-8 pr-4 py-2.5 text-espresso-900 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
+  'w-full rounded-[10px] border border-espresso-200 bg-paper-white py-2.5 pl-7 pr-3.5 text-sm font-semibold text-espresso-950 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
 
 /** Settings-page form for changing your own nickname in this group — typos happen. */
 export function NicknameEditor({ groupId, nickname }: { groupId: string; nickname: string }) {
@@ -22,7 +22,7 @@ export function NicknameEditor({ groupId, nickname }: { groupId: string; nicknam
       {success && <p className="text-sm text-honey-700">Saved.</p>}
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-espresso-400">@</span>
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-espresso-300">@</span>
           <input
             value={value}
             onChange={(e) => {
@@ -34,6 +34,7 @@ export function NicknameEditor({ groupId, nickname }: { groupId: string; nicknam
           />
         </div>
         <Button
+          variant="outline"
           disabled={isPending || value.trim() === '' || value.trim() === nickname}
           onClick={() =>
             startTransition(async () => {
