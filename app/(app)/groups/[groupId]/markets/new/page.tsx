@@ -32,7 +32,7 @@ export default async function NewMarketPage({
     .map((m) => ({ userId: m.user_id, nickname: m.nickname }));
 
   return (
-    <main className="mx-auto max-w-lg px-5 pt-5 pb-8">
+    <main className="mx-auto flex min-h-[var(--flow-height)] max-w-lg flex-col px-5 pt-5 pb-8">
       <CreateMarketForm
         groupId={groupId}
         groupName={group?.name ?? ''}

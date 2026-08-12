@@ -253,6 +253,12 @@ export function CreateMarketForm({
     if (hasOptionSubject) setSubjects([]);
   }, [hasOptionSubject]);
 
+  // Each step is its own screenful, so arriving at one part-scrolled hides the step bar that says
+  // where you are. Same reset the create-group wizard does on every step change.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [step]);
+
   const isOverUnder = marketType === 'over_under';
   const displayUnit = lineFormat === 'number' ? unit.trim() || null : lineFormat;
   const parsedLine = isOverUnder && line !== '' ? parseLineInput(line, lineFormat) : null;
@@ -304,7 +310,7 @@ export function CreateMarketForm({
 
   if (step === 1) {
     return (
-      <div className="flex min-h-[calc(100dvh-4rem)] flex-col gap-[18px]">
+      <div className="flex flex-1 flex-col gap-[18px]">
         <StepBar step={1} label="Ask" onBack={() => router.push(`/groups/${groupId}`)} />
         {errorLine}
 
@@ -543,7 +549,7 @@ export function CreateMarketForm({
 
   if (step === 2) {
     return (
-      <div className="flex min-h-[calc(100dvh-4rem)] flex-col gap-[18px]">
+      <div className="flex flex-1 flex-col gap-[18px]">
         <StepBar step={2} label="Settle" onBack={() => setStep(1)} />
         {errorLine}
 
@@ -602,7 +608,7 @@ export function CreateMarketForm({
   }
 
   return (
-    <div className="flex min-h-[calc(100dvh-4rem)] flex-col gap-[18px]">
+    <div className="flex flex-1 flex-col gap-[18px]">
       <StepBar step={3} label="Review" onBack={() => setStep(2)} />
       {errorLine}
 

@@ -6,7 +6,8 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/Button';
 import { InviteCodeBoxes } from '@/components/groups/InviteCodeBoxes';
 import { OnboardingCarousel } from '@/components/groups/OnboardingCarousel';
-import { PlusIcon, ChevronRightIcon } from '@/components/ui/icons';
+import { StartGroupButton } from '@/components/groups/StartGroupButton';
+import { ChevronRightIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/cn';
 import { formatSignedTokens, formatOrdinal, numberWord, numberWordCapitalized } from '@/lib/formatNumber';
 import { GroupAvatar } from '@/components/ui/GroupAvatar';
@@ -199,13 +200,7 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
             </div>
           )}
 
-          <Link
-            href="/groups/new"
-            className="flex items-center justify-center gap-2 rounded-full bg-espresso-900 py-3.5 text-[15px] font-extrabold text-paper-white"
-          >
-            <PlusIcon className="h-4 w-4 text-honey-300" />
-            Start a group
-          </Link>
+          <StartGroupButton />
         </>
       )}
 

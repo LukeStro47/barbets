@@ -54,6 +54,15 @@
        the nav instead of underneath it, rather than duplicating this as a guessed magic number
        in more than one component. */
     --bottomnav-height: calc(60px + max(20px, env(safe-area-inset-bottom)));
+
+    /* The height a full-screen flow (the two create wizards) can fill without pushing the page
+       into a scroll. The layout already spends env(safe-area-inset-top) as in-flow padding above
+       the page, so a child sized to a plain 100dvh overflows the viewport by exactly that much —
+       which is why these screens used to arrive scrolled a notch down, below their own step bar.
+       Lives here rather than as a Tailwind arbitrary value because `calc(100dvh -
+       env(safe-area-inset-top))` can't be written as one safely: the hyphens inside the env()
+       keyword are indistinguishable from the subtraction operator to an arbitrary-value parser. */
+    --flow-height: calc(100dvh - env(safe-area-inset-top));
   }
 }
 

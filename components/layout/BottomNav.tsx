@@ -12,6 +12,7 @@ import { GROUP_NAME_MAX_LENGTH, TOKEN_ALLOCATION_MAX } from '@/lib/limits';
 import { useKeyboardState } from '@/lib/useKeyboardInset';
 import { cn } from '@/lib/cn';
 import { GroupAvatar } from '@/components/ui/GroupAvatar';
+import { NEW_GROUP_EVENT } from '@/components/groups/StartGroupButton';
 
 export type NavGroup = { id: string; name: string; avatarKey: string | null; meta: string };
 
@@ -118,6 +119,19 @@ export function BottomNav({
       document.body.style.overflow = '';
     };
   }, [switcherOpen, createOpen]);
+
+  // The groups hub's "Start a group" button opens this drawer rather than owning a second copy of
+  // it — one place collects a name and an allocation, whichever affordance you came in through.
+  // Safe to open unconditionally: the only dispatcher lives on /groups, where `inGroup` is always
+  // false, so the sheet below always renders its "New group" side.
+  useEffect(() => {
+    const onNewGroup = () => {
+      setSwitcherOpen(false);
+      setCreateOpen(true);
+    };
+    window.addEventListener(NEW_GROUP_EVENT, onNewGroup);
+    return () => window.removeEventListener(NEW_GROUP_EVENT, onNewGroup);
+  }, []);
 
   // Reset any open sheet the moment the route actually changes, so navigating away (e.g. picking
   // a group) doesn't leave a sheet re-appearing stale on the next visible page.
