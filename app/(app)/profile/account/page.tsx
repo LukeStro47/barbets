@@ -3,7 +3,6 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { ChangeEmailForm, ChangePasswordForm } from '@/components/profile/AccountForms';
 import { DeleteAccountButton } from '@/components/profile/DeleteAccountButton';
-import { DigestToggleStub } from '@/components/profile/DigestToggleStub';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 
 /** /profile/account — everything destructive or rarely touched, one tap deeper than the
@@ -29,11 +28,9 @@ export default async function AccountPage() {
       {/* Notifications are their own row in the settings block on /profile now, a sibling of this
           page rather than something nested inside it, so the link that used to sit here is gone —
           two entry points would have made "back" from that page ambiguous, and the device-level
-          push toggle already lives there as its "All notifications" master. */}
-      <Card className="space-y-3">
-        <h2 className="font-display font-bold text-espresso-800">Digest</h2>
-        <DigestToggleStub />
-      </Card>
+          push toggle already lives there as its "All notifications" master. The results-digest
+          placeholder that shared this card is gone too: an always-disabled switch for a feature
+          that doesn't exist costs a line of attention on every visit to advertise itself once. */}
       <InstallPrompt />
 
       <Card>

@@ -16,6 +16,31 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 
 export type ShareableImageStatus = 'capturing' | 'ready' | 'working' | 'failed';
 
+/** Every failure path used to end in a bare `catch {}`, which meant a button that did nothing and
+    a bug report nobody could act on: no console entry, no message, no way to tell a capture
+    failure from a share-sheet failure. The reason is kept and surfaced instead. */
+function describe(err: unknown): string {
+  if (isMissingPlugin(err)) return 'Update the app from the store to share images.';
+  const e = err as { name?: string; message?: string } | null;
+  return e?.message || e?.name || 'Unknown error';
+}
+
+/**
+ * The native shell loads the *deployed* web app (`server.url` in capacitor.config.ts), so its JS
+ * is always current while its plugin layer is only as new as the last store build. Any web release
+ * that reaches for a newly-added plugin therefore runs against installs that don't have it yet,
+ * and Capacitor's bridge answers with an UNIMPLEMENTED rejection — which is what an installed
+ * build from before `@capacitor/share`/`@capacitor/filesystem` were added does here. That's a
+ * "your app is behind" situation, not a broken share, and it should say so rather than surfacing
+ * `"Share" plugin is not implemented on android` to somebody who can only act on plain English.
+ */
+function isMissingPlugin(err: unknown): boolean {
+  const e = err as { code?: string; message?: string } | null;
+  if (e?.code === 'UNIMPLEMENTED' || e?.code === 'UNAVAILABLE') return true;
+  const message = String(e?.message ?? '').toLowerCase();
+  return message.includes('not implemented') || message.includes('unimplemented') || message.includes('not available');
+}
+
 function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -98,6 +123,7 @@ export function useShareableImage<T extends HTMLElement>({ filename, title, text
   const ref = useRef<T>(null);
   const blobRef = useRef<Blob | null>(null);
   const [status, setStatus] = useState<ShareableImageStatus>('capturing');
+  const [reason, setReason] = useState<string | null>(null);
   const [canShare, setCanShare] = useState(false);
 
   useEffect(() => {
@@ -130,12 +156,16 @@ export function useShareableImage<T extends HTMLElement>({ filename, title, text
     if (!ready) return;
     let cancelled = false;
     setStatus('capturing');
+    setReason(null);
     capture()
       .then(() => {
         if (!cancelled) setStatus('ready');
       })
-      .catch(() => {
-        if (!cancelled) setStatus('failed');
+      .catch((err) => {
+        if (cancelled) return;
+        console.error('[shareImage] capture failed', err);
+        setReason(describe(err));
+        setStatus('failed');
       });
     return () => {
       cancelled = true;
@@ -150,7 +180,9 @@ export function useShareableImage<T extends HTMLElement>({ filename, title, text
       try {
         await shareImageBlob(blob, { filename, title, text });
         setStatus('ready');
-      } catch {
+      } catch (err) {
+        console.error('[shareImage] share failed', err);
+        setReason(describe(err));
         setStatus('failed');
       }
       return;
@@ -161,7 +193,9 @@ export function useShareableImage<T extends HTMLElement>({ filename, title, text
     setStatus('working');
     try {
       blob = await capture();
-    } catch {
+    } catch (err) {
+      console.error('[shareImage] retry capture failed', err);
+      setReason(describe(err));
       blob = null;
     }
     if (!blob) {
@@ -171,10 +205,12 @@ export function useShareableImage<T extends HTMLElement>({ filename, title, text
     try {
       await shareImageBlob(blob, { filename, title, text });
       setStatus('ready');
-    } catch {
+    } catch (err) {
+      console.error('[shareImage] share failed', err);
+      setReason(describe(err));
       setStatus('failed');
     }
   }, [capture, filename, title, text]);
 
-  return { ref, status, canShare, share };
+  return { ref, status, reason, canShare, share };
 }

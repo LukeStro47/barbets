@@ -14,13 +14,15 @@ import { InvitePill } from '@/components/groups/InvitePill';
 import { Mention } from '@/components/ui/Mention';
 import { GroupAvatar } from '@/components/ui/GroupAvatar';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
-import { SettingsIcon, InfoIcon, TicketIcon } from '@/components/ui/icons';
+import { SettingsIcon, InfoIcon } from '@/components/ui/icons';
 import { formatTokens } from '@/lib/formatNumber';
 import { REACTIONS } from '@/lib/reactions';
 import { getGroupTasks } from '@/lib/tasks';
 
+// 44px, a real tap target rather than a decorative chip — it's the only control in this header
+// now that "My bets" has gone, and it's the way into everything about the group.
 const iconLinkClass =
-  'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-espresso-50 text-espresso-500 transition-colors hover:bg-espresso-100 hover:text-espresso-700 active:scale-[0.92]';
+  'flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-espresso-50 text-espresso-500 transition-colors hover:bg-espresso-100 hover:text-espresso-700 active:scale-[0.92]';
 
 /** Mirrors the DB's own cutoff (see supabase/migrations/*_shorten_sponsor_deadline_to_24h.sql):
     a market stops being endorsable at 24h since creation, or 5 minutes before betting
@@ -282,11 +284,8 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
             <h1 className="min-w-0 font-display text-[29px] font-bold tracking-[-0.02em] text-espresso-950">{group!.name}</h1>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <Link href={`/groups/${groupId}/bets`} className={iconLinkClass} aria-label="My bets">
-              <TicketIcon className="h-4 w-4" />
-            </Link>
             <Link href={`/groups/${groupId}/settings`} className={iconLinkClass} aria-label={isOwner ? 'Settings' : 'Group info'}>
-              {isOwner ? <SettingsIcon className="h-4 w-4" /> : <InfoIcon className="h-4 w-4" />}
+              {isOwner ? <SettingsIcon className="h-5 w-5" /> : <InfoIcon className="h-5 w-5" />}
             </Link>
           </div>
         </div>
