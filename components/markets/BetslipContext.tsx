@@ -3,7 +3,9 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
-/** What the drawer opens primed with: a side for yes_no/over_under, an option id for multiple_choice. */
+/** What the drawer opens primed with: a side for yes_no/over_under, an option id for
+ * multiple_choice. An **empty object** is meaningful and distinct from omitting the argument: it
+ * says "open with nothing chosen," which is what "Pick a side" on the line ticket wants. */
 export interface BetslipPick {
   side?: string;
   optionId?: string;
@@ -12,7 +14,7 @@ export interface BetslipPick {
 interface BetslipState {
   isOpen: boolean;
   pick: BetslipPick | null;
-  /** Open the drawer primed with a pick (or with whatever was last selected, if omitted). */
+  /** Open the drawer primed with a pick, cleared (`{}`), or on whatever was last selected (no argument). */
   open: (pick?: BetslipPick) => void;
   close: () => void;
 }

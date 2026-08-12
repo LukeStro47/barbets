@@ -27,9 +27,12 @@ export default async function NewMarketPage({
   ]);
 
   // A market's creator can never be its own subject, so they're not a valid @mention target here.
+  // Alphabetical because the only way to find a name in a chip strip is to look for it, and
+  // membership order (which is what the query returns) is an order nobody can predict.
   const memberOptions = (members ?? [])
     .filter((m) => m.user_id !== user?.id)
-    .map((m) => ({ userId: m.user_id, nickname: m.nickname }));
+    .map((m) => ({ userId: m.user_id, nickname: m.nickname }))
+    .sort((a, b) => a.nickname.localeCompare(b.nickname));
 
   return (
     <main className="mx-auto flex min-h-[var(--flow-height)] max-w-lg flex-col px-5 pt-5 pb-8">
