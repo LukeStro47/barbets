@@ -39,12 +39,31 @@ function toLocalDatetimeInputValue(date: Date): string {
 }
 
 /** Back caret, progress pills, step counter — the only chrome the wizard steps carry, in place of
- * a page title they'd otherwise repeat under the heading. */
-function StepBar({ step, total, label, onBack }: { step: number; total: number; label: string; onBack: () => void }) {
+ * a page title they'd otherwise repeat under the heading. `backLabel` names the destination on the
+ * step where leaving the flow is what "back" means; deeper in, the caret alone is unambiguous. */
+function StepBar({
+  step,
+  total,
+  label,
+  backLabel,
+  onBack,
+}: {
+  step: number;
+  total: number;
+  label: string;
+  backLabel?: string;
+  onBack: () => void;
+}) {
   return (
     <div className="flex items-center gap-3">
-      <button type="button" onClick={onBack} aria-label="Back" className="-ml-1.5 border-0 bg-transparent p-0 text-espresso-300">
+      <button
+        type="button"
+        onClick={onBack}
+        aria-label={backLabel ?? 'Back'}
+        className="-ml-1.5 inline-flex shrink-0 items-center gap-0.5 border-0 bg-transparent p-0 text-espresso-300"
+      >
         <CaretLeftIcon className="h-[18px] w-[18px]" />
+        {backLabel && <span className="text-[12.5px] font-bold text-espresso-400">{backLabel}</span>}
       </button>
       <span className="flex flex-1 gap-[5px]">
         {Array.from({ length: total }, (_, i) => (
@@ -52,6 +71,38 @@ function StepBar({ step, total, label, onBack }: { step: number; total: number; 
         ))}
       </span>
       <span className="text-[11px] font-extrabold tracking-[0.06em] text-espresso-400 uppercase">{label}</span>
+    </div>
+  );
+}
+
+/** One hairline-divided house rule in the advanced view. `children` is whatever the rule needs
+ * once it's on — only the payout split has any, and it stays mounted-on-demand rather than opening
+ * a second screen. */
+function ToggleRow({
+  label,
+  description,
+  checked,
+  onChange,
+  last,
+  children,
+}: {
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: () => void;
+  last?: boolean;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className={cn('py-3.5', !last && 'border-b border-espresso-100')}>
+      <div className="flex items-start gap-3">
+        <span className="min-w-0 flex-1">
+          <span className="block text-[13.5px] font-extrabold text-espresso-800">{label}</span>
+          <span className="mt-0.5 block text-[11.5px] leading-[1.45] text-espresso-400">{description}</span>
+        </span>
+        <Switch checked={checked} onChange={onChange} />
+      </div>
+      {checked && children}
     </div>
   );
 }
@@ -122,14 +173,17 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
   const [requireEndorsement, setRequireEndorsement] = useState(false);
   const [allowHedgedBets, setAllowHedgedBets] = useState(false);
   const [distributePayout, setDistributePayout] = useState(false);
+  const [creatorPayoutPct, setCreatorPayoutPct] = useState(25);
   const [resolutionWindowHours, setResolutionWindowHours] = useState(2);
 
-  function resetAdvanced() {
-    setRequireEndorsement(false);
-    setAllowHedgedBets(false);
-    setDistributePayout(false);
-    setResolutionWindowHours(2);
-  }
+  const creatorPctValid = Number.isFinite(creatorPayoutPct) && creatorPayoutPct >= 0 && creatorPayoutPct <= 100;
+
+  // Each view is its own screenful, so arriving at one part-scrolled (the browser restoring the
+  // last position, or a focused field pulling the page down) hides the step bar that says where
+  // you are. Reset on every step/view change, including the first paint after the drawer's push.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [step, view]);
 
   const seedAmountNumber = Number(seedAmount.replace(/,/g, ''));
   const step1Valid = name.trim().length > 0 && nickname.trim().length > 0 && seedAmountNumber > 0;
@@ -165,7 +219,7 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
           bettingEnabled: false,
           acceptingMembers: true,
           distributePayout,
-          creatorPayoutPct: 25,
+          creatorPayoutPct,
           allowHedgedBets,
           resolutionWindowHours,
           requireEndorsement,
@@ -179,21 +233,62 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
     });
   }
 
-  const identity = (
-    <div className="flex items-center gap-[11px]">
-      <img src={`/avatars/${avatarKey}.png`} alt="" className="h-[38px] w-[38px] shrink-0 rounded-full border border-espresso-100 object-cover" />
-      <span className="min-w-0">
-        <span className="block truncate text-[13.5px] font-extrabold text-espresso-950">{name || 'Your group'}</span>
-        <span className="block text-[11.5px] text-espresso-400">
-          @{nickname || 'you'} · {formatTokens(seedAmountNumber || 0)} tokens each
+  /** The drawer's answers, carried through the flow as the thing being built rather than re-asked
+   * as two more fields. Same block on both steps so the group being made never leaves the top of
+   * the screen; step 2 folds in the picture and nickname, which exist by then. */
+  const ticket = (withIdentity: boolean) => (
+    <div className="flex items-center gap-3 rounded-[18px] bg-gradient-to-br from-espresso-900 to-espresso-700 px-4 py-3.5">
+      {withIdentity && (
+        <img src={`/avatars/${avatarKey}.png`} alt="" className="h-[38px] w-[38px] shrink-0 rounded-full object-cover" />
+      )}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-display text-[16.5px] font-extrabold tracking-[-0.015em] text-paper-white">
+          {name || 'Your group'}
+        </span>
+        <span className="mt-0.5 block text-xs text-paper-white/55">
+          {withIdentity && nickname.trim() ? `@${nickname.trim()} · ` : ''}
+          {formatTokens(seedAmountNumber || 0)} tokens each
         </span>
       </span>
+      <button
+        type="button"
+        onClick={() => setEditingTicket((v) => !v)}
+        className="flex shrink-0 items-center gap-1.5 rounded-full border-0 bg-paper-white/12 px-[13px] py-[7px]"
+      >
+        <PencilIcon className="h-[13px] w-[13px] text-honey-300" />
+        <span className="text-[11.5px] font-extrabold text-honey-300">Edit</span>
+      </button>
+    </div>
+  );
+
+  const ticketEditor = editingTicket && (
+    <div className="flex flex-col gap-2 rounded-[18px] border border-espresso-100 bg-paper-white p-4">
+      <label className="block">
+        <span className="block text-[10px] font-bold tracking-[0.07em] text-espresso-400 uppercase">Group name</span>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={GROUP_NAME_MAX_LENGTH}
+          placeholder="The Wednesday Wagers"
+          className="mt-1 block w-full rounded-xl border border-espresso-200 bg-paper-white px-3 py-2.5 text-sm font-bold text-espresso-950 focus:border-honey-500 focus:outline-none"
+        />
+      </label>
+      <label className="block">
+        <span className="block text-[10px] font-bold tracking-[0.07em] text-espresso-400 uppercase">Token allocation</span>
+        <input
+          type="text"
+          inputMode="numeric"
+          value={seedAmount}
+          onChange={(e) => setSeedAmount(formatTokenInputValue(e.target.value, TOKEN_ALLOCATION_MAX))}
+          className="mt-1 block w-full rounded-xl border border-espresso-200 bg-paper-white px-3 py-2.5 text-sm font-bold text-espresso-950 focus:border-honey-500 focus:outline-none"
+        />
+      </label>
     </div>
   );
 
   if (view === 'advanced') {
     return (
-      <div className="flex min-h-[calc(100dvh-4rem)] flex-col gap-[15px]">
+      <div className="flex flex-1 flex-col gap-[15px]">
         <button
           type="button"
           onClick={() => setView('wizard')}
@@ -211,34 +306,58 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
         </div>
 
         <div className="rounded-[20px] border border-espresso-100 bg-paper-white px-4">
-          {[
-            {
-              label: 'Second pair of eyes',
-              description: 'Someone else endorses a market before betting opens.',
-              checked: requireEndorsement,
-              onChange: () => setRequireEndorsement((v) => !v),
-            },
-            {
-              label: 'Bet both sides',
-              description: 'Members can hold a position on more than one option.',
-              checked: allowHedgedBets,
-              onChange: () => setAllowHedgedBets((v) => !v),
-            },
-            {
-              label: 'Keep universal losses',
-              description: 'When everyone loses, the pool moves on instead of being refunded.',
-              checked: distributePayout,
-              onChange: () => setDistributePayout((v) => !v),
-            },
-          ].map((t, i) => (
-            <div key={t.label} className={cn('flex items-start gap-3 py-3.5', i < 2 && 'border-b border-espresso-100')}>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[13.5px] font-extrabold text-espresso-800">{t.label}</span>
-                <span className="mt-0.5 block text-[11.5px] leading-[1.45] text-espresso-400">{t.description}</span>
-              </span>
-              <Switch checked={t.checked} onChange={t.onChange} />
+          <ToggleRow
+            label="Second pair of eyes"
+            description="Someone else endorses a market before betting opens."
+            checked={requireEndorsement}
+            onChange={() => setRequireEndorsement((v) => !v)}
+          />
+          <ToggleRow
+            label="Hedging"
+            description="Members can bet on more than one side or option of the same market."
+            checked={allowHedgedBets}
+            onChange={() => setAllowHedgedBets((v) => !v)}
+          />
+          <ToggleRow
+            label="Split universal losses"
+            description="When everyone loses, that pool is split instead of refunded."
+            checked={distributePayout}
+            onChange={() => setDistributePayout((v) => !v)}
+            last
+          >
+            {/* Only one number is actually a choice. What's left over is arithmetic, so it's shown
+                rather than asked for — same split the group's own Settings page uses, since this
+                is the same setting seen a few minutes earlier. */}
+            <div className="mt-3 flex gap-3">
+              <label className="flex-1">
+                <span className="block text-[11px] font-bold text-espresso-500">Creator %</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={creatorPayoutPct}
+                  onChange={(e) => setCreatorPayoutPct(Number(e.target.value))}
+                  className="mt-1 block w-full rounded-xl border border-espresso-200 bg-paper-white px-3 py-2.5 text-sm font-bold text-espresso-950 focus:border-honey-500 focus:outline-none"
+                />
+              </label>
+              <div className="flex-1">
+                <span className="block text-[11px] font-bold text-espresso-500">Open markets %</span>
+                <div
+                  aria-readonly
+                  className="mt-1 w-full rounded-xl border border-espresso-100 bg-espresso-50 px-3 py-2.5 text-sm font-bold text-espresso-500"
+                >
+                  {creatorPctValid ? 100 - creatorPayoutPct : '—'}
+                </div>
+              </div>
             </div>
-          ))}
+            <p className="mt-2 text-[11.5px] leading-[1.45] text-espresso-400">
+              Whatever the creator doesn't take is split across the group's other open markets, or held for the next
+              market if there aren't any.
+            </p>
+            {!creatorPctValid && (
+              <p className="mt-1.5 text-[11.5px] text-danger-700">The creator percentage has to be between 0 and 100.</p>
+            )}
+          </ToggleRow>
         </div>
 
         <div className={cardClasses}>
@@ -266,16 +385,9 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
           </p>
         </div>
 
-        <div className="mt-auto flex flex-col gap-2.5 pt-6">
-          <button type="button" onClick={() => setView('wizard')} className={footerButtonClasses}>
+        <div className="mt-auto pt-6">
+          <button type="button" disabled={!creatorPctValid} onClick={() => setView('wizard')} className={footerButtonClasses}>
             Done
-          </button>
-          <button
-            type="button"
-            onClick={resetAdvanced}
-            className="border-0 bg-transparent p-0 text-center text-xs text-espresso-400"
-          >
-            Reset to defaults
           </button>
         </div>
       </div>
@@ -283,56 +395,15 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
   }
 
   return (
-    <div className="flex min-h-[calc(100dvh-4rem)] flex-col gap-4">
+    <div className="flex flex-1 flex-col gap-4">
       {error && <p className="text-sm text-danger-700">{error}</p>}
 
       {step === 1 ? (
         <>
-          <StepBar step={1} total={2} label="1 of 2" onBack={() => router.push('/groups')} />
+          <StepBar step={1} total={2} label="1 of 2" backLabel="All groups" onBack={() => router.push('/groups?all=1')} />
 
-          {/* The drawer's answers, carried up as the thing being built rather than re-asked as two
-              more fields. */}
-          <div className="flex items-center gap-3 rounded-[18px] bg-gradient-to-br from-espresso-900 to-espresso-700 px-4 py-3.5">
-            <span className="min-w-0 flex-1">
-              <span className="block truncate font-display text-[16.5px] font-extrabold tracking-[-0.015em] text-paper-white">
-                {name || 'Your group'}
-              </span>
-              <span className="mt-0.5 block text-xs text-paper-white/55">{formatTokens(seedAmountNumber || 0)} tokens each</span>
-            </span>
-            <button
-              type="button"
-              onClick={() => setEditingTicket((v) => !v)}
-              className="flex shrink-0 items-center gap-1.5 rounded-full border-0 bg-paper-white/12 px-[13px] py-[7px]"
-            >
-              <PencilIcon className="h-[13px] w-[13px] text-honey-300" />
-              <span className="text-[11.5px] font-extrabold text-honey-300">Edit</span>
-            </button>
-          </div>
-
-          {editingTicket && (
-            <div className="flex flex-col gap-2 rounded-[18px] border border-espresso-100 bg-paper-white p-4">
-              <label className="block">
-                <span className="block text-[10px] font-bold tracking-[0.07em] text-espresso-400 uppercase">Group name</span>
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  maxLength={GROUP_NAME_MAX_LENGTH}
-                  placeholder="The Wednesday Wagers"
-                  className="mt-1 block w-full rounded-xl border border-espresso-200 bg-paper-white px-3 py-2.5 text-sm font-bold text-espresso-950 focus:border-honey-500 focus:outline-none"
-                />
-              </label>
-              <label className="block">
-                <span className="block text-[10px] font-bold tracking-[0.07em] text-espresso-400 uppercase">Token allocation</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={seedAmount}
-                  onChange={(e) => setSeedAmount(formatTokenInputValue(e.target.value, TOKEN_ALLOCATION_MAX))}
-                  className="mt-1 block w-full rounded-xl border border-espresso-200 bg-paper-white px-3 py-2.5 text-sm font-bold text-espresso-950 focus:border-honey-500 focus:outline-none"
-                />
-              </label>
-            </div>
-          )}
+          {ticket(false)}
+          {ticketEditor}
 
           <div>
             <h1 className="font-display text-[28px] leading-[1.1] font-extrabold tracking-[-0.025em] text-espresso-950">
@@ -387,7 +458,8 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
       ) : (
         <>
           <StepBar step={2} total={2} label="2 of 2" onBack={() => setStep(1)} />
-          {identity}
+          {ticket(true)}
+          {ticketEditor}
 
           <h1 className="font-display text-[28px] leading-[1.1] font-extrabold tracking-[-0.025em] text-espresso-950">
             How should it run?
@@ -516,14 +588,14 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
           <button
             type="button"
             onClick={() => setView('advanced')}
-            className="flex items-center justify-between rounded-[18px] border border-dashed border-espresso-200 bg-transparent px-4 py-3.5"
+            className="flex items-center justify-between rounded-[18px] border border-espresso-100 bg-paper-white px-4 py-3.5"
           >
             <span className="text-[13px] font-extrabold text-espresso-700">Advanced settings</span>
             <CaretDownIcon className="h-[15px] w-[15px] text-espresso-400 -rotate-90" />
           </button>
 
           <div className="mt-auto pt-6">
-            <button type="button" disabled={isPending} onClick={handleCreate} className={footerButtonClasses}>
+            <button type="button" disabled={isPending || !creatorPctValid} onClick={handleCreate} className={footerButtonClasses}>
               {isPending ? 'Creating…' : 'Create group'}
             </button>
           </div>
