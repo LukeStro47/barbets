@@ -30,8 +30,9 @@ Skip it for purely mechanical changes (copy tweaks, styling, no-behavior refacto
 
 ## Commands
 
-- `npm test` — Vitest integration tests against the **real hosted Supabase project** (no mocks, no local Docker). Tests create and clean up real users.
+- `npm test` — Vitest integration tests against a **real hosted Supabase project** (no mocks, no local Docker). Tests create and clean up real users. Locally that project is production (via `.env.local`); in CI it's the staging project (via env vars, which take precedence over the file). To aim a local run at staging, export `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` in the shell.
 - `npx tsc --noEmit` — typecheck. `npx next build` — production build.
 - `npx supabase db push` — apply migrations to the linked hosted project.
 - `npx supabase functions deploy send-push --no-verify-jwt` — after editing the Edge Function.
 - A push to `main` triggers the Vercel production deploy; migrations and the Edge Function are **not** deployed by it and must be pushed separately.
+- `.github/workflows/ci.yml` runs typecheck + build on every PR, and applies migrations to a **staging** Supabase project before running the integration suite against it. See "Continuous integration" in ARCHITECTURE.md before changing how tests get their credentials or how migrations are applied.
