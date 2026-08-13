@@ -1,0 +1,259 @@
+name: CI
+
+# Runs on every pull request and every push to main. The integration job talks
+# to a dedicated *staging* Supabase project, never production — see the
+# "Continuous integration" section of ARCHITECTURE.md for the one-time setup
+# and the list of repository secrets this file expects.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A newer push to the same branch supersedes an in-flight run of this workflow.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    name: Typecheck and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      # Next prerenders static pages at build time, and some of them construct a
+      # Supabase client, so the public keys have to be present or the build
+      # fails on a page that works fine at runtime. These are the staging
+      # project's public keys; nothing here reaches the database.
+      #
+      # NEXT_PUBLIC_VAPID_PUBLIC_KEY is deliberately absent: it is only read
+      # inside usePushSubscription's subscribe handler, behind a null check, so
+      # it has no effect on a build and nothing in CI ever sends a push.
+      - name: Production build
+        run: npx next build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+
+  integration:
+    name: Migrate staging and run integration tests
+    runs-on: ubuntu-latest
+
+    # Pull requests opened from a fork cannot read repository secrets, so this
+    # job would fail for reasons unrelated to the change. Skip it there rather
+    # than reporting a red X nobody can fix from the fork.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+
+    # There is exactly one staging database, and the suite already runs its own
+    # files sequentially (vitest fileParallelism: false) because tests share
+    # project-wide state such as expire_stale(). Two CI runs at once would race
+    # the same way, so runs queue here instead of overlapping. Note that while
+    # one run holds the group, only ONE other can sit pending; a third is
+    # cancelled by GitHub. Re-run it once the queue drains.
+    concurrency:
+      group: barbets-staging-db
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.114.0
+
+      # Applies any migration files that staging has not seen yet, so the tests
+      # below run against the schema this branch actually proposes. --db-url
+      # avoids needing `supabase link` (and its access token) at all; it must be
+      # the *session pooler* string, because GitHub runners are IPv4-only and
+      # Supabase's direct database host is IPv6-only.
+      - name: Apply migrations to staging
+        run: supabase db push --db-url "$STAGING_DB_URL" --yes
+        env:
+          STAGING_DB_URL: ${{ secrets.STAGING_SUPABASE_DB_URL }}
+
+      - name: Integration tests
+        run: npm test
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+
+      # Each test cleans up after itself, but a test that throws part-way (or a
+      # job cancelled by the concurrency rules above) can leave bb-* users and
+      # their groups behind. Sweep them so staging does not accumulate the way
+      # production once did.
+      - name: Sweep leaked test data
+        if: always()
+        run: node .bulk_cleanup.mjs
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+
+  migrations:
+    name: Migration reminder
+    runs-on: ubuntu-latest
+
+    # Needs to write a PR comment, which a fork PR's read-only token cannot do.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      # fetch-depth: 0 because the diff below reaches back to the base commit,
+      # which a default shallow clone does not contain.
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Find migrations this change adds
+        id: detect
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            base="$PR_BASE_SHA"
+          else
+            base="$PUSH_BEFORE_SHA"
+          fi
+
+          # A brand new branch reports an all-zero "before" SHA and has no diff
+          # base worth speaking of. Nothing to say rather than an error.
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
+            echo "count=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Added or modified only: a deleted migration file is not something to
+          # go and apply.
+          files=$(git diff --name-only --diff-filter=AM "$base" "$GITHUB_SHA" -- 'supabase/migrations/*.sql')
+          count=$(printf '%s' "$files" | grep -c . || true)
+
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          {
+            echo 'files<<MIGRATION_FILES_EOF'
+            echo "$files"
+            echo 'MIGRATION_FILES_EOF'
+          } >> "$GITHUB_OUTPUT"
+          echo "Found $count migration(s) between $base and $GITHUB_SHA"
+
+      # Upserts a single comment rather than adding one per push, and deletes it
+      # if the migrations were dropped from the branch since the last run, so the
+      # PR never carries a note that contradicts its own diff.
+      - name: Flag it on the pull request
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COUNT: ${{ steps.detect.outputs.count }}
+          MIGRATION_FILES: ${{ steps.detect.outputs.files }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          marker='<!-- barbets-migration-nudge -->'
+
+          # --paginate runs the --jq filter per page, so this can emit one id per
+          # page; take the first. Empty when we have not commented here before.
+          existing=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" --paginate \
+            --jq "map(select(.body | startswith(\"$marker\"))) | .[0].id // empty" | head -n 1)
+
+          if [ "$COUNT" -eq 0 ]; then
+            if [ -n "$existing" ]; then
+              gh api -X DELETE "repos/$GITHUB_REPOSITORY/issues/comments/$existing"
+              echo "No migrations left in this PR; removed the earlier note."
+            else
+              echo "No migrations in this PR."
+            fi
+            exit 0
+          fi
+
+          MODE=comment node .github/scripts/migration-nudge.mjs > comment.md
+
+          # --raw-field (not --field) so the body is always sent as a string with
+          # no type coercion, and "$(cat ...)" rather than @file because command
+          # substitution output is never re-parsed by the shell, which keeps the
+          # backticks and fences in the markdown inert.
+          if [ -n "$existing" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$existing" \
+              --raw-field body="$(cat comment.md)"
+          else
+            gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" \
+              --raw-field body="$(cat comment.md)"
+          fi
+
+      # Backstop for having merged without pushing. It cannot know whether you
+      # already ran db push (that would need production credentials in CI, which
+      # is the thing this whole design avoids), so it is worded as a reminder.
+      - name: Remind in Slack after a merge
+        if: github.event_name == 'push' && steps.detect.outputs.count != '0'
+        env:
+          SLACK_ERROR_WEBHOOK_URL: ${{ secrets.SLACK_ERROR_WEBHOOK_URL }}
+          MIGRATION_FILES: ${{ steps.detect.outputs.files }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$SLACK_ERROR_WEBHOOK_URL" ]; then
+            echo "SLACK_ERROR_WEBHOOK_URL not set; skipping Slack reminder."
+            exit 0
+          fi
+          MODE=slack node .github/scripts/migration-nudge.mjs > payload.json
+          curl -sS -f -X POST -H 'Content-Type: application/json' -d @payload.json "$SLACK_ERROR_WEBHOOK_URL"
+
+  notify:
+    name: Report failure to Slack
+    runs-on: ubuntu-latest
+    needs: [static, integration, migrations]
+
+    # `failure()` is true when any job above failed, and (importantly) false when
+    # the run was merely cancelled by the concurrency rules, so queue churn stays
+    # out of the channel. Naming a status function here is also what stops this
+    # job being skipped along with `integration` on a fork PR.
+    if: failure()
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      # Same #barbets-errors webhook the app itself posts to via lib/errorReporter.ts,
+      # stored as a repository secret. Unset, this step no-ops rather than failing,
+      # matching errorReporter's own "reporting must never cause an error" stance.
+      - name: Post to Slack
+        env:
+          SLACK_ERROR_WEBHOOK_URL: ${{ secrets.SLACK_ERROR_WEBHOOK_URL }}
+          STATIC_RESULT: ${{ needs.static.result }}
+          INTEGRATION_RESULT: ${{ needs.integration.result }}
+          MIGRATIONS_RESULT: ${{ needs.migrations.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TRIGGER: ${{ github.event_name == 'pull_request' && format('PR #{0}: {1}', github.event.pull_request.number, github.event.pull_request.title) || format('push to {0}', github.ref_name) }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message || github.event.pull_request.title }}
+        run: |
+          if [ -z "$SLACK_ERROR_WEBHOOK_URL" ]; then
+            echo "SLACK_ERROR_WEBHOOK_URL not set; skipping Slack notification."
+            exit 0
+          fi
+          node .github/scripts/slack-ci-failure.mjs > payload.json
+          curl -sS -f -X POST -H 'Content-Type: application/json' -d @payload.json "$SLACK_ERROR_WEBHOOK_URL"

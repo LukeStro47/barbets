@@ -2,25 +2,50 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import fs from 'node:fs';
 import path from 'node:path';
 
-function loadEnvLocal(): Record<string, string> {
-  const envPath = path.resolve(process.cwd(), '.env.local');
-  const content = fs.readFileSync(envPath, 'utf8');
-  const env: Record<string, string> = {};
-  for (const line of content.split('\n')) {
+/**
+ * Credentials, in increasing order of precedence:
+ *
+ *   1. `.env.local`        — what the dev server uses, i.e. production
+ *   2. `.env.test.local`   — optional, and if present this is where tests go
+ *   3. real environment variables
+ *
+ * The middle one is the point of this. `.env.local` has to keep pointing at
+ * production so `npm run dev` shows real data, but the suite creates and
+ * deletes ~110 users per run and has no business doing that in the live
+ * project. Dropping the three staging keys into `.env.test.local` sends every
+ * `npm test` to staging with no flags, no shell syntax and no second command to
+ * remember, while leaving the dev server untouched. Delete the file and tests
+ * go back to production.
+ *
+ * CI has neither file and sets real environment variables instead, which is why
+ * those sit on top.
+ */
+function readEnvFile(name: string): Record<string, string> {
+  const parsed: Record<string, string> = {};
+  const filePath = path.resolve(process.cwd(), name);
+  if (!fs.existsSync(filePath)) return parsed;
+  for (const line of fs.readFileSync(filePath, 'utf8').split('\n')) {
     if (!line.includes('=') || line.trim().startsWith('#')) continue;
     const i = line.indexOf('=');
-    env[line.slice(0, i).trim()] = line.slice(i + 1).trim();
+    parsed[line.slice(0, i).trim()] = line.slice(i + 1).trim();
   }
-  return env;
+  return parsed;
 }
 
-const env = loadEnvLocal();
+function loadTestEnv(): Record<string, string | undefined> {
+  return { ...readEnvFile('.env.local'), ...readEnvFile('.env.test.local'), ...process.env };
+}
+
+const env = loadTestEnv();
 export const SUPABASE_URL = env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON_KEY = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const SERVICE_KEY = env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!SUPABASE_URL || !ANON_KEY || !SERVICE_KEY) {
-  throw new Error('.env.local is missing NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY');
+  throw new Error(
+    'Missing NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY. ' +
+      'Set them in .env.local (local runs) or as environment variables (CI).',
+  );
 }
 
 // Bypasses RLS entirely — used only for test setup/teardown (creating and

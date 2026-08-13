@@ -1,11 +1,26 @@
 import { createClient } from '@supabase/supabase-js';
 import fs from 'node:fs';
 
-const env = Object.fromEntries(
-  fs.readFileSync('.env.local', 'utf8').split('\n')
-    .filter((l) => l.includes('=') && !l.trim().startsWith('#'))
-    .map((l) => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim()]; })
-);
+// Same precedence as tests/integration/helpers/testUsers.ts, deliberately: this
+// script must follow the tests wherever they run, or it sweeps the wrong project.
+// .env.local (production) < .env.test.local (staging, if you made one) < real env
+// vars (how CI points it at staging). CI runs it as an always() step so a
+// cancelled or crashed run can't leave bb-* users and their groups behind.
+// It deletes every bb-* user it finds, not just one run's, so check the target
+// line it prints before letting it loose on production.
+const readEnvFile = (name) => (fs.existsSync(name)
+  ? Object.fromEntries(
+      fs.readFileSync(name, 'utf8').split('\n')
+        .filter((l) => l.includes('=') && !l.trim().startsWith('#'))
+        .map((l) => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim()]; })
+    )
+  : {});
+const env = { ...readEnvFile('.env.local'), ...readEnvFile('.env.test.local'), ...process.env };
+
+if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY (set them in .env.local or the environment)');
+}
+console.log('cleaning up against', env.NEXT_PUBLIC_SUPABASE_URL);
 
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { autoRefreshToken: false, persistSession: false } });
 
