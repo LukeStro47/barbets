@@ -18,6 +18,33 @@ webpush.setVapidDetails('mailto:barbets-app@example.com', VAPID_PUBLIC_KEY, VAPI
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
+// How many queued events one run takes. This sat at 50 for as long as a run was
+// serial and claimed nothing: 50 was a guess at what fits inside one cron minute,
+// and overrunning meant the next tick re-sent the same batch. Both of those are
+// fixed now (claim_notification_events hands out disjoint slices, and the sends
+// below run through a pool), so the number can reflect throughput rather than fear.
+// Note that events is the wrong unit for capacity anyway - one admin_broadcast to a
+// 40-person group is a single event and 40-plus sends. SEND_CONCURRENCY is the knob
+// that actually governs how fast a run drains.
+const EVENT_BATCH_LIMIT = 200;
+
+// Push sends in flight at once. Bounded rather than a bare Promise.all over the whole
+// batch: a group-wide event is hundreds of sends, and firing every one at once opens
+// hundreds of sockets from a single isolate and walks straight into FCM's per-project
+// rate limits. A pool this size also keeps enough requests aimed at the same host for
+// fetch to reuse a pooled connection instead of paying a TLS handshake per push, so
+// the win is better than linear.
+const SEND_CONCURRENCY = 20;
+
+// Events whose recipients and copy are resolved at once. Database reads only, so this
+// just overlaps round trips that used to happen strictly one after another.
+const EVENT_BUILD_CONCURRENCY = 10;
+
+// Recipients per push_subscriptions lookup. supabase-js issues selects as GET, so an
+// `in.(...)` list of UUIDs ends up in the URL: 100 ids is roughly 4KB, comfortably under
+// any proxy's request-line limit, where one query covering a 500-member group would not be.
+const SUBSCRIPTION_LOOKUP_CHUNK = 100;
+
 // Capacitor/FCM (Android and, once its APNs key is uploaded to Firebase, iOS) - a separate secret
 // from the VAPID pair above since it's a whole different push service. Optional: a project that
 // hasn't set this up yet just skips native sends instead of failing every event.
@@ -39,6 +66,7 @@ try {
 }
 
 let cachedFcmAccessToken: { token: string; expiresAt: number } | null = null;
+let pendingFcmAccessToken: Promise<string> | null = null;
 
 function base64url(input: string | Uint8Array): string {
   const bytes = typeof input === 'string' ? new TextEncoder().encode(input) : input;
@@ -50,13 +78,29 @@ function base64url(input: string | Uint8Array): string {
 // FCM's HTTP v1 API takes a Google OAuth2 access token, not a static server key (the legacy "server
 // key" approach was deprecated) - minted here from the service account's private key via a signed
 // JWT, using Deno's native Web Crypto instead of pulling in a JWT library for one call.
-async function getFcmAccessToken(): Promise<string> {
-  if (!fcmServiceAccount) throw new Error('FCM not configured');
+function getFcmAccessToken(): Promise<string> {
+  if (!fcmServiceAccount) return Promise.reject(new Error('FCM not configured'));
   const now = Math.floor(Date.now() / 1000);
-  if (cachedFcmAccessToken && cachedFcmAccessToken.expiresAt > now + 60) return cachedFcmAccessToken.token;
+  if (cachedFcmAccessToken && cachedFcmAccessToken.expiresAt > now + 60) return Promise.resolve(cachedFcmAccessToken.token);
 
+  // Sends run through a pool now, so on a cold isolate every one of them would find the
+  // cache empty at the same moment and mint its own token. Share the in-flight exchange
+  // instead, and clear it on settle either way so one failed exchange doesn't poison the
+  // rest of the run.
+  if (!pendingFcmAccessToken) {
+    // Passed in rather than read off the module binding, so the null check above is the
+    // only one either function needs.
+    pendingFcmAccessToken = mintFcmAccessToken(fcmServiceAccount).finally(() => {
+      pendingFcmAccessToken = null;
+    });
+  }
+  return pendingFcmAccessToken;
+}
+
+async function mintFcmAccessToken(account: NonNullable<typeof fcmServiceAccount>): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
   const claim = {
-    iss: fcmServiceAccount.client_email,
+    iss: account.client_email,
     scope: 'https://www.googleapis.com/auth/firebase.messaging',
     aud: 'https://oauth2.googleapis.com/token',
     iat: now,
@@ -64,7 +108,7 @@ async function getFcmAccessToken(): Promise<string> {
   };
   const unsigned = `${base64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))}.${base64url(JSON.stringify(claim))}`;
 
-  const pemBody = fcmServiceAccount.private_key.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\s+/g, '');
+  const pemBody = account.private_key.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\s+/g, '');
   const keyBytes = Uint8Array.from(atob(pemBody), (c) => c.charCodeAt(0));
   const key = await crypto.subtle.importKey('pkcs8', keyBytes, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
   const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(unsigned));
@@ -123,14 +167,67 @@ interface Content {
   url: string;
 }
 
-async function marketAndGroup(marketId: string) {
-  const { data: market } = await admin
-    .from('markets')
-    .select('title, group_id, market_type, outcome, outcome_option_id')
-    .eq('id', marketId)
-    .single();
-  const { data: group } = await admin.from('groups').select('name').eq('id', market!.group_id).single();
-  return { market: market!, group: group! };
+/** One push that still needs sending: who it's for, and the copy they should see.
+ *  Building the whole batch's worth of these before sending any is what lets the
+ *  subscription lookups be batched and the sends be pooled. */
+interface Delivery {
+  userId: string;
+  content: Content;
+}
+
+/** Runs `tasks` with at most `concurrency` in flight, in no particular order. Each task
+ *  is expected to handle its own failures; anything that still escapes is logged rather
+ *  than rethrown, since one dead endpoint must not strand the rest of the batch.
+ *  `next++` needs no guard: there is no await between reading it and incrementing it, so
+ *  no two workers can claim the same index. */
+async function runPooled(tasks: Array<() => Promise<void>>, concurrency: number, label: string): Promise<void> {
+  let next = 0;
+  const worker = async () => {
+    while (next < tasks.length) {
+      const index = next++;
+      try {
+        await tasks[index]();
+      } catch (err) {
+        console.error(`${label} failed`, err instanceof Error ? err.message : err);
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(concurrency, tasks.length) }, worker));
+}
+
+// Per-run memo for the small repeated lookups below. A batch is very often several events
+// from the same group (expire_stale() closes markets in bulk across a tick), and a single
+// market_resolved reads the group, the market, and the group's settings on its own. What's
+// cached is the promise, not the value, so builders running concurrently share one in-flight
+// query rather than racing to issue the same one twice. Reset per run: a warm isolate would
+// otherwise serve a stale group name after a rename.
+let runLookups = new Map<string, Promise<unknown>>();
+
+function lookup<T>(key: string, load: () => Promise<T>): Promise<T> {
+  const hit = runLookups.get(key);
+  if (hit) return hit as Promise<T>;
+  const pending = load();
+  runLookups.set(key, pending);
+  return pending;
+}
+
+function groupRow(groupId: string): Promise<{ name: string }> {
+  return lookup(`group:${groupId}`, async () => {
+    const { data } = await admin.from('groups').select('name').eq('id', groupId).single();
+    return data as { name: string };
+  });
+}
+
+function marketAndGroup(marketId: string) {
+  return lookup(`marketAndGroup:${marketId}`, async () => {
+    const { data: market } = await admin
+      .from('markets')
+      .select('title, group_id, market_type, outcome, outcome_option_id')
+      .eq('id', marketId)
+      .single();
+    const group = await groupRow(market!.group_id);
+    return { market: market!, group };
+  });
 }
 
 /** A short, human "what happened" phrase for a resolved market's push copy, e.g. "YES" or a
@@ -144,84 +241,86 @@ async function marketOutcomeLabel(market: { outcome: string | null; outcome_opti
   return market.outcome ? market.outcome.toUpperCase() : 'resolved';
 }
 
-async function resolutionWindowLabel(groupId: string): Promise<string> {
-  const { data: settings } = await admin.from('group_settings').select('resolution_window_hours').eq('group_id', groupId).single();
-  const hours = settings?.resolution_window_hours ?? 8;
-  return hours === 1 ? '1 hour' : `${hours} hours`;
+function resolutionWindowLabel(groupId: string): Promise<string> {
+  return lookup(`resolutionWindow:${groupId}`, async () => {
+    const { data: settings } = await admin.from('group_settings').select('resolution_window_hours').eq('group_id', groupId).single();
+    const hours = settings?.resolution_window_hours ?? 8;
+    return hours === 1 ? '1 hour' : `${hours} hours`;
+  });
 }
 
 async function buildContent(event: NotificationEvent, isSubject: boolean, winnings?: number | null, staked?: number | null): Promise<Content | null> {
   if (event.event_type === 'season_ended') {
     const { data: season } = await admin.from('seasons').select('number').eq('id', event.season_id).single();
-    const { data: group } = await admin.from('groups').select('name').eq('id', event.group_id).single();
+    const group = await groupRow(event.group_id);
     return {
-      title: group!.name,
+      title: group.name,
       body: `Season ${season!.number} just wrapped up. Check the final standings and start the next one when you're ready.`,
       url: `/groups/${event.group_id}/intermission`,
     };
   }
 
   if (event.event_type === 'betting_opened') {
-    const { data: group } = await admin.from('groups').select('name').eq('id', event.group_id).single();
+    const group = await groupRow(event.group_id);
     return {
-      title: group!.name,
+      title: group.name,
       body: 'Betting just opened. Be the first to start a market.',
       url: `/groups/${event.group_id}`,
     };
   }
 
   if (event.event_type === 'member_joined') {
-    const { data: group } = await admin.from('groups').select('name').eq('id', event.group_id).single();
+    const group = await groupRow(event.group_id);
     const { data: member } = await admin.from('memberships').select('nickname').eq('group_id', event.group_id).eq('user_id', event.actor_id).single();
     return {
-      title: group!.name,
+      title: group.name,
       body: member
-        ? `@${member.nickname} just joined ${group!.name}. Say hi, or get a market going.`
-        : `Someone just joined ${group!.name}.`,
+        ? `@${member.nickname} just joined ${group.name}. Say hi, or get a market going.`
+        : `Someone just joined ${group.name}.`,
       url: `/groups/${event.group_id}/settings`,
     };
   }
 
   if (event.event_type === 'group_deletion_scheduled') {
-    const { data: group } = await admin.from('groups').select('name').eq('id', event.group_id).single();
+    const group = await groupRow(event.group_id);
     return {
-      title: group!.name,
-      body: `The owner deleted ${group!.name}. Every open market was refunded, and the group itself is gone for good in 5 days unless they undo it.`,
+      title: group.name,
+      body: `The owner deleted ${group.name}. Every open market was refunded, and the group itself is gone for good in 5 days unless they undo it.`,
       url: `/groups/${event.group_id}/settings`,
     };
   }
 
   if (event.event_type === 'group_deletion_canceled') {
-    const { data: group } = await admin.from('groups').select('name').eq('id', event.group_id).single();
+    const group = await groupRow(event.group_id);
     return {
-      title: group!.name,
-      body: `False alarm, the owner canceled the deletion of ${group!.name}.`,
+      title: group.name,
+      body: `False alarm, the owner canceled the deletion of ${group.name}.`,
       url: `/groups/${event.group_id}`,
     };
   }
 
   if (event.event_type === 'season_betting_opened') {
-    const { data: group } = await admin.from('groups').select('name').eq('id', event.group_id).single();
+    const group = await groupRow(event.group_id);
     return {
-      title: group!.name,
+      title: group.name,
       body: 'Betting just opened for the season. Time to start a market.',
       url: `/groups/${event.group_id}`,
     };
   }
 
   if (event.event_type === 'group_deletion_scheduled_inactivity') {
-    const { data: group } = await admin.from('groups').select('name').eq('id', event.group_id).single();
+    const group = await groupRow(event.group_id);
     return {
-      title: group!.name,
-      body: `Nobody's started a new season in ${group!.name} for 30 days, so it'll be deleted for good in 5 days unless someone continues it.`,
+      title: group.name,
+      body: `Nobody's started a new season in ${group.name} for 30 days, so it'll be deleted for good in 5 days unless someone continues it.`,
       url: `/groups/${event.group_id}/intermission`,
     };
   }
 
   if (event.event_type === 'group_titles_updated') {
-    const { data: group } = await admin.from('groups').select('name').eq('id', event.group_id).single();
+    const group = await groupRow(event.group_id);
     return {
-      title: group!.name,
+      title: group.name,
       body: 'The Awards just shuffled. See who holds what now.',
       url: `/groups/${event.group_id}/awards`,
     };
@@ -231,9 +330,9 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
   // fires it for groups with nothing open), so it deep-links straight to the create form
   // rather than to a group page that has nothing on it worth landing on.
   if (event.event_type === 'weekend_nudge') {
-    const { data: group } = await admin.from('groups').select('name').eq('id', event.group_id).single();
+    const group = await groupRow(event.group_id);
     return {
-      title: group!.name,
+      title: group.name,
       body: "Weekend's nearly here. Anyone up to something worth betting on?",
       url: `/groups/${event.group_id}/markets/new`,
     };
@@ -347,47 +446,99 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
   }
 }
 
-async function sendToUser(userId: string, content: Content) {
-  const { data: subs } = await admin
-    .from('push_subscriptions')
-    .select('id, platform, endpoint, p256dh, auth_key, fcm_token')
-    .eq('user_id', userId);
+interface StoredSubscription {
+  id: string;
+  user_id: string;
+  platform: string;
+  endpoint: string;
+  p256dh: string;
+  auth_key: string;
+  fcm_token: string;
+}
 
-  for (const sub of subs ?? []) {
-    if (sub.platform === 'web') {
-      try {
-        await webpush.sendNotification(
-          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth_key } },
-          JSON.stringify(content)
-        );
-      } catch (err: any) {
-        // 404/410 = the subscription is dead (browser unsubscribed, uninstalled, etc.) — clean it up.
-        if (err?.statusCode === 404 || err?.statusCode === 410) {
-          await admin.from('push_subscriptions').delete().eq('id', sub.id);
-        } else {
-          console.error('push send failed', userId, err?.message ?? err);
-        }
-      }
-      continue;
-    }
-
+/** One device, one notification. Swallows its own failures: this runs inside a pool
+ *  alongside every other send in the batch, and a dead endpoint is a routine event
+ *  that must not take the rest down with it. */
+async function sendToSubscription(sub: StoredSubscription, content: Content) {
+  if (sub.platform === 'web') {
     try {
-      const { ok, tokenInvalid } = await sendFcm(sub.fcm_token, content);
-      if (!ok && tokenInvalid) {
+      await webpush.sendNotification(
+        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth_key } },
+        JSON.stringify(content)
+      );
+    } catch (err: any) {
+      // 404/410 = the subscription is dead (browser unsubscribed, uninstalled, etc.) — clean it up.
+      if (err?.statusCode === 404 || err?.statusCode === 410) {
         await admin.from('push_subscriptions').delete().eq('id', sub.id);
-      } else if (!ok) {
-        console.error('fcm send failed', userId, sub.id);
+      } else {
+        console.error('push send failed', sub.user_id, err?.message ?? err);
       }
-    } catch (err) {
-      console.error('fcm send failed', userId, err instanceof Error ? err.message : err);
     }
+    return;
+  }
+
+  try {
+    const { ok, tokenInvalid } = await sendFcm(sub.fcm_token, content);
+    if (!ok && tokenInvalid) {
+      await admin.from('push_subscriptions').delete().eq('id', sub.id);
+    } else if (!ok) {
+      console.error('fcm send failed', sub.user_id, sub.id);
+    }
+  } catch (err) {
+    console.error('fcm send failed', sub.user_id, err instanceof Error ? err.message : err);
   }
 }
 
-async function processEvent(event: NotificationEvent) {
+/** Turns the batch's deliveries into actual pushes.
+ *
+ *  The shape here is the point. This used to be a per-recipient function that looked up
+ *  that one person's subscriptions and then awaited each of their sends in turn, called
+ *  from a loop over recipients, called from a loop over events — so a 40-person event
+ *  cost 40 database round trips before the first notification went out, and every send
+ *  waited on the one before it. Now the whole batch's subscriptions come back in a
+ *  handful of queries and every resulting send goes through one bounded pool. */
+async function deliverAll(deliveries: Delivery[]) {
+  if (deliveries.length === 0) return;
+
+  const userIds = [...new Set(deliveries.map((d) => d.userId))];
+  const byUser = new Map<string, StoredSubscription[]>();
+
+  for (let i = 0; i < userIds.length; i += SUBSCRIPTION_LOOKUP_CHUNK) {
+    const { data: subs, error } = await admin
+      .from('push_subscriptions')
+      .select('id, user_id, platform, endpoint, p256dh, auth_key, fcm_token')
+      .in('user_id', userIds.slice(i, i + SUBSCRIPTION_LOOKUP_CHUNK));
+    if (error) {
+      // Everyone in this chunk misses their notification, and their events are already
+      // claimed, so there is no next run that quietly fixes it. Worth a card.
+      await reportToSlack('could not read push subscriptions', error);
+      continue;
+    }
+    for (const sub of (subs ?? []) as StoredSubscription[]) {
+      const existing = byUser.get(sub.user_id);
+      if (existing) existing.push(sub);
+      else byUser.set(sub.user_id, [sub]);
+    }
+  }
+
+  const sends: Array<() => Promise<void>> = [];
+  for (const { userId, content } of deliveries) {
+    for (const sub of byUser.get(userId) ?? []) sends.push(() => sendToSubscription(sub, content));
+  }
+
+  await runPooled(sends, SEND_CONCURRENCY, 'push send');
+}
+
+/** Works out who this event reaches and what each of them should read, and returns that
+ *  as a list rather than sending anything. Splitting "decide" from "send" is what lets
+ *  deliverAll() batch the subscription lookups and pool the sends across the whole run
+ *  instead of one recipient at a time. */
+async function eventDeliveries(event: NotificationEvent): Promise<Delivery[]> {
   const { data: recipients } = await admin.rpc('get_event_recipients', { p_event_id: event.id });
   const recipientIds: string[] = (recipients ?? []).map((r: { user_id: string }) => r.user_id);
-  if (recipientIds.length === 0) return;
+  if (recipientIds.length === 0) return [];
+
+  const deliveries: Delivery[] = [];
 
   let subjectIds = new Set<string>();
   if (event.event_type === 'market_resolved' && event.market_id) {
@@ -427,9 +578,9 @@ async function processEvent(event: NotificationEvent) {
         content = await buildContent(event, isSubject, winnings, staked);
         contentCache.set(cacheKey, content);
       }
-      if (content) await sendToUser(userId, content);
+      if (content) deliveries.push({ userId, content });
     }
-    return;
+    return deliveries;
   }
 
   // Every other event type sends the same content to its whole recipient list.
@@ -438,8 +589,9 @@ async function processEvent(event: NotificationEvent) {
 
   for (const userId of recipientIds) {
     const content = subjectIds.has(userId) ? subjectContent : nonSubjectContent;
-    if (content) await sendToUser(userId, content);
+    if (content) deliveries.push({ userId, content });
   }
+  return deliveries;
 }
 
 // Error reporting, same Slack Incoming Webhook idea as the Next.js side (lib/errorReporter.ts)
@@ -486,7 +638,7 @@ async function reportToSlack(label: string, err: unknown, context?: Record<strin
   console.error(label, message, stack);
   if (!SLACK_ERROR_WEBHOOK_URL) return;
   // One Slack line per distinct failure per run: a bad event or a dead FCM config fails
-  // identically for all 50 events in the batch, and 50 identical cards is not 50x the signal.
+  // identically for every event in the batch, and 200 identical cards is not 200x the signal.
   const key = `${label}|${message}`;
   if (reportedThisRun.has(key)) return;
   reportedThisRun.add(key);
@@ -532,34 +684,43 @@ async function reportToSlack(label: string, err: unknown, context?: Record<strin
   }
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (_req) => {
   reportedThisRun.clear();
+  runLookups = new Map();
 
-  const { data: events, error } = await admin
-    .from('notification_events')
-    .select('*')
-    .is('processed_at', null)
-    .order('created_at', { ascending: true })
-    .limit(50);
+  // The rows come back already marked processed — the claim and the mark are one
+  // statement, and rows another run holds are skipped rather than waited on (see
+  // 20260813120000_claim_notification_events.sql). That is what makes it safe for a
+  // run to overrun its cron minute: the next tick gets a disjoint slice instead of
+  // re-sending this one. The tradeoff, spelled out in that migration, is at-most-once:
+  // a run that dies mid-batch drops its claimed events rather than retrying them.
+  const { data: events, error } = await admin.rpc('claim_notification_events', { p_limit: EVENT_BATCH_LIMIT });
 
   if (error) {
-    await reportToSlack('could not read the notification queue', error);
+    await reportToSlack('could not claim from the notification queue', error);
     return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 
-  let processed = 0;
-  for (const event of (events ?? []) as NotificationEvent[]) {
-    try {
-      await processEvent(event);
-    } catch (err) {
-      await reportToSlack('event processing failed', err, { Event: `${event.event_type} \`${event.id}\`` });
-    }
-    // Marked processed after an attempt regardless of per-recipient send
-    // failures (those are logged, not retried) — an event that crashed
-    // before this point stays unprocessed and is picked up next run.
-    await admin.from('notification_events').update({ processed_at: new Date().toISOString() }).eq('id', event.id);
-    processed++;
-  }
+  const claimed = (events ?? []) as NotificationEvent[];
+  const deliveries: Delivery[] = [];
 
-  return new Response(JSON.stringify({ processed }), { headers: { 'Content-Type': 'application/json' } });
+  await runPooled(
+    claimed.map((event) => async () => {
+      try {
+        // Pushed one at a time rather than spread: a group-wide event can be thousands
+        // of deliveries, which is past the argument limit `push(...arr)` would hit.
+        for (const delivery of await eventDeliveries(event)) deliveries.push(delivery);
+      } catch (err) {
+        await reportToSlack('event processing failed', err, { Event: `${event.event_type} \`${event.id}\`` });
+      }
+    }),
+    EVENT_BUILD_CONCURRENCY,
+    'event build',
+  );
+
+  await deliverAll(deliveries);
+
+  return new Response(JSON.stringify({ claimed: claimed.length, deliveries: deliveries.length }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
 });
