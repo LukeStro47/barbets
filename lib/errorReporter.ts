@@ -225,8 +225,9 @@ export async function reportError(report: ErrorReport): Promise<void> {
   const normalized = normalize(report.error);
 
   // Log first, unconditionally and in every environment. The console is the
-  // record that always exists; Slack is the one that pages you.
-  console.error(`[${report.source}]`, report.route ?? report.path ?? '', normalized.name, normalized.message, normalized.stack ?? '');
+  // record that always exists; Slack is the one that pages you. The error object goes in
+  // whole rather than as `.stack`, so Next's inspect hook source-maps it (see below).
+  console.error(`[${report.source}]`, report.route ?? report.path ?? '', report.error);
 
   if (!WEBHOOK_URL || !IS_PRODUCTION) return;
   if (isExpectedThrow(report.error, normalized)) return;
@@ -253,9 +254,21 @@ export async function reportError(report: ErrorReport): Promise<void> {
     { type: 'section', text: { type: 'mrkdwn', text: `*What's happening*\n${meaning}` } },
     { type: 'section', text: { type: 'mrkdwn', text: `*What to do*\n${fix}` } },
   ];
-  if (normalized.stack) {
+  // Prefer the source-mapped rendering. `error.stack` alone points at a minified chunk and a
+  // column offset, which is worth nothing to anyone reading this card. See errorReporter.node.ts
+  // for why this is the only way to get the mapped one out of Next.
+  let stackText = normalized.stack;
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+    try {
+      const { inspectError } = await import('./errorReporter.node');
+      stackText = inspectError(report.error);
+    } catch {
+      // Keep the unmapped stack rather than losing the block entirely.
+    }
+  }
+  if (stackText) {
     blocks.push({ type: 'divider' });
-    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `\`\`\`${truncate(normalized.stack, 2600)}\`\`\`` } });
+    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `\`\`\`${truncate(stackText, 2600)}\`\`\`` } });
   }
   blocks.push({
     type: 'context',
