@@ -25,7 +25,7 @@ export async function createClient() {
         } catch {
           // Called from a Server Component (not a Server Action/Route
           // Handler) — cookies can't be written here. Harmless as long as
-          // middleware.ts is also refreshing the session on every request.
+          // proxy.ts is also refreshing the session on every request.
         }
       },
     },

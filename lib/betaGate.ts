@@ -1,6 +1,6 @@
 /**
  * Temporary beta access gate in front of /login. Flip BETA_GATE_ENABLED to
- * false (or delete this file's usages in middleware.ts and lib/actions/betaGate.ts)
+ * false (or delete this file's usages in proxy.ts and lib/actions/betaGate.ts)
  * to remove it entirely — nothing else depends on it.
  */
 export const BETA_GATE_ENABLED = false;

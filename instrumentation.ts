@@ -2,7 +2,7 @@ import type { Instrumentation } from 'next';
 
 /**
  * Next.js calls this for every error thrown out of server-side rendering, a
- * Server Action, a route handler or middleware — including the ones the user
+ * Server Action, a route handler or the proxy — including the ones the user
  * only ever sees as a redacted digest. It is the single hook that catches
  * everything server-side without a try/catch in each of the ~40 places that
  * could throw.

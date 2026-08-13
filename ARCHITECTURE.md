@@ -62,6 +62,11 @@ app/
   global-error.tsx                     — last-resort client error boundary; also the browser half
                                          of error reporting (see below)
 instrumentation.ts                     — Next's onRequestError hook, the server half of the same
+proxy.ts                               — the file convention formerly called middleware.ts (renamed
+                                         in Next 16). Refreshes the Supabase session on every
+                                         request and gates the beta flag. `lib/supabase/middleware.ts`
+                                         keeps its name: it is Supabase's own helper, not the
+                                         Next.js convention, and only exports updateSession()
 lib/
   actions/*.ts        — Server Actions, one file per domain (markets, bets, resolution,
                          groups, seasons, profile, push, auth, reactions, admin, feedback,
@@ -369,7 +374,7 @@ The admin surface is deliberately small: `get_platform_admin_stats()` (active gr
 
 **Production errors are tracked by posting them to Slack, with no third-party service.** `lib/errorReporter.ts`'s `reportError()` is the one place an unexpected throw becomes a Block Kit card on `SLACK_ERROR_WEBHOOK_URL` (a second Incoming Webhook on the same Slack app the feedback form already uses, pointed at a different channel). Three feeds reach it:
 
-- **`instrumentation.ts`'s `onRequestError`** — Next.js's own hook, called for every error thrown out of server rendering, a Server Action, a route handler, or middleware, including the ones the user only ever sees as a redacted digest. One hook instead of a try/catch in each of the ~40 places that could throw.
+- **`instrumentation.ts`'s `onRequestError`** — Next.js's own hook, called for every error thrown out of server rendering, a Server Action, a route handler, or the proxy, including the ones the user only ever sees as a redacted digest. One hook instead of a try/catch in each of the ~40 places that could throw.
 - **`app/global-error.tsx`** (new, and also the app's first global error boundary at all) — a client render crash never reaches the server on its own, and in an installed PWA that is most of what a user experiences as "the app broke". It posts back through the `reportClientError()` Server Action (`lib/actions/errorReport.ts`). It **skips reporting when `error.digest` is set**, since a digest means the error came from the server and `onRequestError` already sent it with a real un-minified stack.
 - **`supabase/functions/send-push`** — its own ~30-line copy of the same idea (an Edge Function shares no code with the app bundle, and this file already prefers a few lines over a dependency). It runs on a cron with nobody reading its logs, so a broken push run used to be silent in both senses. Set the same webhook as a Supabase secret to turn it on: `npx supabase secrets set SLACK_ERROR_WEBHOOK_URL=...`.
 
@@ -383,7 +388,7 @@ Two filters keep the channel honest, and both matter more here than in a typical
 
 **"Waiting on you" tasks (`lib/tasks.ts`) partially walk back the Inbox deletion.** `getGroupTasks()` returns the two market states genuinely blocked on one specific viewer — endorse a `pending_sponsor` market they didn't create, vote on a `disputed` market where they're neither a hidden subject nor already a voter — mirroring `sponsor_market`/`cast_vote`'s own eligibility exactly, so the UI never offers a task the RPC would reject. It feeds three surfaces: the group hub's `WaitingOnYouCard` (full list), the all-groups page's per-row count, and a red dot on BottomNav's Home tab (batched via `getGroupTaskCounts()`). This is the count and list only, **not** a re-homed Inbox page — see the BottomNav design-decision note below for what was deleted and why this much came back. `WaitingOnYouCard`'s dismissal is keyed to a *signature* of the current task set rather than a plain seen/unseen flag, so a new task automatically un-dismisses the card instead of it staying hidden forever after one dismiss.
 
-**The beta gate is a single flag, currently off.** `lib/betaGate.ts` exports `BETA_GATE_ENABLED` (`false` today), a shared code, and a cookie name; when on, `middleware.ts` bounces an uncookied `/login` to `/under-construction`, and `checkBetaCode()` sets a 30-day httpOnly cookie on a correct code. It's built to be deleted — turning the flag off is enough, and nothing else in the app depends on it. Its `safeNext()` only ever redirects to a relative in-app path, never an absolute URL from form input; `app/auth/confirm/route.ts` applies the identical guard to its own `next` param.
+**The beta gate is a single flag, currently off.** `lib/betaGate.ts` exports `BETA_GATE_ENABLED` (`false` today), a shared code, and a cookie name; when on, `proxy.ts` bounces an uncookied `/login` to `/under-construction`, and `checkBetaCode()` sets a 30-day httpOnly cookie on a correct code. It's built to be deleted — turning the flag off is enough, and nothing else in the app depends on it. Its `safeNext()` only ever redirects to a relative in-app path, never an absolute URL from form input; `app/auth/confirm/route.ts` applies the identical guard to its own `next` param.
 
 **Password recovery uses `verifyOtp`, not PKCE code exchange.** Supabase's Reset Password email template is customized to point at `/auth/confirm` with `token_hash`/`type`/`next` instead of the default `{{ .ConfirmationURL }}`; that route establishes a real session from the recovery token and hands off to `/reset-password` to actually set the new password. If recovery emails ever stop working, check that template first — the flow depends on it not being reverted to the default.
 

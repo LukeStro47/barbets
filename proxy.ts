@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 import { BETA_GATE_ENABLED, BETA_GATE_COOKIE } from '@/lib/betaGate';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   if (BETA_GATE_ENABLED && request.nextUrl.pathname === '/login' && !request.cookies.get(BETA_GATE_COOKIE)) {
     const url = request.nextUrl.clone();
     const next = url.pathname + url.search;
