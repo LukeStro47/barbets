@@ -61,6 +61,11 @@ export async function joinGroup(inviteCode: string, nickname?: string): Promise<
     await supabase.rpc('join_group', { p_invite_code: normalizeInviteCode(inviteCode), p_nickname: nickname ?? null })
   );
   if (result.error) return result;
+  // A code that matches no group comes back as a null row rather than a raise: join_group has to
+  // record the miss for the invite-code rate limit, and a raise would roll that write back with
+  // the rest of the transaction (see 20260813130000_invite_code_rate_limit.sql). The friendly
+  // copy that raise used to produce is re-created here instead.
+  if (!result.data) return { error: "That invite code doesn't match a group." };
   revalidatePath('/groups');
   return result;
 }

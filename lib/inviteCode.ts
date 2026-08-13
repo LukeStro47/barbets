@@ -1,4 +1,9 @@
-/** Invite codes are 4 characters, A-Z0-9. They used to carry a literal "BB-" prefix
+/** Invite codes are 4 characters. Anything A-Z0-9 is accepted on the way in, which is wider than
+ * what gets minted: codes generated before 20260813140000_invite_code_alphabet.sql are hex
+ * (md5's alphabet), newer ones come from 2-9 and A-Z without I/O, and both are still live. Nothing
+ * here should narrow to the current alphabet, or it would reject perfectly good older codes.
+ *
+ * They used to carry a literal "BB-" prefix
  * (dropped in 20260810140000_invite_codes_drop_bb_prefix.sql), and cards, screenshots, and
  * already-shared /join/BB-XXXX links out in the world still have it — so every path into a
  * join tolerates the legacy prefix on the way in rather than 404ing an invite that was
