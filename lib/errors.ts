@@ -68,8 +68,8 @@ export function notFoundIfEmpty<T>(data: T | T[] | null): T {
  */
 export type ActionResult<T> = { data: T; error?: undefined } | { data?: undefined; error: string };
 
-/** Strips the internal `code: ` prefix (e.g. "invalid_operation: ") and capitalizes the rest, so the client shows plain human copy instead of what looks like an internal error code. */
-function friendlyMessage(err: ActionError): string {
+/** Strips the internal `code: ` prefix (e.g. "invalid_operation: ") and capitalizes the rest, so the client shows plain human copy instead of what looks like an internal error code. Exported for the rare read path that needs the same copy without going through a Server Action (the /join/[code] page's rate-limit branch). */
+export function friendlyMessage(err: ActionError): string {
   const rest = err.code === 'unknown' ? err.message : err.message.slice(err.code.length + 1).trim();
   return rest.charAt(0).toUpperCase() + rest.slice(1);
 }
