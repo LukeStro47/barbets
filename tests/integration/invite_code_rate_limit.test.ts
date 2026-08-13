@@ -76,12 +76,14 @@ describe('invite code rate limit', () => {
     expect(data).not.toBeNull();
   });
 
-  test('join_group returns a null row (never a raise) for a code that matches nothing, and counts it', async () => {
+  test('join_group returns no rows (never a raise) for a code that matches nothing, and counts it', async () => {
     const before = (await attemptRow(users.prober.id))?.miss_count ?? 0;
 
     const { data, error } = await users.prober.client.rpc('join_group', { p_invite_code: bogusCode(50), p_nickname: 'prober' });
     expect(error).toBeNull();
-    expect(data).toBeNull();
+    // Zero rows, not a null row: a `returns memberships` function returning NULL would serialize
+    // as an object of all-null columns, which every `if (!data)` check in the app would miss.
+    expect(data).toEqual([]);
 
     expect((await attemptRow(users.prober.id))?.miss_count).toBe(before + 1);
   });

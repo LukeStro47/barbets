@@ -214,12 +214,12 @@ describe('member removal', () => {
 
     const newcomer = await createTestUsers('rmv2', ['newcomer']);
     try {
-      // A code matching no group returns a null row rather than raising, so the invite-code
+      // A code matching no group comes back as zero rows rather than raising, so the invite-code
       // rate limit can record the miss (a raise would roll that write back) — see
-      // 20260813130000_invite_code_rate_limit.sql.
+      // 20260813130000_invite_code_rate_limit.sql and its 20260813150000 correction.
       const { data, error } = await newcomer.newcomer.client.rpc('join_group', { p_invite_code: group.invite_code });
       expect(error).toBeNull();
-      expect(data).toBeNull();
+      expect(data).toEqual([]);
     } finally {
       await cleanupTestUsers(newcomer);
     }
