@@ -76,8 +76,16 @@ export default async function LeaderboardPage({
   const yourTitleCount = ((titleRows ?? []) as GroupTitleRow[]).filter((r) => r.user_id && r.user_id === user?.id).length;
 
   // ---- The hero: who's in front, and where you are relative to them. Both figures already exist
-  // in `members`; the only extra reads are the season this is all happening in and the leader's
-  // last seven days, which is what turns a standing into a direction of travel.
+  // in `members`; the only extra read is the season this is all happening in.
+  //
+  // There used to be a "up N this week" trend line beside the leader's total, built from their
+  // last seven days of `ledger`. It was removed rather than fixed: `ledger_select_own` is
+  // own-rows-only, so that query returned zero rows for every viewer except the leader
+  // themselves, and the fallback branch confidently told everyone else "level this week" no
+  // matter what had actually happened. Restoring it means a SECURITY DEFINER function and a
+  // deliberate decision that one member's weekly swing is another's to see, which is a product
+  // question rather than a bug fix. Don't re-add it by reading `ledger` directly; that is the
+  // version that silently doesn't work.
   const { data: heroSeason } = settings?.seasons_enabled
     ? await supabase.from('seasons').select('number, name, started_at').eq('group_id', groupId).eq('status', 'active').maybeSingle()
     : { data: null };
@@ -85,18 +93,6 @@ export default async function LeaderboardPage({
   const leader = members[0];
   const you = members.find((m: any) => m.user_id === user?.id);
   const yourRank = members.findIndex((m: any) => m.user_id === user?.id) + 1;
-
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60_000).toISOString();
-  const { data: leaderWeekRows } = leader?.id
-    ? await supabase.from('ledger').select('amount').eq('membership_id', leader.id).neq('reason', 'seed').gte('created_at', weekAgo)
-    : { data: [] };
-  const leaderWeekDelta = (leaderWeekRows ?? []).reduce((sum, r) => sum + r.amount, 0);
-  const leaderTrend =
-    leaderWeekDelta > 0
-      ? `up ${formatTokens(leaderWeekDelta)} this week`
-      : leaderWeekDelta < 0
-        ? `down ${formatTokens(Math.abs(leaderWeekDelta))} this week`
-        : 'level this week';
 
   const seasonLine = heroSeason
     ? `${heroSeason.name ?? `Season ${heroSeason.number}`} · day ${Math.max(
@@ -122,9 +118,7 @@ export default async function LeaderboardPage({
         <span className="min-w-0 flex-1">
           <span className="block text-[10px] font-extrabold tracking-[0.1em] text-honey-300 uppercase">Out in front</span>
           <Mention nickname={leader.nickname} className="mt-0.5 block truncate text-[19px] font-extrabold tracking-[-0.015em] text-paper-white" />
-          <span className="mt-0.5 block text-xs text-paper-white/55">
-            {formatTokens(leader.balance)} tokens · {leaderTrend}
-          </span>
+          <span className="mt-0.5 block text-xs text-paper-white/55">{formatTokens(leader.balance)} tokens</span>
         </span>
       </div>
       <div className="relative mt-[15px] flex gap-3 border-t border-white/10 pt-3.5">
