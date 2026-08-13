@@ -24,19 +24,11 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
 
   // Net tokens per group — same definition the leaderboard page's "All-time net" card uses
   // (every ledger entry except the seed itself, so reseeding for a new season doesn't count as
-  // "winning" tokens back). One query across every group the viewer's in, not one per card.
-  const { data: ledgerRows } = user
-    ? await supabase
-        .from('ledger')
-        .select('amount, memberships!inner(user_id, group_id)')
-        .eq('memberships.user_id', user.id)
-        .neq('reason', 'seed')
-    : { data: [] };
-  const netByGroup = new Map<string, number>();
-  for (const row of (ledgerRows ?? []) as any[]) {
-    const groupId = row.memberships.group_id;
-    netByGroup.set(groupId, (netByGroup.get(groupId) ?? 0) + row.amount);
-  }
+  // "winning" tokens back). One row per group from membership_ledger_net, rather than every
+  // ledger row the viewer has ever had across every group summed here: this page renders one
+  // figure per card, and the raw rows behind it grow for the life of the group.
+  const { data: netRows } = await supabase.from('membership_ledger_net').select('group_id, net').eq('user_id', user.id);
+  const netByGroup = new Map<string, number>((netRows ?? []).map((r: { group_id: string; net: number }) => [r.group_id, Number(r.net)]));
 
   // Which groups are currently sitting in intermission — a net-tokens figure there is stale
   // (nothing's being wagered), so those cards show "Season ended" instead. Batched across every

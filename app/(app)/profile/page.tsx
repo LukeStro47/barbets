@@ -182,11 +182,12 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
     .single();
 
   // Same "every ledger entry but the seed" net definition the leaderboard's all-time card and
-  // the groups hub's per-card net figure both use.
-  const { data: ledgerRows } = myMembership
-    ? await supabase.from('ledger').select('amount').eq('membership_id', myMembership.id).neq('reason', 'seed')
-    : { data: [] };
-  const netHere = (ledgerRows ?? []).reduce((sum, r) => sum + r.amount, 0);
+  // the groups hub's per-card net figure both use, summed in Postgres rather than here (see
+  // the membership_ledger_net migration).
+  const { data: netRow } = myMembership
+    ? await supabase.from('membership_ledger_net').select('net').eq('membership_id', myMembership.id).maybeSingle()
+    : { data: null };
+  const netHere = Number(netRow?.net ?? 0);
 
   // Same win-rate definition the leaderboard's Accuracy card and The Oracle/Ice Cold titles use
   // (void markets excluded — never 'resolved' with a null outcome).
