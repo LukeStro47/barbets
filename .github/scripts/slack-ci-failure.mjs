@@ -15,12 +15,30 @@ const {
   STATIC_RESULT = '',
   INTEGRATION_RESULT = '',
   MIGRATIONS_RESULT = '',
-  TRIGGER = 'unknown',
+  EVENT_NAME = '',
+  PR_NUMBER = '',
+  PR_TITLE = '',
+  BRANCH = '',
   COMMIT_MESSAGE = '',
   GITHUB_ACTOR = 'unknown',
   GITHUB_SHA = '',
   RUN_URL = '',
 } = process.env;
+
+/**
+ * Assembled here rather than with format() in the workflow's env block: a "#"
+ * preceded by a space inside an unquoted YAML scalar begins a comment, which
+ * silently truncated the expression and made the whole file invalid. Keeping
+ * run-time strings out of the YAML also means a PR title can never reach the
+ * shell.
+ */
+const TRIGGER =
+  EVENT_NAME === 'pull_request'
+    ? `PR #${PR_NUMBER}: ${PR_TITLE}`
+    : `push to ${BRANCH || 'unknown branch'}`;
+
+/** head_commit is absent on a pull_request event, where the PR title is the useful subject. */
+const subject = COMMIT_MESSAGE || PR_TITLE;
 
 /** A job can also be 'cancelled' or 'skipped'; only an outright failure is worth naming. */
 const failed = [
@@ -35,7 +53,7 @@ const failedLabel = failed.length > 0 ? failed.join(', ') : 'the run did not com
 
 /** Slack section text caps at 3000 chars; commit bodies can be far longer. */
 const truncate = (s, max) => (s.length > max ? `${s.slice(0, max - 1)}…` : s);
-const firstLine = truncate((COMMIT_MESSAGE.split('\n')[0] || '(no message)').trim(), 300);
+const firstLine = truncate((subject.split('\n')[0] || '(no message)').trim(), 300);
 
 const fields = [
   ['Failed', failedLabel],
