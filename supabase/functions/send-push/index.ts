@@ -702,6 +702,10 @@ interface SweepFailure {
  *  returns them, so a row that keeps failing every minute yields one card, not 1,440
  *  a day - `attempts` on that card is what says it is still happening.
  *
+ *  _record_sweep_failure re-arms that flag at escalating thresholds (the 10th and 100th
+ *  attempt, then every 1000th), so a row that stays stuck resurfaces on its own instead
+ *  of the whole warning resting on someone having caught the very first card.
+ *
  *  Deliberately does not claim when no webhook is configured: marking a failure
  *  reported when there is nowhere to report it would throw away the only signal. */
 async function reportSweepFailures() {
@@ -759,7 +763,7 @@ async function reportSweepFailures() {
               elements: [
                 {
                   type: 'mrkdwn',
-                  text: 'One card per stuck row, not one per minute. Before this existed, a failing sweep rolled back every group on the platform and said nothing at all.',
+                  text: 'One card per stuck row, then again on its 10th and 100th attempt and every 1000th after that, so this nags occasionally rather than every minute. Before it existed, a failing sweep rolled back every group on the platform and said nothing at all.',
                 },
               ],
             },

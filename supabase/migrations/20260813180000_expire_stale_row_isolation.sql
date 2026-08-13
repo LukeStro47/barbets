@@ -66,8 +66,9 @@ create table sweep_failures (
   error_message text not null,
   error_context text,
   -- Set once send-push has surfaced this failure to Slack, so a row that keeps
-  -- failing every minute produces one card rather than 1,440 a day. attempts
-  -- is what tells you it is still happening.
+  -- failing every minute produces one card rather than 1,440 a day. Cleared
+  -- again at the escalating thresholds in _record_sweep_failure below, so a
+  -- genuinely stuck row nags occasionally instead of exactly once.
   reported_at timestamptz,
   primary key (sweep, subject_id)
 );
@@ -102,7 +103,22 @@ begin
       last_failed_at = now(),
       error_code = excluded.error_code,
       error_message = excluded.error_message,
-      error_context = excluded.error_context;
+      error_context = excluded.error_context,
+      -- Re-arm the Slack report at escalating thresholds. Reporting once per
+      -- stuck row is what stops a permanently failing sweep posting 1,440 cards
+      -- a day, but on its own it also means a single missed card is the only
+      -- warning anyone ever gets. Clearing reported_at on the 10th and 100th
+      -- attempt, and every 1000th after that, turns "once, ever" into a nag
+      -- that decays: at one attempt a minute that is roughly 10 minutes in,
+      -- then 1.5 hours, then about every 17 hours for as long as it stays
+      -- broken. Deliberately counted in attempts rather than elapsed time,
+      -- since attempts is what actually measures how stuck the row is - a
+      -- market that fails once and then succeeds never escalates at all.
+      reported_at = case
+        when sweep_failures.attempts + 1 in (10, 100) then null
+        when (sweep_failures.attempts + 1) % 1000 = 0 then null
+        else sweep_failures.reported_at
+      end;
 
   raise warning 'expire_stale sweep % failed on %: % (%)', p_sweep, p_subject_id, p_message, p_sqlstate;
 end;
@@ -114,10 +130,10 @@ revoke execute on function _record_sweep_failure(text, uuid, text, text, text) f
 -- Hands send-push a slice of not-yet-reported failures, marking and returning
 -- in one statement for the same reason claim_notification_events does
 -- (20260813120000): two overlapping runs must not both post the same card.
--- The limit is coalesced in the body rather than left to the parameter
--- default: PostgREST never uses a function's default, it passes every argument
--- by name from the request body, so an omitted key arrives as NULL - and
--- `limit null` in Postgres is no limit at all.
+-- The limit is coalesced in the body rather than left to the parameter default,
+-- per 20260813160000: PostgREST never uses a function's default, it passes every
+-- argument by name from the request body, so an omitted key arrives as NULL -
+-- and `limit null` in Postgres is no limit at all.
 create or replace function claim_unreported_sweep_failures(p_limit int default 10)
 returns setof sweep_failures
 language plpgsql
