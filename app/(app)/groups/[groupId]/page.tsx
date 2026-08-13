@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { createClient, requireUser } from '@/lib/supabase/server';
 import { notFoundIfEmpty } from '@/lib/errors';
-import { type MarketCardData } from '@/components/markets/MarketCard';
+import { getActiveMarkets, getSettledMarkets } from '@/lib/groupFeed';
 import { SeasonBanner } from '@/components/groups/SeasonBanner';
 import { GroupDeletionBanner } from '@/components/groups/GroupDeletionBanner';
 import { GroupMarketSections } from '@/components/groups/GroupMarketSections';
@@ -16,22 +16,12 @@ import { GroupAvatar } from '@/components/ui/GroupAvatar';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { SettingsIcon, InfoIcon } from '@/components/ui/icons';
 import { formatTokens } from '@/lib/formatNumber';
-import { REACTIONS } from '@/lib/reactions';
 import { getGroupTasks } from '@/lib/tasks';
 
 // 44px, a real tap target rather than a decorative chip — it's the only control in this header
 // now that "My bets" has gone, and it's the way into everything about the group.
 const iconLinkClass =
   'flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-espresso-50 text-espresso-500 transition-colors hover:bg-espresso-100 hover:text-espresso-700 active:scale-[0.92]';
-
-/** Mirrors the DB's own cutoff (see supabase/migrations/*_shorten_sponsor_deadline_to_24h.sql):
-    a market stops being endorsable at 24h since creation, or 5 minutes before betting
-    would close, whichever comes first. */
-function sponsorDeadline(createdAt: string, closesAt: string): string {
-  const byAge = new Date(createdAt).getTime() + 24 * 3_600_000;
-  const byClose = new Date(closesAt).getTime() - 5 * 60_000;
-  return new Date(Math.min(byAge, byClose)).toISOString();
-}
 
 export default async function GroupFeedPage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
@@ -47,42 +37,16 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
   const user = await requireUser(supabase);
   const isOwner = group!.owner_id === user?.id;
 
-  const { data: membership } = await supabase
-    .from('memberships')
-    .select('balance, nickname')
-    .eq('group_id', groupId)
-    .eq('user_id', user.id)
-    .single();
-
-  const { tasks } = await getGroupTasks(supabase, groupId, user.id);
-
-  const { data: openBetRows } = await supabase
-    .from('bets')
-    .select('market_id, side, option_id, amount, markets!inner(group_id)')
-    .eq('user_id', user.id)
-    .eq('markets.group_id', groupId)
-    .is('settled_at', null);
-  const pendingTokens = (openBetRows ?? []).reduce((sum, b) => sum + b.amount, 0);
-
-  // Grouped by market so an open market's card can show "You: 50 on YES" — settled_at IS NULL
-  // also covers bets on closed/proposed/disputed markets, but only the 'open' branch below ever
-  // looks this map up, so that's harmless. multiple_choice bets carry an option_id instead of a
-  // side, so their labels need a separate lookup against market_options.
-  const myOpenBetsByMarket = new Map<string, { side: string | null; option_id: string | null; amount: number }[]>();
-  for (const b of openBetRows ?? []) {
-    if (!myOpenBetsByMarket.has(b.market_id)) myOpenBetsByMarket.set(b.market_id, []);
-    myOpenBetsByMarket.get(b.market_id)!.push(b);
-  }
-  const myOpenOptionIds = [...new Set((openBetRows ?? []).map((b) => b.option_id).filter((id): id is string => !!id))];
-  const { data: myOpenOptionRows } =
-    myOpenOptionIds.length > 0 ? await supabase.from('market_options').select('id, label').in('id', myOpenOptionIds) : { data: [] };
-  const myOpenOptionLabelById = new Map((myOpenOptionRows ?? []).map((o) => [o.id, o.label]));
-
-  const { data: settings } = await supabase
-    .from('group_settings')
-    .select('seasons_enabled, season_length, betting_enabled')
-    .eq('group_id', groupId)
-    .single();
+  // One wave rather than a dozen sequential round trips: none of these depend on each other,
+  // and the two feed halves (see lib/groupFeed.ts) each do their own internal batching. Only
+  // the season lookup below has to wait, since whether to look for one at all is a setting.
+  const [{ data: membership }, { tasks }, { data: settings }, { buckets, pendingTokens }, settledPage] = await Promise.all([
+    supabase.from('memberships').select('balance, nickname').eq('group_id', groupId).eq('user_id', user.id).single(),
+    getGroupTasks(supabase, groupId, user.id),
+    supabase.from('group_settings').select('seasons_enabled, season_length, betting_enabled').eq('group_id', groupId).single(),
+    getActiveMarkets(supabase, groupId, user.id),
+    getSettledMarkets(supabase, groupId, user.id),
+  ]);
 
   const { data: season } = settings?.seasons_enabled
     ? await supabase
@@ -93,179 +57,6 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
         .limit(1)
         .single()
     : { data: null };
-
-  const { data: markets } = await supabase
-    .from('visible_markets')
-    .select('id, title, status, market_type, closes_at, created_at, resolved_at, outcome, outcome_option_id, line, unit')
-    .eq('group_id', groupId)
-    .order('created_at', { ascending: false });
-
-  // resolution_clarifications!inner narrows to markets the current user
-  // created that have at least one still-open clarification question —
-  // every row in that table is currently-pending by construction (answered
-  // ones are deleted, not flagged), so plain existence is the pending check.
-  const { data: needsClarificationRows } = await supabase
-    .from('markets')
-    .select('id, resolution_clarifications!inner(id)')
-    .eq('group_id', groupId)
-    .eq('creator_id', user.id);
-  const needsClarificationMarketIds = new Set((needsClarificationRows ?? []).map((m) => m.id));
-
-  const revealedMarketIds = (markets ?? []).filter((m) => ['resolved', 'voided'].includes(m.status)).map((m) => m.id);
-  const { data: reactionRows } =
-    revealedMarketIds.length > 0
-      ? await supabase.from('market_reactions').select('market_id, emoji').in('market_id', revealedMarketIds)
-      : { data: [] };
-  const reactionEmojisByMarket = new Map<string, Set<string>>();
-  for (const r of reactionRows ?? []) {
-    if (!reactionEmojisByMarket.has(r.market_id)) reactionEmojisByMarket.set(r.market_id, new Set());
-    reactionEmojisByMarket.get(r.market_id)!.add(r.emoji);
-  }
-
-  // The viewer's own bets on every revealed market, so each market row can show "+N won"/"-N
-  // lost" instead of just the bare outcome — same shape as the reveal page's per-bet query
-  // (app/(app)/groups/[groupId]/markets/[marketId]/reveal/page.tsx), just scoped to one user
-  // across many markets instead of every user on one market.
-  const { data: myBetRows } =
-    revealedMarketIds.length > 0
-      ? await supabase
-          .from('bets')
-          .select('market_id, side, option_id, amount, payout')
-          .eq('user_id', user.id)
-          .in('market_id', revealedMarketIds)
-      : { data: [] };
-  const myBetsByMarket = new Map<string, { side: string | null; option_id: string | null; amount: number; payout: number | null }[]>();
-  for (const b of myBetRows ?? []) {
-    if (!myBetsByMarket.has(b.market_id)) myBetsByMarket.set(b.market_id, []);
-    myBetsByMarket.get(b.market_id)!.push(b);
-  }
-
-  const buckets: Record<string, MarketCardData[]> = {
-    pending_sponsor: [],
-    open: [],
-    awaiting_resolution: [], // closed/proposed
-    challenged: [], // disputed
-    revealed: [], // resolved/voided
-  };
-
-  for (const m of markets ?? []) {
-    const base: MarketCardData = {
-      id: m.id,
-      groupId,
-      title: m.title,
-      status: m.status,
-      marketType: m.market_type,
-      closesAt: m.closes_at,
-      resolvedAt: m.resolved_at,
-      outcome: m.outcome,
-      line: m.line,
-      unit: m.unit,
-    };
-
-    if (m.status === 'pending_sponsor') {
-      buckets.pending_sponsor.push({ ...base, sponsorDeadline: sponsorDeadline(m.created_at, m.closes_at) });
-    } else if (m.status === 'open') {
-      const { data: count } = await supabase.rpc('get_open_bet_count', { p_market_id: m.id });
-      const myOpenBets = myOpenBetsByMarket.get(m.id);
-      const myBets = myOpenBets?.map((b) => ({
-        label: b.side ? b.side.toUpperCase() : (myOpenOptionLabelById.get(b.option_id!) ?? '?'),
-        amount: b.amount,
-      }));
-      buckets.open.push({ ...base, openBetCount: count ?? 0, needsAttention: needsClarificationMarketIds.has(m.id), myBets });
-    } else if (['closed', 'proposed', 'disputed'].includes(m.status)) {
-      const bucket = m.status === 'disputed' ? buckets.challenged : buckets.awaiting_resolution;
-      let proposedOutcomeLabel: string | undefined;
-      if (m.status === 'proposed' || m.status === 'disputed') {
-        const { data: proposalRow } = await supabase
-          .from('resolution_proposals')
-          .select('proposed_outcome, proposed_option_id')
-          .eq('market_id', m.id)
-          .single();
-        if (proposalRow?.proposed_option_id) {
-          const { data: option } = await supabase.from('market_options').select('label').eq('id', proposalRow.proposed_option_id).single();
-          proposedOutcomeLabel = option?.label;
-        } else if (proposalRow?.proposed_outcome) {
-          proposedOutcomeLabel = proposalRow.proposed_outcome;
-        }
-      }
-      if (m.market_type === 'multiple_choice') {
-        const { data: optionOdds } = await supabase.rpc('get_closed_odds_options', { p_market_id: m.id });
-        const closedBetCount = (optionOdds ?? []).reduce((sum: number, o: any) => sum + o.bet_count, 0);
-        bucket.push({
-          ...base,
-          closedBetCount,
-          optionOdds: (optionOdds ?? []).map((o: any) => ({ id: o.option_id, label: o.label, percent: o.pool_percent })),
-          proposedOutcomeLabel,
-        });
-      } else {
-        const { data: odds } = await supabase.rpc('get_closed_odds', { p_market_id: m.id });
-        const closedBetCount = (odds ?? []).reduce((sum: number, o: any) => sum + o.bet_count, 0);
-        bucket.push({
-          ...base,
-          closedBetCount,
-          odds: (odds ?? []).map((o: any) => ({ side: o.side, percent: o.pool_percent })),
-          proposedOutcomeLabel,
-        });
-      }
-    } else {
-      const emojiSet = reactionEmojisByMarket.get(m.id);
-      const reactionGlyphs = emojiSet ? REACTIONS.filter((r) => emojiSet.has(r.emoji)).map((r) => r.glyph) : undefined;
-
-      // Summed across every bet the viewer placed on this market (handles a hedge the same way
-      // the "Resolved" push copy already does) — undefined when they never bet on it at all, so
-      // MarketCard/MarketRowMeta knows to render nothing extra rather than "+0 won".
-      const myBets = myBetsByMarket.get(m.id);
-      let myNet: number | undefined;
-      if (myBets && myBets.length > 0) {
-        const isMultipleChoice = m.market_type === 'multiple_choice';
-        const totalStaked = myBets.reduce((sum, b) => sum + b.amount, 0);
-        const totalPayout = myBets.reduce((sum, b) => {
-          const isWinner = isMultipleChoice ? b.option_id === m.outcome_option_id : b.side === m.outcome;
-          return sum + (isWinner ? (b.payout ?? 0) : 0);
-        }, 0);
-        myNet = totalPayout - totalStaked;
-      }
-
-      if (m.market_type === 'multiple_choice' && m.outcome_option_id) {
-        const { data: option } = await supabase.from('market_options').select('label').eq('id', m.outcome_option_id).single();
-        buckets.revealed.push({ ...base, outcomeLabel: option?.label ?? null, reactionGlyphs, myNet });
-      } else {
-        buckets.revealed.push({ ...base, reactionGlyphs, myNet });
-      }
-    }
-  }
-
-  // Markets the viewer is a hidden subject of never appear in `markets` above at all (that's
-  // the whole point of visible_markets) — get_subject_market_pulse_for_group is the one
-  // sanctioned crack in that wall, returning just enough to render a "???" teaser row alongside
-  // real markets in whichever status bucket it actually belongs to. Never includes
-  // pending_sponsor (no real activity yet) or resolved/voided (already fully visible normally).
-  const { data: mysteryMarkets } = await supabase.rpc('get_subject_market_pulse_for_group', { p_group_id: groupId });
-  const MYSTERY_BUCKET: Record<string, keyof typeof buckets> = {
-    open: 'open',
-    closed: 'awaiting_resolution',
-    proposed: 'awaiting_resolution',
-    disputed: 'challenged',
-  };
-  for (const m of mysteryMarkets ?? []) {
-    const bucketKey = MYSTERY_BUCKET[m.status];
-    if (!bucketKey) continue;
-    buckets[bucketKey].push({
-      id: m.market_id,
-      groupId,
-      title: '???',
-      status: m.status,
-      marketType: m.market_type,
-      closesAt: m.closes_at,
-      outcome: null,
-      mystery: true,
-      ...(m.status === 'open' ? { openBetCount: Number(m.bet_count) } : { closedBetCount: Number(m.bet_count) }),
-    });
-  }
-
-  buckets.revealed.sort(
-    (a, b) => new Date(b.resolvedAt ?? 0).getTime() - new Date(a.resolvedAt ?? 0).getTime()
-  );
 
   return (
     <main className="mx-auto max-w-lg px-5 py-[22px]">
@@ -349,11 +140,13 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
         {season && <SeasonBanner groupId={groupId} season={{ number: season.number, status: season.status, endsAt: season.ends_at, name: season.name }} />}
 
         <GroupMarketSections
+          groupId={groupId}
           pendingSponsor={buckets.pending_sponsor}
           open={buckets.open}
           awaitingResolution={buckets.awaiting_resolution}
           challenged={buckets.challenged}
-          revealed={buckets.revealed}
+          revealed={settledPage.markets}
+          revealedNextCursor={settledPage.nextCursor}
         />
       </div>
     </main>
