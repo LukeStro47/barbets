@@ -684,6 +684,97 @@ async function reportToSlack(label: string, err: unknown, context?: Record<strin
   }
 }
 
+interface SweepFailure {
+  sweep: string;
+  subject_id: string;
+  attempts: number;
+  first_failed_at: string;
+  last_failed_at: string;
+  error_code: string;
+  error_message: string;
+  error_context: string | null;
+}
+
+/** expire_stale() records the rows it failed on instead of aborting the whole sweep
+ *  (20260813180000_expire_stale_row_isolation.sql). Nothing in Postgres can post to
+ *  Slack, so this function piggybacks the reporting: it already runs every minute and
+ *  already holds the webhook. Claiming marks rows reported in the same statement that
+ *  returns them, so a row that keeps failing every minute yields one card, not 1,440
+ *  a day - `attempts` on that card is what says it is still happening.
+ *
+ *  Deliberately does not claim when no webhook is configured: marking a failure
+ *  reported when there is nowhere to report it would throw away the only signal. */
+async function reportSweepFailures() {
+  if (!SLACK_ERROR_WEBHOOK_URL) return;
+
+  const { data, error } = await admin.rpc('claim_unreported_sweep_failures', { p_limit: 10 });
+  if (error) {
+    // Not fatal to the push run, and worth distinguishing from a genuine sweep failure:
+    // this is the reporting channel breaking, not the thing it reports on.
+    console.error('could not claim sweep failures', error.message);
+    return;
+  }
+
+  for (const failure of (data ?? []) as SweepFailure[]) {
+    try {
+      const response = await fetch(SLACK_ERROR_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: `🧹 expire_stale: ${failure.sweep} failed on ${failure.subject_id}`,
+          blocks: [
+            { type: 'header', text: { type: 'plain_text', text: '🧹 expire_stale', emoji: true } },
+            {
+              type: 'section',
+              text: { type: 'mrkdwn', text: `*The \`${failure.sweep}\` sweep failed*\n${failure.error_message.slice(0, 800)}` },
+            },
+            {
+              type: 'section',
+              fields: [
+                { type: 'mrkdwn', text: `*Row:*\n\`${failure.subject_id}\`` },
+                { type: 'mrkdwn', text: `*SQLSTATE:*\n\`${failure.error_code}\`` },
+                { type: 'mrkdwn', text: `*Attempts so far:*\n${failure.attempts}` },
+                { type: 'mrkdwn', text: `*First seen:*\n${failure.first_failed_at}` },
+              ],
+            },
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: "*What's happening*\nThe every-minute maintenance sweep hit an error on one row and skipped it. Everything else in that run still went through, and the rest of the platform is unaffected. The row itself is stuck: it will be retried every minute and fail the same way until the cause is fixed.",
+              },
+            },
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: '*What to do*\nPaste this card into Claude Code. `select * from get_sweep_failures();` (service role) shows every stuck row and whether it is still failing. Not urgent unless the sweep is one that moves tokens (`finalize_proposed`, `finalize_disputed`, `wind_down_void`), in which case somebody is waiting on a payout.',
+              },
+            },
+            ...(failure.error_context
+              ? [{ type: 'section', text: { type: 'mrkdwn', text: `\`\`\`${failure.error_context.slice(0, 2600)}\`\`\`` } }]
+              : []),
+            {
+              type: 'context',
+              elements: [
+                {
+                  type: 'mrkdwn',
+                  text: 'One card per stuck row, not one per minute. Before this existed, a failing sweep rolled back every group on the platform and said nothing at all.',
+                },
+              ],
+            },
+          ],
+        }),
+      });
+      if (!response.ok) {
+        console.error('Slack rejected the sweep failure report:', response.status, await response.text().catch(() => ''));
+      }
+    } catch (err) {
+      console.error('reportSweepFailures failed:', err);
+    }
+  }
+}
+
 Deno.serve(async (_req) => {
   reportedThisRun.clear();
   runLookups = new Map();
@@ -719,6 +810,10 @@ Deno.serve(async (_req) => {
   );
 
   await deliverAll(deliveries);
+
+  // After the pushes, never instead of them: a broken reporting channel must not cost
+  // anyone a notification.
+  await reportSweepFailures();
 
   return new Response(JSON.stringify({ claimed: claimed.length, deliveries: deliveries.length }), {
     headers: { 'Content-Type': 'application/json' },
