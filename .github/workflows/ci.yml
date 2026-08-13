@@ -79,11 +79,39 @@ jobs:
         with:
           version: 2.114.0
 
+      # Without this the wrong connection string surfaces as "dial error
+      # (connect ECONNREFUSED 2600:1f18:...)", which reads like the database is
+      # down rather than like a setting is wrong. Checked with a case glob and
+      # never echoed, so the secret stays out of the log.
+      - name: Check the connection string is the session pooler
+        env:
+          STAGING_DB_URL: ${{ secrets.STAGING_SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$STAGING_DB_URL" ]; then
+            echo "::error::STAGING_SUPABASE_DB_URL is not set. Add it under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+          case "$STAGING_DB_URL" in
+            *pooler.supabase.com*) ;;
+            *)
+              echo "::error::STAGING_SUPABASE_DB_URL is not a session pooler string. It looks like the direct connection (db.<ref>.supabase.co), which resolves to IPv6 only, and GitHub runners have no IPv6. Copy the Session pooler string from Project Settings > Database > Connection string. Its host ends in pooler.supabase.com and its user is postgres.<project-ref>, not postgres."
+              exit 1
+              ;;
+          esac
+
+          case "$STAGING_DB_URL" in
+            *:6543/*)
+              echo "::error::STAGING_SUPABASE_DB_URL is the transaction pooler (port 6543), which cannot hold the session state db push needs. Use the Session pooler tab instead (port 5432)."
+              exit 1
+              ;;
+          esac
+
+          echo "Session pooler connection string looks right."
+
       # Applies any migration files that staging has not seen yet, so the tests
       # below run against the schema this branch actually proposes. --db-url
-      # avoids needing `supabase link` (and its access token) at all; it must be
-      # the *session pooler* string, because GitHub runners are IPv4-only and
-      # Supabase's direct database host is IPv6-only.
+      # avoids needing `supabase link` (and its access token) at all.
       - name: Apply migrations to staging
         run: supabase db push --db-url "$STAGING_DB_URL" --yes
         env:
