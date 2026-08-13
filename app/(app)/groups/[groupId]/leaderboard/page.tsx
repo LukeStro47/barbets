@@ -56,16 +56,22 @@ export default async function LeaderboardPage({
   if (leftMembers && leftMembers.length > 0) {
     const leftUserIds = leftMembers.map((m) => m.user_id);
     const leftMembershipIds = leftMembers.map((m) => m.id);
-    const [{ data: leftBetRows }, { data: leftLedgerRows }] = await Promise.all([
+    const [{ data: leftBetRows }, { data: leftPlayedRows }] = await Promise.all([
       supabase.from('bets').select('user_id, markets!inner(group_id)').eq('markets.group_id', groupId).in('user_id', leftUserIds),
-      // Existence, not a total: entry_count rather than net, because real activity can add up
-      // to exactly zero and a sum can't tell that apart from never having played.
-      supabase.from('membership_ledger_net').select('membership_id').in('membership_id', leftMembershipIds).gt('entry_count', 0),
+      // Not a direct `ledger` read, and not membership_ledger_net either: both are own-rows-only
+      // for the caller, so asking either about someone *else* silently answers "no" and this whole
+      // half of the OR does nothing. group_members_who_played is SECURITY DEFINER and returns
+      // membership ids only, never amounts (see its migration for why that disclosure is the
+      // narrow one). It also answers as soon as a bet is placed, where the `bets` half above has
+      // to wait for the market to resolve before other members can see it.
+      supabase.rpc('group_members_who_played', { p_group_id: groupId, p_membership_ids: leftMembershipIds }),
     ]);
     const membershipIdToUserId = new Map(leftMembers.map((m) => [m.id, m.user_id]));
     const activeLeftUserIds = new Set([
       ...(leftBetRows ?? []).map((b: any) => b.user_id),
-      ...(leftLedgerRows ?? []).map((l: any) => membershipIdToUserId.get(l.membership_id)).filter((id): id is string => !!id),
+      ...((leftPlayedRows ?? []) as { played_membership_id: string }[])
+        .map((r) => membershipIdToUserId.get(r.played_membership_id))
+        .filter((id): id is string => !!id),
     ]);
     members = [...members, ...leftMembers.filter((m) => activeLeftUserIds.has(m.user_id))];
   }
