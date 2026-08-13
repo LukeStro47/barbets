@@ -58,7 +58,9 @@ export default async function LeaderboardPage({
     const leftMembershipIds = leftMembers.map((m) => m.id);
     const [{ data: leftBetRows }, { data: leftLedgerRows }] = await Promise.all([
       supabase.from('bets').select('user_id, markets!inner(group_id)').eq('markets.group_id', groupId).in('user_id', leftUserIds),
-      supabase.from('ledger').select('membership_id').in('membership_id', leftMembershipIds).neq('reason', 'seed'),
+      // Existence, not a total: entry_count rather than net, because real activity can add up
+      // to exactly zero and a sum can't tell that apart from never having played.
+      supabase.from('membership_ledger_net').select('membership_id').in('membership_id', leftMembershipIds).gt('entry_count', 0),
     ]);
     const membershipIdToUserId = new Map(leftMembers.map((m) => [m.id, m.user_id]));
     const activeLeftUserIds = new Set([
@@ -209,10 +211,10 @@ export default async function LeaderboardPage({
       .eq('user_id', user.id)
       .single();
 
-    const [{ data: ledgerRows }, { data: settledBets }, { data: resultsPage }] = await Promise.all([
+    const [{ data: netRow }, { data: settledBets }, { data: resultsPage }] = await Promise.all([
       myMembership
-        ? supabase.from('ledger').select('amount').eq('membership_id', myMembership.id).neq('reason', 'seed')
-        : Promise.resolve({ data: [] }),
+        ? supabase.from('membership_ledger_net').select('net').eq('membership_id', myMembership.id).maybeSingle()
+        : Promise.resolve({ data: null }),
       supabase
         .from('bets')
         .select('side, option_id, markets!inner(group_id, status, outcome, outcome_option_id)')
@@ -227,7 +229,7 @@ export default async function LeaderboardPage({
         .range(from, to),
     ]);
 
-    const myNet = (ledgerRows ?? []).reduce((sum, r) => sum + r.amount, 0);
+    const myNet = Number((netRow as { net: number } | null)?.net ?? 0);
     const correctCount = (settledBets ?? []).filter((b: any) =>
       b.option_id ? b.option_id === b.markets.outcome_option_id : b.side === b.markets.outcome
     ).length;
