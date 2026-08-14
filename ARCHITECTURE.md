@@ -501,6 +501,33 @@ Things about the staging project that are deliberate and easy to get wrong:
 - **Native shell**: adding or upgrading a Capacitor plugin needs `npx cap sync` (writes the plugin into both `android/` and `ios/`) *and* a real native build/store release. A Vercel deploy does not carry it, even though the WebView loads the deployed site for everything else — the JS calling the plugin ships instantly, the native half doesn't, so guard any new plugin call behind `Capacitor.isNativePlatform()` and a web fallback. Currently installed: `@capacitor/app`, `@capacitor/camera`, `@capacitor/filesystem`, `@capacitor/share`, `@capacitor/splash-screen`, `@capacitor/status-bar`, `@capacitor-firebase/app`, `@capacitor-firebase/messaging`.
 - Useful one-offs: `npx tsc --noEmit` (typecheck), `npx next build` (production build), `npm test` (full suite).
 
+### Producing an Android release
+
+The WebView loads `server.url` at runtime, so **a store build ships almost no application code** — what it ships is a shell, a plugin set, and an origin. That is why most changes never need this, and why the ones that do (a new plugin, a changed origin) cannot be hotfixed by a deploy.
+
+```powershell
+# 1. Confirm the site is live at capacitor.config.ts's server.url. The app is a window onto it;
+#    shipping ahead of DNS gives every user a dead launch.
+# 2. Bump versionCode (and usually versionName) in android/app/build.gradle. Play rejects a
+#    duplicate versionCode outright.
+npx cap sync
+$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+cd android
+.\gradlew.bat bundleRelease
+# -> android/app/build/outputs/bundle/release/app-release.aab
+```
+
+Then Play Console > Production (or a testing track) > new release > upload the `.aab`.
+
+Things that are easy to get wrong here:
+
+- **`npx cap sync` is mandatory, not hygiene.** `android/app/src/main/assets/capacitor.config.json` and the copy of `public/offline.html` under `assets/public/` are **gitignored** (Capacitor regenerates them), so a fresh clone does not have them and a stale checkout has the *old* `server.url` baked in. The committed `capacitor.config.ts` and `public/offline.html` are the source of truth; the sync is what makes the build agree with them. Nothing warns you if you skip it, and the failure looks like "the release still points at the old domain."
+- **There is no `java` on this machine's PATH and `JAVA_HOME` is unset**, so `gradlew` fails with "JAVA_HOME is not set" before it does anything. Android Studio bundles a JDK at `C:\Program Files\Android\Android Studio\jbr` — point `JAVA_HOME` at it for the shell (or set it permanently in the user environment). The Android SDK path is already in the gitignored `android/local.properties`.
+- **Signing is already configured and needs no interaction.** `android/app/build.gradle` reads `android/keystore.properties` (gitignored) for the store path, alias, and passwords, and `bundleRelease` produces a signed bundle directly — Android Studio's "Generate Signed Bundle" wizard is not needed. The keystore itself lives outside the repo (`C:\Users\lukes\barbets-signing\barbets-release.jks`). **It is the app's permanent identity: lose it and the listing cannot be updated, ever.** Back it up somewhere other than this machine. If `keystore.properties` is absent the build silently produces an *unsigned* bundle rather than failing, which Play then rejects on upload.
+- `android/app/google-services.json` is likewise gitignored and required for FCM. Without it Gradle logs a notice and carries on, and native push is simply dead in that build.
+- **`app-release.aab` existing is not evidence that your build produced it.** `android/build/` is not cleaned between releases, so the previous release's bundle sits at that exact path indefinitely — months old, pointing at whatever `server.url` was current then. Uploading it looks like it worked right up until users launch a dead app. Wait for `BUILD SUCCESSFUL`, and if in any doubt check the file's timestamp or confirm the origin directly: `unzip -p app-release.aab base/assets/capacitor.config.json`. That last command is also the only end-to-end proof that `cap sync` did its job, since it reads the value out of the artifact you are actually shipping rather than out of a source file.
+- **A release that changes `server.url` signs every existing user out once** (see the domain section below). Put it in the release notes, and prefer an internal testing track first: a silent forced logout reads as a bug.
+
 ### Domains and the mybarbets.com split
 
 Three hostnames, two Vercel projects:
