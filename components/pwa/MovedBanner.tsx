@@ -18,13 +18,6 @@ import { APP_ORIGIN } from '@/lib/appOrigin';
  * this hostname, so the check fails there and the banner never renders.
  */
 
-/**
- * When mybarbets.com actually stops serving the app, which is launch day. If that date moves,
- * change this and RETIRE_AFTER in the marketing site's public/sw.js together: this is a promise
- * made to people whose home screen icon breaks when it comes true.
- */
-const SUNSET_LABEL = 'on August 28';
-
 const DISMISS_KEY = 'bb-moved-banner-dismissed';
 const DISMISS_DAYS = 3;
 
@@ -59,10 +52,14 @@ export function MovedBanner() {
     <div className="border-b border-honey-300 bg-honey-100 pt-[env(safe-area-inset-top)] text-espresso-900">
       <div className="mx-auto flex max-w-lg items-start gap-3 px-5 py-3">
         <div className="min-w-0 flex-1">
-          <p className="font-display text-[14px] font-extrabold tracking-[-0.01em]">Barbets is moving</p>
+          <p className="font-display text-[14px] font-extrabold tracking-[-0.01em]">Barbets has moved</p>
+          {/* Present tense, no date. The domain flip is imminent rather than scheduled, and a
+              banner promising a future cutoff would be a promise this code cannot keep: once the
+              domain moves, this component stops rendering entirely (the app no longer serves that
+              host), so it can never come back to correct itself. */}
           <p className="mt-0.5 text-[13px]/[19px] text-espresso-700">
-            This address stops working {SUNSET_LABEL}. Open Barbets at its new home and add it to
-            your home screen again, then delete the old icon. Your groups and balances come with you.
+            This address is being retired. Open Barbets at its new home and add it to your home
+            screen again, then delete the old icon. Your groups and balances come with you.
           </p>
           <a
             href={APP_ORIGIN}
