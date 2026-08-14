@@ -52,7 +52,7 @@ export async function signIn(_prevState: AuthActionState | null, formData: FormD
 export async function signOut(): Promise<void> {
   const supabase = await createClient();
   await supabase.auth.signOut();
-  redirect('/login');
+  redirect('/');
 }
 
 /** x-forwarded-proto is set by Vercel but absent locally, where host always starts with

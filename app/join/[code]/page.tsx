@@ -24,7 +24,7 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
   }
 
   const { data: group, error } = (await supabase.rpc('get_group_by_invite_code', { p_invite_code: code }).maybeSingle()) as {
-    data: { id: string; name: string; accepting_members: boolean; my_status: string | null } | null;
+    data: { id: string; name: string; avatar_key: string | null; accepting_members: boolean; my_status: string | null } | null;
     error: PostgrestError | null;
   };
 
@@ -62,7 +62,7 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
   // its own gutters and safe-area inset.
   return (
     <main className="flex min-h-dvh flex-col bg-paper">
-      <JoinFlow inviteCode={code} groupName={group.name} blockedReason={blockedReason} />
+      <JoinFlow inviteCode={code} groupName={group.name} groupAvatarKey={group.avatar_key} blockedReason={blockedReason} />
     </main>
   );
 }
