@@ -632,8 +632,33 @@ function triage(message: string): { meaning: string; fix: string } {
   };
 }
 
+// supabase-js never throws a real Error for a Postgrest/RPC failure unless the call opts into
+// .throwOnError(), which nothing here does - the `error` it hands back instead is a plain
+// object ({message, details, hint, code}, or just {message} for a raw non-JSON body), never
+// `instanceof Error`. String(plainObject) is "[object Object]" with no override, so the naive
+// `err instanceof Error ? err.message : String(err)` silently discarded the real message on
+// every Postgrest error this function has ever reported, not just this one - the card would
+// read "[object Object]" no matter what Postgres actually said. Pull `.message` (and, when
+// present, the code/details/hint that make a Postgrest error actually diagnosable) off the
+// object directly instead of relying on it being a real Error.
+function errorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === 'object') {
+    const e = err as { message?: unknown; code?: unknown; details?: unknown; hint?: unknown };
+    if (typeof e.message === 'string') {
+      const extras = [e.code, e.details, e.hint].filter((v) => typeof v === 'string' && v.length > 0);
+      return extras.length > 0 ? `${e.message} (${extras.join(' / ')})` : e.message;
+    }
+  }
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return String(err);
+  }
+}
+
 async function reportToSlack(label: string, err: unknown, context?: Record<string, string>) {
-  const message = err instanceof Error ? err.message : String(err);
+  const message = errorMessage(err);
   const stack = err instanceof Error ? (err.stack ?? '') : '';
   console.error(label, message, stack);
   if (!SLACK_ERROR_WEBHOOK_URL) return;
