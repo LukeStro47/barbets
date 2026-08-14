@@ -80,7 +80,9 @@
     </p>
     <button id="retry">Try again</button>
     <script>
-      var APP_URL = 'https://barbets.vercel.app';
+      // Must match server.url in capacitor.config.ts. This file is bundled into the native app
+      // rather than served, so it cannot import lib/appOrigin.ts and cannot be fixed by a deploy.
+      var APP_URL = 'https://app.mybarbets.com';
       function retry() {
         window.location.href = APP_URL;
       }
