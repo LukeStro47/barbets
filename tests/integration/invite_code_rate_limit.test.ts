@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { createTestUsers, cleanupTestUsers, adminClient, type TestUser } from './helpers/testUsers';
+import { createClient } from '@supabase/supabase-js';
+import { createTestUsers, cleanupTestUsers, adminClient, SUPABASE_URL, ANON_KEY, type TestUser } from './helpers/testUsers';
 import { setupGroup, type GroupRow } from './helpers/scenarios';
 
 /** Matches the constant in 20260813130000_invite_code_rate_limit.sql. */
@@ -119,6 +120,100 @@ describe('invite code rate limit', () => {
   test('the counter is invisible to the client it counts', async () => {
     const { data, error } = await users.prober.client.from('invite_code_attempts').select('*');
     // Zero-policy table: RLS on with no policy, so a client read is empty rather than forbidden.
+    expect(data ?? []).toEqual([]);
+    expect(error === null || error.code === '42501').toBe(true);
+  });
+
+  test('get_group_by_invite_code and join_group reject a caller with no session at all', async () => {
+    const anonClient = createClient(SUPABASE_URL!, ANON_KEY!, { auth: { autoRefreshToken: false, persistSession: false } });
+
+    const { error: previewErr } = await anonClient.rpc('get_group_by_invite_code', { p_invite_code: group.invite_code });
+    expect(previewErr?.code).toBe('42501');
+
+    const { error: joinErr } = await anonClient.rpc('join_group', { p_invite_code: group.invite_code, p_nickname: 'nope' });
+    expect(joinErr?.code).toBe('42501');
+  });
+});
+
+/**
+ * invite_code_exists() is the anon-callable sibling that lets /join/[code] reject a bad code
+ * before bouncing a signed-out visitor into the login flow at all (see
+ * 20260814110000_anon_invite_code_exists.sql). It only ever answers true/false, and it's rate
+ * limited by IP (via a client-supplied x-forwarded-for header, set here to simulate distinct
+ * visitors) rather than by account, since an anonymous caller has no auth.uid().
+ */
+describe('anonymous invite code existence check', () => {
+  const anonClient = createClient(SUPABASE_URL!, ANON_KEY!, { auth: { autoRefreshToken: false, persistSession: false } });
+  let owner: TestUser;
+  let group: GroupRow;
+
+  beforeAll(async () => {
+    const users = await createTestUsers('anonx', ['owner']);
+    owner = users.owner;
+    group = await setupGroup(owner, []);
+  });
+
+  afterAll(async () => {
+    await cleanupTestUsers({ owner });
+  });
+
+  function fakeIp(n: number): string {
+    return `198.51.100.${n}`;
+  }
+
+  test('a bogus code returns false, no account required', async () => {
+    const { data, error } = await anonClient
+      .rpc('invite_code_exists', { p_invite_code: bogusCode(80) })
+      .setHeader('x-forwarded-for', fakeIp(1));
+    expect(error).toBeNull();
+    expect(data).toBe(false);
+  });
+
+  test('a real code returns true, without revealing anything beyond that', async () => {
+    const { data, error } = await anonClient
+      .rpc('invite_code_exists', { p_invite_code: group.invite_code })
+      .setHeader('x-forwarded-for', fakeIp(2));
+    expect(error).toBeNull();
+    expect(data).toBe(true);
+  });
+
+  test('misses are rate limited per IP, and the budget runs out after ten', async () => {
+    const ip = fakeIp(3);
+    for (let i = 0; i < MISS_LIMIT; i++) {
+      const { data, error } = await anonClient
+        .rpc('invite_code_exists', { p_invite_code: bogusCode(60 + i) })
+        .setHeader('x-forwarded-for', ip);
+      expect(error).toBeNull();
+      expect(data).toBe(false);
+    }
+
+    const { error: blockedErr } = await anonClient
+      .rpc('invite_code_exists', { p_invite_code: bogusCode(99) })
+      .setHeader('x-forwarded-for', ip);
+    expect(blockedErr?.message).toMatch(/invalid_operation/);
+    expect(blockedErr?.message).toMatch(/too many invite code tries/);
+
+    // A different visitor (different IP) has its own, untouched budget.
+    const { data: freshData, error: freshErr } = await anonClient
+      .rpc('invite_code_exists', { p_invite_code: bogusCode(70) })
+      .setHeader('x-forwarded-for', fakeIp(4));
+    expect(freshErr).toBeNull();
+    expect(freshData).toBe(false);
+  });
+
+  test('a real code never counts against the IP budget, however many times it is checked', async () => {
+    const ip = fakeIp(5);
+    for (let i = 0; i < MISS_LIMIT + 5; i++) {
+      const { data, error } = await anonClient
+        .rpc('invite_code_exists', { p_invite_code: group.invite_code })
+        .setHeader('x-forwarded-for', ip);
+      expect(error).toBeNull();
+      expect(data).toBe(true);
+    }
+  });
+
+  test('the ip counter is invisible to the client it counts', async () => {
+    const { data, error } = await anonClient.from('invite_code_ip_attempts').select('*');
     expect(data ?? []).toEqual([]);
     expect(error === null || error.code === '42501').toBe(true);
   });

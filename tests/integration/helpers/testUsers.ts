@@ -38,7 +38,7 @@ function loadTestEnv(): Record<string, string | undefined> {
 
 const env = loadTestEnv();
 export const SUPABASE_URL = env.NEXT_PUBLIC_SUPABASE_URL;
-const ANON_KEY = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+export const ANON_KEY = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const SERVICE_KEY = env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!SUPABASE_URL || !ANON_KEY || !SERVICE_KEY) {

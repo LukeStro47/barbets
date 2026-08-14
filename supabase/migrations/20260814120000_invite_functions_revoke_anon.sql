@@ -1,0 +1,28 @@
+-- get_group_by_invite_code() and join_group() were only ever `revoke ... from public`, never
+-- `revoke ... from anon` explicitly. Every function in this codebase has followed that same
+-- two-step pattern (see the catalog query in ARCHITECTURE.md's "notable design decisions" for
+-- how to find the rest), on the assumption that revoking from PUBLIC is enough to lock a function
+-- down to `authenticated`. It isn't: Supabase's project bootstrap runs
+-- `alter default privileges ... grant execute on functions to anon, authenticated, service_role`,
+-- which grants `anon` its own direct, standing EXECUTE privilege on every new function the moment
+-- it's created -- entirely separate from the PUBLIC pseudo-role, and untouched by revoking from
+-- PUBLIC afterward. Confirmed live: calling get_group_by_invite_code with nothing but the public
+-- anon key (no session, no signed-up account) executed successfully and returned real data.
+--
+-- The practical fallout was concentrated in get_group_by_invite_code(): it doesn't require
+-- auth.uid() to produce a result (the my_status lookup just degrades to null), so an anon caller
+-- got the group's real name, avatar, and accepting_members for any guessed code -- and
+-- _enforce_invite_code_rate_limit() no-ops entirely when auth.uid() is null, so none of that
+-- guessing was even counted. The account requirement this app's whole invite-code rate limit is
+-- built on was never actually enforced by Postgres for this function; the app's own `if (!user)
+-- redirect('/login')` in app/join/[code]/page.tsx was the only thing standing in the way, and
+-- that's trivial to skip by calling PostgREST directly.
+--
+-- join_group() is lower-risk the same way create_group() already is: it reads auth.uid() into
+-- v_user_id and every write path eventually needs a real row keyed to it, so a null-user call
+-- degrades to a constraint violation or an unhandled Postgres error rather than a silent
+-- unauthorized join. It's revoked here anyway, both for defense in depth and because it's the
+-- other half of the same "authenticated-only invite lookup" pair the 20260813130000 rate limit
+-- migration describes.
+revoke execute on function get_group_by_invite_code(text) from anon;
+revoke execute on function join_group(text, citext) from anon;

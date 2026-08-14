@@ -1,10 +1,44 @@
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import type { PostgrestError } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import { friendlyMessage, toActionError } from '@/lib/errors';
 import { JoinFlow } from '@/components/groups/JoinFlow';
 import { InvalidInviteModal } from '@/components/groups/InvalidInviteModal';
 import { normalizeInviteCode } from '@/lib/inviteCode';
+
+/** The RPC call to Supabase originates from this server, not the visitor's browser, so
+ *  Supabase would otherwise see every anonymous visitor as this server's own outbound IP.
+ *  Forwarding the real value here is what lets invite_code_exists() rate-limit by visitor
+ *  instead of lumping the whole app's signed-out traffic into one bucket. */
+async function getClientIp(): Promise<string | null> {
+  const h = await headers();
+  const forwarded = h.get('x-forwarded-for');
+  if (!forwarded) return null;
+  return forwarded.split(',')[0]?.trim() || null;
+}
+
+/** Both the anon existence-check and the full authenticated preview hit the same rate limit
+ *  shape (Postgres raises `invalid_operation` with the wait time baked into the message), so
+ *  they share this rendering rather than duplicating the modal markup per call site. */
+function rateLimitedModal(actionError: ReturnType<typeof toActionError>) {
+  return (
+    <main className="flex min-h-dvh items-center justify-center bg-paper px-5 py-12 pt-[calc(env(safe-area-inset-top)+3rem)]">
+      <InvalidInviteModal
+        title={`${friendlyMessage(actionError)}.`}
+        body="Codes are limited to a few tries at a time, so nobody can guess their way into a group."
+      />
+    </main>
+  );
+}
+
+function notFoundModal() {
+  return (
+    <main className="flex min-h-dvh items-center justify-center bg-paper px-5 py-12 pt-[calc(env(safe-area-inset-top)+3rem)]">
+      <InvalidInviteModal />
+    </main>
+  );
+}
 
 export default async function JoinPage({ params }: { params: Promise<{ code: string }> }) {
   const { code: rawCode } = await params;
@@ -20,6 +54,26 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
 
   const nextParam = `/join/${encodeURIComponent(code)}`;
   if (!user) {
+    // A signed-out visitor used to get bounced straight to /login for any code, valid or not, and
+    // only found out it was bogus after signing in — which reads as "the group is real, just
+    // hidden behind a login wall." invite_code_exists() is the anon-callable, rate-limited-by-IP
+    // sibling of get_group_by_invite_code() that only answers true/false, so a bad code can be
+    // rejected before the sign-in detour instead of after it.
+    const ip = await getClientIp();
+    let existsQuery = supabase.rpc('invite_code_exists', { p_invite_code: code });
+    if (ip) existsQuery = existsQuery.setHeader('x-forwarded-for', ip);
+    const { data: exists, error: existsError } = await existsQuery;
+
+    if (existsError) {
+      const actionError = toActionError(existsError);
+      if (actionError.code !== 'invalid_operation') throw actionError;
+      return rateLimitedModal(actionError);
+    }
+
+    if (!exists) {
+      return notFoundModal();
+    }
+
     redirect(`/login?next=${nextParam}`);
   }
 
@@ -34,24 +88,11 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
   if (error) {
     const actionError = toActionError(error);
     if (actionError.code !== 'invalid_operation') throw actionError;
-    // Postgres error copy never carries a trailing period (it usually renders inline under a form
-    // field). This one is a modal headline, so it gets one.
-    return (
-      <main className="flex min-h-dvh items-center justify-center bg-paper px-5 py-12 pt-[calc(env(safe-area-inset-top)+3rem)]">
-        <InvalidInviteModal
-          title={`${friendlyMessage(actionError)}.`}
-          body="Codes are limited to a few tries at a time, so nobody can guess their way into a group."
-        />
-      </main>
-    );
+    return rateLimitedModal(actionError);
   }
 
   if (!group) {
-    return (
-      <main className="flex min-h-dvh items-center justify-center bg-paper px-5 py-12 pt-[calc(env(safe-area-inset-top)+3rem)]">
-        <InvalidInviteModal />
-      </main>
-    );
+    return notFoundModal();
   }
 
   const blockedReason =
