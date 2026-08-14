@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { LinkIcon } from '@/components/ui/icons';
+import { inviteUrl } from '@/lib/appOrigin';
 
 /** The balance card's compact "Invite" pill — the code itself moved out of the card's
  * permanent real estate (it's a once-a-month action, not something that deserves a fixed
@@ -11,11 +12,9 @@ import { LinkIcon } from '@/components/ui/icons';
 export function InvitePill({ inviteCode }: { inviteCode: string }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [url, setUrl] = useState(`/join/${inviteCode}`);
-
-  useEffect(() => {
-    setUrl(`${window.location.origin}/join/${inviteCode}`);
-  }, [inviteCode]);
+  // A constant origin rather than window.location.origin, so this used to need an effect to avoid
+  // a hydration mismatch and no longer does — see lib/appOrigin.ts for why the constant.
+  const url = inviteUrl(inviteCode);
 
   return (
     <>

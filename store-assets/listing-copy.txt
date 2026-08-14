@@ -33,13 +33,22 @@ Entertainment (safest fit — avoids any gambling-adjacent category despite the 
 
 CONTACT EMAIL
 --------------------------------
-luke@pathwell.co
+info@mybarbets.com
 
 
 PRIVACY POLICY URL
 --------------------------------
-https://barbets.vercel.app/privacy
-(or https://mybarbets.com/privacy — same page, both domains currently point at the same deployment)
+https://mybarbets.com/privacy
+
+
+SUPPORT URL
+--------------------------------
+https://mybarbets.com/support
+
+
+MARKETING URL
+--------------------------------
+https://mybarbets.com
 
 
 HEADS UP: CONTENT RATING QUESTIONNAIRE

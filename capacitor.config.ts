@@ -10,7 +10,13 @@ const config: CapacitorConfig = {
   appName: 'Barbets',
   webDir: 'public',
   server: {
-    url: 'https://barbets.vercel.app',
+    // The app's canonical origin. Changing this is a store release, not a deploy -- and it signs
+    // out every existing install once, because Supabase sessions are @supabase/ssr cookies and
+    // cookies are host-scoped, so a new WebView origin means an empty cookie jar. The FCM token
+    // survives, so pushes keep arriving and open a logged-out app. Worth pairing with a release
+    // people already want. barbets.vercel.app still serves the same deployment, so an install that
+    // has not updated yet keeps working.
+    url: 'https://app.mybarbets.com',
     androidScheme: 'https',
     // A failed main-frame load (offline, DNS down) has nowhere else to go: unlike a browser tab,
     // this WebView has no service worker fallback to lean on for the very first request of a cold

@@ -2,6 +2,10 @@ import { createClient } from '@/lib/supabase/server';
 import { Logo } from '@/components/ui/Logo';
 import { Card } from '@/components/ui/Card';
 import { BackButton } from '@/components/ui/BackButton';
+import { CONTACT_EMAIL } from '@/lib/appOrigin';
+
+// Mirror of the canonical terms at mybarbets.com/terms. See app/privacy/page.tsx for why both
+// copies exist, and change them together.
 
 const sections = [
   {
@@ -22,7 +26,7 @@ const sections = [
   },
   {
     title: 'Reporting a problem',
-    body: 'To report abusive content or behavior we should know about, email luke@pathwell.co. We review every report and can remove content, suspend a group, or terminate an account in response.',
+    body: `To report abusive content or behavior we should know about, email ${CONTACT_EMAIL}. We review every report and can remove content, suspend a group, or terminate an account in response.`,
   },
   {
     title: "You own your content, and you're responsible for it",
@@ -67,8 +71,8 @@ export default async function TermsPage() {
 
       <p className="text-sm text-espresso-500">
         Questions about these terms? Reach out at{' '}
-        <a href="mailto:luke@pathwell.co" className="font-medium text-espresso-700 underline">
-          luke@pathwell.co
+        <a href={`mailto:${CONTACT_EMAIL}`} className="font-medium text-espresso-700 underline">
+          {CONTACT_EMAIL}
         </a>
         .
       </p>

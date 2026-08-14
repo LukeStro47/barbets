@@ -16,6 +16,7 @@ import { COMMON_TIMEZONES, friendlyTimezoneName } from '@/lib/timezone';
 import { Mention } from '@/components/ui/Mention';
 import { formatTokens, formatTokenInputValue } from '@/lib/formatNumber';
 import { TOKEN_ALLOCATION_MAX } from '@/lib/limits';
+import { inviteUrl } from '@/lib/appOrigin';
 import type { GroupSettings } from '@/lib/actions/groups';
 
 const inputClasses =
@@ -447,9 +448,10 @@ export function InviteCodeActions({ groupId, inviteCode, canRegenerate }: { grou
           type="button"
           className={pillClasses}
           onClick={async () => {
-            // window is only available client-side, so the absolute URL is built at click time
-            // rather than held in state that would have to match a server render first.
-            await navigator.clipboard.writeText(`${window.location.origin}/join/${inviteCode}`);
+            // A fixed origin, not window.location.origin: this link gets pasted into a group chat,
+            // and it should always name the app's canonical hostname rather than whichever one the
+            // sharer happened to be on (see lib/appOrigin.ts).
+            await navigator.clipboard.writeText(inviteUrl(inviteCode));
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
           }}

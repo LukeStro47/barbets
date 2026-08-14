@@ -6,6 +6,7 @@ import { Mention } from '@/components/ui/Mention';
 import { cn } from '@/lib/cn';
 import { formatTokens } from '@/lib/formatNumber';
 import { formatSeasonLength, type SeasonLength } from '@/lib/seasonLength';
+import { CONTACT_EMAIL } from '@/lib/appOrigin';
 
 type Tab = 'basics' | 'your-group' | 'edge-cases';
 
@@ -284,7 +285,7 @@ export default async function HowItWorksPage({ searchParams }: { searchParams: P
         </Link>
         {/* A mailto rather than /feedback: this page is public, and /feedback lives behind the
             app's auth gate, so a logged-out reader would just get bounced to the login screen. */}
-        <a href="mailto:luke@pathwell.co" className="text-[13.5px] font-semibold text-espresso-700">
+        <a href={`mailto:${CONTACT_EMAIL}`} className="text-[13.5px] font-semibold text-espresso-700">
           Questions? Email us
         </a>
         <div className="mt-0.5 flex gap-3.5">
