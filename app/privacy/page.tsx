@@ -2,6 +2,12 @@ import { createClient } from '@/lib/supabase/server';
 import { Logo } from '@/components/ui/Logo';
 import { Card } from '@/components/ui/Card';
 import { BackButton } from '@/components/ui/BackButton';
+import { CONTACT_EMAIL } from '@/lib/appOrigin';
+
+// This page is a mirror of the canonical policy at mybarbets.com/privacy, which is the URL given
+// to App Store Connect and Google Play. It exists in the app as well because the signup flow's
+// terms checkbox and the profile small-print tiles link here, and inside the Capacitor WebView an
+// external link punts the user out to the system browser mid-signup. Change both together.
 
 const sections = [
   {
@@ -67,8 +73,8 @@ export default async function PrivacyPage() {
 
       <p className="text-sm text-espresso-500">
         Questions about this policy or your data? Reach out at{' '}
-        <a href="mailto:luke@pathwell.co" className="font-medium text-espresso-700 underline">
-          luke@pathwell.co
+        <a href={`mailto:${CONTACT_EMAIL}`} className="font-medium text-espresso-700 underline">
+          {CONTACT_EMAIL}
         </a>
         . See also our{' '}
         <a href="/terms" className="font-medium text-espresso-700 underline">

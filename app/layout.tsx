@@ -5,6 +5,8 @@ import { RegisterServiceWorker } from '@/components/pwa/RegisterServiceWorker';
 import { NativePushNavigation } from '@/components/pwa/NativePushNavigation';
 import { NativeBackButton } from '@/components/pwa/NativeBackButton';
 import { BootSplash } from '@/components/pwa/BootSplash';
+import { MovedBanner } from '@/components/pwa/MovedBanner';
+import { APP_ORIGIN } from '@/lib/appOrigin';
 
 const bricolage = Bricolage_Grotesque({
   subsets: ['latin'],
@@ -12,6 +14,11 @@ const bricolage = Bricolage_Grotesque({
 });
 
 export const metadata: Metadata = {
+  // This app answers on three hostnames (app.mybarbets.com, the barbets.vercel.app deployment
+  // alias, and localhost), so relative metadata URLs need an explicit base rather than whichever
+  // one Next infers. mybarbets.com is deliberately not it: that domain is the marketing site now,
+  // and it owns its own canonical URLs.
+  metadataBase: new URL(APP_ORIGIN),
   title: 'Barbets',
   description: 'Private prediction markets for your friend group.',
   manifest: '/manifest.json',
@@ -42,6 +49,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={bricolage.variable}>
       <body className="font-sans antialiased">
+        {/* Above {children} so it sits at the very top of every screen, signed in or not. Renders
+            nothing unless the page was served from mybarbets.com — see the component. */}
+        <MovedBanner />
         {children}
         <RegisterServiceWorker />
         <NativePushNavigation />
