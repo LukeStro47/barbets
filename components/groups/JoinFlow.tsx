@@ -37,10 +37,12 @@ const BLOCKED_COPY: Record<'removed' | 'not_accepting', { title: string; body: s
 export function JoinFlow({
   inviteCode,
   groupName,
+  groupAvatarKey = null,
   blockedReason = null,
 }: {
   inviteCode: string;
   groupName: string;
+  groupAvatarKey?: string | null;
   blockedReason?: 'removed' | 'not_accepting' | null;
 }) {
   const router = useRouter();
@@ -56,11 +58,9 @@ export function JoinFlow({
         <span className="text-xs font-bold tracking-[2px] text-honey-700 uppercase">You're invited</span>
 
         <div className="mt-5 w-full rounded-[24px] border border-espresso-100 bg-paper-white px-5 pt-8 pb-[34px]">
-          {/* Always the initials monogram in practice: get_group_by_invite_code deliberately
-              reveals only id/name/accepting_members/my_status to a non-member, so the group's
-              chosen avatar isn't available here. GroupAvatar still owns the fallback. */}
           <GroupAvatar
             name={groupName}
+            avatarKey={groupAvatarKey}
             radiusClassName="rounded-[20px]"
             fallbackClassName="bg-espresso-50 text-[26px] text-honey-700"
             className="mx-auto h-16 w-16"
