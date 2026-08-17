@@ -300,6 +300,24 @@ describe('multiple choice markets', () => {
     expect(overCapErr?.message).toMatch(/invalid_operation/);
   });
 
+  test('an option label over 40 characters is rejected', async () => {
+    const { error } = await users.owner.client.rpc('create_market', {
+      p_group_id: group.id,
+      p_title: 'long option',
+      p_description: 'invalid',
+      p_market_type: 'multiple_choice',
+      p_closes_at: new Date(Date.now() + 60000).toISOString(),
+      p_line: null,
+      p_subject_user_ids: [],
+      p_options: ['A', 'x'.repeat(41)],
+    });
+    expect(error?.message).toMatch(/40 characters or fewer/);
+
+    const market = await createMCMarket(users.owner, group.id, ['A', 'x'.repeat(40)]);
+    const options = await getOptions(market.id);
+    expect(options.find((o) => o.label.length === 40)).toBeDefined();
+  });
+
   test('a member can only be a subject of one option', async () => {
     // '@a' and '@A' are distinct label text (so they pass the unique-labels
     // check) but resolve to the same nickname case-insensitively.

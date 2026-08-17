@@ -375,7 +375,7 @@ export function BetslipBar({
               odds readout by another name — anyone could divide their way back to the split. So
               the slip commits to the one number it can state honestly. */}
           <div className="mt-3.5 flex items-baseline justify-between gap-3">
-            <span className="text-[13px] font-semibold text-paper-white/60">
+            <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-paper-white/60">
               {hasPick ? (
                 <>
                   Betting on <OptionLabel label={selectedLabel.toUpperCase()} className="text-honey-200" />
@@ -528,13 +528,13 @@ function BetConfirmedOverlay({
           <p className="text-[11px] font-extrabold tracking-[0.12em] text-espresso-400 uppercase">Your bet</p>
           <p className="mt-2 font-display text-[19px] leading-[1.25] font-extrabold text-espresso-950 text-pretty">{marketTitle}</p>
           <div className="mt-4 flex items-end justify-between gap-3">
-            <div className="min-w-0">
+            <div className="min-w-0 shrink-0">
               <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase">Staked</p>
               <p className="mt-1 font-display text-[38px] leading-none font-extrabold tracking-[-0.02em] text-espresso-950 tabular-nums">
                 {formatTokens(amount)}
               </p>
             </div>
-            <div className="min-w-0 text-right">
+            <div className="min-w-0 flex-1 text-right">
               <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase">On</p>
               <p className="mt-1 truncate font-display text-[38px] leading-none font-extrabold tracking-[-0.02em] text-honey-700">
                 <OptionLabel label={label.toUpperCase()} />

@@ -14,6 +14,12 @@ export const SEASON_NAME_MAX_LENGTH = 60;
     the (uncapped) resolution criteria. Long enough that nobody writing a normal title meets it. */
 export const MARKET_TITLE_MAX_LENGTH = 140;
 
+/** An option label has to survive rendering at large sizes with no wrapper of its own: the "On"
+    value on the bet-confirmed ticket, the trailing bet pill on a market row, the "X leading" line.
+    Those spots truncate long labels regardless, but a cap keeps the common case from ever needing
+    to. 40 comfortably fits a real option ("Sad drunk sitting in corner") with room to spare. */
+export const OPTION_LABEL_MAX_LENGTH = 40;
+
 /** The title box only starts showing its counter this close to the cap — a character count sitting
     under every title from the first keystroke reads as a limit to write up to, which is the opposite
     of what the form asks for. */
