@@ -93,11 +93,11 @@ export function OddsBarMulti({ options, className }: { options: OddsOption[]; cl
     <div className={cn('space-y-2.5', className)}>
       {sorted.map((o) => (
         <div key={o.id} className="space-y-1">
-          <div className="flex justify-between text-sm font-semibold">
-            <span className="text-espresso-700">
+          <div className="flex justify-between gap-2 text-sm font-semibold">
+            <span className="min-w-0 flex-1 truncate text-espresso-700">
               <OptionLabel label={o.label} />
             </span>
-            <span className="text-honey-800">{o.percent}%</span>
+            <span className="shrink-0 text-honey-800">{o.percent}%</span>
           </div>
           <div className="h-2.5 overflow-hidden rounded-full bg-espresso-100">
             <div className="h-full bg-honey-500" style={{ width: `${o.percent}%` }} />

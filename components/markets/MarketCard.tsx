@@ -242,7 +242,7 @@ function MarketRowMeta({ market }: { market: MarketCardData }) {
     const betCountPrefix = market.closedBetCount !== undefined ? `${market.closedBetCount} bets · ` : '';
     if (market.proposedOutcomeLabel) {
       return (
-        <p className="mt-0.5 text-xs text-espresso-400">
+        <p className="mt-0.5 truncate text-xs text-espresso-400">
           {betCountPrefix}Proposed: <OptionLabel label={market.proposedOutcomeLabel.toUpperCase()} />
         </p>
       );
@@ -251,7 +251,7 @@ function MarketRowMeta({ market }: { market: MarketCardData }) {
       const top = [...(market.optionOdds ?? [])].sort((a, b) => b.percent - a.percent)[0];
       if (!top) return null;
       return (
-        <p className="mt-0.5 text-xs text-espresso-400">
+        <p className="mt-0.5 truncate text-xs text-espresso-400">
           {betCountPrefix}
           <OptionLabel label={top.label} /> leading · {top.percent}%
         </p>
@@ -273,7 +273,7 @@ function MarketRowMeta({ market }: { market: MarketCardData }) {
       return <p className="mt-0.5 text-xs text-espresso-400">Voided, everyone refunded</p>;
     }
     return (
-      <p className="mt-0.5 text-xs text-espresso-400">
+      <p className="mt-0.5 truncate text-xs text-espresso-400">
         {isMultipleChoice ? <OptionLabel label={market.outcomeLabel ?? ''} /> : market.outcome?.toUpperCase()}
         <MyNetLabel myNet={market.myNet} />
       </p>
@@ -320,7 +320,7 @@ function MarketRow({ market, isLast }: { market: MarketCardData; isLast: boolean
       {market.reactionGlyphs && market.reactionGlyphs.length > 0 && <ReactionFacepile glyphs={market.reactionGlyphs} />}
       {showBetPill ? (
         singleBet ? (
-          <span className="shrink-0 rounded-full bg-honey-100 px-3 py-[5px] text-xs font-bold text-honey-800">
+          <span className="max-w-[128px] shrink-0 truncate rounded-full bg-honey-100 px-3 py-[5px] text-xs font-bold text-honey-800">
             {formatTokens(singleBet.amount)} {singleBet.label}
           </span>
         ) : (

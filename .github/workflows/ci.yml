@@ -111,9 +111,15 @@ jobs:
 
       # Applies any migration files that staging has not seen yet, so the tests
       # below run against the schema this branch actually proposes. --db-url
-      # avoids needing `supabase link` (and its access token) at all.
+      # avoids needing `supabase link` (and its access token) at all. --include-all
+      # because two open PRs can each add a migration and land on staging out of
+      # timestamp order (whichever PR's CI runs first applies its migration first,
+      # regardless of which filename sorts earlier) — db push refuses that by
+      # default ("found local migration files to be inserted before the last
+      # migration on remote"), even though timestamp order was never a real
+      # dependency between unrelated migrations.
       - name: Apply migrations to staging
-        run: supabase db push --db-url "$STAGING_DB_URL" --yes
+        run: supabase db push --db-url "$STAGING_DB_URL" --yes --include-all
         env:
           STAGING_DB_URL: ${{ secrets.STAGING_SUPABASE_DB_URL }}
 

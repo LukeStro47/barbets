@@ -19,7 +19,7 @@ import {
   type LineFormat,
 } from '@/lib/units';
 import { friendlyTimezoneName } from '@/lib/timezone';
-import { MARKET_TITLE_MAX_LENGTH, MARKET_TITLE_COUNTER_THRESHOLD } from '@/lib/limits';
+import { MARKET_TITLE_MAX_LENGTH, MARKET_TITLE_COUNTER_THRESHOLD, OPTION_LABEL_MAX_LENGTH } from '@/lib/limits';
 import { cn } from '@/lib/cn';
 
 const cardClasses = 'rounded-[18px] border border-espresso-100 bg-paper-white p-4';
@@ -137,6 +137,7 @@ function OptionRow({
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 150)}
           placeholder={`Option ${index + 1}, or @nickname`}
+          maxLength={OPTION_LABEL_MAX_LENGTH}
           className={cn(
             'w-full rounded-xl border px-3.5 py-2.5 text-[15px] placeholder:text-espresso-300 focus:outline-none',
             isMention
