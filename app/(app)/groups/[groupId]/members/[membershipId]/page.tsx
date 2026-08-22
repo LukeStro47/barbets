@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { Mention } from '@/components/ui/Mention';
+import { CompareMemberPicker } from '@/components/groups/CompareMemberPicker';
 import { formatTokens, formatOrdinal, formatSignedTokens } from '@/lib/formatNumber';
 import { titlesByUser, type GroupTitleRow } from '@/lib/titles';
 
@@ -49,7 +50,7 @@ export default async function MemberProfilePage({
 
   const [{ data: group }, { data: groupMembers }, { data: titleRows }, { data: avatarRow }] = await Promise.all([
     supabase.from('groups').select('name').eq('id', groupId).single(),
-    supabase.from('memberships').select('user_id, balance').eq('group_id', groupId).in('status', ['active', 'dormant']),
+    supabase.from('memberships').select('id, user_id, nickname, balance').eq('group_id', groupId).in('status', ['active', 'dormant']),
     supabase.from('group_titles').select('title_key, user_id, stat_value').eq('group_id', groupId),
     supabase.from('users').select('avatar_updated_at').eq('id', stats.user_id).single(),
   ]);
@@ -61,6 +62,9 @@ export default async function MemberProfilePage({
   const standing = rankIndex >= 0 ? `${formatOrdinal(rankIndex + 1)} of ${ranked.length}` : 'Not currently playing';
 
   const badges = titlesByUser((titleRows ?? []) as GroupTitleRow[]).get(stats.user_id) ?? [];
+  const others = (groupMembers ?? [])
+    .filter((m) => m.id !== stats.membership_id)
+    .map((m) => ({ id: m.id, nickname: m.nickname ?? '' }));
   const isYou = stats.user_id === user.id;
   const net = Number(stats.net);
   const sinceLabel = new Date(stats.joined_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -150,6 +154,8 @@ export default async function MemberProfilePage({
           <span className="text-espresso-300">›</span>
         </Link>
       )}
+
+      <CompareMemberPicker groupId={groupId} membershipId={stats.membership_id} others={others} />
     </main>
   );
 }
