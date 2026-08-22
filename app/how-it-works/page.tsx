@@ -141,6 +141,7 @@ export default async function HowItWorksPage({ searchParams }: { searchParams: P
             key={t.key}
             href={tabHref(t.key)}
             scroll={false}
+            replace
             className={cn(
               'flex-1 rounded-full px-1.5 py-2 text-center text-[12.5px]',
               tab === t.key ? 'bg-paper-white font-bold text-espresso-950 shadow-sm' : 'font-semibold text-espresso-400'
