@@ -56,6 +56,49 @@ export async function updateGroupNotificationPrefs(
   return { data: null };
 }
 
+const AVATAR_BUCKET = 'avatars';
+
+/** FormData, not a bare File — the reliable Server Action pattern for file payloads (see
+ * proposeResolution in lib/actions/resolution.ts). The client has already run the file through
+ * compressAvatarImage(), so this just uploads it to a fixed, deterministic path and flips the
+ * caller's own avatar_updated_at. Upsert means a re-upload overwrites the same object rather than
+ * accumulating orphans, and avatar_updated_at is what busts the cache on the rendered URL. */
+export async function uploadAvatar(formData: FormData): Promise<ActionResult<null>> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not signed in.' };
+
+  const file = formData.get('avatar');
+  if (!(file instanceof File)) return { error: 'No photo received.' };
+
+  const admin = createAdminClient();
+  const { error: uploadError } = await admin.storage
+    .from(AVATAR_BUCKET)
+    .upload(`${user.id}.jpg`, file, { contentType: 'image/jpeg', upsert: true });
+  if (uploadError) return { error: 'Could not upload the photo. Try again.' };
+
+  const result = await runRpc<null>(await supabase.rpc('set_avatar_uploaded', { p_uploaded: true }));
+  if (result.error) return result;
+  revalidatePath('/profile');
+  revalidatePath('/profile/account');
+  return { data: null };
+}
+
+/** Clears avatar_updated_at rather than deleting the underlying Storage object — a re-upload
+ * overwrites the same fixed path anyway, and userAvatarSrc() already renders nothing once the
+ * timestamp is null, same "return null rather than a broken image" convention groupAvatarSrc()
+ * uses for a retired group logo key. */
+export async function removeAvatar(): Promise<ActionResult<null>> {
+  const supabase = await createClient();
+  const result = await runRpc<null>(await supabase.rpc('set_avatar_uploaded', { p_uploaded: false }));
+  if (result.error) return result;
+  revalidatePath('/profile');
+  revalidatePath('/profile/account');
+  return { data: null };
+}
+
 /**
  * Two-part deletion: delete_account() (run as the user, via their own
  * client) handles every public-schema consequence — refunding open bets,
