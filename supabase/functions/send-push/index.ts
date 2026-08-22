@@ -317,6 +317,40 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
     };
   }
 
+  // The general (any-group) inactivity sweep's three staged notices, distinct from
+  // the intermission-specific event above: no season involved, so the copy talks
+  // about markets/bets and links at the group hub rather than /intermission. All
+  // three point at cancelling rather than "start a market" - create_market and
+  // join_group both reject a group with deletion_scheduled_at set, so the only way
+  // to actually stop this once it's scheduled is the owner calling
+  // cancel_group_deletion() from the banner on the group page.
+  if (event.event_type === 'group_deletion_notice_14d') {
+    const group = await groupRow(event.group_id);
+    return {
+      title: group.name,
+      body: `Nobody's started a market or placed a bet in ${group.name} for 90 days, so it'll be deleted for good in 14 days unless the owner cancels it.`,
+      url: `/groups/${event.group_id}`,
+    };
+  }
+
+  if (event.event_type === 'group_deletion_notice_7d') {
+    const group = await groupRow(event.group_id);
+    return {
+      title: group.name,
+      body: `${group.name} will be deleted for inactivity in 7 days unless the owner cancels it.`,
+      url: `/groups/${event.group_id}`,
+    };
+  }
+
+  if (event.event_type === 'group_deletion_notice_1d') {
+    const group = await groupRow(event.group_id);
+    return {
+      title: group.name,
+      body: `${group.name} will be deleted for inactivity tomorrow unless the owner cancels it.`,
+      url: `/groups/${event.group_id}`,
+    };
+  }
+
   if (event.event_type === 'group_titles_updated') {
     const group = await groupRow(event.group_id);
     return {

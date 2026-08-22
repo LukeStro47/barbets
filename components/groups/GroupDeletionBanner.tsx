@@ -10,7 +10,7 @@ function daysLeft(iso: string): number {
   return Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000));
 }
 
-/** Shown group-wide once the owner has scheduled deletion — everyone gets a full 5 days to see final market states before the group actually disappears. Only the owner can undo it. */
+/** Shown group-wide once a deletion is scheduled — everyone gets to see final market states until it actually disappears. The grace period varies by which sweep scheduled it (5 days for the intermission/manual-adjacent flows, 14 for the general 90-day inactivity sweep), so the day count is always read from `deletionScheduledAt` rather than assumed. Only the owner can undo it. */
 export function GroupDeletionBanner({
   groupId,
   deletionScheduledAt,

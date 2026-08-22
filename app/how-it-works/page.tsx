@@ -274,8 +274,11 @@ export default async function HowItWorksPage({ searchParams }: { searchParams: P
             If closing time arrives with no bets at all, it&apos;s voided outright. Nothing to settle, nothing to refund.
           </ExplainerRow>
           <ExplainerRow title="The group being deleted">
-            Only the owner can do it. Every open market is voided and refunded first, and everyone gets five days to look at
-            the final board before it disappears.
+            Every open market is voided and refunded first. If the owner does it, it&apos;s immediate and there&apos;s no undo.
+          </ExplainerRow>
+          <ExplainerRow title="A group nobody's touched">
+            No market and no bet in 90 days gets a 14-day warning, with reminders at 7 days and the day before. Anyone can
+            start a market or place a bet to stay clear of it; once it&apos;s scheduled, only the owner can call it off.
           </ExplainerRow>
         </div>
       )}
