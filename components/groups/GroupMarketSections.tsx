@@ -35,10 +35,18 @@ export function GroupMarketSections({
   revealed: MarketCardData[];
   revealedNextCursor: SettledCursor | null;
 }) {
-  const [filter, setFilter] = useState<Filter>('open');
   const openEmpty = open.length === 0;
   const pendingEmpty = pendingSponsor.length === 0 && awaitingResolution.length === 0 && challenged.length === 0;
   const nothingActive = openEmpty && pendingEmpty;
+
+  // Default to the first tab, in open -> pending -> settled order, that actually has something
+  // in it — landing on an empty "Open" tab when everything's already settled just makes someone
+  // click through the other two tabs to find where the markets actually are.
+  const [filter, setFilter] = useState<Filter>(() => {
+    if (!openEmpty) return 'open';
+    if (!pendingEmpty) return 'pending';
+    return 'settled';
+  });
 
   // Later pages are kept separately from `revealed` rather than seeded into one piece of state,
   // so a server re-render (a reaction, a pull-to-refresh) still refreshes the first page instead
@@ -99,7 +107,7 @@ export function GroupMarketSections({
               <EmptyState
                 icon="🎲"
                 title="Nothing open right now"
-                subtitle="See what's already settled instead."
+                subtitle="Tap the + below to start one, or see what's already settled instead."
                 action={
                   <Button variant="outline" size="sm" onClick={() => setFilter('settled')}>
                     View settled
@@ -110,7 +118,7 @@ export function GroupMarketSections({
               <EmptyState
                 icon="🎲"
                 title="Nothing open right now"
-                subtitle="Something's still pending, though."
+                subtitle="Tap the + below to start one, or check what's still pending."
                 action={
                   <Button variant="outline" size="sm" onClick={() => setFilter('pending')}>
                     View pending

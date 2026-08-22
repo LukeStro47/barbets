@@ -107,14 +107,17 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
             height={96}
             className="pointer-events-none absolute -top-4 -right-4 rotate-[-10deg] opacity-[0.12]"
           />
-          {/* In play sits under the free-to-bet total rather than off to its right: the two are
-              the same pile of tokens split in two, so reading down from the headline number to
-              "and this much is already committed" tells that story. Side by side they read as
-              two unrelated figures competing for the same line. */}
+          {/* In play sits under the free-to-bet total rather than off to its right: reading down
+              from the headline number to "and this much is already committed" tells that story
+              better than two unrelated figures competing for the same line. It's informational
+              only, not subtracted from the headline above — place_bet already deducts a bet's
+              stake from memberships.balance the instant it's placed (see the money rules in
+              ARCHITECTURE.md), so `balance` is already exactly what's free to bet; subtracting
+              pendingTokens from it here double-counted every open stake. */}
           <div className="relative">
             <p className="text-[10.5px] font-bold tracking-[0.12em] text-honey-400 uppercase">Free to bet</p>
             <p className="mt-0.5 font-display text-[38px] leading-none font-extrabold tracking-[-0.02em] text-paper-white">
-              {formatTokens(Math.max(0, (membership?.balance ?? 0) - pendingTokens))}
+              {formatTokens(membership?.balance ?? 0)}
             </p>
             {pendingTokens > 0 && (
               <p className="mt-2 flex items-baseline gap-1.5 text-[13px] font-semibold text-paper-white/45">
