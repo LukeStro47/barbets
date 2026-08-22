@@ -31,8 +31,8 @@ describe('get_member_stats', () => {
   let group: GroupRow;
 
   beforeAll(async () => {
-    users = await createTestUsers('mstat', ['owner', 'sponsor', 'bettor', 'left', 'removed']);
-    group = await setupGroup(users.owner, [users.sponsor, users.bettor, users.left, users.removed], { seedAmount: 1000 });
+    users = await createTestUsers('mstat', ['owner', 'sponsor', 'bettor', 'loser', 'left', 'removed']);
+    group = await setupGroup(users.owner, [users.sponsor, users.bettor, users.loser, users.left, users.removed], { seedAmount: 1000 });
   });
 
   afterAll(async () => {
@@ -43,8 +43,13 @@ describe('get_member_stats', () => {
     const market = await createMarket(users.owner, group.id, { closesInMs: 60000 });
     await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
     await fastForwardCloseTime(market.id, 60000);
+    // A real opponent on the losing side, not a one-sided market — payout would otherwise equal
+    // stake exactly (this codebase's own documented "not a win worth quoting" case), which nets
+    // to zero and has no real multiple, both of which this test wants to check are nonzero.
     const { error: betErr } = await users.bettor.client.rpc('place_bet', { p_market_id: market.id, p_side: 'yes', p_amount: 100 });
     expect(betErr).toBeNull();
+    const { error: loserBetErr } = await users.loser.client.rpc('place_bet', { p_market_id: market.id, p_side: 'no', p_amount: 50 });
+    expect(loserBetErr).toBeNull();
 
     await users.sponsor.client.rpc('propose_resolution', {
       p_market_id: market.id,
