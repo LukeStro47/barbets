@@ -2,6 +2,7 @@ import { createClient, requireUser } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { ChangeEmailForm, ChangePasswordForm } from '@/components/profile/AccountForms';
+import { AvatarUpload } from '@/components/profile/AvatarUpload';
 import { DeleteAccountButton } from '@/components/profile/DeleteAccountButton';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 
@@ -12,9 +13,18 @@ export default async function AccountPage() {
   const supabase = await createClient();
   const user = await requireUser(supabase);
 
+  const { data: userRow } = await supabase.from('users').select('avatar_updated_at').eq('id', user.id).single();
+
   return (
     <main className="mx-auto max-w-lg space-y-6 px-5 py-8">
       <PageHeader title="Account & security" backHref="/profile" backLabel="Profile" />
+
+      <Card>
+        {/* No single nickname to fall back on here — this page is deliberately not group-scoped,
+            and a nickname is per-membership. The email's local part stands in for the initials
+            fallback only; it's never shown as text. */}
+        <AvatarUpload userId={user.id} nickname={user.email?.split('@')[0] ?? '?'} avatarUpdatedAt={userRow?.avatar_updated_at ?? null} />
+      </Card>
 
       <Card className="space-y-4">
         <ChangeEmailForm currentEmail={user?.email ?? ''} />

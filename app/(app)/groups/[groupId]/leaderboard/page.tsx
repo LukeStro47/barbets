@@ -4,11 +4,13 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Mention } from '@/components/ui/Mention';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 import { LeaderboardLenses } from '@/components/groups/LeaderboardLenses';
 import { AwardGlyph } from '@/components/groups/AwardGlyph';
 import { ChevronRightIcon } from '@/components/ui/icons';
 import { formatTokens, formatOrdinal, numberWord } from '@/lib/formatNumber';
 import { titlesByUser, TITLE_ORDER, type GroupTitleRow } from '@/lib/titles';
+import { cn } from '@/lib/cn';
 
 function medal(rank: number): string {
   return rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : `${rank + 1}.`;
@@ -77,6 +79,17 @@ export default async function LeaderboardPage({
   }
   members.sort((a, b) => b.balance - a.balance);
 
+  // One batched lookup for every member's avatar rather than a query inside the row loop below
+  // (see lib/groupFeed.ts's "no query inside a per-market loop" rule, same idea applied here).
+  const { data: avatarRows } = await supabase
+    .from('users')
+    .select('id, avatar_updated_at')
+    .in(
+      'id',
+      members.map((m) => m.user_id)
+    );
+  const avatarByUser = new Map((avatarRows ?? []).map((r) => [r.id, r.avatar_updated_at as string | null]));
+
   const { data: titleRows } = await supabase.from('group_titles').select('title_key, user_id, stat_value').eq('group_id', groupId);
   const badges = titlesByUser((titleRows ?? []) as GroupTitleRow[]);
   const yourTitleCount = ((titleRows ?? []) as GroupTitleRow[]).filter((r) => r.user_id && r.user_id === user?.id).length;
@@ -118,9 +131,13 @@ export default async function LeaderboardPage({
     <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-espresso-900 to-espresso-700 p-[18px]">
       <div className="pointer-events-none absolute inset-0 opacity-50 [background:radial-gradient(circle_at_90%_0%,rgba(232,163,61,0.3),rgba(232,163,61,0)_60%)]" />
       <div className="relative flex items-center gap-3.5">
-        <span className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-honey-300/50 bg-honey-500/[0.18] text-[15px] font-extrabold text-honey-300">
-          {leader.nickname.slice(0, 2).toUpperCase()}
-        </span>
+        <UserAvatar
+          userId={leader.user_id}
+          nickname={leader.nickname}
+          avatarUpdatedAt={avatarByUser.get(leader.user_id)}
+          className="h-[52px] w-[52px] border-[1.5px] border-honey-300/50 text-[15px]"
+          fallbackClassName="bg-honey-500/[0.18] text-honey-300"
+        />
         <span className="min-w-0 flex-1">
           <span className="block text-[10px] font-extrabold tracking-[0.1em] text-honey-300 uppercase">Out in front</span>
           <Mention nickname={leader.nickname} className="mt-0.5 block truncate text-[19px] font-extrabold tracking-[-0.015em] text-paper-white" />
@@ -168,13 +185,13 @@ export default async function LeaderboardPage({
               />
               <span className="absolute inset-0 flex items-center gap-2.5 px-3">
                 <span className="w-5 shrink-0 text-center text-xs font-extrabold text-espresso-500">{medal(i)}</span>
-                <span
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-paper-white text-xs font-extrabold text-espresso-700 ${
-                    isMe ? 'border-2 border-honey-500' : 'border-[1.5px] border-espresso-100'
-                  }`}
-                >
-                  {m.nickname.slice(0, 2).toUpperCase()}
-                </span>
+                <UserAvatar
+                  userId={m.user_id}
+                  nickname={m.nickname}
+                  avatarUpdatedAt={avatarByUser.get(m.user_id)}
+                  className={cn('h-9 w-9 text-xs', isMe ? 'border-2 border-honey-500' : 'border-[1.5px] border-espresso-100')}
+                  fallbackClassName="bg-paper-white text-espresso-700"
+                />
                 <span className="min-w-0 flex-1">
                   <Mention nickname={m.nickname} titles={badges.get(m.user_id)} className="block truncate text-[13.5px] font-bold text-espresso-900" />
                   {(m.balance === 0 || m.status !== 'active') && (
