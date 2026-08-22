@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { AwardGlyph } from '@/components/groups/AwardGlyph';
 import { ChevronRightIcon } from '@/components/ui/icons';
+import { SwipeRail } from '@/components/ui/SwipeRail';
 import { TITLE_META, type TitleKey } from '@/lib/titles';
 import { numberWordCapitalized } from '@/lib/formatNumber';
 import { cn } from '@/lib/cn';
@@ -11,60 +12,27 @@ import { cn } from '@/lib/cn';
  * Holding three used to mean three dark blocks pushing everyone else's titles below the fold; on a
  * rail they read as a collection, which is what holding several of them actually is. */
 export function AwardsRail({ titles }: { titles: { key: TitleKey; stat: string }[] }) {
-  const [active, setActive] = useState(0);
-
   return (
-    <div>
-      <div
-        onScroll={(e) => {
-          // Measured, not hard-coded: the cards are a percentage of the viewport now, so the step
-          // between snap positions isn't a number this file can know. Rounding rather than
-          // flooring so the dot flips at the halfway point of a drag, which is where the eye has
-          // already committed to the next card.
-          const step = (e.currentTarget.firstElementChild?.clientWidth ?? 0) + 10;
-          if (step <= 10) return;
-          const index = Math.round(e.currentTarget.scrollLeft / step);
-          if (index !== active) setActive(Math.min(Math.max(index, 0), titles.length - 1));
-        }}
-        // scroll-pl-5 matches the px-5: without it, mandatory snapping aligns the first card to
-        // the scrollport's border edge and immediately scrolls the padding away, parking every
-        // card 20px left of the heading above them.
-        className="-mx-5 flex scroll-pl-5 gap-2.5 overflow-x-auto px-5 pb-1 [scroll-snap-type:x_mandatory] [scrollbar-width:none]"
-      >
-        {titles.map((t) => (
-          <div
-            key={t.key}
-            // Half the gutter-to-gutter width, so two titles are on screen at once instead of one
-            // and a sliver.
-            className="relative w-[calc((100%-10px)/2)] shrink-0 overflow-hidden rounded-[20px] bg-gradient-to-br from-espresso-900 to-espresso-700 p-3.5 [scroll-snap-align:start]"
-          >
-            <div className="pointer-events-none absolute inset-0 opacity-50 [background:radial-gradient(circle_at_85%_6%,rgba(232,163,61,0.34),rgba(232,163,61,0)_60%)]" />
-            <div className="relative">
-              <span className="flex h-11 w-11 items-center justify-center rounded-full border-[1.5px] border-honey-300/45 bg-honey-500/16">
-                <AwardGlyph titleKey={t.key} stroke="var(--color-honey-300)" size={22} />
-              </span>
-              <p className="mt-3 text-[10px] font-extrabold tracking-[0.1em] text-honey-300 uppercase">Yours</p>
-              <p className="mt-[3px] text-[15.5px] leading-[1.15] font-extrabold tracking-[-0.01em] text-balance text-paper-white">
-                {TITLE_META[t.key].label}
-              </p>
-              <p className="mt-1 text-[11.5px] leading-[1.35] text-paper-white/60">{t.stat}</p>
-            </div>
+    <SwipeRail>
+      {titles.map((t) => (
+        <div
+          key={t.key}
+          className="relative w-full shrink-0 overflow-hidden rounded-[20px] bg-gradient-to-br from-espresso-900 to-espresso-700 p-3.5 [scroll-snap-align:start]"
+        >
+          <div className="pointer-events-none absolute inset-0 opacity-50 [background:radial-gradient(circle_at_85%_6%,rgba(232,163,61,0.34),rgba(232,163,61,0)_60%)]" />
+          <div className="relative">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full border-[1.5px] border-honey-300/45 bg-honey-500/16">
+              <AwardGlyph titleKey={t.key} stroke="var(--color-honey-300)" size={22} />
+            </span>
+            <p className="mt-3 text-[10px] font-extrabold tracking-[0.1em] text-honey-300 uppercase">Yours</p>
+            <p className="mt-[3px] text-[15.5px] leading-[1.15] font-extrabold tracking-[-0.01em] text-balance text-paper-white">
+              {TITLE_META[t.key].label}
+            </p>
+            <p className="mt-1 text-[11.5px] leading-[1.35] text-paper-white/60">{t.stat}</p>
           </div>
-        ))}
-        <span className="w-1 shrink-0" />
-      </div>
-
-      {titles.length > 1 && (
-        <div className="mt-2.5 flex justify-center gap-[5px]">
-          {titles.map((t, i) => (
-            <span
-              key={t.key}
-              className={cn('h-1 rounded-full transition-all', i === active ? 'w-4 bg-honey-600' : 'w-1 bg-espresso-200')}
-            />
-          ))}
         </div>
-      )}
-    </div>
+      ))}
+    </SwipeRail>
   );
 }
 

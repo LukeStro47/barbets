@@ -19,8 +19,9 @@ import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { GroupSwitcher } from '@/components/profile/GroupSwitcher';
 import { ShareRecordCard } from '@/components/profile/ShareRecordCard';
+import { SwipeRail } from '@/components/ui/SwipeRail';
 import { formatTokens, formatOrdinal } from '@/lib/formatNumber';
-import { MARKET_TYPE_LABEL } from '@/lib/marketType';
+import { cn } from '@/lib/cn';
 
 const LINKS = [
   { label: 'How it works', href: '/how-it-works', Icon: InfoIcon },
@@ -336,12 +337,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
         {openCount === 0 ? (
           <EmptyState icon="🎲" title="Nothing riding right now" subtitle="Bets you've got open show up here." />
         ) : (
-          <div
-            // scroll-pl-5 matches the px-5: without it, mandatory snapping aligns the first card
-            // to the scrollport's border edge and immediately scrolls the padding away, parking
-            // every card 20px left of the "Still open" heading above them.
-            className="-mx-5 flex scroll-pl-5 gap-2.5 overflow-x-auto px-5 pb-3 [scroll-snap-type:x_mandatory] [scrollbar-width:none]"
-          >
+          <SwipeRail>
             {openBets.map((b: any) => {
               const market = b.markets;
               const sideLabel = (b.option_id ? openOptionLabelById.get(b.option_id) ?? '' : b.side ?? '').toUpperCase();
@@ -349,20 +345,17 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
                 <Link
                   key={b.id}
                   href={`/groups/${market.group_id}/markets/${market.id}`}
-                  className="flex w-[calc((100%-10px)/2)] shrink-0 flex-col justify-between gap-3 rounded-[20px] border border-espresso-100 bg-paper-white p-3.5 [scroll-snap-align:start]"
+                  className="flex w-full shrink-0 flex-col justify-between gap-3 rounded-[20px] border border-espresso-100 bg-paper-white p-3.5 [scroll-snap-align:start]"
                 >
                   <span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="inline-flex shrink-0 items-center rounded-full bg-espresso-50 px-2.5 py-1 text-[10px] font-extrabold tracking-[0.06em] text-espresso-500 uppercase">
-                        {MARKET_TYPE_LABEL[market.market_type as keyof typeof MARKET_TYPE_LABEL]}
+                    {showGroupLabels && (
+                      <span className="block text-[10px] font-extrabold tracking-[0.05em] text-espresso-300 uppercase">
+                        {groupNameById.get(market.group_id)}
                       </span>
-                      {showGroupLabels && (
-                        <span className="min-w-0 truncate text-[10px] font-extrabold tracking-[0.05em] text-espresso-300 uppercase">
-                          {groupNameById.get(market.group_id)}
-                        </span>
-                      )}
+                    )}
+                    <span className={cn('block text-balance text-[14.5px] font-bold leading-[1.32] text-espresso-900', showGroupLabels && 'mt-1')}>
+                      {market.title}
                     </span>
-                    <span className="mt-2 block text-balance text-[14.5px] font-bold leading-[1.32] text-espresso-900">{market.title}</span>
                   </span>
                   <span className="flex items-center justify-between gap-2.5 border-t border-espresso-50 pt-3">
                     <span className="min-w-0">
@@ -381,8 +374,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
                 </Link>
               );
             })}
-            <span className="w-1 shrink-0" />
-          </div>
+          </SwipeRail>
         )}
       </div>
 
