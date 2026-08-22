@@ -199,6 +199,46 @@ describe('delete_account', () => {
       await cleanupTestUsers(users);
     }
   });
+
+  test('a user who has triggered a notification event can still delete their account, and the event survives with a null actor', async () => {
+    const users = await createTestUsers('delacct3', ['owner', 'sponsor']);
+    try {
+      const group = await setupGroup(users.owner, [users.sponsor]);
+      const market = await createMarket(users.owner, group.id, { closesInMs: 60000 });
+      // sponsor_market sets actor_id = sponsor on the market_opened event — the group is still
+      // very much alive at this point, unlike the previous test's cleanup-time deletion, so this
+      // is the real self-service deleteAccount() scenario: the row that would reference the
+      // deleted user isn't going away via any group-level cascade.
+      const { error: sponsorErr } = await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+      expect(sponsorErr).toBeNull();
+
+      const { data: eventBefore } = await adminClient
+        .from('notification_events')
+        .select('id, actor_id')
+        .eq('market_id', market.id)
+        .eq('event_type', 'market_opened')
+        .single();
+      expect(eventBefore!.actor_id).toBe(users.sponsor.id);
+
+      // The real two-step deleteAccount() flow: the public-schema cleanup RPC first (as the
+      // user), then the service-role auth deletion (which is what used to fail here — see
+      // 20260822160000_notification_events_actor_fk_set_null.sql).
+      const { error: cleanupErr } = await users.sponsor.client.rpc('delete_account');
+      expect(cleanupErr).toBeNull();
+      const { error: authDeleteErr } = await adminClient.auth.admin.deleteUser(users.sponsor.id);
+      expect(authDeleteErr).toBeNull();
+
+      const { data: eventAfter } = await adminClient
+        .from('notification_events')
+        .select('id, actor_id')
+        .eq('id', eventBefore!.id)
+        .single();
+      expect(eventAfter!.actor_id).toBeNull();
+    } finally {
+      // sponsor is already gone; cleanupTestUsers tolerates a second delete attempt failing.
+      await cleanupTestUsers(users);
+    }
+  });
 });
 
 describe('token allocation bounds', () => {
