@@ -780,7 +780,7 @@ function DeleteGroupSheet({ groupId, groupName, onClose }: { groupId: string; gr
       {error && <p className="text-sm text-danger-700">{error}</p>}
       <div className="pt-0.5">
         <ConsequenceRow dotClassName="bg-danger-500">Every open market is voided and refunded first.</ConsequenceRow>
-        <ConsequenceRow dotClassName="bg-espresso-800">Everyone keeps read access for 5 days, then it&apos;s gone.</ConsequenceRow>
+        <ConsequenceRow dotClassName="bg-espresso-800">The group disappears immediately, for everyone.</ConsequenceRow>
         <ConsequenceRow dotClassName="bg-espresso-200" isLast>
           Awards, seasons and history go with it. This can&apos;t be undone.
         </ConsequenceRow>
