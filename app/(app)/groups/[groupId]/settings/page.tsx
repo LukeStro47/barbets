@@ -111,15 +111,26 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
               <InviteCodeActions groupId={groupId} inviteCode={group!.invite_code} canRegenerate />
             </div>
             {groupSettings && (
-              <SettingRow
-                label="Accepting new members"
-                consequence={
-                  groupSettings.accepting_members
-                    ? 'Anyone holding the code can join.'
-                    : 'The code stays live, but nobody new can join with it.'
-                }
-                value={groupSettings.accepting_members ? 'Yes' : 'Paused'}
-              />
+              <>
+                <SettingRow
+                  label="Accepting new members"
+                  consequence={
+                    groupSettings.accepting_members
+                      ? 'Anyone holding the code can join.'
+                      : 'The code stays live, but nobody new can join with it.'
+                  }
+                  value={groupSettings.accepting_members ? 'Yes' : 'Paused'}
+                />
+                <SettingRow
+                  label="Join message"
+                  consequence={
+                    groupSettings.join_message
+                      ? 'Shown to a new member the moment they finish joining.'
+                      : 'Nothing shows when someone new joins.'
+                  }
+                  value={groupSettings.join_message ? 'Set' : 'None'}
+                />
+              </>
             )}
           </SettingsCard>
         </section>

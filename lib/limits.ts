@@ -31,3 +31,7 @@ export const MARKET_TITLE_COUNTER_THRESHOLD = MARKET_TITLE_MAX_LENGTH - 30;
     which would seed a group nobody can ever bet in. */
 export const TOKEN_ALLOCATION_MAX = 1_000_000;
 export const TOKEN_ALLOCATION_MIN = 1;
+
+/** The owner's custom message shown to a new member right after they join. Short on purpose: it's a
+    one-screen modal, not a place to paste in the group's whole set of house rules. */
+export const JOIN_MESSAGE_MAX_LENGTH = 240;
