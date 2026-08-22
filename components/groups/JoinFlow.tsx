@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { joinGroup } from '@/lib/actions/groups';
+import { joinGroup, getGroupJoinMessage } from '@/lib/actions/groups';
 import { Button } from '@/components/ui/Button';
 import { GroupAvatar } from '@/components/ui/GroupAvatar';
 import { Modal } from '@/components/ui/Modal';
@@ -51,6 +51,7 @@ export function JoinFlow({
   const [nickname, setNickname] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [welcome, setWelcome] = useState<{ groupId: string; message: string } | null>(null);
 
   if (step === 'confirm') {
     return (
@@ -149,15 +150,35 @@ export function JoinFlow({
             const result = await joinGroup(inviteCode, nickname.trim());
             if (result.error) {
               setError(result.error);
+              return;
+            }
+            localStorage.setItem(JUST_JOINED_GROUP_KEY, '1');
+            const groupId = result.data!.group_id;
+            // Best-effort: a failure here should never block someone who already joined
+            // successfully from landing in their new group.
+            const messageResult = await getGroupJoinMessage(groupId);
+            if (!messageResult.error && messageResult.data) {
+              setWelcome({ groupId, message: messageResult.data });
             } else {
-              localStorage.setItem(JUST_JOINED_GROUP_KEY, '1');
-              router.push(`/groups/${result.data!.group_id}`);
+              router.push(`/groups/${groupId}`);
             }
           })
         }
       >
         Join {groupName}
       </Button>
+
+      {welcome && (
+        <Modal onClose={() => router.push(`/groups/${welcome.groupId}`)}>
+          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">
+            Welcome to {groupName}
+          </p>
+          <p className="whitespace-pre-wrap text-sm leading-[1.5] text-espresso-600">{welcome.message}</p>
+          <Button className="w-full" onClick={() => router.push(`/groups/${welcome.groupId}`)}>
+            Continue
+          </Button>
+        </Modal>
+      )}
     </div>
   );
 }

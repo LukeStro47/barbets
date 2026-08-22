@@ -127,6 +127,8 @@ export interface GroupSettings {
   resolution_window_hours: number;
   /** Default true. When false, create_market() opens a market directly instead of routing it through pending_sponsor. */
   require_endorsement: boolean;
+  /** Shown to a new member in a modal right after they join. Null when the owner hasn't set one. */
+  join_message: string | null;
 }
 
 export async function updateGroupSettings(
@@ -144,6 +146,7 @@ export async function updateGroupSettings(
     allowHedgedBets: boolean;
     resolutionWindowHours: number;
     requireEndorsement: boolean;
+    joinMessage?: string | null;
   }
 ): Promise<ActionResult<GroupSettings>> {
   const supabase = await createClient();
@@ -162,12 +165,20 @@ export async function updateGroupSettings(
       p_season_custom_ends_at: input.seasonCustomEndsAt ?? null,
       p_resolution_window_hours: input.resolutionWindowHours,
       p_require_endorsement: input.requireEndorsement,
+      p_join_message: input.joinMessage ?? null,
     })
   );
   if (result.error) return result;
   revalidatePath(`/groups/${groupId}/settings`);
   revalidatePath(`/groups/${groupId}`);
   return result;
+}
+
+/** Read-only: the owner's welcome message for new joiners, or null. Called by JoinFlow right after
+    a successful join, not part of join_group()'s own return value (see the migration's comment). */
+export async function getGroupJoinMessage(groupId: string): Promise<ActionResult<string | null>> {
+  const supabase = await createClient();
+  return runRpc<string | null>(await supabase.rpc('get_group_join_message', { p_group_id: groupId }));
 }
 
 export async function transferOwnership(groupId: string, newOwnerUserId: string): Promise<ActionResult<Group>> {

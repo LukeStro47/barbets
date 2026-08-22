@@ -15,7 +15,7 @@ import { SEASON_LENGTH_HINTS, SEASON_LENGTH_SHORT_LABEL, type SeasonLength } fro
 import { COMMON_TIMEZONES, friendlyTimezoneName } from '@/lib/timezone';
 import { Mention } from '@/components/ui/Mention';
 import { formatTokens, formatTokenInputValue } from '@/lib/formatNumber';
-import { TOKEN_ALLOCATION_MAX } from '@/lib/limits';
+import { TOKEN_ALLOCATION_MAX, JOIN_MESSAGE_MAX_LENGTH } from '@/lib/limits';
 import { inviteUrl } from '@/lib/appOrigin';
 import type { GroupSettings } from '@/lib/actions/groups';
 
@@ -97,6 +97,7 @@ export function EditSettingsForm({
   const [allowHedgedBets, setAllowHedgedBets] = useState(settings.allow_hedged_bets);
   const [resolutionWindowHours, setResolutionWindowHours] = useState(settings.resolution_window_hours);
   const [requireEndorsement, setRequireEndorsement] = useState(settings.require_endorsement);
+  const [joinMessage, setJoinMessage] = useState(settings.join_message ?? '');
 
   const creatorPctValid = Number.isFinite(creatorPayoutPct) && creatorPayoutPct >= 0 && creatorPayoutPct <= 100;
   const openMarketsPct = creatorPctValid ? 100 - creatorPayoutPct : '—';
@@ -121,6 +122,7 @@ export function EditSettingsForm({
         allowHedgedBets,
         resolutionWindowHours,
         requireEndorsement,
+        joinMessage,
       });
       if (result.error) {
         setError(result.error);
@@ -249,6 +251,26 @@ export function EditSettingsForm({
               checked={acceptingMembers}
               onChange={() => setAcceptingMembers((v) => !v)}
             />
+            <div className={rowClasses}>
+              <label className={rowLabelClasses} htmlFor="join-message">
+                Custom join message
+              </label>
+              <p className={`mb-2 mt-0.5 ${rowHelpClasses}`}>
+                Shown in a modal to a new member the moment they finish joining. Leave it blank for none.
+              </p>
+              <textarea
+                id="join-message"
+                value={joinMessage}
+                onChange={(e) => setJoinMessage(e.target.value)}
+                maxLength={JOIN_MESSAGE_MAX_LENGTH}
+                rows={3}
+                placeholder="Welcome to the group. House rule: no crying about bad beats."
+                className={inputClasses}
+              />
+              <span className="mt-1 block text-right text-[11px] text-espresso-400">
+                {joinMessage.length} / {JOIN_MESSAGE_MAX_LENGTH}
+              </span>
+            </div>
             {/* Only meaningful while seasons are off. Once they're on, each season carries its own
                 betting switch and this one stops being the real gate. */}
             {!seasonsEnabled && (
