@@ -35,3 +35,11 @@ export const TOKEN_ALLOCATION_MIN = 1;
 /** The owner's custom message shown to a new member right after they join. Short on purpose: it's a
     one-screen modal, not a place to paste in the group's whole set of house rules. */
 export const JOIN_MESSAGE_MAX_LENGTH = 240;
+
+/** A custom award's owner-chosen name — short enough to sit next to an emoji on a card the same
+    size as the 8 fixed titles' labels ("The Oracle", "Risk Taker", ...). */
+export const CUSTOM_AWARD_LABEL_MAX_LENGTH = 30;
+
+/** Bounds the added recompute cost every 3rd resolved market now carries, one query per custom
+    award per group. */
+export const CUSTOM_AWARD_MAX_PER_GROUP = 5;
