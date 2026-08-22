@@ -223,6 +223,7 @@ export function BottomNav({
   const activeSlot = !activeTab ? null : inGroup ? SLOT[activeTab] : activeTab === 'you' ? 2 : activeTab === 'home' ? 0 : null;
   const indicatorLeft = activeSlot !== null ? `calc(${activeSlot * slotPct}% + ${slotPct / 2}% - 11px)` : null;
   const plusLeftPct = inGroup ? 40 : slotPct;
+  const bettingOff = !!currentGroup && !bettingEnabledByGroup[currentGroup.id];
 
   return (
     <>
@@ -476,7 +477,8 @@ export function BottomNav({
             <span
               className={cn(
                 'flex h-[46px] w-[46px] items-center justify-center rounded-full bg-espresso-900 transition-transform duration-[380ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] motion-reduce:transition-none',
-                createOpen && 'rotate-45'
+                createOpen && 'rotate-45',
+                bettingOff && 'opacity-35'
               )}
             >
               <PlusIcon className="h-[19px] w-[19px] text-honey-300" />
