@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { createClient, requireUser } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -27,7 +28,7 @@ export default async function AwardsPage({ params }: { params: Promise<{ groupId
   const [{ data: settings }, { data: titleRows }, { data: members }] = await Promise.all([
     supabase.from('group_settings').select('seasons_enabled').eq('group_id', groupId).single(),
     supabase.from('group_titles').select('title_key, user_id, stat_value').eq('group_id', groupId),
-    supabase.from('memberships').select('user_id, nickname').eq('group_id', groupId).neq('status', 'removed'),
+    supabase.from('memberships').select('id, user_id, nickname').eq('group_id', groupId).neq('status', 'removed'),
   ]);
 
   const { data: activeSeason } = settings?.seasons_enabled
@@ -35,6 +36,7 @@ export default async function AwardsPage({ params }: { params: Promise<{ groupId
     : { data: null };
 
   const nicknameByUserId = new Map((members ?? []).map((m) => [m.user_id, m.nickname]));
+  const membershipIdByUserId = new Map((members ?? []).map((m) => [m.user_id, m.id]));
   const rowsByKey = new Map(((titleRows ?? []) as GroupTitleRow[]).map((r) => [r.title_key, r]));
 
   const heldKeys = TITLE_ORDER.filter((k) => rowsByKey.get(k)?.user_id);
@@ -94,8 +96,9 @@ export default async function AwardsPage({ params }: { params: Promise<{ groupId
             {otherKeys.map((key) => {
               const meta = TITLE_META[key];
               const row = rowsByKey.get(key)!;
-              return (
-                <div key={key} className="flex items-center gap-[11px] rounded-2xl border border-espresso-100 bg-paper-white px-3.5 py-3">
+              const holderMembershipId = membershipIdByUserId.get(row.user_id!);
+              const content = (
+                <>
                   <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-honey-50">
                     <AwardGlyph titleKey={key} stroke="var(--color-honey-700)" size={20} />
                   </span>
@@ -110,6 +113,19 @@ export default async function AwardsPage({ params }: { params: Promise<{ groupId
                     />
                     <span className="block text-[11px] font-extrabold text-honey-700">{meta.format(row.stat_value)}</span>
                   </span>
+                </>
+              );
+              const rowClassName = 'flex items-center gap-[11px] rounded-2xl border border-espresso-100 bg-paper-white px-3.5 py-3';
+              // A holder is always a current, non-removed member as of the last title recompute —
+              // the fallback to a plain (unlinked) row only matters for the rare window where
+              // someone's left/been removed since, since titles only recompute every 3rd resolution.
+              return holderMembershipId ? (
+                <Link key={key} href={`/groups/${groupId}/members/${holderMembershipId}`} className={rowClassName}>
+                  {content}
+                </Link>
+              ) : (
+                <div key={key} className={rowClassName}>
+                  {content}
                 </div>
               );
             })}

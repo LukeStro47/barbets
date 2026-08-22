@@ -130,7 +130,7 @@ export default async function LeaderboardPage({
   const hero = leader && (
     <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-espresso-900 to-espresso-700 p-[18px]">
       <div className="pointer-events-none absolute inset-0 opacity-50 [background:radial-gradient(circle_at_90%_0%,rgba(232,163,61,0.3),rgba(232,163,61,0)_60%)]" />
-      <div className="relative flex items-center gap-3.5">
+      <Link href={`/groups/${groupId}/members/${leader.id}`} className="relative flex items-center gap-3.5">
         <UserAvatar
           userId={leader.user_id}
           nickname={leader.nickname}
@@ -143,7 +143,7 @@ export default async function LeaderboardPage({
           <Mention nickname={leader.nickname} className="mt-0.5 block truncate text-[19px] font-extrabold tracking-[-0.015em] text-paper-white" />
           <span className="mt-0.5 block text-xs text-paper-white/55">{formatTokens(leader.balance)} tokens</span>
         </span>
-      </div>
+      </Link>
       <div className="relative mt-[15px] flex gap-3 border-t border-white/10 pt-3.5">
         <span className="flex-1">
           <span className="block text-xl font-extrabold tabular-nums text-paper-white">{you ? formatOrdinal(yourRank) : '—'}</span>
@@ -183,7 +183,7 @@ export default async function LeaderboardPage({
                 className={`absolute inset-y-0 left-0 ${isMe ? 'bg-honey-500' : 'bg-honey-500/30'}`}
                 style={{ width: `${pct}%` }}
               />
-              <span className="absolute inset-0 flex items-center gap-2.5 px-3">
+              <Link href={`/groups/${groupId}/members/${m.id}`} className="absolute inset-0 flex items-center gap-2.5 px-3">
                 <span className="w-5 shrink-0 text-center text-xs font-extrabold text-espresso-500">{medal(i)}</span>
                 <UserAvatar
                   userId={m.user_id}
@@ -206,7 +206,7 @@ export default async function LeaderboardPage({
                 <span className="shrink-0 font-display text-[15px] font-extrabold tabular-nums text-espresso-900">
                   {formatTokens(m.balance)}
                 </span>
-              </span>
+              </Link>
             </div>
           );
         });
