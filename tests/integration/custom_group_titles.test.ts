@@ -31,6 +31,14 @@ function createTitle(caller: TestUser, groupId: string, overrides: Partial<{ lab
   });
 }
 
+/** Throws on failure rather than the usual {data,error} shape — a silently-failed cleanup delete
+    (e.g. calling as the wrong client) would otherwise leave a title behind and cascade into every
+    later test in this file via the 5-per-group cap, exactly as happened before this existed. */
+async function deleteTitle(owner: TestUser, id: string): Promise<void> {
+  const { error } = await owner.client.rpc('delete_custom_group_title', { p_id: id });
+  if (error) throw error;
+}
+
 describe('custom_group_titles', () => {
   let users: Record<string, TestUser>;
   let group: GroupRow;
@@ -82,7 +90,7 @@ describe('custom_group_titles', () => {
       const holder = await holderOf(row.id);
       expect(holder.user_id).toBeNull();
 
-      await adminClient.rpc('delete_custom_group_title', { p_id: row.id });
+      await deleteTitle(users.owner, row.id);
     });
 
     test('caps at 5 per group', async () => {
@@ -97,7 +105,7 @@ describe('custom_group_titles', () => {
       expect(sixthErr?.message).toMatch(/at most 5/);
 
       for (const id of created) {
-        await adminClient.rpc('delete_custom_group_title', { p_id: id });
+        await deleteTitle(users.owner, id);
       }
     });
   });
@@ -118,7 +126,7 @@ describe('custom_group_titles', () => {
       expect(holder.user_id).toBe(users.a.id);
       expect(Number(holder.stat_value)).toBe(2);
 
-      await adminClient.rpc('delete_custom_group_title', { p_id: row.id });
+      await deleteTitle(users.owner, row.id);
     });
 
     test('net picks the real all-time winner, not just whoever bet most', async () => {
@@ -138,7 +146,7 @@ describe('custom_group_titles', () => {
       expect(holder.user_id).toBe(users.a.id);
       expect(Number(holder.stat_value)).toBeGreaterThan(0);
 
-      await adminClient.rpc('delete_custom_group_title', { p_id: row.id });
+      await deleteTitle(users.owner, row.id);
     });
 
     test('times_subject only counts a subject once the market has resolved, never while it is still open', async () => {
@@ -166,7 +174,7 @@ describe('custom_group_titles', () => {
       expect(holder.user_id).toBe(users.subject.id);
       expect(Number(holder.stat_value)).toBe(1);
 
-      await adminClient.rpc('delete_custom_group_title', { p_id: row.id });
+      await deleteTitle(users.owner, row.id);
     });
   });
 
