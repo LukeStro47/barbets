@@ -5,7 +5,9 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Mention } from '@/components/ui/Mention';
 import { AwardGlyph } from '@/components/groups/AwardGlyph';
 import { AwardsRail, UnclaimedTitles } from '@/components/groups/AwardsSections';
+import { CustomAwardsSection } from '@/components/groups/CustomAwardsSection';
 import { TITLE_ORDER, TITLE_META, type GroupTitleRow } from '@/lib/titles';
+import type { CustomGroupTitle, CustomGroupTitleHolder } from '@/lib/customAwards';
 import { numberWord, numberWordCapitalized } from '@/lib/formatNumber';
 
 /** "@marta and @ros", "@marta, @ros and @jake", "@marta, @ros and two others" — the holders named
@@ -25,11 +27,21 @@ export default async function AwardsPage({ params }: { params: Promise<{ groupId
   const supabase = await createClient();
   const user = await requireUser(supabase);
 
-  const [{ data: settings }, { data: titleRows }, { data: members }] = await Promise.all([
+  const [{ data: settings }, { data: titleRows }, { data: members }, { data: group }, { data: customTitles }] = await Promise.all([
     supabase.from('group_settings').select('seasons_enabled').eq('group_id', groupId).single(),
     supabase.from('group_titles').select('title_key, user_id, stat_value').eq('group_id', groupId),
     supabase.from('memberships').select('id, user_id, nickname').eq('group_id', groupId).neq('status', 'removed'),
+    supabase.from('groups').select('owner_id').eq('id', groupId).single(),
+    supabase.from('custom_group_titles').select('id, group_id, label, emoji, metric, direction').eq('group_id', groupId),
   ]);
+
+  const customTitleIds = (customTitles ?? []).map((t) => t.id);
+  const { data: customHolders } =
+    customTitleIds.length > 0
+      ? await supabase.from('custom_group_title_holders').select('custom_title_id, user_id, stat_value').in('custom_title_id', customTitleIds)
+      : { data: [] };
+  const holderByTitleId = new Map(((customHolders ?? []) as CustomGroupTitleHolder[]).map((h) => [h.custom_title_id, h]));
+  const isOwner = group?.owner_id === user?.id;
 
   const { data: activeSeason } = settings?.seasons_enabled
     ? await supabase.from('seasons').select('number, name').eq('group_id', groupId).eq('status', 'active').maybeSingle()
@@ -134,6 +146,16 @@ export default async function AwardsPage({ params }: { params: Promise<{ groupId
       )}
 
       {vacantKeys.length > 0 && <UnclaimedTitles keys={vacantKeys} />}
+
+      <CustomAwardsSection
+        groupId={groupId}
+        isOwner={isOwner}
+        titles={(customTitles ?? []) as CustomGroupTitle[]}
+        holderByTitleId={holderByTitleId}
+        nicknameByUserId={nicknameByUserId}
+        membershipIdByUserId={membershipIdByUserId}
+        currentUserId={user?.id}
+      />
     </main>
   );
 }
