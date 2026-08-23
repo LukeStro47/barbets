@@ -7,14 +7,14 @@ import type { CustomGroupTitle, CustomTitleDirection, CustomTitleMetric } from '
 
 export async function createCustomGroupTitle(
   groupId: string,
-  input: { label: string; emoji: string; metric: CustomTitleMetric; direction: CustomTitleDirection }
+  input: { label: string; iconKey: string; metric: CustomTitleMetric; direction: CustomTitleDirection }
 ): Promise<ActionResult<CustomGroupTitle>> {
   const supabase = await createClient();
   const result = await runRpc<CustomGroupTitle>(
     await supabase.rpc('create_custom_group_title', {
       p_group_id: groupId,
       p_label: input.label,
-      p_emoji: input.emoji,
+      p_icon_key: input.iconKey,
       p_metric: input.metric,
       p_direction: input.direction,
     })

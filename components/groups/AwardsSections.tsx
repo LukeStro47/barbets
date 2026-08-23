@@ -10,26 +10,34 @@ import { cn } from '@/lib/cn';
 
 /** The titles the viewer holds, as a shelf you swipe rather than a stack of full-width hero cards.
  * Holding three used to mean three dark blocks pushing everyone else's titles below the fold; on a
- * rail they read as a collection, which is what holding several of them actually is. */
+ * rail they read as a collection, which is what holding several of them actually is.
+ *
+ * The icon sits top-right rather than top-left: the title/stat/description is the actual content
+ * and reads left-to-right from the card's leading edge, with the glyph as a corner mark rather
+ * than something the eye has to step around first. The description (never shown on this card
+ * before) fills what used to be a lot of bare gradient underneath the stat line. */
 export function AwardsRail({ titles }: { titles: { key: TitleKey; stat: string }[] }) {
   return (
     <SwipeRail>
       {titles.map((t) => (
         <div
           key={t.key}
-          className="relative w-full shrink-0 overflow-hidden rounded-[20px] bg-gradient-to-br from-espresso-900 to-espresso-700 p-3.5 [scroll-snap-align:start]"
+          className="relative w-full shrink-0 overflow-hidden rounded-[22px] bg-gradient-to-br from-espresso-900 to-espresso-700 p-5 [scroll-snap-align:start]"
         >
           <div className="pointer-events-none absolute inset-0 opacity-50 [background:radial-gradient(circle_at_85%_6%,rgba(232,163,61,0.34),rgba(232,163,61,0)_60%)]" />
-          <div className="relative">
-            <span className="flex h-11 w-11 items-center justify-center rounded-full border-[1.5px] border-honey-300/45 bg-honey-500/16">
+          <div className="relative flex items-start justify-between gap-3">
+            <p className="text-[10px] font-extrabold tracking-[0.1em] text-honey-300 uppercase">Yours</p>
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[1.5px] border-honey-300/45 bg-honey-500/16">
               <AwardGlyph titleKey={t.key} stroke="var(--color-honey-300)" size={22} />
             </span>
-            <p className="mt-3 text-[10px] font-extrabold tracking-[0.1em] text-honey-300 uppercase">Yours</p>
-            <p className="mt-[3px] text-[15.5px] leading-[1.15] font-extrabold tracking-[-0.01em] text-balance text-paper-white">
-              {TITLE_META[t.key].label}
-            </p>
-            <p className="mt-1 text-[11.5px] leading-[1.35] text-paper-white/60">{t.stat}</p>
           </div>
+          <p className="relative mt-2.5 text-[19px] leading-[1.15] font-extrabold tracking-[-0.01em] text-balance text-paper-white">
+            {TITLE_META[t.key].label}
+          </p>
+          <p className="relative mt-1 text-[12.5px] leading-[1.35] font-bold text-honey-300">{t.stat}</p>
+          <p className="relative mt-3 border-t border-white/10 pt-3 text-[12.5px] leading-[1.45] text-paper-white/60">
+            {TITLE_META[t.key].description}
+          </p>
         </div>
       ))}
     </SwipeRail>

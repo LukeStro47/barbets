@@ -19,6 +19,8 @@ import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { GroupSwitcher } from '@/components/profile/GroupSwitcher';
 import { ShareRecordCard } from '@/components/profile/ShareRecordCard';
+import { AvatarPicker } from '@/components/profile/AvatarPicker';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 import { SwipeRail } from '@/components/ui/SwipeRail';
 import { formatTokens, formatOrdinal } from '@/lib/formatNumber';
 import { cn } from '@/lib/cn';
@@ -93,9 +95,41 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
     .neq('status', 'removed')
     .order('joined_at', { ascending: false });
 
+  const { data: avatarRow } = await supabase.from('users').select('avatar_updated_at, avatar_preset_key').eq('id', user.id).single();
+  const myNickname = memberships?.[0]?.nickname ?? user.email?.split('@')[0] ?? '?';
+
   const accountLinks = (
     <div className="space-y-3.5">
       <div className="space-y-2">
+        {/* Identity, not account hygiene, so it lives here rather than a tap deeper inside
+            Account & security — see AvatarPicker. */}
+        <AvatarPicker
+          userId={user.id}
+          nickname={myNickname}
+          avatarUpdatedAt={avatarRow?.avatar_updated_at ?? null}
+          avatarPresetKey={avatarRow?.avatar_preset_key ?? null}
+          trigger={(onClick) => (
+            <button
+              type="button"
+              onClick={onClick}
+              className="flex w-full items-center gap-3 rounded-[20px] border border-espresso-100 bg-paper-white px-4 py-3.5 transition-colors hover:border-espresso-200"
+            >
+              <UserAvatar
+                userId={user.id}
+                nickname={myNickname}
+                avatarUpdatedAt={avatarRow?.avatar_updated_at ?? null}
+                avatarPresetKey={avatarRow?.avatar_preset_key ?? null}
+                className="h-9 w-9 shrink-0 text-xs"
+                fallbackClassName="bg-espresso-50 text-honey-700"
+              />
+              <span className="min-w-0 flex-1 text-left">
+                <span className="block text-sm font-extrabold text-espresso-800">Profile picture</span>
+                <span className="mt-0.5 block text-[11.5px] text-espresso-400">A photo, or one of the built-in icons</span>
+              </span>
+              <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-espresso-300" />
+            </button>
+          )}
+        />
         <SettingsRow
           href="/profile/account"
           label="Account & security"
@@ -280,11 +314,18 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
       <ShareRecordCard groupName={groupName} handle={selected.nickname}>
         <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 p-5 text-paper-white">
           <div className="pointer-events-none absolute inset-0 opacity-50 [background:radial-gradient(circle_at_88%_0%,rgba(232,163,61,0.3),rgba(232,163,61,0)_60%)]" />
-          <div className="relative mb-3.5 flex items-center gap-2.5">
-            <img src="/barbets-mono-white.png" alt="" width={20} height={20} className="block" />
-            <div>
-              <p className="text-base font-extrabold italic">@{selected.nickname}</p>
-              <p className="text-[10.5px] font-extrabold tracking-[0.09em] text-honey-400 uppercase">Your name at this table</p>
+          <div className="relative mb-3.5 flex items-center gap-3">
+            <UserAvatar
+              userId={user.id}
+              nickname={selected.nickname}
+              avatarUpdatedAt={avatarRow?.avatar_updated_at ?? null}
+              avatarPresetKey={avatarRow?.avatar_preset_key ?? null}
+              className="h-11 w-11 border-2 border-white/20 text-sm"
+              fallbackClassName="bg-white/10 text-honey-300"
+            />
+            <div className="min-w-0">
+              <p className="truncate text-base font-extrabold italic">@{selected.nickname}</p>
+              <p className="truncate text-[11px] text-paper-white/50">{groupName}</p>
             </div>
           </div>
           <div className="relative grid grid-cols-2 gap-x-2.5 gap-y-3.5">
@@ -322,21 +363,17 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
         </div>
       </ShareRecordCard>
 
-      <div>
-        {/* No horizontal padding of its own: the rail below breaks out of the page gutter
-            (-mx-5 … px-5), so any inset here would leave the heading a couple of pixels to the
-            right of the card edges it is supposed to sit above. */}
-        <div className="mb-2 flex items-baseline justify-between gap-3">
-          <h3 className="text-xs font-extrabold tracking-[0.06em] text-espresso-400 uppercase">Still open</h3>
-          {openCount > 0 && (
+      {openCount > 0 && (
+        <div>
+          {/* No horizontal padding of its own: the rail below breaks out of the page gutter
+              (-mx-5 … px-5), so any inset here would leave the heading a couple of pixels to the
+              right of the card edges it is supposed to sit above. */}
+          <div className="mb-2 flex items-baseline justify-between gap-3">
+            <h3 className="text-xs font-extrabold tracking-[0.06em] text-espresso-400 uppercase">Open Bets</h3>
             <span className="shrink-0 text-xs text-espresso-400">
-              {openCount} {openCount === 1 ? 'bet' : 'bets'} riding · {showGroupLabels ? 'every table' : 'swipe'}
+              {openCount} {openCount === 1 ? 'bet' : 'bets'} riding · swipe
             </span>
-          )}
-        </div>
-        {openCount === 0 ? (
-          <EmptyState icon="🎲" title="Nothing riding right now" subtitle="Bets you've got open show up here." />
-        ) : (
+          </div>
           <SwipeRail>
             {openBets.map((b: any) => {
               const market = b.markets;
@@ -375,8 +412,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
               );
             })}
           </SwipeRail>
-        )}
-      </div>
+        </div>
+      )}
 
       {accountLinks}
     </main>

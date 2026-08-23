@@ -17,6 +17,7 @@ import { Mention } from '@/components/ui/Mention';
 import { formatTokens, formatTokenInputValue } from '@/lib/formatNumber';
 import { TOKEN_ALLOCATION_MAX, JOIN_MESSAGE_MAX_LENGTH } from '@/lib/limits';
 import { inviteUrl } from '@/lib/appOrigin';
+import { useKeyboardState } from '@/lib/useKeyboardInset';
 import type { GroupSettings } from '@/lib/actions/groups';
 
 const inputClasses =
@@ -98,6 +99,10 @@ export function EditSettingsForm({
   const [resolutionWindowHours, setResolutionWindowHours] = useState(settings.resolution_window_hours);
   const [requireEndorsement, setRequireEndorsement] = useState(settings.require_endorsement);
   const [joinMessage, setJoinMessage] = useState(settings.join_message ?? '');
+  // The join-message textarea's keyboard pushes this bar up just enough to reveal the field
+  // itself, leaving it flush against the keyboard with no breathing room — pad past it, same
+  // fix BetslipBar's amount field uses.
+  const { visible: keyboardOpen, inset: keyboardInset } = useKeyboardState();
 
   const creatorPctValid = Number.isFinite(creatorPayoutPct) && creatorPayoutPct >= 0 && creatorPayoutPct <= 100;
   const openMarketsPct = creatorPctValid ? 100 - creatorPayoutPct : '—';
@@ -410,7 +415,12 @@ export function EditSettingsForm({
         </p>
       </div>
 
-      <div className="fixed inset-x-0 bottom-[var(--bottomnav-height)] z-20 border-t border-espresso-100 bg-paper-white/95 px-5 pb-5 pt-3 backdrop-blur-sm">
+      <div
+        className="fixed inset-x-0 bottom-[var(--bottomnav-height)] z-20 border-t border-espresso-100 bg-paper-white/95 px-5 pb-5 pt-3 backdrop-blur-sm"
+        style={{
+          paddingBottom: keyboardOpen && keyboardInset > 0 ? `calc(1.25rem + ${keyboardInset}px)` : undefined,
+        }}
+      >
         <div className="mx-auto flex max-w-lg gap-2.5">
           <Button type="button" variant="outline" className="flex-1" disabled={isPending} onClick={back}>
             Cancel

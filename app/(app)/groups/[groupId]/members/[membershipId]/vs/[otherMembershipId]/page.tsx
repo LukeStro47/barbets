@@ -32,7 +32,15 @@ interface HeadToHeadMarket {
 }
 
 /** A compact two-column stat card, reused for both sides of the comparison. */
-function StatColumn({ stats, avatarUpdatedAt }: { stats: MemberStats; avatarUpdatedAt: string | null }) {
+function StatColumn({
+  stats,
+  avatarUpdatedAt,
+  avatarPresetKey,
+}: {
+  stats: MemberStats;
+  avatarUpdatedAt: string | null;
+  avatarPresetKey: string | null;
+}) {
   const net = Number(stats.net);
   return (
     <div className="flex-1 space-y-3">
@@ -41,6 +49,7 @@ function StatColumn({ stats, avatarUpdatedAt }: { stats: MemberStats; avatarUpda
           userId={stats.user_id}
           nickname={stats.nickname}
           avatarUpdatedAt={avatarUpdatedAt}
+          avatarPresetKey={avatarPresetKey}
           className="h-9 w-9 text-xs"
           fallbackClassName="bg-espresso-50 text-honey-700"
         />
@@ -89,8 +98,8 @@ export default async function HeadToHeadPage({
   const markets = (marketsData ?? []) as HeadToHeadMarket[];
 
   const [{ data: aAvatar }, { data: bAvatar }] = await Promise.all([
-    supabase.from('users').select('avatar_updated_at').eq('id', a.user_id).single(),
-    supabase.from('users').select('avatar_updated_at').eq('id', b.user_id).single(),
+    supabase.from('users').select('avatar_updated_at, avatar_preset_key').eq('id', a.user_id).single(),
+    supabase.from('users').select('avatar_updated_at, avatar_preset_key').eq('id', b.user_id).single(),
   ]);
 
   return (
@@ -99,9 +108,9 @@ export default async function HeadToHeadPage({
 
       <Card>
         <div className="flex gap-4">
-          <StatColumn stats={a} avatarUpdatedAt={aAvatar?.avatar_updated_at ?? null} />
+          <StatColumn stats={a} avatarUpdatedAt={aAvatar?.avatar_updated_at ?? null} avatarPresetKey={aAvatar?.avatar_preset_key ?? null} />
           <div className="w-px shrink-0 bg-espresso-100" />
-          <StatColumn stats={b} avatarUpdatedAt={bAvatar?.avatar_updated_at ?? null} />
+          <StatColumn stats={b} avatarUpdatedAt={bAvatar?.avatar_updated_at ?? null} avatarPresetKey={bAvatar?.avatar_preset_key ?? null} />
         </div>
       </Card>
 

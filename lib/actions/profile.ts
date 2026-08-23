@@ -60,9 +60,11 @@ const AVATAR_BUCKET = 'avatars';
 
 /** FormData, not a bare File — the reliable Server Action pattern for file payloads (see
  * proposeResolution in lib/actions/resolution.ts). The client has already run the file through
- * compressAvatarImage(), so this just uploads it to a fixed, deterministic path and flips the
- * caller's own avatar_updated_at. Upsert means a re-upload overwrites the same object rather than
- * accumulating orphans, and avatar_updated_at is what busts the cache on the rendered URL. */
+ * AvatarCropper, so this just uploads it to a fixed, deterministic path and flips the caller's
+ * own avatar_updated_at. Upsert means a re-upload overwrites the same object rather than
+ * accumulating orphans, and avatar_updated_at is what busts the cache on the rendered URL.
+ * set_avatar_uploaded also clears avatar_preset_key server-side — a photo and a preset are
+ * mutually exclusive, see the migration. */
 export async function uploadAvatar(formData: FormData): Promise<ActionResult<null>> {
   const supabase = await createClient();
   const {
@@ -82,7 +84,6 @@ export async function uploadAvatar(formData: FormData): Promise<ActionResult<nul
   const result = await runRpc<null>(await supabase.rpc('set_avatar_uploaded', { p_uploaded: true }));
   if (result.error) return result;
   revalidatePath('/profile');
-  revalidatePath('/profile/account');
   return { data: null };
 }
 
@@ -95,7 +96,17 @@ export async function removeAvatar(): Promise<ActionResult<null>> {
   const result = await runRpc<null>(await supabase.rpc('set_avatar_uploaded', { p_uploaded: false }));
   if (result.error) return result;
   revalidatePath('/profile');
-  revalidatePath('/profile/account');
+  return { data: null };
+}
+
+/** The alternative to a photo: one of the same built-in icons a group can pick as its logo
+ * (lib/avatars.ts's GROUP_AVATARS). `key: null` clears it back to plain initials. Mutually
+ * exclusive with a photo server-side (set_avatar_preset clears avatar_updated_at). */
+export async function setAvatarPreset(key: string | null): Promise<ActionResult<null>> {
+  const supabase = await createClient();
+  const result = await runRpc<null>(await supabase.rpc('set_avatar_preset', { p_avatar_key: key }));
+  if (result.error) return result;
+  revalidatePath('/profile');
   return { data: null };
 }
 

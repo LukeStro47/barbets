@@ -193,7 +193,7 @@ export interface CustomGroupTitle {
   id: string;
   group_id: string;
   label: string;
-  emoji: string;
+  icon_key: string;
   metric: CustomTitleMetric;
   direction: CustomTitleDirection;
 }

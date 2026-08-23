@@ -7,7 +7,7 @@ import { PushReminderModal } from '@/components/pwa/PushReminderModal';
 import { InstallBanner } from '@/components/pwa/InstallBanner';
 import { getGroupTaskCounts } from '@/lib/tasks';
 
-export default async function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({ children, modal }: { children: React.ReactNode; modal: React.ReactNode }) {
   const supabase = await createClient();
   // This redirect is the layout's own protection, never the page's underneath it: a layout and
   // its page render in parallel, so this cannot stop one from running. Every page calls
@@ -71,6 +71,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </PageTransition>
       </PullToRefresh>
       <BottomNav groups={groups} bettingEnabledByGroup={bettingEnabledByGroup} hasNeedsYou={hasNeedsYou} />
+      {/* The @modal parallel slot — RouteModal portals its actual content to document.body, so
+          where this renders in the tree doesn't matter, only that it renders at all. */}
+      {modal}
     </div>
   );
 }

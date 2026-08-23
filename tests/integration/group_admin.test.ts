@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { createTestUsers, cleanupTestUsers, adminClient, type TestUser } from './helpers/testUsers';
+import { createTestUsers, cleanupTestUsers, backdate, adminClient, type TestUser } from './helpers/testUsers';
 import { setupGroup, createMarket, fastForwardCloseTime, type GroupRow } from './helpers/scenarios';
 
 async function membershipRow(groupId: string, userId: string) {
@@ -236,6 +236,90 @@ describe('delete_account', () => {
       expect(eventAfter!.actor_id).toBeNull();
     } finally {
       // sponsor is already gone; cleanupTestUsers tolerates a second delete attempt failing.
+      await cleanupTestUsers(users);
+    }
+  });
+
+  test('an account that has bet, asked for clarification, proposed, challenged, and voted can still be deleted, with every row surviving with a null actor', async () => {
+    const users = await createTestUsers('delacct4', ['owner', 'sponsor', 'subject', 'proposer']);
+    try {
+      const group = await setupGroup(users.owner, [users.sponsor, users.subject, users.proposer], { seedAmount: 1000 });
+
+      // Market A: subject bets, requests a clarification while it's still open, then proposes the
+      // resolution themselves — propose_resolution accepts a still-open market (it's what locks
+      // betting), so there's no need to wait for closes_at at all.
+      const marketA = await createMarket(users.owner, group.id, { closesInMs: 60000 });
+      await users.sponsor.client.rpc('sponsor_market', { p_market_id: marketA.id });
+      const { error: clarifyErr } = await users.subject.client.rpc('request_clarification', {
+        p_market_id: marketA.id,
+        p_question: 'What counts as a win here?',
+      });
+      expect(clarifyErr).toBeNull();
+      const { error: betErr } = await users.subject.client.rpc('place_bet', { p_market_id: marketA.id, p_side: 'yes', p_amount: 20 });
+      expect(betErr).toBeNull();
+      const { error: proposeErr } = await users.subject.client.rpc('propose_resolution', {
+        p_market_id: marketA.id,
+        p_outcome: 'yes',
+        p_justification: null,
+        p_actual_value: null,
+      });
+      expect(proposeErr).toBeNull();
+      await backdate('resolution_proposals', 'market_id', marketA.id, 'proposed_at', 9);
+      const { error: finalizeAErr } = await adminClient.rpc('finalize_market', { p_market_id: marketA.id });
+      expect(finalizeAErr).toBeNull();
+
+      // Market B: someone else proposes, subject challenges it and casts the deciding vote.
+      const marketB = await createMarket(users.owner, group.id, { closesInMs: 60000 });
+      await users.sponsor.client.rpc('sponsor_market', { p_market_id: marketB.id });
+      await fastForwardCloseTime(marketB.id, 60000);
+      const { error: proposeBErr } = await users.proposer.client.rpc('propose_resolution', {
+        p_market_id: marketB.id,
+        p_outcome: 'yes',
+        p_justification: null,
+        p_actual_value: null,
+      });
+      expect(proposeBErr).toBeNull();
+      const { error: challengeErr } = await users.subject.client.rpc('challenge_resolution', { p_market_id: marketB.id, p_reason: null });
+      expect(challengeErr).toBeNull();
+      const { error: voteErr } = await users.subject.client.rpc('cast_vote', { p_market_id: marketB.id, p_outcome: 'no', p_option_id: null });
+      expect(voteErr).toBeNull();
+      await backdate('challenges', 'market_id', marketB.id, 'created_at', 9);
+      const { error: finalizeBErr } = await adminClient.rpc('finalize_market', { p_market_id: marketB.id });
+      expect(finalizeBErr).toBeNull();
+
+      const [{ data: betRow }, { data: clarificationRow }, { data: proposalARow }, { data: challengeRow }, { data: voteRow }] = await Promise.all([
+        adminClient.from('bets').select('user_id').eq('market_id', marketA.id).eq('amount', 20).single(),
+        adminClient.from('resolution_clarifications').select('requester_id').eq('market_id', marketA.id).single(),
+        adminClient.from('resolution_proposals').select('proposer_id').eq('market_id', marketA.id).single(),
+        adminClient.from('challenges').select('challenger_id').eq('market_id', marketB.id).single(),
+        adminClient.from('votes').select('voter_id').eq('market_id', marketB.id).eq('user_id', users.subject.id).maybeSingle(),
+      ]);
+      expect(betRow!.user_id).toBe(users.subject.id);
+      expect(clarificationRow!.requester_id).toBe(users.subject.id);
+      expect(proposalARow!.proposer_id).toBe(users.subject.id);
+      expect(challengeRow!.challenger_id).toBe(users.subject.id);
+
+      const { error: cleanupErr } = await users.subject.client.rpc('delete_account');
+      expect(cleanupErr).toBeNull();
+      const { error: authDeleteErr } = await adminClient.auth.admin.deleteUser(users.subject.id);
+      expect(authDeleteErr).toBeNull();
+
+      const [{ data: betAfter }, { data: clarificationAfter }, { data: proposalAAfter }, { data: challengeAfter }, { data: voteAfter }] = await Promise.all([
+        adminClient.from('bets').select('user_id').eq('market_id', marketA.id).eq('amount', 20).single(),
+        // Still exists rather than answered-and-deleted: update_resolution_criteria was never
+        // called, so this row survives with a null requester rather than being cleared away.
+        adminClient.from('resolution_clarifications').select('requester_id').eq('market_id', marketA.id).maybeSingle(),
+        adminClient.from('resolution_proposals').select('proposer_id').eq('market_id', marketA.id).single(),
+        adminClient.from('challenges').select('challenger_id').eq('market_id', marketB.id).single(),
+        adminClient.from('votes').select('voter_id').eq('market_id', marketB.id).eq('outcome', 'no').maybeSingle(),
+      ]);
+      expect(betAfter!.user_id).toBeNull();
+      expect(clarificationAfter?.requester_id ?? null).toBeNull();
+      expect(proposalAAfter!.proposer_id).toBeNull();
+      expect(challengeAfter!.challenger_id).toBeNull();
+      expect(voteAfter!.voter_id).toBeNull();
+    } finally {
+      // subject is already gone; cleanupTestUsers tolerates a second delete attempt failing.
       await cleanupTestUsers(users);
     }
   });

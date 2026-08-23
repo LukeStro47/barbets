@@ -10,17 +10,19 @@ export function UserAvatar({
   userId,
   nickname,
   avatarUpdatedAt,
+  avatarPresetKey,
   className,
   fallbackClassName,
 }: {
   userId: string;
   nickname: string;
   avatarUpdatedAt?: string | null;
+  avatarPresetKey?: string | null;
   /** Size and colors only — the chip's shape (a circle) is owned here, not by the caller. */
   className?: string;
   fallbackClassName?: string;
 }) {
-  const src = userAvatarSrc(userId, avatarUpdatedAt);
+  const src = userAvatarSrc(userId, avatarUpdatedAt, avatarPresetKey);
 
   return (
     <span

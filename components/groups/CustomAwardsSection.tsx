@@ -5,10 +5,20 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createCustomGroupTitle, deleteCustomGroupTitle } from '@/lib/actions/customAwards';
 import { CUSTOM_AWARD_SHAPES, findShape, type CustomGroupTitle, type CustomGroupTitleHolder } from '@/lib/customAwards';
+import { CUSTOM_AWARD_ICONS, customAwardIconPath } from '@/lib/customAwardIcons';
 import { CUSTOM_AWARD_LABEL_MAX_LENGTH, CUSTOM_AWARD_MAX_PER_GROUP } from '@/lib/limits';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Mention } from '@/components/ui/Mention';
+import { cn } from '@/lib/cn';
+
+function CustomAwardGlyph({ iconKey, stroke, size = 20 }: { iconKey: string; stroke: string; size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ height: size, width: size }}>
+      <path d={customAwardIconPath(iconKey)} />
+    </svg>
+  );
+}
 
 const inputClasses =
   'w-full rounded-[10px] border border-espresso-200 bg-paper-white px-3.5 py-2.5 text-[15px] font-semibold text-espresso-950 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
@@ -45,7 +55,7 @@ export function CustomAwardsSection({
 
   const [shapeKey, setShapeKey] = useState(CUSTOM_AWARD_SHAPES[0].key);
   const [label, setLabel] = useState('');
-  const [emoji, setEmoji] = useState('');
+  const [iconKey, setIconKey] = useState<string>(CUSTOM_AWARD_ICONS[0].key);
 
   const held = titles.filter((t) => holderByTitleId.get(t.id)?.user_id);
   const vacant = titles.filter((t) => !holderByTitleId.get(t.id)?.user_id);
@@ -53,7 +63,7 @@ export function CustomAwardsSection({
   function resetForm() {
     setShapeKey(CUSTOM_AWARD_SHAPES[0].key);
     setLabel('');
-    setEmoji('');
+    setIconKey(CUSTOM_AWARD_ICONS[0].key);
     setError(null);
   }
 
@@ -64,7 +74,7 @@ export function CustomAwardsSection({
     startTransition(async () => {
       const result = await createCustomGroupTitle(groupId, {
         label,
-        emoji,
+        iconKey,
         metric: shape.metric,
         direction: shape.direction,
       });
@@ -103,8 +113,8 @@ export function CustomAwardsSection({
         const isYours = holder.user_id === currentUserId;
         const content = (
           <>
-            <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-honey-50 text-lg">
-              {t.emoji}
+            <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-honey-50">
+              <CustomAwardGlyph iconKey={t.icon_key} stroke="var(--color-honey-700)" />
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-[13.5px] font-extrabold text-espresso-950">{t.label}</span>
@@ -146,8 +156,8 @@ export function CustomAwardsSection({
             return (
               <div key={t.id} className="flex items-center gap-2">
                 <div className={`flex-1 ${rowClassName} border-dashed`}>
-                  <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-espresso-50 text-lg opacity-60">
-                    {t.emoji}
+                  <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-espresso-50 opacity-60">
+                    <CustomAwardGlyph iconKey={t.icon_key} stroke="var(--color-espresso-400)" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13.5px] font-extrabold text-espresso-400">{t.label}</span>
@@ -204,21 +214,36 @@ export function CustomAwardsSection({
             <p className="text-[11.5px] text-espresso-400">{CUSTOM_AWARD_SHAPES.find((s) => s.key === shapeKey)?.description}</p>
           </div>
 
-          <div className="flex gap-2.5">
-            <label className="flex-[2] space-y-1.5">
-              <span className="block text-xs font-bold text-espresso-500">Name</span>
-              <input
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-                maxLength={CUSTOM_AWARD_LABEL_MAX_LENGTH}
-                placeholder="The Menace"
-                className={inputClasses}
-              />
-            </label>
-            <label className="flex-1 space-y-1.5">
-              <span className="block text-xs font-bold text-espresso-500">Emoji</span>
-              <input value={emoji} onChange={(e) => setEmoji(e.target.value)} maxLength={8} placeholder="😈" className={inputClasses} />
-            </label>
+          <label className="block space-y-1.5">
+            <span className="block text-xs font-bold text-espresso-500">Name</span>
+            <input
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              maxLength={CUSTOM_AWARD_LABEL_MAX_LENGTH}
+              placeholder="The Menace"
+              className={inputClasses}
+            />
+          </label>
+
+          <div className="space-y-1.5">
+            <span className="block text-xs font-bold text-espresso-500">Symbol</span>
+            <div className="flex flex-wrap gap-2">
+              {CUSTOM_AWARD_ICONS.map((icon) => (
+                <button
+                  key={icon.key}
+                  type="button"
+                  onClick={() => setIconKey(icon.key)}
+                  aria-pressed={iconKey === icon.key}
+                  title={icon.label}
+                  className={cn(
+                    'flex h-11 w-11 items-center justify-center rounded-full border-[1.5px] transition-colors',
+                    iconKey === icon.key ? 'border-honey-500 bg-honey-50' : 'border-espresso-200 bg-paper-white'
+                  )}
+                >
+                  <CustomAwardGlyph iconKey={icon.key} stroke={iconKey === icon.key ? 'var(--color-honey-700)' : 'var(--color-espresso-400)'} />
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="flex gap-2 pt-1">
@@ -233,7 +258,7 @@ export function CustomAwardsSection({
             >
               Cancel
             </Button>
-            <Button type="button" className="flex-1" disabled={isPending || !label.trim() || !emoji.trim()} onClick={submit}>
+            <Button type="button" className="flex-1" disabled={isPending || !label.trim() || !iconKey} onClick={submit}>
               Create
             </Button>
           </div>
