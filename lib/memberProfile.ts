@@ -26,6 +26,11 @@ export interface MemberProfileData {
   standing: string;
   badges: TitleBadge[];
   others: { id: string; nickname: string }[];
+  /** The viewer's own membership id in this group, so the compare picker can label their own row
+   *  "@me" instead of listing them under their nickname like anyone else. Null in the (should be
+   *  unreachable, since get_member_stats already requires an active/dormant caller) case the
+   *  viewer's own row isn't found among this group's current members. */
+  meMembershipId: string | null;
   isYou: boolean;
   net: number;
   sinceLabel: string;
@@ -68,6 +73,7 @@ export async function getMemberProfileData(groupId: string, membershipId: string
   const others = (groupMembers ?? [])
     .filter((m) => m.id !== stats.membership_id)
     .map((m) => ({ id: m.id, nickname: m.nickname ?? '' }));
+  const meMembershipId = (groupMembers ?? []).find((m) => m.user_id === user.id)?.id ?? null;
   const isYou = stats.user_id === user.id;
   const net = Number(stats.net);
   const sinceLabel = new Date(stats.joined_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -79,6 +85,7 @@ export async function getMemberProfileData(groupId: string, membershipId: string
     standing,
     badges,
     others,
+    meMembershipId,
     isYou,
     net,
     sinceLabel,

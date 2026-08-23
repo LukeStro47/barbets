@@ -19,7 +19,7 @@ export default async function MemberProfileModal({
   const data = await getMemberProfileData(groupId, membershipId);
 
   return (
-    <RouteModal>
+    <RouteModal title={data.isYou ? 'Your record' : 'Member record'}>
       <MemberProfileCard data={data} />
     </RouteModal>
   );

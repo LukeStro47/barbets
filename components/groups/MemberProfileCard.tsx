@@ -8,11 +8,12 @@ import type { MemberProfileData } from '@/lib/memberProfile';
 
 /**
  * The member profile's actual content, with no opinion on what wraps it — the full-page route
- * puts a `PageHeader` above it, the modal route puts a close button in its own corner instead.
+ * puts a `PageHeader` above it, the modal route puts `RouteModal`'s own banded header instead.
  * See lib/memberProfile.ts for where `data` comes from.
  */
 export function MemberProfileCard({ data }: { data: MemberProfileData }) {
-  const { stats, groupId, groupName, standing, badges, others, isYou, net, sinceLabel, avatarUpdatedAt, avatarPresetKey } = data;
+  const { stats, groupId, groupName, standing, badges, others, meMembershipId, isYou, net, sinceLabel, avatarUpdatedAt, avatarPresetKey } =
+    data;
 
   return (
     <>
@@ -95,7 +96,7 @@ export function MemberProfileCard({ data }: { data: MemberProfileData }) {
         </Link>
       )}
 
-      <CompareMemberPicker groupId={groupId} membershipId={stats.membership_id} others={others} />
+      <CompareMemberPicker groupId={groupId} membershipId={stats.membership_id} others={others} meMembershipId={meMembershipId} />
     </>
   );
 }
