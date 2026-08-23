@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
+import { cloneElement, isValidElement, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { uploadAvatar, removeAvatar, setAvatarPreset } from '@/lib/actions/profile';
 import { GROUP_AVATARS } from '@/lib/avatars';
@@ -18,10 +18,13 @@ type Step = 'closed' | 'menu' | 'cropping';
  * thing everyone sees you by, not an account-hygiene setting like email/password, and it was easy
  * to never find one tap deeper than the page most people never open.
  *
- * `trigger` renders whatever's tappable to open this (the avatar itself, sized however the caller
- * needs); the sheet it opens offers uploading a photo (through AvatarCropper) or picking one of
- * the app's built-in icons (the same GROUP_AVATARS set a group's own logo uses) — a photo and a
- * preset are mutually exclusive, enforced server-side.
+ * `trigger` is whatever's tappable to open this (the avatar itself, sized however the caller
+ * needs), passed as an already-rendered element rather than a render-prop function: a function
+ * can't cross the server/client boundary (it isn't a Server Action), so the caller renders the
+ * markup and this component clones an onClick onto it instead. The sheet it opens offers
+ * uploading a photo (through AvatarCropper) or picking one of the app's built-in icons (the same
+ * GROUP_AVATARS set a group's own logo uses) — a photo and a preset are mutually exclusive,
+ * enforced server-side.
  */
 export function AvatarPicker({
   userId,
@@ -34,7 +37,7 @@ export function AvatarPicker({
   nickname: string;
   avatarUpdatedAt: string | null;
   avatarPresetKey: string | null;
-  trigger: (onClick: () => void) => React.ReactNode;
+  trigger: React.ReactElement<{ onClick?: () => void }>;
 }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>('closed');
@@ -97,7 +100,7 @@ export function AvatarPicker({
 
   return (
     <>
-      {trigger(() => setStep('menu'))}
+      {isValidElement(trigger) ? cloneElement(trigger, { onClick: () => setStep('menu') }) : trigger}
       <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
 
       {step === 'menu' && (

@@ -108,10 +108,9 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           nickname={myNickname}
           avatarUpdatedAt={avatarRow?.avatar_updated_at ?? null}
           avatarPresetKey={avatarRow?.avatar_preset_key ?? null}
-          trigger={(onClick) => (
+          trigger={
             <button
               type="button"
-              onClick={onClick}
               className="flex w-full items-center gap-3 rounded-[20px] border border-espresso-100 bg-paper-white px-4 py-3.5 transition-colors hover:border-espresso-200"
             >
               <UserAvatar
@@ -128,7 +127,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
               </span>
               <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-espresso-300" />
             </button>
-          )}
+          }
         />
         <SettingsRow
           href="/profile/account"
