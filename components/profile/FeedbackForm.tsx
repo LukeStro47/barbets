@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/cn';
 
 const CATEGORIES: { value: FeedbackCategory; label: string }[] = [
-  { value: 'bug', label: '🐛 Bug' },
-  { value: 'idea', label: '💡 Idea' },
-  { value: 'general', label: '💬 General' },
+  { value: 'bug', label: 'Bug' },
+  { value: 'idea', label: 'Idea' },
+  { value: 'general', label: 'General' },
 ];
 
 export function FeedbackForm() {

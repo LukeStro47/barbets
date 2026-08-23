@@ -9,7 +9,7 @@ import { LeaderboardLenses } from '@/components/groups/LeaderboardLenses';
 import { AwardGlyph } from '@/components/groups/AwardGlyph';
 import { ChevronRightIcon } from '@/components/ui/icons';
 import { formatTokens, formatOrdinal, numberWord } from '@/lib/formatNumber';
-import { titlesByUser, TITLE_ORDER, type GroupTitleRow } from '@/lib/titles';
+import { TITLE_ORDER, type GroupTitleRow } from '@/lib/titles';
 import { cn } from '@/lib/cn';
 
 function medal(rank: number): string {
@@ -83,15 +83,14 @@ export default async function LeaderboardPage({
   // (see lib/groupFeed.ts's "no query inside a per-market loop" rule, same idea applied here).
   const { data: avatarRows } = await supabase
     .from('users')
-    .select('id, avatar_updated_at')
+    .select('id, avatar_updated_at, avatar_preset_key')
     .in(
       'id',
       members.map((m) => m.user_id)
     );
-  const avatarByUser = new Map((avatarRows ?? []).map((r) => [r.id, r.avatar_updated_at as string | null]));
+  const avatarByUser = new Map((avatarRows ?? []).map((r) => [r.id, r]));
 
   const { data: titleRows } = await supabase.from('group_titles').select('title_key, user_id, stat_value').eq('group_id', groupId);
-  const badges = titlesByUser((titleRows ?? []) as GroupTitleRow[]);
   const yourTitleCount = ((titleRows ?? []) as GroupTitleRow[]).filter((r) => r.user_id && r.user_id === user?.id).length;
 
   // ---- The hero: who's in front, and where you are relative to them. Both figures already exist
@@ -134,7 +133,8 @@ export default async function LeaderboardPage({
         <UserAvatar
           userId={leader.user_id}
           nickname={leader.nickname}
-          avatarUpdatedAt={avatarByUser.get(leader.user_id)}
+          avatarUpdatedAt={avatarByUser.get(leader.user_id)?.avatar_updated_at}
+          avatarPresetKey={avatarByUser.get(leader.user_id)?.avatar_preset_key}
           className="h-[52px] w-[52px] border-[1.5px] border-honey-300/50 text-[15px]"
           fallbackClassName="bg-honey-500/[0.18] text-honey-300"
         />
@@ -188,12 +188,13 @@ export default async function LeaderboardPage({
                 <UserAvatar
                   userId={m.user_id}
                   nickname={m.nickname}
-                  avatarUpdatedAt={avatarByUser.get(m.user_id)}
+                  avatarUpdatedAt={avatarByUser.get(m.user_id)?.avatar_updated_at}
+                  avatarPresetKey={avatarByUser.get(m.user_id)?.avatar_preset_key}
                   className={cn('h-9 w-9 text-xs', isMe ? 'border-2 border-honey-500' : 'border-[1.5px] border-espresso-100')}
                   fallbackClassName="bg-paper-white text-espresso-700"
                 />
                 <span className="min-w-0 flex-1">
-                  <Mention nickname={m.nickname} titles={badges.get(m.user_id)} className="block truncate text-[13.5px] font-bold text-espresso-900" />
+                  <Mention nickname={m.nickname} className="block truncate text-[13.5px] font-bold text-espresso-900" />
                   {(m.balance === 0 || m.status !== 'active') && (
                     <span className="block text-[10.5px] font-semibold text-espresso-400">
                       {m.balance === 0 && 'Broke'}

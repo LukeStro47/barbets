@@ -37,8 +37,9 @@ export function PendingBonusPoolNote({ amount }: { amount: number }) {
               Free money, waiting for a market
             </p>
             <p className="text-sm leading-[1.5] text-espresso-700 text-pretty">
-              A market in this group resolved without any winners. Your group has payout splitting turned on, so part
-              of that pool is held here instead of going to another market right away.
+              A market in this group resolved without any winners. Your group holds the bets in this outcome,
+              sending that pool to the winners of the next created market. If the season ends first, it splits
+              evenly across everyone still playing.
             </p>
 
             <div className="flex flex-col gap-2 border-t border-espresso-50 pt-3">
@@ -51,11 +52,6 @@ export function PendingBonusPoolNote({ amount }: { amount: number }) {
                 <span className="text-sm font-extrabold text-espresso-900">The next market created</span>
               </div>
             </div>
-
-            <p className="text-[12.5px] leading-[1.45] text-espresso-400">
-              It seeds that market's pool and splits among its winners. If the season ends first, it splits evenly
-              across everyone still playing.
-            </p>
           </div>
 
           <div className="border-t border-espresso-50 px-[18px] py-[14px]">

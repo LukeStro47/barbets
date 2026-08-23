@@ -82,7 +82,12 @@ function StepBar({
   onBack: () => void;
 }) {
   return (
-    <div className="flex items-center gap-3">
+    // Sticky rather than in normal flow: the multiple-choice step in particular can grow past a
+    // screenful of options, and losing the back button and progress bar off the top the moment
+    // you scroll is exactly when you'd want them most. -mx-5/px-5 extends the background edge to
+    // edge (canceling the page's own gutter just for this bar) so scrolled content never shows
+    // through the gaps between the caret, progress pips and label.
+    <div className="sticky top-[env(safe-area-inset-top)] z-20 -mx-5 flex items-center gap-3 bg-paper px-5 py-3">
       <button
         type="button"
         onClick={onBack}

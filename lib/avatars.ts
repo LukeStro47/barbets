@@ -1,9 +1,13 @@
-/** The fixed set of group logos, served straight out of `public/avatars/` as ordinary static
+/** The fixed set of built-in icons, served straight out of `public/avatars/` as ordinary static
  * assets rather than through Supabase Storage. They're app-authored art, identical for every
  * group and never user-supplied, so there's nothing to gate: no bucket, no RLS surface, no signed
  * URLs, and the CDN caches them like any other icon. Adding one is a PNG in that folder plus a
  * line here, with no migration involved — `groups.avatar_key` deliberately stores free text and
- * lets this list decide what actually renders (see groupAvatarSrc). */
+ * lets this list decide what actually renders (see groupAvatarSrc).
+ *
+ * Also reused as a user's profile picture preset (`users.avatar_preset_key`, see userAvatarSrc in
+ * lib/userAvatars.ts) — the same "pick a built-in icon instead of uploading a photo" idea, and
+ * there was no reason to ship a second art set for it. */
 export const GROUP_AVATARS = [
   { key: 'ace', label: 'Ace' },
   { key: 'beer', label: 'Beer' },

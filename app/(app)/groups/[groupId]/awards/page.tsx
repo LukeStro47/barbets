@@ -32,7 +32,7 @@ export default async function AwardsPage({ params }: { params: Promise<{ groupId
     supabase.from('group_titles').select('title_key, user_id, stat_value').eq('group_id', groupId),
     supabase.from('memberships').select('id, user_id, nickname').eq('group_id', groupId).neq('status', 'removed'),
     supabase.from('groups').select('owner_id').eq('id', groupId).single(),
-    supabase.from('custom_group_titles').select('id, group_id, label, emoji, metric, direction').eq('group_id', groupId),
+    supabase.from('custom_group_titles').select('id, group_id, label, icon_key, metric, direction').eq('group_id', groupId),
   ]);
 
   const customTitleIds = (customTitles ?? []).map((t) => t.id);

@@ -6,7 +6,7 @@ interface CustomTitle {
   id: string;
   group_id: string;
   label: string;
-  emoji: string;
+  icon_key: string;
   metric: string;
   direction: string;
 }
@@ -21,11 +21,11 @@ async function holderOf(customTitleId: string) {
   return data!;
 }
 
-function createTitle(caller: TestUser, groupId: string, overrides: Partial<{ label: string; emoji: string; metric: string; direction: string }> = {}) {
+function createTitle(caller: TestUser, groupId: string, overrides: Partial<{ label: string; iconKey: string; metric: string; direction: string }> = {}) {
   return caller.client.rpc('create_custom_group_title', {
     p_group_id: groupId,
     p_label: overrides.label ?? 'Test Award',
-    p_emoji: overrides.emoji ?? '🎯',
+    p_icon_key: overrides.iconKey ?? 'target',
     p_metric: overrides.metric ?? 'bet_count',
     p_direction: overrides.direction ?? 'desc',
   });
@@ -68,12 +68,12 @@ describe('custom_group_titles', () => {
       }
     });
 
-    test('rejects a blank label, a blank emoji, and an over-length label', async () => {
+    test('rejects a blank label, a blank icon key, and an over-length label', async () => {
       const { error: blankLabel } = await createTitle(users.owner, group.id, { label: '   ' });
       expect(blankLabel?.message).toMatch(/invalid_operation/);
 
-      const { error: blankEmoji } = await createTitle(users.owner, group.id, { emoji: '' });
-      expect(blankEmoji?.message).toMatch(/invalid_operation/);
+      const { error: blankIcon } = await createTitle(users.owner, group.id, { iconKey: '' });
+      expect(blankIcon?.message).toMatch(/invalid_operation/);
 
       const { error: tooLong } = await createTitle(users.owner, group.id, { label: 'x'.repeat(31) });
       expect(tooLong?.message).toMatch(/invalid_operation/);
