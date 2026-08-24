@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Mention } from '@/components/ui/Mention';
 import { AwardGlyph } from '@/components/groups/AwardGlyph';
+import { EditTitleButton } from '@/components/groups/EditTitleButton';
 import { AwardsRail, UnclaimedTitles } from '@/components/groups/AwardsSections';
 import { LostTitleCard } from '@/components/groups/LostTitleCard';
 import { CustomAwardsSection } from '@/components/groups/CustomAwardsSection';
@@ -31,7 +32,7 @@ export default async function AwardsPage({ params }: { params: Promise<{ groupId
 
   const [{ data: settings }, { data: titleRows }, { data: members }, { data: group }, { data: customTitles }] = await Promise.all([
     supabase.from('group_settings').select('seasons_enabled').eq('group_id', groupId).single(),
-    supabase.from('group_titles').select('title_key, user_id, stat_value').eq('group_id', groupId),
+    supabase.from('group_titles').select('title_key, user_id, stat_value, label, icon_key').eq('group_id', groupId),
     supabase.from('memberships').select('id, user_id, nickname').eq('group_id', groupId).neq('status', 'removed'),
     supabase.from('groups').select('owner_id').eq('id', groupId).single(),
     supabase.from('custom_group_titles').select('id, group_id, label, icon_key, metric, direction').eq('group_id', groupId),
@@ -62,13 +63,22 @@ export default async function AwardsPage({ params }: { params: Promise<{ groupId
   const membershipIdByUserId = new Map((members ?? []).map((m) => [m.user_id, m.id]));
   const rowsByKey = new Map(((titleRows ?? []) as GroupTitleRow[]).map((r) => [r.title_key, r]));
 
+  // Resolves a title's owner overrides against TITLE_META's defaults — every place a fixed title
+  // renders (AwardsRail, held-by-others, UnclaimedTitles, LostTitleCard) uses this instead of
+  // reading TITLE_META directly, so a renamed/re-iconed title shows consistently everywhere.
+  function resolveTitle(key: (typeof TITLE_ORDER)[number]) {
+    const meta = TITLE_META[key];
+    const row = rowsByKey.get(key);
+    return { key, label: row?.label ?? meta.label, description: meta.description, iconKey: row?.icon_key ?? meta.defaultIconKey };
+  }
+
   // Titles are lifetime/live (see lib/titles.ts), never reset at a season boundary, and nothing
   // re-resolves during intermission — so the live rows above are already exactly "as they stood
   // when the season closed." What they can't show on their own is what changed: for that, diff
   // against the titles_snapshot the *previous* season's finalize captured (see
   // supabase/migrations/20260823140000_season_end_stats_and_title_snapshot.sql), which is "who
   // held what at the start of the season that just ended."
-  let lostTitles: { key: (typeof TITLE_ORDER)[number]; toNickname: string }[] = [];
+  let lostTitles: { key: (typeof TITLE_ORDER)[number]; label: string; iconKey: string; toNickname: string }[] = [];
   if (isIntermission && endedSeason && endedSeason.number > 1) {
     const { data: priorResult } = await supabase
       .from('season_results')
@@ -85,7 +95,10 @@ export default async function AwardsPage({ params }: { params: Promise<{ groupId
     }));
     lostTitles = diffTitleSnapshots(currentSnapshot, priorTitlesSnapshot)
       .filter((c) => c.fromUserId === user?.id)
-      .map((c) => ({ key: c.titleKey, toNickname: c.toNickname }));
+      .map((c) => {
+        const resolved = resolveTitle(c.titleKey);
+        return { key: c.titleKey, label: resolved.label, iconKey: resolved.iconKey, toNickname: c.toNickname };
+      });
   }
 
   const heldKeys = TITLE_ORDER.filter((k) => rowsByKey.get(k)?.user_id);
@@ -134,13 +147,17 @@ export default async function AwardsPage({ params }: { params: Promise<{ groupId
       />
 
       {yourKeys.length > 0 && (
-        <AwardsRail titles={yourKeys.map((key) => ({ key, stat: TITLE_META[key].format(rowsByKey.get(key)!.stat_value) }))} />
+        <AwardsRail
+          groupId={groupId}
+          isOwner={isOwner}
+          titles={yourKeys.map((key) => ({ ...resolveTitle(key), stat: TITLE_META[key].format(rowsByKey.get(key)!.stat_value) }))}
+        />
       )}
 
       {lostTitles.length > 0 && (
         <div className="grid grid-cols-2 gap-2.5">
           {lostTitles.map((t) => (
-            <LostTitleCard key={t.key} titleKey={t.key} toNickname={t.toNickname} />
+            <LostTitleCard key={t.key} label={t.label} iconKey={t.iconKey} toNickname={t.toNickname} />
           ))}
         </div>
       )}
@@ -152,38 +169,49 @@ export default async function AwardsPage({ params }: { params: Promise<{ groupId
           <div className="space-y-[7px]">
             <p className="ml-1 text-[10.5px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">Held by others</p>
             {otherKeys.map((key) => {
-              const meta = TITLE_META[key];
+              const resolved = resolveTitle(key);
               const row = rowsByKey.get(key)!;
               const holderMembershipId = membershipIdByUserId.get(row.user_id!);
               const content = (
                 <>
                   <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-honey-50">
-                    <AwardGlyph titleKey={key} stroke="var(--color-honey-700)" size={20} />
+                    <AwardGlyph iconKey={resolved.iconKey} stroke="var(--color-honey-700)" size={20} />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[13.5px] font-extrabold text-espresso-950">{meta.label}</span>
-                    <span className="block text-[11px] leading-[1.4] text-espresso-400">{meta.description}</span>
+                    <span className="block text-[13.5px] font-extrabold text-espresso-950">{resolved.label}</span>
+                    <span className="block text-[11px] leading-[1.4] text-espresso-400">{resolved.description}</span>
                   </span>
                   <span className="shrink-0 text-right">
                     <Mention
                       nickname={nicknameByUserId.get(row.user_id!) ?? ''}
                       className="block text-[12.5px] font-extrabold text-espresso-950"
                     />
-                    <span className="block text-[11px] font-extrabold text-honey-700">{meta.format(row.stat_value)}</span>
+                    <span className="block text-[11px] font-extrabold text-honey-700">{TITLE_META[key].format(row.stat_value)}</span>
                   </span>
                 </>
               );
-              const rowClassName = 'flex items-center gap-[11px] rounded-2xl border border-espresso-100 bg-paper-white px-3.5 py-3';
+              const rowClassName = 'flex flex-1 items-center gap-[11px] rounded-2xl border border-espresso-100 bg-paper-white px-3.5 py-3';
               // A holder is always a current, non-removed member as of the last title recompute —
               // the fallback to a plain (unlinked) row only matters for the rare window where
               // someone's left/been removed since, since titles only recompute every 3rd resolution.
-              return holderMembershipId ? (
-                <Link key={key} href={`/groups/${groupId}/members/${holderMembershipId}`} className={rowClassName}>
-                  {content}
-                </Link>
-              ) : (
-                <div key={key} className={rowClassName}>
-                  {content}
+              return (
+                <div key={key} className="flex items-center gap-2">
+                  {holderMembershipId ? (
+                    <Link href={`/groups/${groupId}/members/${holderMembershipId}`} className={rowClassName}>
+                      {content}
+                    </Link>
+                  ) : (
+                    <div className={rowClassName}>{content}</div>
+                  )}
+                  {isOwner && (
+                    <EditTitleButton
+                      groupId={groupId}
+                      titleKey={key}
+                      currentLabel={resolved.label}
+                      currentIconKey={resolved.iconKey}
+                      defaultLabel={TITLE_META[key].label}
+                    />
+                  )}
                 </div>
               );
             })}
@@ -191,7 +219,7 @@ export default async function AwardsPage({ params }: { params: Promise<{ groupId
         )
       )}
 
-      {vacantKeys.length > 0 && <UnclaimedTitles keys={vacantKeys} />}
+      {vacantKeys.length > 0 && <UnclaimedTitles groupId={groupId} isOwner={isOwner} titles={vacantKeys.map((key) => resolveTitle(key))} />}
 
       <CustomAwardsSection
         groupId={groupId}

@@ -5,10 +5,10 @@ import { titlesByUser, type GroupTitleRow } from '@/lib/titles';
 import { findShape, type CustomGroupTitle, type CustomGroupTitleHolder } from '@/lib/customAwards';
 import { formatOrdinal } from '@/lib/formatNumber';
 
-/** One row in the member record's "Awards held" section — a built-in title (`iconKey` is a
- *  `TitleKey`, rendered via `AwardGlyph`) or a group-configured custom award (`iconKey` is a
- *  `CustomAwardIconKey`, rendered via `CustomAwardGlyph`). Unified here so `MemberProfileCard`
- *  doesn't need to know the two systems are separate tables. */
+/** One row in the member record's "Awards held" section — a built-in title or a group-configured
+ *  custom award, both rendered via the same `AwardGlyph` since both now pick `iconKey` from the
+ *  shared lib/awardIcons.ts set. Unified here so `MemberProfileCard` doesn't need to know the two
+ *  systems are separate tables. */
 export interface HeldAward {
   kind: 'builtin' | 'custom';
   key: string;
@@ -73,7 +73,7 @@ export async function getMemberProfileData(groupId: string, membershipId: string
   const [{ data: group }, { data: groupMembers }, { data: titleRows }, { data: avatarRow }, { data: customTitles }] = await Promise.all([
     supabase.from('groups').select('name').eq('id', groupId).single(),
     supabase.from('memberships').select('id, user_id, nickname, balance').eq('group_id', groupId).in('status', ['active', 'dormant']),
-    supabase.from('group_titles').select('title_key, user_id, stat_value').eq('group_id', groupId),
+    supabase.from('group_titles').select('title_key, user_id, stat_value, label, icon_key').eq('group_id', groupId),
     supabase.from('users').select('avatar_updated_at, avatar_preset_key').eq('id', stats.user_id).single(),
     supabase.from('custom_group_titles').select('id, group_id, label, icon_key, metric, direction').eq('group_id', groupId),
   ]);
@@ -96,7 +96,7 @@ export async function getMemberProfileData(groupId: string, membershipId: string
   const builtinAwards: HeldAward[] = (titlesByUser((titleRows ?? []) as GroupTitleRow[]).get(stats.user_id) ?? []).map((b) => ({
     kind: 'builtin',
     key: b.key,
-    iconKey: b.key,
+    iconKey: b.iconKey,
     label: b.label,
     description: b.description,
     stat: b.stat,

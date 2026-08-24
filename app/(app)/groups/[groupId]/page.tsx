@@ -18,6 +18,7 @@ import { SeasonMarketsArchiveCard } from '@/components/groups/SeasonMarketsArchi
 import { SeasonNumbersCard } from '@/components/groups/SeasonNumbersCard';
 import { SeasonHighlightsCard, type SnapshotHighlight } from '@/components/groups/SeasonHighlightsCard';
 import { MemberTitleCard } from '@/components/groups/MemberTitleCard';
+import { SeasonNameEditor } from '@/components/groups/SeasonNameEditor';
 import { WhatsNextCard } from '@/components/groups/WhatsNextCard';
 import { WindingDownCard } from '@/components/groups/WindingDownCard';
 import { Mention } from '@/components/ui/Mention';
@@ -26,7 +27,7 @@ import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { SettingsIcon, InfoIcon } from '@/components/ui/icons';
 import { formatTokens } from '@/lib/formatNumber';
 import { getGroupTasks } from '@/lib/tasks';
-import { TITLE_ORDER, type GroupTitleRow } from '@/lib/titles';
+import { TITLE_ORDER, TITLE_META, type GroupTitleRow } from '@/lib/titles';
 import { diffTitleSnapshots, type TitleSnapshotEntry } from '@/lib/seasonTitleDiff';
 import type { GroupSettings } from '@/lib/actions/groups';
 
@@ -102,7 +103,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
       supabase.from('memberships').select('user_id, nickname, status').eq('group_id', groupId).in('status', ['active', 'dormant']),
       supabase.from('season_optouts').select('user_id').eq('season_id', season.id),
       supabase.from('season_optins').select('user_id').eq('season_id', season.id),
-      supabase.from('group_titles').select('title_key, user_id, stat_value').eq('group_id', groupId),
+      supabase.from('group_titles').select('title_key, user_id, stat_value, label, icon_key').eq('group_id', groupId),
     ]);
     notFoundIfEmpty(endedResult);
 
@@ -232,7 +233,15 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
             />
           ) : (
             <>
-              {myFirstTitle && <MemberTitleCard titleKey={myFirstTitle.title_key} statValue={myFirstTitle.stat_value} otherCount={myTitles.length - 1} />}
+              {myFirstTitle && (
+                <MemberTitleCard
+                  titleKey={myFirstTitle.title_key}
+                  label={myFirstTitle.label ?? TITLE_META[myFirstTitle.title_key].label}
+                  iconKey={myFirstTitle.icon_key ?? TITLE_META[myFirstTitle.title_key].defaultIconKey}
+                  statValue={myFirstTitle.stat_value}
+                  otherCount={myTitles.length - 1}
+                />
+              )}
               {mine && (
                 <WhatsNextCard
                   groupId={groupId}
@@ -324,7 +333,17 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
         <GroupHeader groupId={groupId} group={group!} isOwner={isOwner} />
         {season && season.status === 'active' && (
           <div className="flex items-center gap-2 text-[13px] font-medium text-espresso-400">
-            <span>{season.name ?? `Season ${season.number}`}</span>
+            {isOwner ? (
+              <SeasonNameEditor
+                groupId={groupId}
+                seasonId={season.id}
+                currentName={season.name}
+                seasonNumber={season.number}
+                nameClassName="text-[13px] font-medium text-espresso-400"
+              />
+            ) : (
+              <span>{season.name ?? `Season ${season.number}`}</span>
+            )}
             {season.ends_at && (
               <>
                 <span className="h-1 w-1 shrink-0 rounded-full bg-espresso-300" />

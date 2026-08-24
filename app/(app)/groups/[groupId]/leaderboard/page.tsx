@@ -406,7 +406,7 @@ export default async function LeaderboardPage({
         className="flex items-center gap-3 rounded-[18px] border border-espresso-100 bg-paper-white px-3.5 py-3"
       >
         <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-honey-50">
-          <AwardGlyph titleKey="oracle" stroke="var(--color-honey-700)" size={20} />
+          <AwardGlyph iconKey="target" stroke="var(--color-honey-700)" size={20} />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-[13.5px] font-extrabold text-espresso-950">Awards</span>
