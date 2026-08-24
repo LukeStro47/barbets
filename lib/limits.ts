@@ -36,9 +36,10 @@ export const TOKEN_ALLOCATION_MIN = 1;
     one-screen modal, not a place to paste in the group's whole set of house rules. */
 export const JOIN_MESSAGE_MAX_LENGTH = 240;
 
-/** A custom award's owner-chosen name — short enough to sit next to an emoji on a card the same
-    size as the 8 fixed titles' labels ("The Oracle", "Risk Taker", ...). */
-export const CUSTOM_AWARD_LABEL_MAX_LENGTH = 30;
+/** An award's owner-chosen name — a custom award's from scratch, or a default title's rename
+    ("The Oracle", "Risk Taker", ...). Short enough to sit next to an icon on the same card size
+    either way. */
+export const AWARD_LABEL_MAX_LENGTH = 30;
 
 /** Bounds the added recompute cost every 3rd resolved market now carries, one query per custom
     award per group. */

@@ -4,14 +4,14 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createCustomGroupTitle, deleteCustomGroupTitle } from '@/lib/actions/customAwards';
-import { CUSTOM_AWARD_SHAPES, findShape, type CustomGroupTitle, type CustomGroupTitleHolder } from '@/lib/customAwards';
-import { CUSTOM_AWARD_ICONS } from '@/lib/customAwardIcons';
-import { CUSTOM_AWARD_LABEL_MAX_LENGTH, CUSTOM_AWARD_MAX_PER_GROUP } from '@/lib/limits';
+import { AVAILABLE_CUSTOM_AWARD_SHAPES, findShape, type CustomGroupTitle, type CustomGroupTitleHolder } from '@/lib/customAwards';
+import { AWARD_ICONS } from '@/lib/awardIcons';
+import { AWARD_LABEL_MAX_LENGTH, CUSTOM_AWARD_MAX_PER_GROUP } from '@/lib/limits';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Mention } from '@/components/ui/Mention';
-import { CustomAwardGlyph } from '@/components/groups/CustomAwardGlyph';
-import { cn } from '@/lib/cn';
+import { AwardGlyph } from '@/components/groups/AwardGlyph';
+import { AwardIconPicker } from '@/components/groups/AwardIconPicker';
 
 const inputClasses =
   'w-full rounded-[10px] border border-espresso-200 bg-paper-white px-3.5 py-2.5 text-[15px] font-semibold text-espresso-950 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
@@ -21,8 +21,9 @@ const rowClassName = 'flex items-center gap-[11px] rounded-2xl border border-esp
  * The awards page's second section, group-configured rather than app-defined — the "Propose an
  * award / Soon" placeholder this replaces was removed rather than restyled because a disabled row
  * promising a feature costs attention on every visit. Deliberately a separate section from the
- * fixed 8, not merged into AwardsRail/AwardGlyph/UnclaimedTitles: those are tightly typed to the
- * closed TitleKey enum, and a custom award's label/emoji/description are data, not code.
+ * fixed 4, not merged into AwardsRail/UnclaimedTitles: those are tightly typed to the closed
+ * TitleKey enum, and a custom award's label/icon/description are data, not code. They do share the
+ * same icon set and AwardGlyph renderer, though (lib/awardIcons.ts).
  */
 export function CustomAwardsSection({
   groupId,
@@ -46,22 +47,22 @@ export function CustomAwardsSection({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const [shapeKey, setShapeKey] = useState(CUSTOM_AWARD_SHAPES[0].key);
+  const [shapeKey, setShapeKey] = useState(AVAILABLE_CUSTOM_AWARD_SHAPES[0].key);
   const [label, setLabel] = useState('');
-  const [iconKey, setIconKey] = useState<string>(CUSTOM_AWARD_ICONS[0].key);
+  const [iconKey, setIconKey] = useState<string>(AWARD_ICONS[0].key);
 
   const held = titles.filter((t) => holderByTitleId.get(t.id)?.user_id);
   const vacant = titles.filter((t) => !holderByTitleId.get(t.id)?.user_id);
 
   function resetForm() {
-    setShapeKey(CUSTOM_AWARD_SHAPES[0].key);
+    setShapeKey(AVAILABLE_CUSTOM_AWARD_SHAPES[0].key);
     setLabel('');
-    setIconKey(CUSTOM_AWARD_ICONS[0].key);
+    setIconKey(AWARD_ICONS[0].key);
     setError(null);
   }
 
   function submit() {
-    const shape = CUSTOM_AWARD_SHAPES.find((s) => s.key === shapeKey);
+    const shape = AVAILABLE_CUSTOM_AWARD_SHAPES.find((s) => s.key === shapeKey);
     if (!shape) return;
     setError(null);
     startTransition(async () => {
@@ -107,7 +108,7 @@ export function CustomAwardsSection({
         const content = (
           <>
             <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-honey-50">
-              <CustomAwardGlyph iconKey={t.icon_key} stroke="var(--color-honey-700)" />
+              <AwardGlyph iconKey={t.icon_key} stroke="var(--color-honey-700)" />
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-[13.5px] font-extrabold text-espresso-950">{t.label}</span>
@@ -150,7 +151,7 @@ export function CustomAwardsSection({
               <div key={t.id} className="flex items-center gap-2">
                 <div className={`flex-1 ${rowClassName} border-dashed`}>
                   <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-espresso-50 opacity-60">
-                    <CustomAwardGlyph iconKey={t.icon_key} stroke="var(--color-espresso-400)" />
+                    <AwardGlyph iconKey={t.icon_key} stroke="var(--color-espresso-400)" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13.5px] font-extrabold text-espresso-400">{t.label}</span>
@@ -198,13 +199,13 @@ export function CustomAwardsSection({
               What it measures
             </label>
             <select id="award-shape" value={shapeKey} onChange={(e) => setShapeKey(e.target.value)} className={inputClasses}>
-              {CUSTOM_AWARD_SHAPES.map((s) => (
+              {AVAILABLE_CUSTOM_AWARD_SHAPES.map((s) => (
                 <option key={s.key} value={s.key}>
                   {s.menuLabel}
                 </option>
               ))}
             </select>
-            <p className="text-[11.5px] text-espresso-400">{CUSTOM_AWARD_SHAPES.find((s) => s.key === shapeKey)?.description}</p>
+            <p className="text-[11.5px] text-espresso-400">{AVAILABLE_CUSTOM_AWARD_SHAPES.find((s) => s.key === shapeKey)?.description}</p>
           </div>
 
           <label className="block space-y-1.5">
@@ -212,7 +213,7 @@ export function CustomAwardsSection({
             <input
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              maxLength={CUSTOM_AWARD_LABEL_MAX_LENGTH}
+              maxLength={AWARD_LABEL_MAX_LENGTH}
               placeholder="The Menace"
               className={inputClasses}
             />
@@ -220,23 +221,7 @@ export function CustomAwardsSection({
 
           <div className="space-y-1.5">
             <span className="block text-xs font-bold text-espresso-500">Symbol</span>
-            <div className="flex flex-wrap gap-2">
-              {CUSTOM_AWARD_ICONS.map((icon) => (
-                <button
-                  key={icon.key}
-                  type="button"
-                  onClick={() => setIconKey(icon.key)}
-                  aria-pressed={iconKey === icon.key}
-                  title={icon.label}
-                  className={cn(
-                    'flex h-11 w-11 items-center justify-center rounded-full border-[1.5px] transition-colors',
-                    iconKey === icon.key ? 'border-honey-500 bg-honey-50' : 'border-espresso-200 bg-paper-white'
-                  )}
-                >
-                  <CustomAwardGlyph iconKey={icon.key} stroke={iconKey === icon.key ? 'var(--color-honey-700)' : 'var(--color-espresso-400)'} />
-                </button>
-              ))}
-            </div>
+            <AwardIconPicker value={iconKey} onChange={setIconKey} />
           </div>
 
           <div className="flex gap-2 pt-1">

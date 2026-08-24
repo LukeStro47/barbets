@@ -3,9 +3,7 @@ import { Card } from '@/components/ui/Card';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { Mention } from '@/components/ui/Mention';
 import { AwardGlyph } from '@/components/groups/AwardGlyph';
-import { CustomAwardGlyph } from '@/components/groups/CustomAwardGlyph';
 import { formatTokens, formatSignedTokens } from '@/lib/formatNumber';
-import type { TitleKey } from '@/lib/titles';
 import type { MemberProfileData } from '@/lib/memberProfile';
 
 /**
@@ -98,11 +96,7 @@ export function MemberProfileCard({ data }: { data: MemberProfileData }) {
           {awards.map((award) => (
             <div key={`${award.kind}-${award.key}`} className="flex items-center gap-[11px] rounded-2xl border border-espresso-100 bg-paper-white px-3.5 py-3">
               <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-honey-50">
-                {award.kind === 'builtin' ? (
-                  <AwardGlyph titleKey={award.key as TitleKey} stroke="var(--color-honey-700)" size={20} />
-                ) : (
-                  <CustomAwardGlyph iconKey={award.iconKey} stroke="var(--color-honey-700)" size={20} />
-                )}
+                <AwardGlyph iconKey={award.iconKey} stroke="var(--color-honey-700)" size={20} />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-[13.5px] font-extrabold text-espresso-950">{award.label}</span>

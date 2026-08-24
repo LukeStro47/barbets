@@ -21,12 +21,15 @@ async function holderOf(customTitleId: string) {
   return data!;
 }
 
+// tokens_wagered/desc, not bet_count/desc — bet_count/desc is now Degenerate's dynamic (one of
+// the 4 default titles group_titles seeds for every group), and create_custom_group_title rejects
+// any (metric, direction) that duplicates a default's dynamic.
 function createTitle(caller: TestUser, groupId: string, overrides: Partial<{ label: string; iconKey: string; metric: string; direction: string }> = {}) {
   return caller.client.rpc('create_custom_group_title', {
     p_group_id: groupId,
     p_label: overrides.label ?? 'Test Award',
     p_icon_key: overrides.iconKey ?? 'target',
-    p_metric: overrides.metric ?? 'bet_count',
+    p_metric: overrides.metric ?? 'tokens_wagered',
     p_direction: overrides.direction ?? 'desc',
   });
 }
@@ -93,6 +96,20 @@ describe('custom_group_titles', () => {
       await deleteTitle(users.owner, row.id);
     });
 
+    test('rejects a shape that duplicates a default title (Oracle, Ice Cold, Degenerate, Risk Taker)', async () => {
+      const duplicates: [string, string][] = [
+        ['win_rate', 'desc'],
+        ['win_rate', 'asc'],
+        ['bet_count', 'desc'],
+        ['payout_multiple', 'desc'],
+      ];
+      for (const [metric, direction] of duplicates) {
+        const { error } = await createTitle(users.owner, group.id, { metric, direction });
+        expect(error?.message).toMatch(/invalid_operation/);
+        expect(error?.message).toMatch(/already exists/);
+      }
+    });
+
     test('caps at 5 per group', async () => {
       const created: string[] = [];
       for (let i = 0; i < 5; i++) {
@@ -111,20 +128,20 @@ describe('custom_group_titles', () => {
   });
 
   describe('_compute_custom_title', () => {
-    test('bet_count picks whoever placed the most bets', async () => {
+    test('tokens_wagered picks whoever wagered the most', async () => {
       const market = await createMarket(users.owner, group.id, { closesInMs: 60000 });
       await users.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
       await fastForwardCloseTime(market.id, 60000);
-      // a places 2 bets (hedging both sides), b places 1.
+      // a wagers 15 total (hedging both sides), b wagers 10.
       await users.a.client.rpc('place_bet', { p_market_id: market.id, p_side: 'yes', p_amount: 10 });
       await users.a.client.rpc('place_bet', { p_market_id: market.id, p_side: 'no', p_amount: 5 });
       await users.b.client.rpc('place_bet', { p_market_id: market.id, p_side: 'yes', p_amount: 10 });
 
-      const { data } = await createTitle(users.owner, group.id, { label: 'Bet Count', metric: 'bet_count', direction: 'desc' });
+      const { data } = await createTitle(users.owner, group.id, { label: 'Tokens Wagered', metric: 'tokens_wagered', direction: 'desc' });
       const row = (Array.isArray(data) ? data[0] : data) as CustomTitle;
       const holder = await holderOf(row.id);
       expect(holder.user_id).toBe(users.a.id);
-      expect(Number(holder.stat_value)).toBe(2);
+      expect(Number(holder.stat_value)).toBe(15);
 
       await deleteTitle(users.owner, row.id);
     });

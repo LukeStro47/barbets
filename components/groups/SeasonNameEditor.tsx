@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { renameSeason } from '@/lib/actions/seasons';
 import { Button } from '@/components/ui/Button';
+import { PencilIcon } from '@/components/ui/icons';
 import { SEASON_NAME_MAX_LENGTH } from '@/lib/limits';
 
 /** Owner-only season name control, reused on the group settings page (naming the currently active
@@ -19,6 +20,7 @@ export function SeasonNameEditor({
   currentName,
   seasonNumber,
   className,
+  nameClassName,
 }: {
   groupId: string;
   seasonId: string;
@@ -26,6 +28,10 @@ export function SeasonNameEditor({
   /** Shown as the "Season N" fallback label when there's no currentName yet. Omit to show just the trigger with no label (e.g. when a page title already displays the name). */
   seasonNumber?: number;
   className?: string;
+  /** Styling for the idle-state name span — defaults to the settings-sheet weight; callers
+      embedding this in a lighter-weight context (e.g. the group hub's top season line) can match
+      their surrounding text instead. */
+  nameClassName?: string;
 }) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
@@ -37,8 +43,8 @@ export function SeasonNameEditor({
 
   if (!isEditing) {
     return (
-      <div className={`flex flex-wrap items-center gap-2 ${className ?? ''}`}>
-        {displayName && <span className="text-sm font-semibold text-espresso-800">{displayName}</span>}
+      <div className={`flex flex-wrap items-center gap-1.5 ${className ?? ''}`}>
+        {displayName && <span className={nameClassName ?? 'text-sm font-semibold text-espresso-800'}>{displayName}</span>}
         <button
           type="button"
           onClick={() => {
@@ -46,9 +52,10 @@ export function SeasonNameEditor({
             setError(null);
             setIsEditing(true);
           }}
-          className="text-xs font-medium text-espresso-400 underline decoration-dotted hover:text-espresso-600"
+          aria-label={currentName ? 'Rename season' : 'Name this season'}
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-espresso-400 transition-colors hover:bg-espresso-50 hover:text-espresso-700"
         >
-          {currentName ? 'Rename season' : 'Name this season'}
+          <PencilIcon className="h-3 w-3" />
         </button>
       </div>
     );

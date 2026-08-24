@@ -189,6 +189,14 @@ export function findShape(metric: CustomTitleMetric, direction: CustomTitleDirec
   return CUSTOM_AWARD_SHAPES.find((s) => s.metric === metric && s.direction === direction);
 }
 
+/** The 4 shapes that duplicate a default title's dynamic (Oracle, Ice Cold, Degenerate, Risk
+ * Taker) — offering "Highest win rate" as a custom-award option when Oracle already exists would
+ * just be the same award twice on one page. Enforced here (the create menu) and again server-side
+ * in create_custom_group_title, which is the real guard. */
+const DEFAULT_TITLE_SHAPE_KEYS = new Set(['win_rate_desc', 'win_rate_asc', 'bet_count_desc', 'payout_multiple_desc']);
+
+export const AVAILABLE_CUSTOM_AWARD_SHAPES = CUSTOM_AWARD_SHAPES.filter((s) => !DEFAULT_TITLE_SHAPE_KEYS.has(s.key));
+
 export interface CustomGroupTitle {
   id: string;
   group_id: string;

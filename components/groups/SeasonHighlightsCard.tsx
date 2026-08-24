@@ -64,7 +64,7 @@ export function SeasonHighlightsCard({
             className="flex items-center gap-3 border-b border-espresso-50 px-4 py-[14px] transition-colors hover:bg-espresso-50/25 last:border-b-0"
           >
             <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-honey-50">
-              <AwardGlyph titleKey="risk_taker" stroke="var(--color-honey-700)" size={20} />
+              <AwardGlyph iconKey="spike" stroke="var(--color-honey-700)" size={20} />
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-[13.5px] font-extrabold text-espresso-950">Biggest upset</span>
@@ -78,7 +78,7 @@ export function SeasonHighlightsCard({
         {titleChanges.length > 0 && (
           <div className="flex items-center gap-3 px-4 py-[14px]">
             <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-honey-50">
-              <AwardGlyph titleKey="oracle" stroke="var(--color-honey-700)" size={20} />
+              <AwardGlyph iconKey="target" stroke="var(--color-honey-700)" size={20} />
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-[13.5px] font-extrabold text-espresso-950">Titles changed hands</span>
