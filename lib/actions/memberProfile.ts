@@ -41,11 +41,15 @@ export async function loadHeadToHead(
     return { error: 'Could not load that comparison.' };
   }
 
-  const [{ data: aAvatar }, { data: bAvatar }] = await Promise.all([
+  const [{ data: group }, { data: aAvatar }, { data: bAvatar }] = await Promise.all([
+    supabase.from('groups').select('is_public').eq('id', groupId).single(),
     supabase.from('users').select('avatar_updated_at, avatar_preset_key').eq('id', aStats.user_id).single(),
     supabase.from('users').select('avatar_updated_at, avatar_preset_key').eq('id', bStats.user_id).single(),
   ]);
+  const isPublic = !!group?.is_public;
 
+  // No profile pictures in a public group, for anyone — see getMemberProfileData()'s identical
+  // note in lib/memberProfile.ts.
   function toMemberStats(stats: typeof aStats, avatar: typeof aAvatar): HeadToHeadMemberStats {
     return {
       membership_id: stats.membership_id,
@@ -56,8 +60,8 @@ export async function loadHeadToHead(
       net: Number(stats.net),
       accuracy_pct: stats.accuracy_pct,
       tokens_wagered: Number(stats.tokens_wagered),
-      avatarUpdatedAt: avatar?.avatar_updated_at ?? null,
-      avatarPresetKey: avatar?.avatar_preset_key ?? null,
+      avatarUpdatedAt: isPublic ? null : (avatar?.avatar_updated_at ?? null),
+      avatarPresetKey: isPublic ? null : (avatar?.avatar_preset_key ?? null),
     };
   }
 

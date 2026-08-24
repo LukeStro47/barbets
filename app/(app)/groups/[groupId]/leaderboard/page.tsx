@@ -38,6 +38,7 @@ export default async function LeaderboardPage({
   const user = await requireUser(supabase);
 
   const { data: settings } = await supabase.from('group_settings').select('seasons_enabled, awards_enabled').eq('group_id', groupId).single();
+  const { data: group } = await supabase.from('groups').select('is_public').eq('id', groupId).single();
 
   const { data: activeMembers } = await supabase
     .from('memberships')
@@ -81,13 +82,17 @@ export default async function LeaderboardPage({
 
   // One batched lookup for every member's avatar rather than a query inside the row loop below
   // (see lib/groupFeed.ts's "no query inside a per-market loop" rule, same idea applied here).
-  const { data: avatarRows } = await supabase
-    .from('users')
-    .select('id, avatar_updated_at, avatar_preset_key')
-    .in(
-      'id',
-      members.map((m) => m.user_id)
-    );
+  // No profile pictures in a public group, for anyone — an empty map means every UserAvatar below
+  // falls back to initials, same as a member who never uploaded a photo.
+  const { data: avatarRows } = group?.is_public
+    ? { data: [] }
+    : await supabase
+        .from('users')
+        .select('id, avatar_updated_at, avatar_preset_key')
+        .in(
+          'id',
+          members.map((m) => m.user_id)
+        );
   const avatarByUser = new Map((avatarRows ?? []).map((r) => [r.id, r]));
 
   const { data: titleRows } = await supabase.from('group_titles').select('title_key, user_id, stat_value').eq('group_id', groupId);
