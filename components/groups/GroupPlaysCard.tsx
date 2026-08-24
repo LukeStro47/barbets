@@ -33,11 +33,17 @@ export function GroupPlaysCard({
   settings,
   season,
   isOwner,
+  isPublic = false,
 }: {
   settings: GroupSettings;
   /** The currently active season, or null when there isn't one (seasons off, or between seasons). */
   season: ActiveSeasonSummary | null;
   isOwner: boolean;
+  /** A public group's rules are almost entirely fixed (see ARCHITECTURE.md's "Public groups"
+      section) — betting, endorsement, hedging, challenge window, seasons, and universal-loss
+      pooling are none of them a preference there, so the whole read view drops to just token
+      allocation and time zone rather than a wall of permanently-fixed rows. */
+  isPublic?: boolean;
 }) {
   const you = !isOwner;
 
@@ -89,60 +95,72 @@ export function GroupPlaysCard({
         }
         value={formatTokens(settings.seed_amount)}
       />
-      <SettingRow
-        label="Betting"
-        consequence={bettingConsequence}
-        value={<StatusPill tone={bettingValue === 'Open' ? 'dark' : 'muted'}>{bettingValue}</StatusPill>}
-      />
-      <SettingRow
-        label="Endorsement"
-        consequence={
-          settings.require_endorsement
-            ? isOwner
-              ? 'A second member has to endorse a market before betting opens.'
-              : 'Someone else has to endorse your market before betting opens.'
-            : "Markets open for betting the moment they're created."
-        }
-        value={settings.require_endorsement ? 'Required' : 'Not needed'}
-      />
-      <SettingRow
-        label="Hedging"
-        consequence={
-          settings.allow_hedged_bets
-            ? `${you ? 'You' : 'Members'} can back more than one side of the same market.`
-            : `${you ? 'You hold' : 'Members hold'} one side per market. Adding to that same side is still fine.`
-        }
-        value={settings.allow_hedged_bets ? 'Allowed' : 'One side only'}
-      />
-      <SettingRow
-        label="When nobody calls it"
-        consequence={
-          settings.distribute_payout
-            ? `The market's creator takes ${settings.creator_payout_pct}%, and the rest tops up the group's other open markets.`
-            : you
-              ? 'You get your stake back.'
-              : 'Every stake goes back to whoever placed it.'
-        }
-        value={settings.distribute_payout ? 'Split' : 'Refunded'}
-      />
-      <SettingRow
-        label="Challenge window"
-        consequence={
-          isOwner
-            ? 'How long a called result can be disputed, and how long a vote runs.'
-            : 'How long you have to dispute a called result.'
-        }
-        value={`${settings.resolution_window_hours} ${settings.resolution_window_hours === 1 ? 'hour' : 'hours'}`}
-      />
-      <SettingRow
-        label="Seasons"
-        consequence={
-          settings.seasons_enabled
-            ? 'Standings archive to Awards, then everyone is reseeded.'
-            : 'The board never resets. One running total, forever.'
-        }
-        value={seasonsValue}
-      />
+      {!isPublic && (
+        <SettingRow
+          label="Betting"
+          consequence={bettingConsequence}
+          value={<StatusPill tone={bettingValue === 'Open' ? 'dark' : 'muted'}>{bettingValue}</StatusPill>}
+        />
+      )}
+      {!isPublic && (
+        <SettingRow
+          label="Endorsement"
+          consequence={
+            settings.require_endorsement
+              ? isOwner
+                ? 'A second member has to endorse a market before betting opens.'
+                : 'Someone else has to endorse your market before betting opens.'
+              : "Markets open for betting the moment they're created."
+          }
+          value={settings.require_endorsement ? 'Required' : 'Not needed'}
+        />
+      )}
+      {!isPublic && (
+        <SettingRow
+          label="Hedging"
+          consequence={
+            settings.allow_hedged_bets
+              ? `${you ? 'You' : 'Members'} can back more than one side of the same market.`
+              : `${you ? 'You hold' : 'Members hold'} one side per market. Adding to that same side is still fine.`
+          }
+          value={settings.allow_hedged_bets ? 'Allowed' : 'One side only'}
+        />
+      )}
+      {!isPublic && (
+        <SettingRow
+          label="When nobody calls it"
+          consequence={
+            settings.distribute_payout
+              ? `The market's creator takes ${settings.creator_payout_pct}%, and the rest tops up the group's other open markets.`
+              : you
+                ? 'You get your stake back.'
+                : 'Every stake goes back to whoever placed it.'
+          }
+          value={settings.distribute_payout ? 'Split' : 'Refunded'}
+        />
+      )}
+      {!isPublic && (
+        <SettingRow
+          label="Challenge window"
+          consequence={
+            isOwner
+              ? 'How long a called result can be disputed, and how long a vote runs.'
+              : 'How long you have to dispute a called result.'
+          }
+          value={`${settings.resolution_window_hours} ${settings.resolution_window_hours === 1 ? 'hour' : 'hours'}`}
+        />
+      )}
+      {!isPublic && (
+        <SettingRow
+          label="Seasons"
+          consequence={
+            settings.seasons_enabled
+              ? 'Standings archive to Awards, then everyone is reseeded.'
+              : 'The board never resets. One running total, forever.'
+          }
+          value={seasonsValue}
+        />
+      )}
       <SettingRow
         label="Time zone"
         consequence="Shown beside every betting-closes time."

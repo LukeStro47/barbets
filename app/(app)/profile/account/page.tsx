@@ -3,19 +3,56 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { ChangeEmailForm, ChangePasswordForm } from '@/components/profile/AccountForms';
 import { DeleteAccountButton } from '@/components/profile/DeleteAccountButton';
+import { AvatarPicker } from '@/components/profile/AvatarPicker';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
+import { ChevronRightIcon } from '@/components/ui/icons';
 
 /** /profile/account — everything destructive or rarely touched, one tap deeper than the
- * per-group Profile page, in the order people go looking for it: identity, credentials,
- * notifications, deletion. Nothing here is group-scoped. The profile picture isn't here either —
- * see AvatarPicker on /profile — since it's identity, not account hygiene. */
+ * per-group Profile page, in the order people go looking for it: identity, credentials, profile
+ * picture, notifications, deletion. Nothing here is group-scoped. The profile picture used to live
+ * on the main /profile page instead (identity, not account hygiene, was the reasoning) but moved
+ * here to keep everything about the account itself in one place. */
 export default async function AccountPage() {
   const supabase = await createClient();
   const user = await requireUser(supabase);
 
+  const [{ data: avatarRow }, { data: firstMembership }] = await Promise.all([
+    supabase.from('users').select('avatar_updated_at, avatar_preset_key').eq('id', user.id).single(),
+    supabase.from('memberships').select('nickname').eq('user_id', user.id).neq('status', 'removed').limit(1).maybeSingle(),
+  ]);
+  const nickname = firstMembership?.nickname ?? user.email?.split('@')[0] ?? '?';
+
   return (
     <main className="mx-auto max-w-lg space-y-6 px-5 py-8">
       <PageHeader title="Account & security" backHref="/profile" backLabel="Profile" />
+
+      <AvatarPicker
+        userId={user.id}
+        nickname={nickname}
+        avatarUpdatedAt={avatarRow?.avatar_updated_at ?? null}
+        avatarPresetKey={avatarRow?.avatar_preset_key ?? null}
+        trigger={
+          <button
+            type="button"
+            className="flex w-full items-center gap-3 rounded-[20px] border border-espresso-100 bg-paper-white px-4 py-3.5 transition-colors hover:border-espresso-200"
+          >
+            <UserAvatar
+              userId={user.id}
+              nickname={nickname}
+              avatarUpdatedAt={avatarRow?.avatar_updated_at ?? null}
+              avatarPresetKey={avatarRow?.avatar_preset_key ?? null}
+              className="h-9 w-9 shrink-0 text-xs"
+              fallbackClassName="bg-espresso-50 text-honey-700"
+            />
+            <span className="min-w-0 flex-1 text-left">
+              <span className="block text-sm font-extrabold text-espresso-800">Profile picture</span>
+              <span className="mt-0.5 block text-[11.5px] text-espresso-400">A photo, or one of the built-in icons</span>
+            </span>
+            <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-espresso-300" />
+          </button>
+        }
+      />
 
       <Card className="space-y-4">
         <ChangeEmailForm currentEmail={user?.email ?? ''} />

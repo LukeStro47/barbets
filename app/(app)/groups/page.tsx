@@ -19,7 +19,7 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
   const user = await requireUser(supabase);
   const { data: groups } = await supabase
     .from('groups')
-    .select('id, name, avatar_key, deletion_scheduled_at, memberships(user_id, balance, status)')
+    .select('id, name, avatar_key, deletion_scheduled_at, is_public, memberships(user_id, balance, status)')
     .order('created_at', { ascending: false });
 
   // Net tokens per group — same definition the leaderboard page's "All-time net" card uses
@@ -63,11 +63,16 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
 
   // Groups whose current season has ended sink to the bottom — nothing to act on there right
   // now, so they shouldn't compete with groups still being actively played for the top of the
-  // list. A stable sort (native Array#sort in every engine this app ships to) preserves the
-  // existing newest-first order within each partition.
-  const sortedGroups = [...(groups ?? [])].sort(
-    (a, b) => (intermissionGroupIds.has(a.id) ? 1 : 0) - (intermissionGroupIds.has(b.id) ? 1 : 0)
-  );
+  // list. Public groups sink beneath the ones you actually started or were invited to as well
+  // (a directory join is a lighter commitment than a real friend group), but still above the
+  // between-seasons partition below, since a public group never has one. A stable sort (native
+  // Array#sort in every engine this app ships to) preserves the existing newest-first order
+  // within each of the resulting partitions.
+  const sortedGroups = [...(groups ?? [])].sort((a, b) => {
+    const intermissionDelta = (intermissionGroupIds.has(a.id) ? 1 : 0) - (intermissionGroupIds.has(b.id) ? 1 : 0);
+    if (intermissionDelta !== 0) return intermissionDelta;
+    return (a.is_public ? 1 : 0) - (b.is_public ? 1 : 0);
+  });
 
   const hasGroups = (groups ?? []).length > 0;
 
@@ -130,12 +135,18 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
                     <GroupAvatar
                       name={g.name}
                       avatarKey={g.avatar_key}
-                      radiusClassName="rounded-[14px]"
                       className="h-11 w-11 text-[13px]"
                       fallbackClassName={needsYou > 0 ? 'bg-espresso-900 text-honey-300' : 'bg-espresso-50 text-espresso-500'}
                     />
                     <span className="min-w-0 flex-1">
-                      <p className="truncate font-display text-[15.5px] font-extrabold tracking-[-0.01em] text-espresso-950">{g.name}</p>
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <p className="truncate font-display text-[15.5px] font-extrabold tracking-[-0.01em] text-espresso-950">{g.name}</p>
+                        {g.is_public && (
+                          <span className="shrink-0 rounded-full bg-honey-100 px-1.5 py-[1px] text-[9.5px] font-extrabold tracking-[0.04em] text-honey-700 uppercase">
+                            Public
+                          </span>
+                        )}
+                      </span>
                       <p className="mt-[3px] flex items-center gap-1.5 text-[12.5px] text-espresso-500">
                         {needsYou > 0 && (
                           <>
@@ -176,7 +187,6 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
                   <GroupAvatar
                     name={g.name}
                     avatarKey={g.avatar_key}
-                    radiusClassName="rounded-[11px]"
                     className="h-[34px] w-[34px] text-[11.5px]"
                     fallbackClassName="bg-espresso-100 text-espresso-400"
                   />
@@ -202,9 +212,9 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
         </div>
       </div>
 
-      <Link href="/demo" className="block">
+      <Link href="/groups/discover" className="block">
         <Button size="lg" variant="outline" className="w-full">
-          Try a two-minute demo
+          Browse public groups
         </Button>
       </Link>
     </main>

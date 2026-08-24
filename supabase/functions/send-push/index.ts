@@ -281,6 +281,15 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
     };
   }
 
+  if (event.event_type === 'assigned_group_moderator') {
+    const group = await groupRow(event.group_id);
+    return {
+      title: group.name,
+      body: `You're now a moderator of ${group.name}. You can create markets and remove bad actors.`,
+      url: `/groups/${event.group_id}`,
+    };
+  }
+
   if (event.event_type === 'group_deletion_scheduled') {
     const group = await groupRow(event.group_id);
     return {

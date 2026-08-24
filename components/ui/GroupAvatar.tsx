@@ -23,8 +23,8 @@ export function GroupAvatar({
       than override — pass `radiusClassName` instead. */
   className?: string;
   fallbackClassName?: string;
-  /** The one exception to "avatars are circles": the groups hub squares them off to a soft
-      rounded tile, so a stack of cards reads as a list of places rather than a row of faces. */
+  /** Every group icon is a circle by default, public or private, chosen or initials — an escape
+      hatch for a caller that genuinely needs a different shape, not currently used anywhere. */
   radiusClassName?: string;
 }) {
   const src = groupAvatarSrc(avatarKey);
