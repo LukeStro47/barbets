@@ -27,6 +27,16 @@ const STEP_INDEX: Record<Step, number> = { profile: 0, picking: 1, comparing: 2 
  * taps "Compare with someone" again, it does not require re-traversing the picker to get home.
  * The close X (from `RouteModal`) always closes the whole dialog via `router.back()`, independent
  * of which step is showing.
+ *
+ * The three steps are stacked, not laid out side by side in a normal flex row: only the
+ * `profile` panel sits in normal document flow (so it alone determines the dialog's height, the
+ * same height a plain member record would have); `picking` and `comparing` are `absolute inset-0`
+ * over that same box, each independently `overflow-y-auto`. A plain flex row of three same-width
+ * panels would size the dialog to whichever panel happened to be tallest and leave the others
+ * either awkwardly short or, worse, resize the whole dialog as `step` changes — the "picking" list
+ * is usually much shorter than the record above it, and letting the dialog visibly shrink to fit
+ * it read as a layout glitch rather than a deliberate step. Stacking fixes the height at the
+ * record's own and lets a longer member list scroll within that same box instead.
  */
 export function MemberProfileModal({ data }: { data: MemberProfileData }) {
   const [step, setStep] = useState<Step>('profile');
@@ -65,10 +75,17 @@ export function MemberProfileModal({ data }: { data: MemberProfileData }) {
 
   const title = step === 'profile' ? (isYou ? 'Your record' : 'Member record') : step === 'picking' ? 'Compare with' : 'Head to head';
 
+  // Each panel's own resting offset relative to whichever step is current — 0 when it's the one
+  // showing, ±100% when it's one step to either side. Applied as a translateX, which is purely
+  // visual and never affects how much space a panel's box claims in the layout.
+  function offset(panelStep: Step) {
+    return `${(STEP_INDEX[panelStep] - STEP_INDEX[step]) * 100}%`;
+  }
+
   return (
     <RouteModal title={title} onBack={step !== 'profile' ? backToProfile : undefined} padded={false}>
-      <div className="flex transition-transform duration-300 ease-out" style={{ width: '300%', transform: `translateX(-${STEP_INDEX[step] * (100 / 3)}%)` }}>
-        <div className="w-full shrink-0 space-y-5 p-5" style={{ width: `${100 / 3}%` }}>
+      <div className="relative overflow-x-hidden">
+        <div className="space-y-5 p-5 transition-transform duration-300 ease-out" style={{ transform: `translateX(${offset('profile')})` }}>
           <MemberProfileCard data={data} />
           {others.length > 0 && (
             <button
@@ -81,7 +98,10 @@ export function MemberProfileModal({ data }: { data: MemberProfileData }) {
           )}
         </div>
 
-        <div className="w-full shrink-0 space-y-1 p-[18px]" style={{ width: `${100 / 3}%` }}>
+        <div
+          className="absolute inset-0 space-y-1 overflow-y-auto p-[18px] transition-transform duration-300 ease-out"
+          style={{ transform: `translateX(${offset('picking')})` }}
+        >
           {ordered.map((m) => (
             <button
               key={m.id}
@@ -94,7 +114,10 @@ export function MemberProfileModal({ data }: { data: MemberProfileData }) {
           ))}
         </div>
 
-        <div className="w-full shrink-0 p-[18px]" style={{ width: `${100 / 3}%` }}>
+        <div
+          className="absolute inset-0 overflow-y-auto p-[18px] transition-transform duration-300 ease-out"
+          style={{ transform: `translateX(${offset('comparing')})` }}
+        >
           {isPending ? (
             <p className="py-6 text-center text-sm text-espresso-400">Loading…</p>
           ) : error ? (
