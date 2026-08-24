@@ -5,8 +5,10 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Mention } from '@/components/ui/Mention';
 import { AwardGlyph } from '@/components/groups/AwardGlyph';
 import { AwardsRail, UnclaimedTitles } from '@/components/groups/AwardsSections';
+import { LostTitleCard } from '@/components/groups/LostTitleCard';
 import { CustomAwardsSection } from '@/components/groups/CustomAwardsSection';
 import { TITLE_ORDER, TITLE_META, type GroupTitleRow } from '@/lib/titles';
+import { diffTitleSnapshots, type TitleSnapshotEntry } from '@/lib/seasonTitleDiff';
 import type { CustomGroupTitle, CustomGroupTitleHolder } from '@/lib/customAwards';
 import { numberWord, numberWordCapitalized } from '@/lib/formatNumber';
 
@@ -43,13 +45,48 @@ export default async function AwardsPage({ params }: { params: Promise<{ groupId
   const holderByTitleId = new Map(((customHolders ?? []) as CustomGroupTitleHolder[]).map((h) => [h.custom_title_id, h]));
   const isOwner = group?.owner_id === user?.id;
 
-  const { data: activeSeason } = settings?.seasons_enabled
-    ? await supabase.from('seasons').select('number, name').eq('group_id', groupId).eq('status', 'active').maybeSingle()
+  // Any status, not just active — this is how the page knows to switch into "frozen at close"
+  // framing. `latestSeason` is the *next* season's intermission row once the season has ended
+  // (see _finalize_season), so the season being recapped is number - 1.
+  const { data: latestSeason } = settings?.seasons_enabled
+    ? await supabase.from('seasons').select('number, name, status').eq('group_id', groupId).order('number', { ascending: false }).limit(1).maybeSingle()
+    : { data: null };
+  const isIntermission = latestSeason?.status === 'intermission';
+  const activeSeason = latestSeason?.status === 'active' ? latestSeason : null;
+
+  const { data: endedSeason } = isIntermission
+    ? await supabase.from('seasons').select('number, name').eq('group_id', groupId).eq('number', latestSeason!.number - 1).maybeSingle()
     : { data: null };
 
   const nicknameByUserId = new Map((members ?? []).map((m) => [m.user_id, m.nickname]));
   const membershipIdByUserId = new Map((members ?? []).map((m) => [m.user_id, m.id]));
   const rowsByKey = new Map(((titleRows ?? []) as GroupTitleRow[]).map((r) => [r.title_key, r]));
+
+  // Titles are lifetime/live (see lib/titles.ts), never reset at a season boundary, and nothing
+  // re-resolves during intermission — so the live rows above are already exactly "as they stood
+  // when the season closed." What they can't show on their own is what changed: for that, diff
+  // against the titles_snapshot the *previous* season's finalize captured (see
+  // supabase/migrations/20260823140000_season_end_stats_and_title_snapshot.sql), which is "who
+  // held what at the start of the season that just ended."
+  let lostTitles: { key: (typeof TITLE_ORDER)[number]; toNickname: string }[] = [];
+  if (isIntermission && endedSeason && endedSeason.number > 1) {
+    const { data: priorResult } = await supabase
+      .from('season_results')
+      .select('snapshot, seasons!inner(number)')
+      .eq('group_id', groupId)
+      .eq('seasons.number', endedSeason.number - 1)
+      .maybeSingle();
+    const priorTitlesSnapshot = (priorResult?.snapshot as { titles_snapshot?: TitleSnapshotEntry[] } | undefined)?.titles_snapshot ?? null;
+    const currentSnapshot: TitleSnapshotEntry[] = ((titleRows ?? []) as GroupTitleRow[]).map((r) => ({
+      title_key: r.title_key,
+      user_id: r.user_id,
+      nickname: r.user_id ? (nicknameByUserId.get(r.user_id) ?? null) : null,
+      stat_value: r.stat_value,
+    }));
+    lostTitles = diffTitleSnapshots(currentSnapshot, priorTitlesSnapshot)
+      .filter((c) => c.fromUserId === user?.id)
+      .map((c) => ({ key: c.titleKey, toNickname: c.toNickname }));
+  }
 
   const heldKeys = TITLE_ORDER.filter((k) => rowsByKey.get(k)?.user_id);
   const vacantKeys = TITLE_ORDER.filter((k) => !rowsByKey.get(k)?.user_id);
@@ -71,14 +108,15 @@ export default async function AwardsPage({ params }: { params: Promise<{ groupId
         backHref={`/groups/${groupId}/leaderboard`}
         backLabel="Leaderboard"
         backAction={
-          activeSeason && (
+          (activeSeason || (isIntermission && endedSeason)) && (
             <span className="shrink-0 rounded-full bg-espresso-50 px-3 py-1 text-[11.5px] font-extrabold text-espresso-700">
-              {activeSeason.name ?? `Season ${activeSeason.number}`}
+              {isIntermission ? `${endedSeason?.name ?? `Season ${endedSeason?.number ?? ''}`} · final` : (activeSeason?.name ?? `Season ${activeSeason?.number}`)}
             </span>
           )
         }
         subtitle={
           <span className="text-[13px] text-espresso-500">
+            {isIntermission && 'Titles as they stood when the season closed. '}
             {yourKeys.length > 0 ? (
               <>
                 You hold{' '}
@@ -97,6 +135,14 @@ export default async function AwardsPage({ params }: { params: Promise<{ groupId
 
       {yourKeys.length > 0 && (
         <AwardsRail titles={yourKeys.map((key) => ({ key, stat: TITLE_META[key].format(rowsByKey.get(key)!.stat_value) }))} />
+      )}
+
+      {lostTitles.length > 0 && (
+        <div className="grid grid-cols-2 gap-2.5">
+          {lostTitles.map((t) => (
+            <LostTitleCard key={t.key} titleKey={t.key} toNickname={t.toNickname} />
+          ))}
+        </div>
       )}
 
       {heldKeys.length === 0 ? (

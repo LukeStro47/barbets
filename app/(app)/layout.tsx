@@ -1,5 +1,5 @@
 import { createClient, requireUser } from '@/lib/supabase/server';
-import { BottomNav, type NavGroup } from '@/components/layout/BottomNav';
+import { BottomNav, type NavGroup, type GroupBettingStatus } from '@/components/layout/BottomNav';
 import { BottomNavSpacer } from '@/components/layout/BottomNavSpacer';
 import { PullToRefresh } from '@/components/layout/PullToRefresh';
 import { PageTransition } from '@/components/layout/PageTransition';
@@ -16,7 +16,7 @@ export default async function AppLayout({ children, modal }: { children: React.R
 
   const { data: groupRows } = await supabase
     .from('groups')
-    .select('id, name, avatar_key, memberships(status)')
+    .select('id, name, avatar_key, owner_id, memberships(status, user_id, nickname)')
     .order('created_at', { ascending: false });
 
   const groupIds = (groupRows ?? []).map((g) => g.id);
@@ -26,25 +26,47 @@ export default async function AppLayout({ children, modal }: { children: React.R
       : { data: [] };
   const settingsByGroup = new Map((settingsRows ?? []).map((s) => [s.group_id, s]));
 
-  // Betting only ever opens through the current *active* season for a seasons-enabled group
-  // (winding_down/intermission/archived can't take new markets either way, same gate
-  // create_market() itself uses) — see GroupFeedPage's identical bettingEnabled formula.
+  // Betting only ever opens through the current *active* season for a seasons-enabled group —
+  // winding_down/intermission/archived can't take new markets either way, same gate
+  // create_market() itself uses. Fetching every status (not just 'active') is what lets the
+  // "+" button's blocked-modal tell "between seasons" apart from "owner has betting off" instead
+  // of collapsing both into one boolean; reduced to one row per group below since there's no
+  // per-group "top 1" query shape over PostgREST.
   const seasonsEnabledGroupIds = (settingsRows ?? []).filter((s) => s.seasons_enabled).map((s) => s.group_id);
-  const { data: activeSeasonRows } =
+  const { data: seasonRows } =
     seasonsEnabledGroupIds.length > 0
-      ? await supabase.from('seasons').select('group_id, betting_open').in('group_id', seasonsEnabledGroupIds).eq('status', 'active')
+      ? await supabase.from('seasons').select('group_id, number, status, betting_open, name').in('group_id', seasonsEnabledGroupIds)
       : { data: [] };
-  const activeSeasonBettingOpenByGroup = new Map((activeSeasonRows ?? []).map((s) => [s.group_id, s.betting_open]));
+  const latestSeasonByGroup = new Map<string, { number: number; status: string; betting_open: boolean; name: string | null }>();
+  for (const s of seasonRows ?? []) {
+    const prev = latestSeasonByGroup.get(s.group_id);
+    if (!prev || s.number > prev.number) latestSeasonByGroup.set(s.group_id, s);
+  }
 
   const groups: NavGroup[] = (groupRows ?? []).map((g) => {
     const memberCount = (g.memberships ?? []).filter((m: { status: string }) => m.status === 'active' || m.status === 'dormant').length;
     return { id: g.id, name: g.name, avatarKey: g.avatar_key, meta: `${memberCount} member${memberCount === 1 ? '' : 's'}` };
   });
 
-  const bettingEnabledByGroup: Record<string, boolean> = {};
+  const bettingStatusByGroup: Record<string, GroupBettingStatus> = {};
   for (const g of groupRows ?? []) {
-    const settings = settingsByGroup.get(g.id);
-    bettingEnabledByGroup[g.id] = settings?.seasons_enabled ? (activeSeasonBettingOpenByGroup.get(g.id) ?? false) : (settings?.betting_enabled ?? false);
+    const groupSettings = settingsByGroup.get(g.id);
+    if (!groupSettings?.seasons_enabled) {
+      bettingStatusByGroup[g.id] = { blocked: !groupSettings?.betting_enabled, reason: 'owner_off' };
+      continue;
+    }
+    const latest = latestSeasonByGroup.get(g.id);
+    if (latest?.status === 'active') {
+      bettingStatusByGroup[g.id] = { blocked: !latest.betting_open, reason: 'owner_off' };
+      continue;
+    }
+    const ownerNickname = (g.memberships ?? []).find((m: { user_id: string; nickname: string | null }) => m.user_id === g.owner_id)?.nickname ?? undefined;
+    bettingStatusByGroup[g.id] = {
+      blocked: true,
+      reason: latest?.status === 'winding_down' ? 'season_winding_down' : 'season_intermission',
+      ownerNickname,
+      seasonName: latest?.name ?? undefined,
+    };
   }
 
   const taskCounts = await getGroupTaskCounts(supabase, groupIds, user.id);
@@ -70,7 +92,7 @@ export default async function AppLayout({ children, modal }: { children: React.R
           <BottomNavSpacer>{children}</BottomNavSpacer>
         </PageTransition>
       </PullToRefresh>
-      <BottomNav groups={groups} bettingEnabledByGroup={bettingEnabledByGroup} hasNeedsYou={hasNeedsYou} />
+      <BottomNav groups={groups} bettingStatusByGroup={bettingStatusByGroup} hasNeedsYou={hasNeedsYou} />
       {/* The @modal parallel slot — RouteModal portals its actual content to document.body, so
           where this renders in the tree doesn't matter, only that it renders at all. */}
       {modal}

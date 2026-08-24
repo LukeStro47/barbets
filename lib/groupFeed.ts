@@ -23,7 +23,7 @@ type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 /** The column list every bucket below is built from. */
 const MARKET_COLUMNS =
-  'id, title, status, market_type, closes_at, created_at, resolved_at, outcome, outcome_option_id, line, unit';
+  'id, title, status, market_type, closes_at, created_at, resolved_at, outcome, outcome_option_id, line, unit, season_id';
 
 const ACTIVE_STATUSES = ['pending_sponsor', 'open', 'closed', 'proposed', 'disputed'];
 const BETTING_CLOSED_STATUSES = ['closed', 'proposed', 'disputed'];
@@ -41,6 +41,7 @@ type MarketRow = {
   outcome_option_id: string | null;
   line: number | null;
   unit: string | null;
+  season_id: string | null;
 };
 
 type BetRow = { market_id: string; side: string | null; option_id: string | null; amount: number; payout?: number | null };
@@ -308,7 +309,10 @@ export async function getSettledMarkets(
   supabase: Supabase,
   groupId: string,
   userId: string,
-  cursor: SettledCursor | null = null
+  cursor: SettledCursor | null = null,
+  /** Scopes the feed to one season's markets (the /seasons archive route). Omitted everywhere
+   * else, which keeps today's all-time behavior for the normal in-season Settled tab. */
+  seasonId?: string
 ): Promise<SettledPage> {
   if (cursor && (!TIMESTAMP_RE.test(cursor.resolvedAt) || !UUID_RE.test(cursor.id))) return EMPTY_PAGE;
 
@@ -316,7 +320,13 @@ export async function getSettledMarkets(
     .from('visible_markets')
     .select(MARKET_COLUMNS)
     .eq('group_id', groupId)
-    .in('status', ['resolved', 'voided'])
+    .in('status', ['resolved', 'voided']);
+
+  if (seasonId) {
+    query = query.eq('season_id', seasonId);
+  }
+
+  query = query
     // Ordered in SQL, not sorted in JS after the fact: a page boundary only holds if the
     // database and the cursor agree on the order. resolved_at is non-null for both statuses
     // by check constraint (markets_terminal_requires_resolved_at).

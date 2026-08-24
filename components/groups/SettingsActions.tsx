@@ -714,7 +714,7 @@ function EndSeasonSheet({
   );
 }
 
-function TransferOwnershipSheet({
+export function TransferOwnershipSheet({
   groupId,
   members,
   onClose,
