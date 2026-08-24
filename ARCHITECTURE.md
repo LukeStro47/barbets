@@ -47,7 +47,10 @@ app/
                                          members/[membershipId] (another member's read-only
                                          record — see get_member_stats() below),
                                          members/[membershipId]/vs/[otherMembershipId]
-                                         (head-to-head — see get_head_to_head_markets() below)
+                                         (head-to-head — see get_head_to_head_markets() below;
+                                         the direct-link/refresh fallback only, since "Compare
+                                         with someone" now stays inline in CompareMemberPicker's
+                                         own modal step instead of navigating here — see below)
   (app)/@modal/(.)groups/.../members/[membershipId] — intercepts a same-app tap on a name so
                                          the member record above opens as a centered dialog
                                          (RouteModal) instead of a full page navigation; the
@@ -79,8 +82,8 @@ proxy.ts                               — the file convention formerly called m
 lib/
   actions/*.ts        — Server Actions, one file per domain (markets, bets, resolution,
                          groups, seasons, profile, customAwards, push, auth, reactions, admin, feedback,
-                         betaGate, errorReport, feed — the last is the one read-only action,
-                         see the Server Actions section)
+                         betaGate, errorReport, feed, memberProfile — the last two are reads
+                         rather than mutations, see the Server Actions section)
   errors.ts           — error-mapping conventions (see below)
   errorReporter.ts    — the one place an unexpected throw becomes a Slack card (see
                          "Production errors are tracked by posting them to Slack")
@@ -107,9 +110,14 @@ lib/
                          allocation bounds, all enforced by the inputs and the Postgres
                          functions both (see below)
   memberProfile.ts     — getMemberProfileData(): the member-record query (get_member_stats()
-                         plus the group/rank/badges/avatar lookups around it), shared by the
-                         full-page route and its intercepted modal so there's one query path
-                         behind two presentations
+                         plus the group/rank/badges/avatar lookups around it, and the viewer's
+                         own meMembershipId for labelling their row "@me" in the compare picker),
+                         shared by the full-page route and its intercepted modal so there's one
+                         query path behind two presentations
+  headToHead.ts        — HeadToHeadData/HeadToHeadMemberStats/HeadToHeadMarket: the pure shapes a
+                         head-to-head comparison renders, shared by the vs/ page's server fetch
+                         and lib/actions/memberProfile.ts's loadHeadToHead() so HeadToHeadCard
+                         (components/groups/) only has to know one shape
   tasks.ts             — "does this group need me?" endorse/vote task list + counts (see below)
   groupFeed.ts         — the group hub's two market halves: getActiveMarkets() (bucketed by
                          status, unpaged) and getSettledMarkets() (keyset-paged, and the one
@@ -129,7 +137,10 @@ lib/
 components/
   ui/          — palette-driven atoms (Button, Card, Modal, RouteModal (the centered-dialog
                  shell an intercepted route opens, closed via router.back() rather than a
-                 state setter), Logo, StackedLogo, CountdownTimer, Mention, GroupAvatar,
+                 state setter; takes a `title` and renders the same bg-espresso-50 banded
+                 header every other Modal-with-padded={false} caller uses, close button inside
+                 that row rather than floating over the content's own top-right corner),
+                 Logo, StackedLogo, CountdownTimer, Mention, GroupAvatar,
                  UserAvatar, ConsequenceRow, Field, ...)
                  SettingsList — the settings page's "ledger" grammar: SectionLabel,
                  SettingsCard (hairline-separated rows), SettingRow (label + consequence
@@ -159,13 +170,21 @@ components/
                  IntermissionActions, LeaveGroupButton, GroupDeletionBanner, WaitingOnYouCard,
                  OnboardingCarousel, AwardGlyph, AwardsSections (the awards page's
                  swipeable "yours" rail and its unclaimed-titles expander),
-                 CompareMemberPicker (the member page's "Compare with someone" pick-one list),
+                 CompareMemberPicker (the member page's "Compare with someone" control — a
+                 single banded modal with a picking step and a comparing step, Back between
+                 them, no navigation involved; the viewer's own row is labelled "@me" via
+                 Mention rather than their nickname), HeadToHeadCard (the comparison's actual
+                 content — two StatColumns plus shared markets — shared by that modal step and
+                 the vs/ page's direct-link fallback, see lib/headToHead.ts),
                  MemberProfileCard (the member record's actual content, shared by the full-page
                  route and its intercepted modal — see RouteModal above), CustomAwardsSection
                  (the awards page's owner-configured second section: held/vacant custom
                  awards, the create-award form, delete), ...
   profile/     — AccountForms, AvatarPicker (upload-with-crop or pick a built-in icon; opened
-                 from /profile, not Account & security), AvatarCropper (the pan/zoom crop step),
+                 from a tappable row directly above ShareRecordCard on /profile, not Account &
+                 security — identity, not account hygiene — and deliberately outside
+                 ShareRecordCard's own captured node, since that node is what gets rendered
+                 straight to the shared PNG), AvatarCropper (the pan/zoom crop step),
                  DeleteAccountButton, FeedbackForm, GroupSwitcher, ShareRecordCard,
                  NotificationPreferences
   admin/       — AdminBroadcastForm (the one component behind /admin)
@@ -318,7 +337,7 @@ All are `SECURITY DEFINER`, `SET search_path = public`, and explicitly `REVOKE`d
 - **`set_avatar_preset`** — the preset counterpart: sets/clears `users.avatar_preset_key` for the caller's own row and clears `avatar_updated_at` in the same update. `setAvatarPreset()` (`lib/actions/profile.ts`) is the one Server Action that calls it, from `AvatarPicker`'s icon grid.
 - **`set_notifications_enabled` / `update_notification_categories` / `update_group_notification_prefs`** — the three writes behind `/profile/notifications` (see "Notification preferences" below). All three act on the caller's own row only, so there's nothing to authorize beyond membership.
 - **`get_member_stats`** — the foundation for viewing another member's profile (`/groups/[groupId]/members/[membershipId]`, linked from leaderboard rows and the awards page's "held by" rows). **This is a new, deliberate authority decision, not an extension of an existing gate**: today, within a group, only you can see your own accuracy/net/bet history — everyone else's is either invisible or (per `membership_ledger_net`'s own-rows-only limitation, see the money section above) silently reads as a real-looking zero. This function makes every non-`removed` member's performance record visible to every other currently-active member of the same group. Gated on `_caller_is_active_group_member()` (excludes both `removed` and `left` callers — a member who left can't browse anyone's profile any more, same as every other group surface), with the *target* allowed to be `left` as well as `active`/`dormant` (only `removed` is excluded), matching the leaderboard's existing precedent of still showing a left member's honest historical record if they actually played. Returns balance, tenure, accuracy (the same win-rate definition already shown on `/profile` for yourself, no min-bet threshold), lifetime tokens wagered, best call (highest payout/stake multiple), and **all-time net, read directly from `ledger` under this function's elevated privilege** — deliberately the first place the two known "silently reads zero for other people" gaps get a real, deliberate answer instead of an accidental blind spot. No new privacy exception for hidden-subject markets is needed: every stat is computed from `status = 'resolved'` bets (or the bettor's own bet rows regardless of market status for the wagered/settled-count figures), and a resolved market is already visible to everyone per `is_market_visible()`.
-- **`get_head_to_head_markets`** — the second half of head-to-head analysis (`/groups/[groupId]/members/[membershipId]/vs/[otherMembershipId]`, reached via "Compare with someone" on a member's page). Adds no new disclosure beyond what `get_member_stats` already decided: same gate (`_caller_is_active_group_member`, both targets non-`removed` and in the same group), and every row comes from `status = 'resolved'` markets. Aggregates per `(market, user)` rather than joining bet rows directly, so a hedged bettor (hedging is opt-out, not the exception) collapses to one row per shared market instead of a cross-joined fan-out of every side/option combination the two of them happened to hold; the "choice" each side is shown as is resolved to a plain label in SQL (the bet side's text, or the option's label for multiple choice) rather than an enum or option id the client would have to look up itself.
+- **`get_head_to_head_markets`** — the second half of head-to-head analysis, called from `lib/actions/memberProfile.ts`'s `loadHeadToHead()` (the inline "Compare with someone" step on a member's page/modal) and, for a direct link, from the `/groups/[groupId]/members/[membershipId]/vs/[otherMembershipId]` fallback page directly. Adds no new disclosure beyond what `get_member_stats` already decided: same gate (`_caller_is_active_group_member`, both targets non-`removed` and in the same group), and every row comes from `status = 'resolved'` markets. Aggregates per `(market, user)` rather than joining bet rows directly, so a hedged bettor (hedging is opt-out, not the exception) collapses to one row per shared market instead of a cross-joined fan-out of every side/option combination the two of them happened to hold; the "choice" each side is shown as is resolved to a plain label in SQL (the bet side's text, or the option's label for multiple choice) rather than an enum or option id the client would have to look up itself.
 - **`get_group_join_message`** — a new member sees the owner's custom welcome message (`group_settings.join_message`, plain text, capped at 240 characters, written through `update_group_settings` like every other setting) in a modal the instant `JoinFlow` finishes joining them. Deliberately its own read function rather than a `join_group()` return-value change: `join_group` currently `returns setof memberships`, a real table type, and folding in a non-column field would mean switching to `returns table(...)` — a bigger, riskier signature change than a purely cosmetic feature warrants. Gated to an active member of the group (same 404-not-403 posture as everywhere else), but returns a bare `text` scalar rather than a row, so a non-member and a member-with-no-message-set are both indistinguishable `null` — there's no partial disclosure to worry about either way.
 - **`get_group_by_invite_code` / `_enforce_invite_code_rate_limit` / `_record_invite_code_miss`** — the invite-code preview a non-member gets on `/join/[code]` (group name, `accepting_members`, and the caller's own membership status, nothing about members, markets, or bets), plus the two internal helpers behind the 10-misses-per-hour guess limit it shares with `join_group`. Both helpers are revoked from `authenticated`; only those two functions call them. Both `get_group_by_invite_code` and `join_group` are also explicitly revoked from `anon` (`20260814120000_invite_functions_revoke_anon.sql`) — see the "notable design decisions" entry on the `anon` grant for why that revoke had to be explicit at all. See "Guessing at invite codes is rate limited in the database" above for why the miss paths stopped raising and why the preview is VOLATILE.
 - **`invite_code_exists` / `_client_ip` / `_enforce_invite_code_ip_rate_limit` / `_record_invite_code_ip_miss`** — the one function in this app granted to `anon`. See the data model section above for what it exists to do and how its IP-based limit differs from the account-based one.
@@ -376,7 +395,7 @@ The five slots, in order: **(1)** your position (`PositionTicket`), only when yo
 
 Two decisions here are load-bearing enough to have their own entries in "Notable design decisions": why slots 1 and 2 exclude each other and why the stage's action never sits where betting does, and why the drawn payout projection was dropped rather than built (short version: it would have repealed sealed odds).
 
-**Banded modals.** Four modals own their own edge-to-edge header/footer bands instead of `Modal`'s default padded stack: the bonus pool explainer (`BonusPoolValue`), its group-level twin (`PendingBonusPoolNote`, same band and the same two-row arithmetic block for money that has no market yet), "Call the result" (`ProposeResolutionCard`, two steps under one band that reads `Step 1 of 2` / `Step 2 of 2`), and owner void (`MarketOverflowMenu`'s `VoidAction`, also two steps under one band). They share the band styling with `TicketCard` on purpose — `bg-espresso-50 px-[18px]`, uppercase label left, meta right — so a modal reads as the same object family as the cards behind it. `Modal` takes `padded={false}` plus a `panelClassName` for this rather than being forked; every other modal in the app still gets the default `space-y-3 p-5`.
+**Banded modals.** Several modals own their own edge-to-edge header/footer bands instead of `Modal`'s default padded stack: the bonus pool explainer (`BonusPoolValue`), its group-level twin (`PendingBonusPoolNote`, same band and the same two-row arithmetic block for money that has no market yet), "Call the result" (`ProposeResolutionCard`, two steps under one band that reads `Step 1 of 2` / `Step 2 of 2`), owner void (`MarketOverflowMenu`'s `VoidAction`, also two steps under one band), the full ledger (`SettlementLedger`), and `CompareMemberPicker` (a "Compare with" picking step and a "Head to head" comparing step under one band, `Back` between them rather than a step counter, since going back changes what's being asked rather than advancing a fixed sequence). They share the band styling with `TicketCard` on purpose — `bg-espresso-50 px-[18px]`, uppercase label left, meta (or nothing) right — so a modal reads as the same object family as the cards behind it. `Modal` takes `padded={false}` plus a `panelClassName` for this rather than being forked; every other modal in the app still gets the default `space-y-3 p-5`. `RouteModal` (the intercepted-route shell, a different component from `Modal` — see above) uses the same band for its own close control rather than the floating top-right button it used to have, so an intercepted-route dialog and a locally-opened one read as the same family too.
 
 "Review your market" uses the same band and the same espresso outline but is **no longer a modal** — it's step 3 of the create-market wizard (`ReviewTicket` in `MarketForms.tsx`), a full page like the two steps before it. It is still where the endorsement rule lives (it used to be small print under the create form's submit button, explaining the consequence of an action nobody had taken yet), and it still only appears when `group_settings.require_endorsement` is actually on, since "betting opens as soon as you create it" is the unremarkable default and doesn't need a highlighted callout.
 

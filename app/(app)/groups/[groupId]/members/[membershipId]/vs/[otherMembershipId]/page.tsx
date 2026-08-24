@@ -2,13 +2,10 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { notFoundIfEmpty } from '@/lib/errors';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Card } from '@/components/ui/Card';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { UserAvatar } from '@/components/ui/UserAvatar';
-import { Mention } from '@/components/ui/Mention';
-import { formatTokens, formatSignedTokens } from '@/lib/formatNumber';
+import { HeadToHeadCard } from '@/components/groups/HeadToHeadCard';
+import type { HeadToHeadMemberStats, HeadToHeadMarket } from '@/lib/headToHead';
 
-interface MemberStats {
+interface MemberStatsRow {
   membership_id: string;
   group_id: string;
   user_id: string;
@@ -19,64 +16,14 @@ interface MemberStats {
   tokens_wagered: number;
 }
 
-interface HeadToHeadMarket {
-  market_id: string;
-  title: string;
-  resolved_at: string;
-  a_amount: number;
-  a_payout: number;
-  a_choice: string;
-  b_amount: number;
-  b_payout: number;
-  b_choice: string;
-}
-
-/** A compact two-column stat card, reused for both sides of the comparison. */
-function StatColumn({
-  stats,
-  avatarUpdatedAt,
-  avatarPresetKey,
-}: {
-  stats: MemberStats;
-  avatarUpdatedAt: string | null;
-  avatarPresetKey: string | null;
-}) {
-  const net = Number(stats.net);
-  return (
-    <div className="flex-1 space-y-3">
-      <div className="flex items-center gap-2">
-        <UserAvatar
-          userId={stats.user_id}
-          nickname={stats.nickname}
-          avatarUpdatedAt={avatarUpdatedAt}
-          avatarPresetKey={avatarPresetKey}
-          className="h-9 w-9 text-xs"
-          fallbackClassName="bg-espresso-50 text-honey-700"
-        />
-        <Mention nickname={stats.nickname} className="min-w-0 truncate font-display text-sm font-extrabold text-espresso-950" />
-      </div>
-      <div className="space-y-2 text-sm">
-        <div className="flex items-baseline justify-between">
-          <span className="text-espresso-400">Tokens</span>
-          <span className="font-bold tabular-nums text-espresso-900">{formatTokens(stats.balance)}</span>
-        </div>
-        <div className="flex items-baseline justify-between">
-          <span className="text-espresso-400">Accuracy</span>
-          <span className="font-bold tabular-nums text-espresso-900">{stats.accuracy_pct == null ? '—' : `${stats.accuracy_pct}%`}</span>
-        </div>
-        <div className="flex items-baseline justify-between">
-          <span className="text-espresso-400">Net</span>
-          <span className={`font-bold tabular-nums ${net >= 0 ? 'text-honey-600' : 'text-espresso-400'}`}>{formatSignedTokens(net)}</span>
-        </div>
-        <div className="flex items-baseline justify-between">
-          <span className="text-espresso-400">Wagered</span>
-          <span className="font-bold tabular-nums text-espresso-900">{formatTokens(Number(stats.tokens_wagered))}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
+/**
+ * The full-page fallback for a head-to-head comparison: a direct link, a shared URL, or a hard
+ * refresh land here. A same-app tap on "Compare with someone" normally never reaches this route
+ * at all any more — it's handled inline by `CompareMemberPicker`'s own modal step (fetching
+ * through `loadHeadToHead`, see lib/actions/memberProfile.ts) so comparing stays inside the
+ * member-profile modal with a Back button instead of leaving it. This page exists for the direct
+ * case only, sharing `HeadToHeadCard` (the actual comparison content) with that inline step.
+ */
 export default async function HeadToHeadPage({
   params,
 }: {
@@ -91,8 +38,8 @@ export default async function HeadToHeadPage({
     supabase.rpc('get_head_to_head_markets', { p_membership_id_a: membershipId, p_membership_id_b: otherMembershipId }),
   ]);
 
-  const a = notFoundIfEmpty<MemberStats>(aData);
-  const b = notFoundIfEmpty<MemberStats>(bData);
+  const a = notFoundIfEmpty<MemberStatsRow>(aData);
+  const b = notFoundIfEmpty<MemberStatsRow>(bData);
   if (a.group_id !== groupId || b.group_id !== groupId) notFound();
 
   const markets = (marketsData ?? []) as HeadToHeadMarket[];
@@ -102,51 +49,25 @@ export default async function HeadToHeadPage({
     supabase.from('users').select('avatar_updated_at, avatar_preset_key').eq('id', b.user_id).single(),
   ]);
 
+  const aStats: HeadToHeadMemberStats = {
+    ...a,
+    net: Number(a.net),
+    tokens_wagered: Number(a.tokens_wagered),
+    avatarUpdatedAt: aAvatar?.avatar_updated_at ?? null,
+    avatarPresetKey: aAvatar?.avatar_preset_key ?? null,
+  };
+  const bStats: HeadToHeadMemberStats = {
+    ...b,
+    net: Number(b.net),
+    tokens_wagered: Number(b.tokens_wagered),
+    avatarUpdatedAt: bAvatar?.avatar_updated_at ?? null,
+    avatarPresetKey: bAvatar?.avatar_preset_key ?? null,
+  };
+
   return (
     <main className="mx-auto max-w-lg space-y-5 px-5 py-8">
       <PageHeader title="Head to head" backHref={`/groups/${groupId}/members/${membershipId}`} backLabel="Back" />
-
-      <Card>
-        <div className="flex gap-4">
-          <StatColumn stats={a} avatarUpdatedAt={aAvatar?.avatar_updated_at ?? null} avatarPresetKey={aAvatar?.avatar_preset_key ?? null} />
-          <div className="w-px shrink-0 bg-espresso-100" />
-          <StatColumn stats={b} avatarUpdatedAt={bAvatar?.avatar_updated_at ?? null} avatarPresetKey={bAvatar?.avatar_preset_key ?? null} />
-        </div>
-      </Card>
-
-      <div>
-        <p className="mb-2 ml-1 text-[10.5px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">Markets you&apos;ve both bet on</p>
-        {markets.length === 0 ? (
-          <EmptyState icon="🤝" title="No shared markets yet" subtitle="Once you've both bet on the same market, it shows up here." />
-        ) : (
-          <div className="space-y-2">
-            {markets.map((m) => {
-              const aWon = m.a_payout > m.a_amount;
-              const bWon = m.b_payout > m.b_amount;
-              return (
-                <Card key={m.market_id} className="space-y-2.5">
-                  <p className="truncate text-sm font-bold text-espresso-900">{m.title}</p>
-                  <div className="flex gap-4 text-[13px]">
-                    <div className="flex-1 space-y-0.5">
-                      <p className="truncate text-espresso-500">{m.a_choice}</p>
-                      <p className={`font-bold tabular-nums ${aWon ? 'text-honey-600' : 'text-espresso-400'}`}>
-                        {formatSignedTokens(Number(m.a_payout) - Number(m.a_amount))}
-                      </p>
-                    </div>
-                    <div className="w-px shrink-0 bg-espresso-100" />
-                    <div className="flex-1 space-y-0.5">
-                      <p className="truncate text-espresso-500">{m.b_choice}</p>
-                      <p className={`font-bold tabular-nums ${bWon ? 'text-honey-600' : 'text-espresso-400'}`}>
-                        {formatSignedTokens(Number(m.b_payout) - Number(m.b_amount))}
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      <HeadToHeadCard data={{ a: aStats, b: bStats, markets }} />
     </main>
   );
 }

@@ -101,34 +101,6 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   const accountLinks = (
     <div className="space-y-3.5">
       <div className="space-y-2">
-        {/* Identity, not account hygiene, so it lives here rather than a tap deeper inside
-            Account & security — see AvatarPicker. */}
-        <AvatarPicker
-          userId={user.id}
-          nickname={myNickname}
-          avatarUpdatedAt={avatarRow?.avatar_updated_at ?? null}
-          avatarPresetKey={avatarRow?.avatar_preset_key ?? null}
-          trigger={
-            <button
-              type="button"
-              className="flex w-full items-center gap-3 rounded-[20px] border border-espresso-100 bg-paper-white px-4 py-3.5 transition-colors hover:border-espresso-200"
-            >
-              <UserAvatar
-                userId={user.id}
-                nickname={myNickname}
-                avatarUpdatedAt={avatarRow?.avatar_updated_at ?? null}
-                avatarPresetKey={avatarRow?.avatar_preset_key ?? null}
-                className="h-9 w-9 shrink-0 text-xs"
-                fallbackClassName="bg-espresso-50 text-honey-700"
-              />
-              <span className="min-w-0 flex-1 text-left">
-                <span className="block text-sm font-extrabold text-espresso-800">Profile picture</span>
-                <span className="mt-0.5 block text-[11.5px] text-espresso-400">A photo, or one of the built-in icons</span>
-              </span>
-              <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-espresso-300" />
-            </button>
-          }
-        />
         <SettingsRow
           href="/profile/account"
           label="Account & security"
@@ -173,10 +145,40 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
     </div>
   );
 
+  const avatarPickerRow = (
+    <AvatarPicker
+      userId={user.id}
+      nickname={myNickname}
+      avatarUpdatedAt={avatarRow?.avatar_updated_at ?? null}
+      avatarPresetKey={avatarRow?.avatar_preset_key ?? null}
+      trigger={
+        <button
+          type="button"
+          className="flex w-full items-center gap-3 rounded-[20px] border border-espresso-100 bg-paper-white px-4 py-3.5 transition-colors hover:border-espresso-200"
+        >
+          <UserAvatar
+            userId={user.id}
+            nickname={myNickname}
+            avatarUpdatedAt={avatarRow?.avatar_updated_at ?? null}
+            avatarPresetKey={avatarRow?.avatar_preset_key ?? null}
+            className="h-9 w-9 shrink-0 text-xs"
+            fallbackClassName="bg-espresso-50 text-honey-700"
+          />
+          <span className="min-w-0 flex-1 text-left">
+            <span className="block text-sm font-extrabold text-espresso-800">Profile picture</span>
+            <span className="mt-0.5 block text-[11.5px] text-espresso-400">A photo, or one of the built-in icons</span>
+          </span>
+          <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-espresso-300" />
+        </button>
+      }
+    />
+  );
+
   if (!memberships || memberships.length === 0) {
     return (
       <main className="mx-auto max-w-lg space-y-6 px-5 py-8">
         <PageHeader title="Profile" />
+        {avatarPickerRow}
         <EmptyState icon="👥" title="You're not in any groups yet" subtitle="Your record shows up here once you join or start one." />
         <Link href="/groups">
           <Button className="w-full">Go to your groups</Button>
@@ -309,6 +311,13 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   return (
     <main className="mx-auto max-w-lg space-y-4 px-5 py-8">
       <GroupSwitcher groups={switcherGroups} currentGroupId={groupId} />
+
+      {/* Identity, not account hygiene, so it lives here — right beside the record card that
+          shows this same picture — rather than a tap deeper inside Account & security, or lost
+          among the settings rows below. Sits outside ShareRecordCard's own captured node on
+          purpose: that node gets rendered straight to the shared PNG, and a chevron/edit
+          affordance has no business showing up in someone's shared record image. */}
+      {avatarPickerRow}
 
       <ShareRecordCard groupName={groupName} handle={selected.nickname}>
         <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 p-5 text-paper-white">

@@ -1,50 +1,130 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useTransition } from 'react';
+import { loadHeadToHead } from '@/lib/actions/memberProfile';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Mention } from '@/components/ui/Mention';
+import { HeadToHeadCard } from '@/components/groups/HeadToHeadCard';
+import type { HeadToHeadData } from '@/lib/headToHead';
+
+type Step = 'picking' | 'comparing';
 
 /**
- * Opens a simple pick-one list rather than the create-market flow's chip-strip subject picker —
- * that component is built for multi-select-with-a-cap against a whole group; this just needs one
- * name tapped out of a short list, closer to TransferOwnershipSheet's member picker than to it.
+ * "Compare with someone" as a single banded modal with a Back button between its two steps,
+ * rather than a small pick-one popup that then navigates away to a full page — the comparison
+ * itself (`HeadToHeadCard`, fetched through `loadHeadToHead`) renders inline as the modal's second
+ * step, so leaving the member-profile modal is never required just to see a comparison. The
+ * standalone `vs/[otherMembershipId]` route still exists for a direct link or a refresh; this is
+ * the same data and the same card, reached without a navigation.
+ *
+ * The viewer's own row is included in `others` (whoever the profile being viewed belongs to is
+ * already excluded by the caller) and labelled "@me" rather than their own nickname, so comparing
+ * yourself against whoever you're looking at doesn't require hunting for your own name in a list
+ * of everyone else's.
  */
 export function CompareMemberPicker({
   groupId,
   membershipId,
   others,
+  meMembershipId,
 }: {
   groupId: string;
   membershipId: string;
   others: { id: string; nickname: string }[];
+  meMembershipId: string | null;
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [step, setStep] = useState<Step>('picking');
+  const [data, setData] = useState<HeadToHeadData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   if (others.length === 0) return null;
 
+  // Your own row, if present, leads the list — the one entry someone opening this is likely
+  // looking for first, rather than buried alphabetically among everyone else's.
+  const ordered = [...others].sort((a, b) => (a.id === meMembershipId ? -1 : b.id === meMembershipId ? 1 : 0));
+
+  function openPicker() {
+    setStep('picking');
+    setData(null);
+    setError(null);
+    setOpen(true);
+  }
+
+  function close() {
+    setOpen(false);
+  }
+
+  function pick(other: { id: string; nickname: string }) {
+    setStep('comparing');
+    setError(null);
+    startTransition(async () => {
+      const result = await loadHeadToHead(groupId, membershipId, other.id);
+      if (result.error) setError(result.error);
+      else setData(result.data!);
+    });
+  }
+
+  function back() {
+    setStep('picking');
+    setData(null);
+    setError(null);
+  }
+
   return (
     <>
-      <Button type="button" variant="outline" className="w-full" onClick={() => setOpen(true)}>
+      <Button type="button" variant="outline" className="w-full" onClick={openPicker}>
         Compare with someone
       </Button>
 
       {open && (
-        <Modal onClose={() => setOpen(false)}>
-          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">Compare with</p>
-          <div className="max-h-[50vh] space-y-1 overflow-y-auto">
-            {others.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                className="flex w-full items-center rounded-xl px-3 py-2.5 text-left hover:bg-espresso-50"
-                onClick={() => router.push(`/groups/${groupId}/members/${membershipId}/vs/${m.id}`)}
-              >
-                <Mention nickname={m.nickname} className="font-semibold text-espresso-900" />
-              </button>
-            ))}
+        <Modal onClose={close} padded={false} panelClassName="flex max-h-[85dvh] flex-col overflow-hidden">
+          <div className="flex shrink-0 items-center justify-between gap-3 bg-espresso-50 px-[18px] py-[13px]">
+            <p className="text-xs font-extrabold tracking-[0.06em] text-espresso-800 uppercase">
+              {step === 'picking' ? 'Compare with' : 'Head to head'}
+            </p>
+          </div>
+
+          <div className="overflow-y-auto p-[18px]">
+            {step === 'picking' ? (
+              <div className="space-y-1">
+                {ordered.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    className="flex w-full items-center rounded-xl px-3 py-2.5 text-left hover:bg-espresso-50"
+                    onClick={() => pick(m)}
+                  >
+                    <Mention nickname={m.id === meMembershipId ? 'me' : m.nickname} className="font-semibold text-espresso-900" />
+                  </button>
+                ))}
+              </div>
+            ) : isPending ? (
+              <p className="py-6 text-center text-sm text-espresso-400">Loading…</p>
+            ) : error ? (
+              <p className="py-6 text-center text-sm text-danger-700">{error}</p>
+            ) : data ? (
+              <HeadToHeadCard data={data} />
+            ) : null}
+          </div>
+
+          <div className="flex shrink-0 gap-2 border-t border-espresso-50 px-[18px] py-[14px]">
+            {step === 'picking' ? (
+              <Button type="button" variant="outline" className="flex-1" onClick={close}>
+                Cancel
+              </Button>
+            ) : (
+              <>
+                <Button type="button" variant="outline" className="flex-1" onClick={back}>
+                  Back
+                </Button>
+                <Button type="button" className="flex-1" onClick={close}>
+                  Done
+                </Button>
+              </>
+            )}
           </div>
         </Modal>
       )}
