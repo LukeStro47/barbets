@@ -6,19 +6,21 @@ import { formatTokens, formatSignedTokens } from '@/lib/formatNumber';
 import type { HeadToHeadData, HeadToHeadMemberStats } from '@/lib/headToHead';
 
 /** A compact two-column stat card, reused for both sides of the comparison. */
-function StatColumn({ stats }: { stats: HeadToHeadMemberStats }) {
+function StatColumn({ stats, isPublicGroup }: { stats: HeadToHeadMemberStats; isPublicGroup: boolean }) {
   const net = Number(stats.net);
   return (
     <div className="flex-1 space-y-3">
       <div className="flex items-center gap-2">
-        <UserAvatar
-          userId={stats.user_id}
-          nickname={stats.nickname}
-          avatarUpdatedAt={stats.avatarUpdatedAt}
-          avatarPresetKey={stats.avatarPresetKey}
-          className="h-9 w-9 text-xs"
-          fallbackClassName="bg-espresso-50 text-honey-700"
-        />
+        {!isPublicGroup && (
+          <UserAvatar
+            userId={stats.user_id}
+            nickname={stats.nickname}
+            avatarUpdatedAt={stats.avatarUpdatedAt}
+            avatarPresetKey={stats.avatarPresetKey}
+            className="h-9 w-9 text-xs"
+            fallbackClassName="bg-espresso-50 text-honey-700"
+          />
+        )}
         <Mention nickname={stats.nickname} className="min-w-0 truncate font-display text-sm font-extrabold text-espresso-950" />
       </div>
       <div className="space-y-2 text-sm">
@@ -50,15 +52,15 @@ function StatColumn({ stats }: { stats: HeadToHeadMemberStats }) {
  * shape (lib/headToHead.ts) and presentation.
  */
 export function HeadToHeadCard({ data }: { data: HeadToHeadData }) {
-  const { a, b, markets } = data;
+  const { a, b, markets, isPublicGroup } = data;
 
   return (
     <div className="space-y-5">
       <Card>
         <div className="flex gap-4">
-          <StatColumn stats={a} />
+          <StatColumn stats={a} isPublicGroup={isPublicGroup} />
           <div className="w-px shrink-0 bg-espresso-100" />
-          <StatColumn stats={b} />
+          <StatColumn stats={b} isPublicGroup={isPublicGroup} />
         </div>
       </Card>
 

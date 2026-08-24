@@ -149,14 +149,18 @@ export default async function LeaderboardPage({
     <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-espresso-900 to-espresso-700 p-[18px]">
       <div className="pointer-events-none absolute inset-0 opacity-50 [background:radial-gradient(circle_at_90%_0%,rgba(232,163,61,0.3),rgba(232,163,61,0)_60%)]" />
       <Link href={`/groups/${groupId}/members/${leader.id}`} className="relative flex items-center gap-3.5">
-        <UserAvatar
-          userId={leader.user_id}
-          nickname={leader.nickname}
-          avatarUpdatedAt={avatarByUser.get(leader.user_id)?.avatar_updated_at}
-          avatarPresetKey={avatarByUser.get(leader.user_id)?.avatar_preset_key}
-          className="h-[52px] w-[52px] border-[1.5px] border-honey-300/50 text-[15px]"
-          fallbackClassName="bg-honey-500/[0.18] text-honey-300"
-        />
+        {/* Not even an initials placeholder in a public group — no avatar chip at all, not just no
+            photo, since the empty circle still reads as "a person's picture goes here". */}
+        {!group?.is_public && (
+          <UserAvatar
+            userId={leader.user_id}
+            nickname={leader.nickname}
+            avatarUpdatedAt={avatarByUser.get(leader.user_id)?.avatar_updated_at}
+            avatarPresetKey={avatarByUser.get(leader.user_id)?.avatar_preset_key}
+            className="h-[52px] w-[52px] border-[1.5px] border-honey-300/50 text-[15px]"
+            fallbackClassName="bg-honey-500/[0.18] text-honey-300"
+          />
+        )}
         <span className="min-w-0 flex-1">
           <span className="block text-[10px] font-extrabold tracking-[0.1em] text-honey-300 uppercase">
             {isIntermission ? 'Took the season' : 'Out in front'}
@@ -208,14 +212,16 @@ export default async function LeaderboardPage({
               />
               <Link href={`/groups/${groupId}/members/${m.id}`} className="absolute inset-0 flex items-center gap-2.5 px-3">
                 <span className="w-5 shrink-0 text-center text-xs font-extrabold text-espresso-500">{medal(i)}</span>
-                <UserAvatar
-                  userId={m.user_id}
-                  nickname={m.nickname}
-                  avatarUpdatedAt={avatarByUser.get(m.user_id)?.avatar_updated_at}
-                  avatarPresetKey={avatarByUser.get(m.user_id)?.avatar_preset_key}
-                  className={cn('h-9 w-9 text-xs', isMe ? 'border-2 border-honey-500' : 'border-[1.5px] border-espresso-100')}
-                  fallbackClassName="bg-paper-white text-espresso-700"
-                />
+                {!group?.is_public && (
+                  <UserAvatar
+                    userId={m.user_id}
+                    nickname={m.nickname}
+                    avatarUpdatedAt={avatarByUser.get(m.user_id)?.avatar_updated_at}
+                    avatarPresetKey={avatarByUser.get(m.user_id)?.avatar_preset_key}
+                    className={cn('h-9 w-9 text-xs', isMe ? 'border-2 border-honey-500' : 'border-[1.5px] border-espresso-100')}
+                    fallbackClassName="bg-paper-white text-espresso-700"
+                  />
+                )}
                 <span className="min-w-0 flex-1">
                   <Mention nickname={m.nickname} className="block truncate text-[13.5px] font-bold text-espresso-900" />
                   {(m.balance === 0 || m.status !== 'active') && (

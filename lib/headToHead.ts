@@ -30,4 +30,8 @@ export interface HeadToHeadData {
   a: HeadToHeadMemberStats;
   b: HeadToHeadMemberStats;
   markets: HeadToHeadMarket[];
+  /** Not just "no photo" — a public group shows no avatar chip at all, not even an initials
+      placeholder. One flag at the top level rather than per-side, since both stats always belong
+      to the same group. */
+  isPublicGroup: boolean;
 }

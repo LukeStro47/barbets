@@ -50,6 +50,10 @@ export interface MemberProfileData {
   sinceLabel: string;
   avatarUpdatedAt: string | null;
   avatarPresetKey: string | null;
+  /** Not just "no photo" — a public group shows no avatar chip at all, not even an initials
+      placeholder. MemberProfileCard reads this rather than inferring it from both avatar fields
+      being null, since that's also what an ordinary member with no photo looks like. */
+  isPublicGroup: boolean;
 }
 
 /**
@@ -141,5 +145,6 @@ export async function getMemberProfileData(groupId: string, membershipId: string
     // function gets the initials fallback for free, with nothing group-type-aware to remember.
     avatarUpdatedAt: group?.is_public ? null : (avatarRow?.avatar_updated_at ?? null),
     avatarPresetKey: group?.is_public ? null : (avatarRow?.avatar_preset_key ?? null),
+    isPublicGroup: !!group?.is_public,
   };
 }

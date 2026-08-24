@@ -15,20 +15,22 @@ import type { MemberProfileData } from '@/lib/memberProfile';
  * See lib/memberProfile.ts for where `data` comes from.
  */
 export function MemberProfileCard({ data }: { data: MemberProfileData }) {
-  const { stats, groupId, groupName, standing, awards, isYou, net, sinceLabel, avatarUpdatedAt, avatarPresetKey } = data;
+  const { stats, groupId, groupName, standing, awards, isYou, net, sinceLabel, avatarUpdatedAt, avatarPresetKey, isPublicGroup } = data;
 
   return (
     <>
       <Card className="space-y-4">
         <div className="flex items-center gap-3.5">
-          <UserAvatar
-            userId={stats.user_id}
-            nickname={stats.nickname}
-            avatarUpdatedAt={avatarUpdatedAt}
-            avatarPresetKey={avatarPresetKey}
-            className="h-14 w-14 text-lg"
-            fallbackClassName="bg-espresso-50 text-honey-700"
-          />
+          {!isPublicGroup && (
+            <UserAvatar
+              userId={stats.user_id}
+              nickname={stats.nickname}
+              avatarUpdatedAt={avatarUpdatedAt}
+              avatarPresetKey={avatarPresetKey}
+              className="h-14 w-14 text-lg"
+              fallbackClassName="bg-espresso-50 text-honey-700"
+            />
+          )}
           <div className="min-w-0 flex-1">
             <Mention nickname={stats.nickname} className="block truncate font-display text-lg font-extrabold text-espresso-950" />
             <p className="mt-0.5 truncate text-xs text-espresso-400">
