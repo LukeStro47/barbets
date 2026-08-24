@@ -69,7 +69,6 @@ function GroupRow({
           <GroupAvatar
             name={prefs.groupName}
             avatarKey={prefs.avatarKey}
-            radiusClassName="rounded-[10px]"
             className="h-8 w-8 text-[11px]"
             fallbackClassName="bg-espresso-900 text-honey-300"
           />

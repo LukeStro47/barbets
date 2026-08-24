@@ -274,6 +274,7 @@ export function CreateMarketForm({
   timezone,
   requireEndorsement,
   initialMarketType,
+  isPublic = false,
 }: {
   groupId: string;
   groupName: string;
@@ -285,6 +286,11 @@ export function CreateMarketForm({
    * there's no type picker here any more. Falls back to a yes/no market for anyone who reaches
    * the route directly without one. */
   initialMarketType?: MarketType;
+  /** Public groups can never have a subject — create_market() rejects it outright (see
+   * 20260824120000_public_group_market_gates.sql) — so the "About someone?" card and the
+   * @mention-an-option hint are dropped from the form entirely rather than offering something
+   * that would just come back as an error. */
+  isPublic?: boolean;
 }) {
   const router = useRouter();
   const marketType: MarketType = initialMarketType ?? 'yes_no';
@@ -626,14 +632,16 @@ export function CreateMarketForm({
                 </button>
               )}
             </div>
-            <p className="mt-2.5 text-[11.5px] leading-[1.45] text-espresso-400">
-              Type @ and pick a member to make an option about them. That hides the whole market from them until it
-              resolves.
-            </p>
+            {!isPublic && (
+              <p className="mt-2.5 text-[11.5px] leading-[1.45] text-espresso-400">
+                Type @ and pick a member to make an option about them. That hides the whole market from them until it
+                resolves.
+              </p>
+            )}
           </div>
         )}
 
-        {!hasOptionSubject && (
+        {!hasOptionSubject && !isPublic && (
           <div className={cardClasses}>
             <p className="text-[13px] font-extrabold text-espresso-800">About someone?</p>
             <SubjectChips

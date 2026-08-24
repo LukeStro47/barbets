@@ -31,12 +31,21 @@ export default async function AwardsPage({ params }: { params: Promise<{ groupId
   const user = await requireUser(supabase);
 
   const [{ data: settings }, { data: titleRows }, { data: members }, { data: group }, { data: customTitles }] = await Promise.all([
-    supabase.from('group_settings').select('seasons_enabled').eq('group_id', groupId).single(),
+    supabase.from('group_settings').select('seasons_enabled, awards_enabled').eq('group_id', groupId).single(),
     supabase.from('group_titles').select('title_key, user_id, stat_value, label, icon_key').eq('group_id', groupId),
     supabase.from('memberships').select('id, user_id, nickname').eq('group_id', groupId).neq('status', 'removed'),
     supabase.from('groups').select('owner_id').eq('id', groupId).single(),
     supabase.from('custom_group_titles').select('id, group_id, label, icon_key, metric, direction').eq('group_id', groupId),
   ]);
+
+  if (settings && !settings.awards_enabled) {
+    return (
+      <main className="mx-auto max-w-lg space-y-4 px-5 py-8">
+        <PageHeader title="Awards" backHref={`/groups/${groupId}/leaderboard`} backLabel="Leaderboard" />
+        <EmptyState icon="🚫" title="Not available in this group" subtitle="This group doesn't run titles or custom awards." />
+      </main>
+    );
+  }
 
   const customTitleIds = (customTitles ?? []).map((t) => t.id);
   const { data: customHolders } =

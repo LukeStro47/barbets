@@ -74,10 +74,12 @@ export function EditSettingsForm({
   groupId,
   groupName,
   settings,
+  isPublic,
 }: {
   groupId: string;
   groupName: string;
   settings: GroupSettings;
+  isPublic: boolean;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -99,6 +101,7 @@ export function EditSettingsForm({
   const [resolutionWindowHours, setResolutionWindowHours] = useState(settings.resolution_window_hours);
   const [requireEndorsement, setRequireEndorsement] = useState(settings.require_endorsement);
   const [joinMessage, setJoinMessage] = useState(settings.join_message ?? '');
+  const [awardsEnabled, setAwardsEnabled] = useState(settings.awards_enabled);
   // The join-message textarea's keyboard pushes this bar up just enough to reveal the field
   // itself, leaving it flush against the keyboard with no breathing room — pad past it, same
   // fix BetslipBar's amount field uses.
@@ -114,20 +117,24 @@ export function EditSettingsForm({
   function save() {
     setError(null);
     startTransition(async () => {
+      // A public group's rules are fixed, not owner-configurable — update_group_settings forces
+      // all of these server-side for a public group regardless of what's sent, but none of the
+      // controls behind them are even rendered there either (see below).
       const result = await updateGroupSettings(groupId, {
         seedAmount: Number(seedAmount.replace(/,/g, '')),
-        seasonsEnabled,
-        seasonLength: seasonsEnabled ? seasonLength : null,
-        seasonCustomEndsAt: seasonsEnabled && seasonLength === 'custom' ? new Date(seasonCustomEndsAt).toISOString() : null,
+        seasonsEnabled: isPublic ? false : seasonsEnabled,
+        seasonLength: isPublic || !seasonsEnabled ? null : seasonLength,
+        seasonCustomEndsAt: !isPublic && seasonsEnabled && seasonLength === 'custom' ? new Date(seasonCustomEndsAt).toISOString() : null,
         timezone,
-        bettingEnabled,
-        acceptingMembers,
-        distributePayout,
-        creatorPayoutPct,
-        allowHedgedBets,
+        bettingEnabled: isPublic ? true : bettingEnabled,
+        acceptingMembers: isPublic ? true : acceptingMembers,
+        distributePayout: isPublic ? true : distributePayout,
+        creatorPayoutPct: isPublic ? 0 : creatorPayoutPct,
+        allowHedgedBets: isPublic ? false : allowHedgedBets,
         resolutionWindowHours,
-        requireEndorsement,
-        joinMessage,
+        requireEndorsement: isPublic ? false : requireEndorsement,
+        joinMessage: isPublic ? null : joinMessage,
+        awardsEnabled: isPublic ? false : awardsEnabled,
       });
       if (result.error) {
         setError(result.error);
@@ -178,214 +185,243 @@ export function EditSettingsForm({
               />
             </div>
 
-            <div>
-              <ToggleRow
-                label="Split universal losses"
-                help={
-                  distributePayout
-                    ? "On: when nobody calls it right, the creator takes a cut and the rest tops up the group's other open markets."
-                    : 'Off: when nobody calls it right, every stake goes back to whoever placed it.'
-                }
-                checked={distributePayout}
-                onChange={() => setDistributePayout((v) => !v)}
-              />
-              {/* Only one number is actually a choice. What's left over is arithmetic, so it's
-                  shown rather than asked for: two editable fields could be set to sum past 100,
-                  and the second one was never the interesting decision anyway. */}
-              {distributePayout && (
-                <div className="space-y-2 px-4 pb-3.5">
-                  <div className="flex gap-3">
-                    <label className="flex-1 space-y-1">
-                      <span className="block text-xs font-bold text-espresso-500">Creator %</span>
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={creatorPayoutPct}
-                        onChange={(e) => setCreatorPayoutPct(Number(e.target.value))}
-                        className={inputClasses}
-                      />
-                    </label>
-                    <div className="flex-1 space-y-1">
-                      <span className="block text-xs font-bold text-espresso-500">Open markets %</span>
-                      <div
-                        aria-readonly
-                        className="w-full rounded-[10px] border border-espresso-100 bg-espresso-50 px-3.5 py-2.5 text-[15px] font-bold text-espresso-400"
-                      >
-                        {openMarketsPct}
+            {!isPublic && (
+              <div>
+                <ToggleRow
+                  label="Split universal losses"
+                  help={
+                    distributePayout
+                      ? "On: when nobody calls it right, the creator takes a cut and the rest tops up the group's other open markets."
+                      : 'Off: when nobody calls it right, every stake goes back to whoever placed it.'
+                  }
+                  checked={distributePayout}
+                  onChange={() => setDistributePayout((v) => !v)}
+                />
+                {/* Only one number is actually a choice. What's left over is arithmetic, so it's
+                    shown rather than asked for: two editable fields could be set to sum past 100,
+                    and the second one was never the interesting decision anyway. */}
+                {distributePayout && (
+                  <div className="space-y-2 px-4 pb-3.5">
+                    <div className="flex gap-3">
+                      <label className="flex-1 space-y-1">
+                        <span className="block text-xs font-bold text-espresso-500">Creator %</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={creatorPayoutPct}
+                          onChange={(e) => setCreatorPayoutPct(Number(e.target.value))}
+                          className={inputClasses}
+                        />
+                      </label>
+                      <div className="flex-1 space-y-1">
+                        <span className="block text-xs font-bold text-espresso-500">Open markets %</span>
+                        <div
+                          aria-readonly
+                          className="w-full rounded-[10px] border border-espresso-100 bg-espresso-50 px-3.5 py-2.5 text-[15px] font-bold text-espresso-400"
+                        >
+                          {openMarketsPct}
+                        </div>
                       </div>
                     </div>
+                    {!creatorPctValid && <p className="text-xs text-danger-700">The creator percentage has to be between 0 and 100.</p>}
                   </div>
-                  {!creatorPctValid && <p className="text-xs text-danger-700">The creator percentage has to be between 0 and 100.</p>}
-                </div>
-              )}
-            </div>
-          </SettingsCard>
-        </section>
-
-        <section>
-          <SectionLabel>Starting a market</SectionLabel>
-          <SettingsCard>
-            <ToggleRow
-              label="Require endorsement"
-              help={
-                requireEndorsement
-                  ? 'On: a second member has to endorse a market before betting opens.'
-                  : "Off: markets open for betting the moment they're created, no second person needed."
-              }
-              checked={requireEndorsement}
-              onChange={() => setRequireEndorsement((v) => !v)}
-            />
-            <ToggleRow
-              label="Hedging"
-              help={
-                allowHedgedBets
-                  ? 'On: members can back more than one side of the same market.'
-                  : 'Off: one side per market. Adding more to that same side is still fine.'
-              }
-              checked={allowHedgedBets}
-              onChange={() => setAllowHedgedBets((v) => !v)}
-            />
-            <ToggleRow
-              label="Accepting new members"
-              help={
-                acceptingMembers
-                  ? 'On: anyone holding the invite code can join.'
-                  : 'Off: the invite code stays live but joining is paused.'
-              }
-              checked={acceptingMembers}
-              onChange={() => setAcceptingMembers((v) => !v)}
-            />
-            <div className={rowClasses}>
-              <label className={rowLabelClasses} htmlFor="join-message">
-                Custom join message
-              </label>
-              <p className={`mb-2 mt-0.5 ${rowHelpClasses}`}>
-                Shown in a modal to a new member the moment they finish joining. Leave it blank for none.
-              </p>
-              <textarea
-                id="join-message"
-                value={joinMessage}
-                onChange={(e) => setJoinMessage(e.target.value)}
-                maxLength={JOIN_MESSAGE_MAX_LENGTH}
-                rows={3}
-                placeholder="Welcome to the group. House rule: no crying about bad beats."
-                className={inputClasses}
-              />
-              <span className="mt-1 block text-right text-[11px] text-espresso-400">
-                {joinMessage.length} / {JOIN_MESSAGE_MAX_LENGTH}
-              </span>
-            </div>
-            {/* Only meaningful while seasons are off. Once they're on, each season carries its own
-                betting switch and this one stops being the real gate. */}
-            {!seasonsEnabled && (
-              <ToggleRow
-                label="Betting"
-                help={
-                  bettingEnabled
-                    ? "On: members can start markets. This one can't be turned back off."
-                    : 'Off by default. Turn it on when your group is ready.'
-                }
-                checked={bettingEnabled}
-                onChange={() => {
-                  if (!bettingEnabled) setConfirmingBetting(true);
-                }}
-                disabled={settings.betting_enabled}
-              />
+                )}
+              </div>
             )}
           </SettingsCard>
         </section>
 
-        <section>
-          <SectionLabel>Settling it</SectionLabel>
-          <SettingsCard>
-            <div className={rowClasses}>
-              <div className="flex items-baseline justify-between gap-3">
-                <label className="text-sm font-semibold text-espresso-800" htmlFor="resolution-window">
-                  Challenge window
+        {/* Public groups have no market-creation preferences left to set — endorsement, hedging,
+            accepting members, the join message, and betting are all fixed (see the "Public groups"
+            section of ARCHITECTURE.md), so the whole section is dropped rather than rendered empty. */}
+        {!isPublic && (
+          <section>
+            <SectionLabel>Starting a market</SectionLabel>
+            <SettingsCard>
+              <ToggleRow
+                label="Require endorsement"
+                help={
+                  requireEndorsement
+                    ? 'On: a second member has to endorse a market before betting opens.'
+                    : "Off: markets open for betting the moment they're created, no second person needed."
+                }
+                checked={requireEndorsement}
+                onChange={() => setRequireEndorsement((v) => !v)}
+              />
+              <ToggleRow
+                label="Hedging"
+                help={
+                  allowHedgedBets
+                    ? 'On: members can back more than one side of the same market.'
+                    : 'Off: one side per market. Adding more to that same side is still fine.'
+                }
+                checked={allowHedgedBets}
+                onChange={() => setAllowHedgedBets((v) => !v)}
+              />
+              <ToggleRow
+                label="Accepting new members"
+                help={
+                  acceptingMembers
+                    ? 'On: anyone holding the invite code can join.'
+                    : 'Off: the invite code stays live but joining is paused.'
+                }
+                checked={acceptingMembers}
+                onChange={() => setAcceptingMembers((v) => !v)}
+              />
+              <div className={rowClasses}>
+                <label className={rowLabelClasses} htmlFor="join-message">
+                  Custom join message
                 </label>
-                <span className="font-display text-[15px] font-extrabold text-honey-700">
-                  {resolutionWindowHours} {resolutionWindowHours === 1 ? 'hour' : 'hours'}
+                <p className={`mb-2 mt-0.5 ${rowHelpClasses}`}>
+                  Shown in a modal to a new member the moment they finish joining. Leave it blank for none.
+                </p>
+                <textarea
+                  id="join-message"
+                  value={joinMessage}
+                  onChange={(e) => setJoinMessage(e.target.value)}
+                  maxLength={JOIN_MESSAGE_MAX_LENGTH}
+                  rows={3}
+                  placeholder="Welcome to the group. House rule: no crying about bad beats."
+                  className={inputClasses}
+                />
+                <span className="mt-1 block text-right text-[11px] text-espresso-400">
+                  {joinMessage.length} / {JOIN_MESSAGE_MAX_LENGTH}
                 </span>
               </div>
-              <p className={`mb-2.5 mt-0.5 ${rowHelpClasses}`}>
-                How long a called result can be disputed, and how long a vote stays open. Under 2 hours, people miss it.
-              </p>
-              <input
-                id="resolution-window"
-                type="range"
-                min={0.5}
-                max={10}
-                step={0.5}
-                value={resolutionWindowHours}
-                onChange={(e) => setResolutionWindowHours(Number(e.target.value))}
-                className="w-full accent-honey-500"
-              />
-              <div className="mt-0.5 flex justify-between text-[11px] text-espresso-300">
-                <span>30 min</span>
-                <span>10 hours</span>
+              {/* Only meaningful while seasons are off. Once they're on, each season carries its own
+                  betting switch and this one stops being the real gate. */}
+              {!seasonsEnabled && (
+                <ToggleRow
+                  label="Betting"
+                  help={
+                    bettingEnabled
+                      ? "On: members can start markets. This one can't be turned back off."
+                      : 'Off by default. Turn it on when your group is ready.'
+                  }
+                  checked={bettingEnabled}
+                  onChange={() => {
+                    if (!bettingEnabled) setConfirmingBetting(true);
+                  }}
+                  disabled={settings.betting_enabled}
+                />
+              )}
+            </SettingsCard>
+          </section>
+        )}
+
+        {!isPublic && (
+          <section>
+            <SectionLabel>Settling it</SectionLabel>
+            <SettingsCard>
+              <div className={rowClasses}>
+                <div className="flex items-baseline justify-between gap-3">
+                  <label className="text-sm font-semibold text-espresso-800" htmlFor="resolution-window">
+                    Challenge window
+                  </label>
+                  <span className="font-display text-[15px] font-extrabold text-honey-700">
+                    {resolutionWindowHours} {resolutionWindowHours === 1 ? 'hour' : 'hours'}
+                  </span>
+                </div>
+                <p className={`mb-2.5 mt-0.5 ${rowHelpClasses}`}>
+                  How long a called result can be disputed, and how long a vote stays open. Under 2 hours, people miss it.
+                </p>
+                <input
+                  id="resolution-window"
+                  type="range"
+                  min={0.5}
+                  max={10}
+                  step={0.5}
+                  value={resolutionWindowHours}
+                  onChange={(e) => setResolutionWindowHours(Number(e.target.value))}
+                  className="w-full accent-honey-500"
+                />
+                <div className="mt-0.5 flex justify-between text-[11px] text-espresso-300">
+                  <span>30 min</span>
+                  <span>10 hours</span>
+                </div>
               </div>
-            </div>
-          </SettingsCard>
-        </section>
+            </SettingsCard>
+          </section>
+        )}
+
+        {!isPublic && (
+          <section>
+            <SectionLabel>Awards</SectionLabel>
+            <SettingsCard>
+              <ToggleRow
+                label="Titles & custom awards"
+                help={
+                  awardsEnabled
+                    ? 'On: The Oracle, Ice Cold, and other titles compute normally, and custom awards can be created.'
+                    : 'Off: the Awards page is hidden, and no titles compute for this group.'
+                }
+                checked={awardsEnabled}
+                onChange={() => setAwardsEnabled((v) => !v)}
+              />
+            </SettingsCard>
+          </section>
+        )}
 
         <section>
-          <SectionLabel>Seasons &amp; time</SectionLabel>
+          <SectionLabel>{isPublic ? 'Time zone' : 'Seasons & time'}</SectionLabel>
           <SettingsCard>
-            <div className={rowClasses}>
-              <div className="flex items-center justify-between gap-3">
-                <span className={rowLabelClasses}>Season length</span>
-                {/* Already-on seasons get a padlock pill instead of a disabled switch: a greyed-out
-                    switch reads as "not available yet" rather than "this decision is final". */}
-                {settings.seasons_enabled ? (
-                  <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-espresso-50 px-2.5 py-[3px] text-[11px] font-bold text-espresso-500">
-                    <LockIcon className="h-[11px] w-[11px]" />
-                    Seasons stay on
-                  </span>
-                ) : (
-                  <Switch checked={seasonsEnabled} onChange={() => setSeasonsEnabled((v) => !v)} />
+            {!isPublic && (
+              <div className={rowClasses}>
+                <div className="flex items-center justify-between gap-3">
+                  <span className={rowLabelClasses}>Season length</span>
+                  {/* Already-on seasons get a padlock pill instead of a disabled switch: a greyed-out
+                      switch reads as "not available yet" rather than "this decision is final". */}
+                  {settings.seasons_enabled ? (
+                    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-espresso-50 px-2.5 py-[3px] text-[11px] font-bold text-espresso-500">
+                      <LockIcon className="h-[11px] w-[11px]" />
+                      Seasons stay on
+                    </span>
+                  ) : (
+                    <Switch checked={seasonsEnabled} onChange={() => setSeasonsEnabled((v) => !v)} />
+                  )}
+                </div>
+                <p className={`mt-0.5 ${rowHelpClasses}`}>
+                  {seasonsEnabled
+                    ? 'At the end of each one, standings archive to Awards and everyone is reseeded.'
+                    : 'Off: the board never resets. Turning seasons on is permanent.'}
+                </p>
+
+                {seasonsEnabled && (
+                  <>
+                    <div className="mt-2.5 flex flex-wrap gap-[7px]">
+                      {(['1m', '2m', '3m', 'manual', 'custom'] as SeasonLength[]).map((len) => (
+                        <button
+                          type="button"
+                          key={len}
+                          onClick={() => setSeasonLength(len)}
+                          aria-pressed={seasonLength === len}
+                          className={`rounded-full border-[1.5px] px-3 py-[5px] text-[13px] ${
+                            seasonLength === len
+                              ? 'border-honey-500 bg-honey-50 font-bold text-honey-800'
+                              : 'border-espresso-200 font-semibold text-espresso-600'
+                          }`}
+                        >
+                          {SEASON_LENGTH_SHORT_LABEL[len]}
+                        </button>
+                      ))}
+                    </div>
+                    <p className={`mt-2 ${rowHelpClasses}`}>{SEASON_LENGTH_HINTS[seasonLength]}</p>
+
+                    {seasonLength === 'custom' && (
+                      <input
+                        type="datetime-local"
+                        min={minSeasonEndsAt}
+                        value={seasonCustomEndsAt}
+                        onChange={(e) => setSeasonCustomEndsAt(e.target.value)}
+                        required
+                        className={`${inputClasses} mt-2`}
+                      />
+                    )}
+                  </>
                 )}
               </div>
-              <p className={`mt-0.5 ${rowHelpClasses}`}>
-                {seasonsEnabled
-                  ? 'At the end of each one, standings archive to Awards and everyone is reseeded.'
-                  : 'Off: the board never resets. Turning seasons on is permanent.'}
-              </p>
-
-              {seasonsEnabled && (
-                <>
-                  <div className="mt-2.5 flex flex-wrap gap-[7px]">
-                    {(['1m', '2m', '3m', 'manual', 'custom'] as SeasonLength[]).map((len) => (
-                      <button
-                        type="button"
-                        key={len}
-                        onClick={() => setSeasonLength(len)}
-                        aria-pressed={seasonLength === len}
-                        className={`rounded-full border-[1.5px] px-3 py-[5px] text-[13px] ${
-                          seasonLength === len
-                            ? 'border-honey-500 bg-honey-50 font-bold text-honey-800'
-                            : 'border-espresso-200 font-semibold text-espresso-600'
-                        }`}
-                      >
-                        {SEASON_LENGTH_SHORT_LABEL[len]}
-                      </button>
-                    ))}
-                  </div>
-                  <p className={`mt-2 ${rowHelpClasses}`}>{SEASON_LENGTH_HINTS[seasonLength]}</p>
-
-                  {seasonLength === 'custom' && (
-                    <input
-                      type="datetime-local"
-                      min={minSeasonEndsAt}
-                      value={seasonCustomEndsAt}
-                      onChange={(e) => setSeasonCustomEndsAt(e.target.value)}
-                      required
-                      className={`${inputClasses} mt-2`}
-                    />
-                  )}
-                </>
-              )}
-            </div>
+            )}
 
             <div className={rowClasses}>
               <label className={rowLabelClasses} htmlFor="group-timezone">
@@ -409,9 +445,11 @@ export function EditSettingsForm({
         </section>
 
         <p className="px-0.5 text-xs leading-[1.5] text-espresso-400">
-          {seasonsEnabled
-            ? "Betting itself is opened per season from the group page, not here. Seasons can't be switched off once they're on."
-            : 'Betting can only be switched on once. After that, pausing play is what ending a season is for.'}
+          {isPublic
+            ? 'Public groups run continuously with betting always on, no endorsement, no hedging, and results settle instantly, no challenge window.'
+            : seasonsEnabled
+              ? "Betting itself is opened per season from the group page, not here. Seasons can't be switched off once they're on."
+              : 'Betting can only be switched on once. After that, pausing play is what ending a season is for.'}
         </p>
       </div>
 
@@ -596,13 +634,17 @@ export function OwnerOnlySection({
   activeSeason,
   members,
   deletionScheduled,
+  isPublic = false,
 }: {
   groupId: string;
   groupName: string;
   resolutionWindowHours: number;
   activeSeason: { id: string; number: number; name: string | null } | null;
+  /** Every active member other than the owner for a private group; moderators only for a public
+      one (transfer_ownership() requires it — see TransferOwnershipSheet). */
   members: { userId: string; nickname: string }[];
   deletionScheduled: boolean;
+  isPublic?: boolean;
 }) {
   const [openSheet, setOpenSheet] = useState<null | 'end-season' | 'transfer' | 'delete'>(null);
 
@@ -640,7 +682,9 @@ export function OwnerOnlySection({
           onClose={() => setOpenSheet(null)}
         />
       )}
-      {openSheet === 'transfer' && <TransferOwnershipSheet groupId={groupId} members={members} onClose={() => setOpenSheet(null)} />}
+      {openSheet === 'transfer' && (
+        <TransferOwnershipSheet groupId={groupId} members={members} onClose={() => setOpenSheet(null)} isPublic={isPublic} />
+      )}
       {openSheet === 'delete' && <DeleteGroupSheet groupId={groupId} groupName={groupName} onClose={() => setOpenSheet(null)} />}
     </section>
   );
@@ -718,10 +762,16 @@ export function TransferOwnershipSheet({
   groupId,
   members,
   onClose,
+  isPublic = false,
 }: {
   groupId: string;
   members: { userId: string; nickname: string }[];
   onClose: () => void;
+  /** Public-group ownership can only pass to an existing moderator — see transfer_ownership()'s
+      migration. The page already filters `members` down to moderators-only when this is true;
+      this prop only changes the copy so the empty state points at the actual fix (assign a
+      moderator first) instead of the generic "no other members yet". */
+  isPublic?: boolean;
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState('');
@@ -746,7 +796,9 @@ export function TransferOwnershipSheet({
       {members.length === 0 ? (
         <>
           <p className="text-sm leading-[1.55] text-espresso-600">
-            There&apos;s nobody to hand it to yet. Only active members other than you can take it on.
+            {isPublic
+              ? "There's no other moderator yet. Assign one from the admin console first, then come back here to hand it off."
+              : "There's nobody to hand it to yet. Only active members other than you can take it on."}
           </p>
           <Button type="button" variant="outline" className="w-full" onClick={onClose}>
             Close
@@ -755,9 +807,11 @@ export function TransferOwnershipSheet({
       ) : (
         <>
           <p className="text-sm leading-[1.55] text-espresso-600">
-            You stay in the group as a regular member. From then on only{' '}
-            {selectedNickname ? <Mention nickname={selectedNickname} /> : 'they'} can change how the group plays, remove people,
-            or transfer it back.
+            {isPublic
+              ? 'You stay on as a moderator. '
+              : 'You stay in the group as a regular member. '}
+            From then on only {selectedNickname ? <Mention nickname={selectedNickname} /> : 'they'} can change how the group
+            plays, remove people, or transfer it back.
           </p>
           <select value={selected} onChange={(e) => setSelected(e.target.value)} className={selectClasses}>
             <option value="">Choose a member…</option>

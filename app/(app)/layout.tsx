@@ -16,7 +16,7 @@ export default async function AppLayout({ children, modal }: { children: React.R
 
   const { data: groupRows } = await supabase
     .from('groups')
-    .select('id, name, avatar_key, owner_id, memberships(status, user_id, nickname)')
+    .select('id, name, avatar_key, owner_id, is_public, memberships(status, user_id, nickname, role)')
     .order('created_at', { ascending: false });
 
   const groupIds = (groupRows ?? []).map((g) => g.id);
@@ -67,6 +67,19 @@ export default async function AppLayout({ children, modal }: { children: React.R
       ownerNickname,
       seasonName: latest?.name ?? undefined,
     };
+  }
+
+  // Public groups: only mods (or the owner) can hand-create a market — see
+  // supabase/migrations/20260824120000_public_group_market_gates.sql. Overrides whatever the
+  // betting-status checks above landed on, since a public group is always betting_enabled = true
+  // with seasons off, so those checks alone never block a regular member here.
+  for (const g of groupRows ?? []) {
+    if (!g.is_public) continue;
+    const myMembership = (g.memberships ?? []).find((m: { user_id: string }) => m.user_id === user.id);
+    const isModOrOwner = g.owner_id === user.id || myMembership?.role === 'moderator';
+    if (!isModOrOwner) {
+      bettingStatusByGroup[g.id] = { blocked: true, reason: 'not_moderator' };
+    }
   }
 
   const taskCounts = await getGroupTaskCounts(supabase, groupIds, user.id);

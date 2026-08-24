@@ -62,7 +62,6 @@ export function JoinFlow({
           <GroupAvatar
             name={groupName}
             avatarKey={groupAvatarKey}
-            radiusClassName="rounded-[20px]"
             fallbackClassName="bg-espresso-50 text-[26px] text-honey-700"
             className="mx-auto h-16 w-16"
           />

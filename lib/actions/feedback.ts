@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { runRpc, type ActionResult } from '@/lib/errors';
 
-export type FeedbackCategory = 'bug' | 'idea' | 'general';
+export type FeedbackCategory = 'bug' | 'idea' | 'general' | 'group_request';
 
 interface Feedback {
   id: string;
@@ -19,6 +19,7 @@ const CATEGORY_META: Record<FeedbackCategory, { emoji: string; label: string }> 
   bug: { emoji: '🐛', label: 'Bug report' },
   idea: { emoji: '💡', label: 'Idea' },
   general: { emoji: '💬', label: 'General feedback' },
+  group_request: { emoji: '🏫', label: 'New group request' },
 };
 
 /** A UUID group id embedded in a /groups/{id}/... page URL, if the referrer happened to be one. */

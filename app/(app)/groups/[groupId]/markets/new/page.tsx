@@ -1,3 +1,4 @@
+import { notFound } from 'next/navigation';
 import { createClient, requireUser } from '@/lib/supabase/server';
 import { CreateMarketForm } from '@/components/markets/MarketForms';
 import type { MarketType } from '@/lib/marketType';
@@ -18,11 +19,19 @@ export default async function NewMarketPage({
 
   const user = await requireUser(supabase);
 
-  const [{ data: members }, { data: settings }, { data: group }] = await Promise.all([
+  const [{ data: members }, { data: settings }, { data: group }, { data: myMembership }] = await Promise.all([
     supabase.from('memberships').select('user_id, nickname').eq('group_id', groupId).eq('status', 'active'),
     supabase.from('group_settings').select('timezone, require_endorsement').eq('group_id', groupId).single(),
-    supabase.from('groups').select('name').eq('id', groupId).single(),
+    supabase.from('groups').select('name, owner_id, is_public').eq('id', groupId).single(),
+    supabase.from('memberships').select('role').eq('group_id', groupId).eq('user_id', user.id).maybeSingle(),
   ]);
+
+  // Public groups restrict hand-creating a market to mods/the owner — see
+  // supabase/migrations/20260824120000_public_group_market_gates.sql. Same 404-not-403 posture
+  // BottomNav's own pre-check and every other authorization gate in this app already uses.
+  if (group?.is_public && group.owner_id !== user.id && myMembership?.role !== 'moderator') {
+    notFound();
+  }
 
   // A market's creator can never be its own subject, so they're not a valid @mention target here.
   // Alphabetical because the only way to find a name in a chip strip is to look for it, and
@@ -42,6 +51,7 @@ export default async function NewMarketPage({
         timezone={settings?.timezone ?? 'UTC'}
         requireEndorsement={settings?.require_endorsement ?? true}
         initialMarketType={initialType}
+        isPublic={group?.is_public ?? false}
       />
     </main>
   );

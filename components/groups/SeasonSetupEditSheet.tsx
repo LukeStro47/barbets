@@ -86,6 +86,7 @@ export function SeasonSetupEditSheet({
         resolutionWindowHours: settings.resolution_window_hours,
         requireEndorsement: settings.require_endorsement,
         joinMessage: settings.join_message,
+        awardsEnabled: settings.awards_enabled,
       });
       if (result.error) {
         setError(result.error);

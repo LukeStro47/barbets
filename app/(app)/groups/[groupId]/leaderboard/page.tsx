@@ -37,7 +37,7 @@ export default async function LeaderboardPage({
 
   const user = await requireUser(supabase);
 
-  const { data: settings } = await supabase.from('group_settings').select('seasons_enabled').eq('group_id', groupId).single();
+  const { data: settings } = await supabase.from('group_settings').select('seasons_enabled, awards_enabled').eq('group_id', groupId).single();
 
   const { data: activeMembers } = await supabase
     .from('memberships')
@@ -401,23 +401,25 @@ export default async function LeaderboardPage({
         standingsSection
       )}
 
-      <Link
-        href={`/groups/${groupId}/awards`}
-        className="flex items-center gap-3 rounded-[18px] border border-espresso-100 bg-paper-white px-3.5 py-3"
-      >
-        <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-honey-50">
-          <AwardGlyph iconKey="target" stroke="var(--color-honey-700)" size={20} />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[13.5px] font-extrabold text-espresso-950">Awards</span>
-          <span className="mt-0.5 block text-[11.5px] text-espresso-400">
-            {yourTitleCount > 0
-              ? `You hold ${numberWord(yourTitleCount)} of ${numberWord(TITLE_ORDER.length)} titles`
-              : 'See who holds each standing title'}
+      {settings?.awards_enabled && (
+        <Link
+          href={`/groups/${groupId}/awards`}
+          className="flex items-center gap-3 rounded-[18px] border border-espresso-100 bg-paper-white px-3.5 py-3"
+        >
+          <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-honey-50">
+            <AwardGlyph iconKey="target" stroke="var(--color-honey-700)" size={20} />
           </span>
-        </span>
-        <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-espresso-300" />
-      </Link>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13.5px] font-extrabold text-espresso-950">Awards</span>
+            <span className="mt-0.5 block text-[11.5px] text-espresso-400">
+              {yourTitleCount > 0
+                ? `You hold ${numberWord(yourTitleCount)} of ${numberWord(TITLE_ORDER.length)} titles`
+                : 'See who holds each standing title'}
+            </span>
+          </span>
+          <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-espresso-300" />
+        </Link>
+      )}
     </main>
   );
 }

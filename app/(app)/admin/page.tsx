@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { AdminBroadcastForm } from '@/components/admin/AdminBroadcastForm';
+import { CreatePublicGroupForm, ManageModeratorsPanel } from '@/components/admin/AdminPublicGroupsForm';
 import { formatTokens } from '@/lib/formatNumber';
 
 function StatTile({ label, value }: { label: string; value: number }) {
@@ -22,14 +23,16 @@ export default async function AdminPage() {
   const { data: isAdmin } = await supabase.rpc('is_platform_admin');
   if (!isAdmin) notFound();
 
-  const [{ data: stats }, { data: groups }, { data: members }] = (await Promise.all([
+  const [{ data: stats }, { data: groups }, { data: members }, { data: publicGroups }] = (await Promise.all([
     supabase.rpc('get_platform_admin_stats').single(),
     supabase.rpc('list_groups_for_admin'),
     supabase.rpc('list_group_members_for_admin'),
+    supabase.rpc('list_public_groups'),
   ])) as [
     { data: { active_groups: number; total_markets: number; total_users: number } | null },
     { data: { id: string; name: string; member_count: number }[] | null },
     { data: { group_id: string; user_id: string; nickname: string }[] | null },
+    { data: { id: string; name: string; avatar_key: string | null; category: 'generic' | 'campus'; member_count: number }[] | null },
   ];
 
   const membersByGroup = new Map<string, { userId: string; nickname: string }[]>();
@@ -64,6 +67,34 @@ export default async function AdminPage() {
             members: membersByGroup.get(g.id) ?? [],
           }))}
         />
+      </Card>
+
+      <Card className="space-y-3">
+        <div>
+          <h2 className="font-semibold text-espresso-800">New public group</h2>
+          <p className="text-sm text-espresso-500">
+            Always-on, browse-and-join from the directory. You become its owner and first member.
+          </p>
+        </div>
+        <CreatePublicGroupForm />
+      </Card>
+
+      <Card className="space-y-3">
+        <div>
+          <h2 className="font-semibold text-espresso-800">Public groups &amp; moderators</h2>
+          <p className="text-sm text-espresso-500">
+            A moderator can hand-create a market and void a bad one, without full owner access.
+          </p>
+        </div>
+        {(publicGroups ?? []).length === 0 ? (
+          <p className="text-sm text-espresso-400">No public groups yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {(publicGroups ?? []).map((g) => (
+              <ManageModeratorsPanel key={g.id} group={{ id: g.id, name: g.name, category: g.category, memberCount: g.member_count }} />
+            ))}
+          </div>
+        )}
       </Card>
     </main>
   );

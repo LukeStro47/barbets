@@ -14,6 +14,9 @@ export interface Group {
   deletion_scheduled_at: string | null;
   /** One of lib/avatars.ts's GROUP_AVATARS keys, or null for the initials fallback. Stored as free text, so an unrecognized key degrades to initials rather than erroring. */
   avatar_key: string | null;
+  is_public: boolean;
+  /** null for a private group; 'generic' or 'campus' for a public one. See lib/actions/discover.ts. */
+  category: 'generic' | 'campus' | null;
 }
 
 export interface Membership {
@@ -24,6 +27,9 @@ export interface Membership {
   status: 'active' | 'dormant' | 'left' | 'removed';
   nickname: string;
   joined_at: string;
+  /** 'moderator' only ever appears in a public group — see lib/actions/discover.ts. Owner authority
+      is still entirely groups.owner_id, unrelated to this column. */
+  role: 'member' | 'moderator';
 }
 
 export async function createGroup(input: {
@@ -132,6 +138,9 @@ export interface GroupSettings {
   require_endorsement: boolean;
   /** Shown to a new member in a modal right after they join. Null when the owner hasn't set one. */
   join_message: string | null;
+  /** Default true. Always false for a public group (see lib/actions/discover.ts) — no built-in
+      titles, no custom awards. Freely reversible for a private group, same as allow_hedged_bets. */
+  awards_enabled: boolean;
 }
 
 export async function updateGroupSettings(
@@ -150,6 +159,7 @@ export async function updateGroupSettings(
     resolutionWindowHours: number;
     requireEndorsement: boolean;
     joinMessage?: string | null;
+    awardsEnabled: boolean;
   }
 ): Promise<ActionResult<GroupSettings>> {
   const supabase = await createClient();
@@ -169,6 +179,7 @@ export async function updateGroupSettings(
       p_resolution_window_hours: input.resolutionWindowHours,
       p_require_endorsement: input.requireEndorsement,
       p_join_message: input.joinMessage ?? null,
+      p_awards_enabled: input.awardsEnabled,
     })
   );
   if (result.error) return result;

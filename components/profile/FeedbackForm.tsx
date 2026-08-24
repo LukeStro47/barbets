@@ -5,11 +5,20 @@ import { submitFeedback, type FeedbackCategory } from '@/lib/actions/feedback';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/cn';
 
+// group_request has its own dedicated form now — see RequestGroupForm on /groups/discover —
+// rather than being buried as a fourth pill here.
 const CATEGORIES: { value: FeedbackCategory; label: string }[] = [
   { value: 'bug', label: 'Bug' },
   { value: 'idea', label: 'Idea' },
   { value: 'general', label: 'General' },
 ];
+
+const PLACEHOLDER: Record<FeedbackCategory, string> = {
+  bug: 'Bug, idea, or anything else on your mind…',
+  idea: 'Bug, idea, or anything else on your mind…',
+  general: 'Bug, idea, or anything else on your mind…',
+  group_request: '',
+};
 
 export function FeedbackForm() {
   const [category, setCategory] = useState<FeedbackCategory>('general');
@@ -20,7 +29,7 @@ export function FeedbackForm() {
   const [isPending, startTransition] = useTransition();
 
   if (sent) {
-    return <p className="text-sm font-semibold text-success-700">Thanks, sent.</p>;
+    return <p className="text-sm font-semibold text-success-700">Thanks, we&apos;ll follow-up soon</p>;
   }
 
   function submit() {
@@ -66,7 +75,7 @@ export function FeedbackForm() {
         onChange={(e) => setMessage(e.target.value)}
         maxLength={2000}
         rows={6}
-        placeholder="Bug, idea, or anything else on your mind…"
+        placeholder={PLACEHOLDER[category]}
         className="w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-espresso-900 placeholder:text-espresso-300 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200"
       />
 

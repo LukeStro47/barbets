@@ -228,6 +228,7 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
           allowHedgedBets,
           resolutionWindowHours,
           requireEndorsement,
+          awardsEnabled: true,
         }),
         setGroupAvatar(groupId, avatarKey),
         seasonsEnabled && seasonName.trim() ? nameActiveSeason(groupId, seasonName.trim()) : Promise.resolve(),
