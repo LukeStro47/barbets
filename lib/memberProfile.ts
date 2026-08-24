@@ -71,7 +71,7 @@ export async function getMemberProfileData(groupId: string, membershipId: string
   if (stats.group_id !== groupId) notFound();
 
   const [{ data: group }, { data: groupMembers }, { data: titleRows }, { data: avatarRow }, { data: customTitles }] = await Promise.all([
-    supabase.from('groups').select('name').eq('id', groupId).single(),
+    supabase.from('groups').select('name, is_public').eq('id', groupId).single(),
     supabase.from('memberships').select('id, user_id, nickname, balance').eq('group_id', groupId).in('status', ['active', 'dormant']),
     supabase.from('group_titles').select('title_key, user_id, stat_value, label, icon_key').eq('group_id', groupId),
     supabase.from('users').select('avatar_updated_at, avatar_preset_key').eq('id', stats.user_id).single(),
@@ -135,7 +135,11 @@ export async function getMemberProfileData(groupId: string, membershipId: string
     isYou,
     net,
     sinceLabel,
-    avatarUpdatedAt: avatarRow?.avatar_updated_at ?? null,
-    avatarPresetKey: avatarRow?.avatar_preset_key ?? null,
+    // No profile pictures in a public group, for anyone — a directory-joined roster is
+    // strangers, and an uploaded photo carries none of the same trust an invited friend group
+    // does. Nulling both here (rather than in UserAvatar itself) means every caller of this
+    // function gets the initials fallback for free, with nothing group-type-aware to remember.
+    avatarUpdatedAt: group?.is_public ? null : (avatarRow?.avatar_updated_at ?? null),
+    avatarPresetKey: group?.is_public ? null : (avatarRow?.avatar_preset_key ?? null),
   };
 }

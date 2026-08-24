@@ -89,7 +89,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
 
   const { data: memberships } = await supabase
     .from('memberships')
-    .select('group_id, nickname, balance, joined_at, groups(name, avatar_key)')
+    .select('group_id, nickname, balance, joined_at, groups(name, avatar_key, is_public)')
     .eq('user_id', user.id)
     .neq('status', 'removed')
     .order('joined_at', { ascending: false });
@@ -160,6 +160,9 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   const selected = memberships.find((m) => m.group_id === groupParam) ?? memberships[0];
   const groupId = selected.group_id;
   const groupName = (selected.groups as any)?.name ?? '';
+  // No profile pictures in a public group, for anyone — including your own record card, since
+  // that's exactly the thing ShareRecordCard lets you export as an image.
+  const isPublicGroup = !!(selected.groups as any)?.is_public;
 
   const switcherGroups = memberships.map((m) => ({
     id: m.group_id,
@@ -288,8 +291,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
             <UserAvatar
               userId={user.id}
               nickname={selected.nickname}
-              avatarUpdatedAt={avatarRow?.avatar_updated_at ?? null}
-              avatarPresetKey={avatarRow?.avatar_preset_key ?? null}
+              avatarUpdatedAt={isPublicGroup ? null : (avatarRow?.avatar_updated_at ?? null)}
+              avatarPresetKey={isPublicGroup ? null : (avatarRow?.avatar_preset_key ?? null)}
               className="h-11 w-11 border-2 border-white/20 text-sm"
               fallbackClassName="bg-white/10 text-honey-300"
             />

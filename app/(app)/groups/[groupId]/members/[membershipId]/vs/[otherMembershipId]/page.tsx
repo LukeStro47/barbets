@@ -44,24 +44,28 @@ export default async function HeadToHeadPage({
 
   const markets = (marketsData ?? []) as HeadToHeadMarket[];
 
-  const [{ data: aAvatar }, { data: bAvatar }] = await Promise.all([
+  const [{ data: group }, { data: aAvatar }, { data: bAvatar }] = await Promise.all([
+    supabase.from('groups').select('is_public').eq('id', groupId).single(),
     supabase.from('users').select('avatar_updated_at, avatar_preset_key').eq('id', a.user_id).single(),
     supabase.from('users').select('avatar_updated_at, avatar_preset_key').eq('id', b.user_id).single(),
   ]);
+  // No profile pictures in a public group, for anyone — see getMemberProfileData()'s identical
+  // note in lib/memberProfile.ts.
+  const isPublic = !!group?.is_public;
 
   const aStats: HeadToHeadMemberStats = {
     ...a,
     net: Number(a.net),
     tokens_wagered: Number(a.tokens_wagered),
-    avatarUpdatedAt: aAvatar?.avatar_updated_at ?? null,
-    avatarPresetKey: aAvatar?.avatar_preset_key ?? null,
+    avatarUpdatedAt: isPublic ? null : (aAvatar?.avatar_updated_at ?? null),
+    avatarPresetKey: isPublic ? null : (aAvatar?.avatar_preset_key ?? null),
   };
   const bStats: HeadToHeadMemberStats = {
     ...b,
     net: Number(b.net),
     tokens_wagered: Number(b.tokens_wagered),
-    avatarUpdatedAt: bAvatar?.avatar_updated_at ?? null,
-    avatarPresetKey: bAvatar?.avatar_preset_key ?? null,
+    avatarUpdatedAt: isPublic ? null : (bAvatar?.avatar_updated_at ?? null),
+    avatarPresetKey: isPublic ? null : (bAvatar?.avatar_preset_key ?? null),
   };
 
   return (
