@@ -61,11 +61,13 @@ export interface GroupTitleRow {
 export interface TitleBadge {
   key: TitleKey;
   label: string;
+  description: string;
+  stat: string;
 }
 
-/** Builds a userId -> badges map of the titles someone holds. No longer used to render flair next
-    to a nickname (that emoji-badge treatment was removed from Mention) — just a count/list, e.g.
-    the member profile page's "Holds N awards" link. Vacant titles (null user_id) are skipped. */
+/** Builds a userId -> badges map of the titles someone holds — the member record's "Awards held"
+    section lists these directly (icon, label, and the stat that earned it) rather than just a
+    count behind a link. Vacant titles (null user_id) are skipped. */
 export function titlesByUser(rows: GroupTitleRow[]): Map<string, TitleBadge[]> {
   const map = new Map<string, TitleBadge[]>();
   for (const key of TITLE_ORDER) {
@@ -73,7 +75,7 @@ export function titlesByUser(rows: GroupTitleRow[]): Map<string, TitleBadge[]> {
     if (!row?.user_id) continue;
     const meta = TITLE_META[key];
     const arr = map.get(row.user_id) ?? [];
-    arr.push({ key, label: meta.label });
+    arr.push({ key, label: meta.label, description: meta.description, stat: meta.format(row.stat_value) });
     map.set(row.user_id, arr);
   }
   return map;

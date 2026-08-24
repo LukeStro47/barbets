@@ -2,18 +2,22 @@ import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { Mention } from '@/components/ui/Mention';
-import { CompareMemberPicker } from '@/components/groups/CompareMemberPicker';
+import { AwardGlyph } from '@/components/groups/AwardGlyph';
+import { CustomAwardGlyph } from '@/components/groups/CustomAwardGlyph';
 import { formatTokens, formatSignedTokens } from '@/lib/formatNumber';
+import type { TitleKey } from '@/lib/titles';
 import type { MemberProfileData } from '@/lib/memberProfile';
 
 /**
  * The member profile's actual content, with no opinion on what wraps it — the full-page route
  * puts a `PageHeader` above it, the modal route puts `RouteModal`'s own banded header instead.
+ * "Compare with someone" is not rendered here: the full-page route adds `CompareMemberPicker`
+ * itself, and the modal route's `MemberProfileModal` owns the compare flow as its own step so it
+ * can slide within the same panel — see that component's own comment.
  * See lib/memberProfile.ts for where `data` comes from.
  */
 export function MemberProfileCard({ data }: { data: MemberProfileData }) {
-  const { stats, groupId, groupName, standing, badges, others, meMembershipId, isYou, net, sinceLabel, avatarUpdatedAt, avatarPresetKey } =
-    data;
+  const { stats, groupId, groupName, standing, awards, isYou, net, sinceLabel, avatarUpdatedAt, avatarPresetKey } = data;
 
   return (
     <>
@@ -86,17 +90,29 @@ export function MemberProfileCard({ data }: { data: MemberProfileData }) {
         </div>
       </Card>
 
-      {badges.length > 0 && (
-        <Link
-          href={`/groups/${groupId}/awards`}
-          className="flex items-center justify-between rounded-[14px] border border-espresso-100 bg-paper-white px-4 py-3 text-sm font-semibold text-espresso-700"
-        >
-          Holds {badges.length} award{badges.length === 1 ? '' : 's'}
-          <span className="text-espresso-300">›</span>
-        </Link>
+      {awards.length > 0 && (
+        <div className="space-y-[7px]">
+          <p className="ml-1 text-[10.5px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">
+            {isYou ? 'Your awards' : 'Awards held'}
+          </p>
+          {awards.map((award) => (
+            <div key={`${award.kind}-${award.key}`} className="flex items-center gap-[11px] rounded-2xl border border-espresso-100 bg-paper-white px-3.5 py-3">
+              <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-honey-50">
+                {award.kind === 'builtin' ? (
+                  <AwardGlyph titleKey={award.key as TitleKey} stroke="var(--color-honey-700)" size={20} />
+                ) : (
+                  <CustomAwardGlyph iconKey={award.iconKey} stroke="var(--color-honey-700)" size={20} />
+                )}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13.5px] font-extrabold text-espresso-950">{award.label}</span>
+                <span className="block text-[11px] leading-[1.4] text-espresso-400">{award.description}</span>
+              </span>
+              <span className="shrink-0 text-[11px] font-extrabold text-honey-700">{award.stat}</span>
+            </div>
+          ))}
+        </div>
       )}
-
-      <CompareMemberPicker groupId={groupId} membershipId={stats.membership_id} others={others} meMembershipId={meMembershipId} />
     </>
   );
 }

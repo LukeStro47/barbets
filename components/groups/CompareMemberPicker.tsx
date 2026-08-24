@@ -11,12 +11,15 @@ import type { HeadToHeadData } from '@/lib/headToHead';
 type Step = 'picking' | 'comparing';
 
 /**
- * "Compare with someone" as a single banded modal with a Back button between its two steps,
- * rather than a small pick-one popup that then navigates away to a full page — the comparison
- * itself (`HeadToHeadCard`, fetched through `loadHeadToHead`) renders inline as the modal's second
- * step, so leaving the member-profile modal is never required just to see a comparison. The
- * standalone `vs/[otherMembershipId]` route still exists for a direct link or a refresh; this is
- * the same data and the same card, reached without a navigation.
+ * "Compare with someone" as its own small floating modal with a Back button between its two
+ * steps — used only by the full-page member-record route (a direct link, a shared URL, or a hard
+ * refresh). The same-app tap path opens the intercepted modal route instead, where
+ * `MemberProfileModal` builds this same picking/comparing flow as a sliding step of its own
+ * banded panel rather than a separate modal layered on top; a floating popup over another modal
+ * would look disconnected there, but is the simplest, self-contained control for this plain page.
+ * Both paths fetch the same data (`loadHeadToHead`, see lib/actions/memberProfile.ts) and render
+ * the same `HeadToHeadCard`. The standalone `vs/[otherMembershipId]` route still exists too, for a
+ * direct link or a refresh straight to a comparison.
  *
  * The viewer's own row is included in `others` (whoever the profile being viewed belongs to is
  * already excluded by the caller) and labelled "@me" rather than their own nickname, so comparing

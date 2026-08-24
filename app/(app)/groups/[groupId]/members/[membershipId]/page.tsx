@@ -1,5 +1,6 @@
 import { PageHeader } from '@/components/ui/PageHeader';
 import { MemberProfileCard } from '@/components/groups/MemberProfileCard';
+import { CompareMemberPicker } from '@/components/groups/CompareMemberPicker';
 import { getMemberProfileData } from '@/lib/memberProfile';
 
 /**
@@ -8,6 +9,11 @@ import { getMemberProfileData } from '@/lib/memberProfile';
  * an intercepted route only intercepts a same-app soft navigation. Tapping a name from the
  * leaderboard or the awards page normally opens the modal version — see the design note on why
  * this is a modal now rather than always a full page.
+ *
+ * `CompareMemberPicker` (its own small floating modal) is added here rather than inside
+ * `MemberProfileCard`, since the modal route's `MemberProfileModal` builds the compare flow as a
+ * sliding step of its own banded panel instead — a floating modal-over-modal would be the wrong
+ * feel there, but is the right, self-contained control for this plain page.
  */
 export default async function MemberProfilePage({
   params,
@@ -21,6 +27,12 @@ export default async function MemberProfilePage({
     <main className="mx-auto max-w-lg space-y-5 px-5 py-8">
       <PageHeader title="Member record" backHref={`/groups/${groupId}/leaderboard`} backLabel="Leaderboard" />
       <MemberProfileCard data={data} />
+      <CompareMemberPicker
+        groupId={groupId}
+        membershipId={data.stats.membership_id}
+        others={data.others}
+        meMembershipId={data.meMembershipId}
+      />
     </main>
   );
 }

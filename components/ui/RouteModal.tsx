@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { CloseIcon } from '@/components/ui/icons';
+import { CaretLeftIcon, CloseIcon } from '@/components/ui/icons';
 
 /**
  * The centered-dialog shell for an intercepted route (see the `@modal` slot in `app/(app)/`) —
@@ -23,7 +23,22 @@ import { CloseIcon } from '@/components/ui/icons';
  * content put there (an avatar, a badge link) and never lined up with the same close affordance
  * used everywhere else.
  */
-export function RouteModal({ title, children }: { title: string; children: React.ReactNode }) {
+export function RouteModal({
+  title,
+  onBack,
+  padded = true,
+  children,
+}: {
+  title: React.ReactNode;
+  /** Shows a back chevron to the left of the title instead of just the close X — for a caller
+   *  (like `MemberProfileModal`) sliding between steps of its own inside one panel, where "back"
+   *  and "close the whole dialog" are different actions. Omitted, the header is just title + X. */
+  onBack?: () => void;
+  /** Off for a caller managing its own per-step padding/scroll (a sliding multi-step body) rather
+   *  than one padded stack — same idea as `Modal`'s `padded` prop. */
+  padded?: boolean;
+  children: React.ReactNode;
+}) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
@@ -37,6 +52,16 @@ export function RouteModal({ title, children }: { title: string; children: React
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [router]);
 
+  // Without this, a drag that starts on the backdrop (or overscroll past a short panel) reaches
+  // the real page scrolling underneath — the overlay covers it visually but not for touch/wheel.
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
   if (!mounted) return null;
 
   return createPortal(
@@ -45,8 +70,18 @@ export function RouteModal({ title, children }: { title: string; children: React
         className="flex max-h-full w-full max-w-lg flex-col overflow-hidden rounded-[22px] bg-paper-white shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex shrink-0 items-center justify-between gap-3 bg-espresso-50 px-[18px] py-[13px]">
-          <p className="text-xs font-extrabold tracking-[0.06em] text-espresso-800 uppercase">{title}</p>
+        <div className="flex shrink-0 items-center gap-2 bg-espresso-50 px-[18px] py-[13px]">
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              aria-label="Back"
+              className="-ml-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-espresso-500 transition-colors hover:bg-espresso-100"
+            >
+              <CaretLeftIcon className="h-4 w-4" />
+            </button>
+          )}
+          <p className="flex-1 truncate text-xs font-extrabold tracking-[0.06em] text-espresso-800 uppercase">{title}</p>
           <button
             type="button"
             onClick={() => router.back()}
@@ -56,7 +91,7 @@ export function RouteModal({ title, children }: { title: string; children: React
             <CloseIcon className="h-4 w-4" />
           </button>
         </div>
-        <div className="space-y-5 overflow-y-auto p-5">{children}</div>
+        <div className={padded ? 'space-y-5 overflow-y-auto p-5' : 'overflow-x-hidden overflow-y-auto'}>{children}</div>
       </div>
     </div>,
     document.body
