@@ -104,10 +104,22 @@ export default async function LeaderboardPage({
   // deliberate decision that one member's weekly swing is another's to see, which is a product
   // question rather than a bug fix. Don't re-add it by reading `ledger` directly; that is the
   // version that silently doesn't work.
-  const { data: heroSeason } = settings?.seasons_enabled
-    ? await supabase.from('seasons').select('number, name, started_at').eq('group_id', groupId).eq('status', 'active').maybeSingle()
+  // Any status, not just active — this is how the hero and lens label know to switch into their
+  // season-over framing. Note `latestSeason` is the *next* season's row once intermission starts
+  // (see _finalize_season), so the season this page is actually recapping is number - 1.
+  const { data: latestSeason } = settings?.seasons_enabled
+    ? await supabase.from('seasons').select('number, name, started_at, status').eq('group_id', groupId).order('number', { ascending: false }).limit(1).maybeSingle()
+    : { data: null };
+  const isIntermission = latestSeason?.status === 'intermission';
+  const heroSeason = latestSeason?.status === 'active' ? latestSeason : null;
+
+  const { data: endedSeason } = isIntermission
+    ? await supabase.from('seasons').select('number, name').eq('group_id', groupId).eq('number', latestSeason!.number - 1).maybeSingle()
     : { data: null };
 
+  // members is sorted by live balance, which during intermission is exactly the frozen final
+  // standing — nothing touches it again until start_season reseeds everyone — so the "final
+  // table" here needs no separate season_results read of its own.
   const leader = members[0];
   const you = members.find((m: any) => m.user_id === user?.id);
   const yourRank = members.findIndex((m: any) => m.user_id === user?.id) + 1;
@@ -117,7 +129,9 @@ export default async function LeaderboardPage({
         1,
         Math.floor((Date.now() - new Date(heroSeason.started_at).getTime()) / (24 * 60 * 60_000)) + 1
       )}`
-    : null;
+    : isIntermission
+      ? `${endedSeason?.name ?? `Season ${endedSeason?.number ?? ''}`} · final`
+      : null;
 
   // Leading the board makes "behind the leader" a zero that says nothing, so the third stat flips
   // to the lead you're actually defending.
@@ -139,7 +153,9 @@ export default async function LeaderboardPage({
           fallbackClassName="bg-honey-500/[0.18] text-honey-300"
         />
         <span className="min-w-0 flex-1">
-          <span className="block text-[10px] font-extrabold tracking-[0.1em] text-honey-300 uppercase">Out in front</span>
+          <span className="block text-[10px] font-extrabold tracking-[0.1em] text-honey-300 uppercase">
+            {isIntermission ? 'Took the season' : 'Out in front'}
+          </span>
           <Mention nickname={leader.nickname} className="mt-0.5 block truncate text-[19px] font-extrabold tracking-[-0.015em] text-paper-white" />
           <span className="mt-0.5 block text-xs text-paper-white/55">{formatTokens(leader.balance)} tokens</span>
         </span>
@@ -153,12 +169,14 @@ export default async function LeaderboardPage({
         </span>
         <span className="flex-1">
           <span className="block text-xl font-extrabold tabular-nums text-honey-300">{formatTokens(you?.balance ?? 0)}</span>
-          <span className="mt-px block text-[10px] font-extrabold tracking-[0.07em] text-paper-white/45 uppercase">your tokens</span>
+          <span className="mt-px block text-[10px] font-extrabold tracking-[0.07em] text-paper-white/45 uppercase">
+            {isIntermission ? 'your final' : 'your tokens'}
+          </span>
         </span>
         <span className="flex-1">
           <span className="block text-xl font-extrabold tabular-nums text-paper-white">{formatTokens(gapValue)}</span>
           <span className="mt-px block text-[10px] font-extrabold tracking-[0.07em] text-paper-white/45 uppercase">
-            {youLead ? 'clear of 2nd' : 'behind the leader'}
+            {youLead ? 'clear of 2nd' : isIntermission ? 'off the win' : 'behind the leader'}
           </span>
         </span>
       </div>
@@ -212,7 +230,11 @@ export default async function LeaderboardPage({
           );
         });
       })()}
-      <p className="pt-1 text-[11.5px] text-espresso-400">Bar length is share of the group's tokens. Your row is outlined.</p>
+      <p className="pt-1 text-[11.5px] text-espresso-400">
+        {isIntermission
+          ? 'Frozen when the season ended. The next season starts everyone level.'
+          : "Bar length is share of the group's tokens. Your row is outlined."}
+      </p>
     </Card>
   );
 
@@ -369,7 +391,12 @@ export default async function LeaderboardPage({
       {hero}
 
       {settings?.seasons_enabled ? (
-        <LeaderboardLenses initialLens={lensParam === 'alltime' ? 'alltime' : 'current'} current={standingsSection} allTime={allTimeSection} />
+        <LeaderboardLenses
+          initialLens={lensParam === 'alltime' ? 'alltime' : 'current'}
+          currentLabel={isIntermission ? `${endedSeason?.name ?? `Season ${endedSeason?.number ?? ''}`} final` : 'Current standings'}
+          current={standingsSection}
+          allTime={allTimeSection}
+        />
       ) : (
         standingsSection
       )}

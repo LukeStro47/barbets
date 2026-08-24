@@ -9,10 +9,14 @@ import { cn } from '@/lib/cn';
  * to Current on every navigation. */
 export function LeaderboardLenses({
   initialLens,
+  currentLabel = 'Current standings',
   current,
   allTime,
 }: {
   initialLens: 'current' | 'alltime';
+  /** "Season N final" once the season's over — the lens is frozen standings, not "current"
+   * anything, by the time this label matters. */
+  currentLabel?: string;
   current: React.ReactNode;
   allTime: React.ReactNode;
 }) {
@@ -31,7 +35,7 @@ export function LeaderboardLenses({
               lens === k ? 'bg-paper-white text-espresso-900 shadow-sm' : 'text-espresso-400 hover:text-espresso-600'
             )}
           >
-            {k === 'current' ? 'Current standings' : 'All-time'}
+            {k === 'current' ? currentLabel : 'All-time'}
           </button>
         ))}
       </div>

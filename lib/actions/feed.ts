@@ -15,12 +15,17 @@ import type { ActionResult } from '@/lib/errors';
  * isn't in the group (or is a hidden subject of everything in it) simply gets an empty page,
  * which is indistinguishable from having reached the end of the list.
  */
-export async function loadMoreSettledMarkets(groupId: string, cursor: SettledCursor): Promise<ActionResult<SettledPage>> {
+export async function loadMoreSettledMarkets(
+  groupId: string,
+  cursor: SettledCursor,
+  /** Passed by the /seasons archive route's load-more button to keep paging within one season. */
+  seasonId?: string
+): Promise<ActionResult<SettledPage>> {
   const supabase = await createClient();
   const user = await requireUser(supabase);
 
   try {
-    return { data: await getSettledMarkets(supabase, groupId, user.id, cursor) };
+    return { data: await getSettledMarkets(supabase, groupId, user.id, cursor, seasonId) };
   } catch {
     return { error: 'Could not load more settled markets. Try again.' };
   }

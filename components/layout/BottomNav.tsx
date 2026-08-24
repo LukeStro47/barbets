@@ -16,6 +16,17 @@ import { NEW_GROUP_EVENT } from '@/components/groups/StartGroupButton';
 
 export type NavGroup = { id: string; name: string; avatarKey: string | null; meta: string };
 
+/** Why the "+" create-market button is blocked for a group, if it is — distinct reasons because
+ * they need distinct copy: an owner-off group can be turned on any time by the owner, a
+ * between-seasons group is waiting on the owner to continue, and a winding-down one just needs
+ * its last few markets to finish resolving. */
+export interface GroupBettingStatus {
+  blocked: boolean;
+  reason?: 'owner_off' | 'season_intermission' | 'season_winding_down';
+  ownerNickname?: string;
+  seasonName?: string;
+}
+
 const TABS: { key: NavTab; label: string }[] = [
   { key: 'home', label: 'Home' },
   { key: 'markets', label: 'Markets' },
@@ -82,11 +93,11 @@ const TAB_GLYPH: Record<NavTab, (props: GlyphProps) => React.ReactNode> = {
  */
 export function BottomNav({
   groups,
-  bettingEnabledByGroup,
+  bettingStatusByGroup,
   hasNeedsYou = false,
 }: {
   groups: NavGroup[];
-  bettingEnabledByGroup: Record<string, boolean>;
+  bettingStatusByGroup: Record<string, GroupBettingStatus>;
   /** True when any of the viewer's groups has a market waiting on them (an endorsement, a
    * vote) — surfaced as a small red dot on the Home tab, since Home is where the switcher
    * (and from there, every group's own "N waiting on you" card) lives. */
@@ -175,7 +186,7 @@ export function BottomNav({
     setSwitcherOpen(false);
     // Fail fast, same as NewMarketButton's own pre-check: no point walking through "pick a
     // type" only to be told betting's off on Continue.
-    if (currentGroup && !bettingEnabledByGroup[currentGroup.id]) {
+    if (currentGroup && bettingStatusByGroup[currentGroup.id]?.blocked) {
       setBettingOffOpen(true);
       return;
     }
@@ -223,15 +234,31 @@ export function BottomNav({
   const activeSlot = !activeTab ? null : inGroup ? SLOT[activeTab] : activeTab === 'you' ? 2 : activeTab === 'home' ? 0 : null;
   const indicatorLeft = activeSlot !== null ? `calc(${activeSlot * slotPct}% + ${slotPct / 2}% - 11px)` : null;
   const plusLeftPct = inGroup ? 40 : slotPct;
-  const bettingOff = !!currentGroup && !bettingEnabledByGroup[currentGroup.id];
+  const bettingStatus = currentGroup ? bettingStatusByGroup[currentGroup.id] : undefined;
+  const bettingOff = !!bettingStatus?.blocked;
 
   return (
     <>
       {bettingOffOpen && (
         <Modal onClose={() => setBettingOffOpen(false)}>
-          <p className="font-display font-bold text-espresso-900">Betting is turned off</p>
+          <p className="font-display font-bold text-espresso-900">
+            {bettingStatus?.reason === 'season_intermission'
+              ? 'Betting is closed between seasons'
+              : bettingStatus?.reason === 'season_winding_down'
+                ? 'No new markets right now'
+                : 'Betting is turned off'}
+          </p>
           <p className="text-sm text-espresso-500">
-            The group owner hasn't turned betting on yet. Once they do, everyone can start creating markets.
+            {bettingStatus?.reason === 'season_intermission' ? (
+              <>
+                This season is done and the next one hasn&apos;t started yet.
+                {bettingStatus.ownerNickname && ` Once @${bettingStatus.ownerNickname} continues the group and opens betting, everyone can create markets again.`}
+              </>
+            ) : bettingStatus?.reason === 'season_winding_down' ? (
+              `No new markets while ${bettingStatus.seasonName ?? 'the season'} finishes resolving.`
+            ) : (
+              "The group owner hasn't turned betting on yet. Once they do, everyone can start creating markets."
+            )}
           </p>
           <Button className="w-full" onClick={() => setBettingOffOpen(false)}>
             Got it

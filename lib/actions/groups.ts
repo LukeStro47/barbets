@@ -108,6 +108,9 @@ export async function removeMember(groupId: string, targetUserId: string): Promi
   const result = await runRpc<null>(await supabase.rpc('remove_member', { p_group_id: groupId, p_target_user_id: targetUserId }));
   if (result.error) return result;
   revalidatePath(`/groups/${groupId}/settings`);
+  // Also reachable from the Season N+1 setup card on the group hub itself (see
+  // SeasonSetupEditSheet), not just /settings — revalidate both, same as transferOwnership below.
+  revalidatePath(`/groups/${groupId}`);
   return result;
 }
 
