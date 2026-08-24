@@ -71,7 +71,7 @@ export default async function HeadToHeadPage({
   return (
     <main className="mx-auto max-w-lg space-y-5 px-5 py-8">
       <PageHeader title="Head to head" backHref={`/groups/${groupId}/members/${membershipId}`} backLabel="Back" />
-      <HeadToHeadCard data={{ a: aStats, b: bStats, markets }} />
+      <HeadToHeadCard data={{ a: aStats, b: bStats, markets, isPublicGroup: isPublic }} />
     </main>
   );
 }

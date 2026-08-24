@@ -288,14 +288,16 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
         <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 p-5 text-paper-white">
           <div className="pointer-events-none absolute inset-0 opacity-50 [background:radial-gradient(circle_at_88%_0%,rgba(232,163,61,0.3),rgba(232,163,61,0)_60%)]" />
           <div className="relative mb-3.5 flex items-center gap-3">
-            <UserAvatar
-              userId={user.id}
-              nickname={selected.nickname}
-              avatarUpdatedAt={isPublicGroup ? null : (avatarRow?.avatar_updated_at ?? null)}
-              avatarPresetKey={isPublicGroup ? null : (avatarRow?.avatar_preset_key ?? null)}
-              className="h-11 w-11 border-2 border-white/20 text-sm"
-              fallbackClassName="bg-white/10 text-honey-300"
-            />
+            {!isPublicGroup && (
+              <UserAvatar
+                userId={user.id}
+                nickname={selected.nickname}
+                avatarUpdatedAt={avatarRow?.avatar_updated_at ?? null}
+                avatarPresetKey={avatarRow?.avatar_preset_key ?? null}
+                className="h-11 w-11 border-2 border-white/20 text-sm"
+                fallbackClassName="bg-white/10 text-honey-300"
+              />
+            )}
             <div className="min-w-0">
               <p className="truncate text-base font-extrabold italic">@{selected.nickname}</p>
               <p className="truncate text-[11px] text-paper-white/50">{groupName}</p>

@@ -69,6 +69,7 @@ export async function loadHeadToHead(
     data: {
       a: toMemberStats(aStats, aAvatar),
       b: toMemberStats(bStats, bAvatar),
+      isPublicGroup: isPublic,
       markets: (marketsRes.data ?? []) as HeadToHeadMarket[],
     },
   };
