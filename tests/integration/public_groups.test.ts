@@ -63,7 +63,37 @@ describe('create_public_group / list_public_groups', () => {
     const { data: membership } = await adminClient.from('memberships').select('balance, status, role').eq('group_id', group.id).eq('user_id', users.admin.id).single();
     expect(membership!.balance).toBe(1000);
     expect(membership!.status).toBe('active');
-    expect(membership!.role).toBe('member'); // owner authority comes from groups.owner_id, not this column
+    // createPublicGroup() (the test helper above) always passes a nickname, which is the "I'll
+    // moderate this too" opt-in — role='moderator' alongside the owner authority they already
+    // have via groups.owner_id, not a substitute for it.
+    expect(membership!.role).toBe('moderator');
+  });
+
+  test('a nickname-less create_public_group call gives the admin no membership at all', async () => {
+    const { data, error } = await users.admin.client.rpc('create_public_group', {
+      p_name: `No-join test ${Date.now()}`,
+      p_category: 'generic',
+      p_seed_amount: 1000,
+      p_timezone: 'UTC',
+    });
+    expect(error).toBeNull();
+    const group = (Array.isArray(data) ? data[0] : data) as PublicGroupRow;
+
+    const { data: membership } = await adminClient.from('memberships').select('id').eq('group_id', group.id).eq('user_id', users.admin.id).maybeSingle();
+    expect(membership).toBeNull();
+
+    // The owner can still manage the group they didn't join — see update_group_settings()'s
+    // is_public branch.
+    const { error: settingsErr } = await users.admin.client.rpc('update_group_settings', {
+      p_group_id: group.id,
+      p_seed_amount: 2000,
+      p_seasons_enabled: false,
+      p_season_length: null,
+      p_timezone: 'UTC',
+      p_betting_enabled: true,
+      p_accepting_members: true,
+    });
+    expect(settingsErr).toBeNull();
   });
 
   test('update_group_settings forces awards_enabled off for a public group regardless of what is submitted', async () => {
@@ -130,8 +160,12 @@ describe('join_public_group', () => {
     expect(membership.nickname).toBe('pga'); // untouched, not overwritten by the second call's nickname
   });
 
-  test('accepting_members off blocks a genuinely new join the same way it does for a private group', async () => {
-    await users.admin.client.rpc('update_group_settings', {
+  test('accepting_members is a fixed-on hard rule for a public group, not owner-configurable', async () => {
+    // update_group_settings() coerces this back to true for a public group regardless of what's
+    // submitted (see 20260825100000) — a directory-joined group has no "pause invites" concept,
+    // the listing itself is the only gate. Confirm the coercion holds, then confirm a genuinely
+    // new join still succeeds.
+    const { error: settingsErr } = await users.admin.client.rpc('update_group_settings', {
       p_group_id: group.id,
       p_seed_amount: 1000,
       p_seasons_enabled: false,
@@ -140,21 +174,13 @@ describe('join_public_group', () => {
       p_betting_enabled: true,
       p_accepting_members: false,
     });
-    try {
-      const { error } = await users.b.client.rpc('join_public_group', { p_group_id: group.id, p_nickname: 'pgb' });
-      expect(error?.message).toMatch(/invalid_operation/);
-      expect(error?.message).toMatch(/accepting new members/);
-    } finally {
-      await users.admin.client.rpc('update_group_settings', {
-        p_group_id: group.id,
-        p_seed_amount: 1000,
-        p_seasons_enabled: false,
-        p_season_length: null,
-        p_timezone: 'UTC',
-        p_betting_enabled: true,
-        p_accepting_members: true,
-      });
-    }
+    expect(settingsErr).toBeNull();
+
+    const { data: settings } = await adminClient.from('group_settings').select('accepting_members').eq('group_id', group.id).single();
+    expect(settings!.accepting_members).toBe(true);
+
+    const { error: joinErr } = await users.b.client.rpc('join_public_group', { p_group_id: group.id, p_nickname: 'pgb' });
+    expect(joinErr).toBeNull();
   });
 });
 
@@ -306,6 +332,9 @@ describe('awards_enabled = false: a public group never writes group_titles', () 
       await fastForwardCloseTime(pubMarket.id, 60_000);
       await users.winner.client.rpc('place_bet', { p_market_id: pubMarket.id, p_side: 'yes', p_amount: 100 });
       await users.loser.client.rpc('place_bet', { p_market_id: pubMarket.id, p_side: 'no', p_amount: 100 });
+      // No backdate/finalize_market call here: propose_resolution() finalizes a public group's
+      // market in the same transaction (see 20260825110000), so it's already resolved the moment
+      // this returns — a separate finalize_market() call would find nothing left to finalize.
       const { error: proposeErr } = await users.winner.client.rpc('propose_resolution', {
         p_market_id: pubMarket.id,
         p_outcome: 'yes',
@@ -313,9 +342,9 @@ describe('awards_enabled = false: a public group never writes group_titles', () 
         p_actual_value: null,
       });
       expect(proposeErr).toBeNull();
-      await backdate('resolution_proposals', 'market_id', pubMarket.id, 'proposed_at', 9);
-      const { error: finalizeErr } = await adminClient.rpc('finalize_market', { p_market_id: pubMarket.id });
-      expect(finalizeErr).toBeNull();
+
+      const { data: resolvedMarket } = await adminClient.from('markets').select('status').eq('id', pubMarket.id).single();
+      expect(resolvedMarket!.status).toBe('resolved');
 
       const { data: pubTitleRow } = await adminClient
         .from('group_titles')
