@@ -25,6 +25,17 @@ export function Modal({
 }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  // Without this, a drag that starts on the backdrop (or overscroll past a short panel) reaches
+  // the real page scrolling underneath — the overlay covers it visually but not for touch/wheel.
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
   if (!mounted) return null;
 
   return createPortal(

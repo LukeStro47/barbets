@@ -5,20 +5,13 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createCustomGroupTitle, deleteCustomGroupTitle } from '@/lib/actions/customAwards';
 import { CUSTOM_AWARD_SHAPES, findShape, type CustomGroupTitle, type CustomGroupTitleHolder } from '@/lib/customAwards';
-import { CUSTOM_AWARD_ICONS, customAwardIconPath } from '@/lib/customAwardIcons';
+import { CUSTOM_AWARD_ICONS } from '@/lib/customAwardIcons';
 import { CUSTOM_AWARD_LABEL_MAX_LENGTH, CUSTOM_AWARD_MAX_PER_GROUP } from '@/lib/limits';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Mention } from '@/components/ui/Mention';
+import { CustomAwardGlyph } from '@/components/groups/CustomAwardGlyph';
 import { cn } from '@/lib/cn';
-
-function CustomAwardGlyph({ iconKey, stroke, size = 20 }: { iconKey: string; stroke: string; size?: number }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ height: size, width: size }}>
-      <path d={customAwardIconPath(iconKey)} />
-    </svg>
-  );
-}
 
 const inputClasses =
   'w-full rounded-[10px] border border-espresso-200 bg-paper-white px-3.5 py-2.5 text-[15px] font-semibold text-espresso-950 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
