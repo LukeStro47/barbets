@@ -259,9 +259,9 @@ export default async function HowItWorksPage({ searchParams }: { searchParams: P
 
       {tab === 'edge-cases' && (
         <div className={`${cardClasses} [&>*+*]:border-t [&>*+*]:border-espresso-100`}>
-          <ExplainerRow title="Markets about you are invisible to you">
-            If a market @mentions you, you won&apos;t see that it exists anywhere until it resolves. Then you see everything,
-            including who bet what.
+          <ExplainerRow title="Markets about you stay sealed">
+            If a market @mentions you, you&apos;ll know one exists, but not what it&apos;s about, not until it resolves. Then you
+            see everything, including who bet what.
           </ExplainerRow>
           <ExplainerRow title="Leaving">
             Any market about you is voided and refunded. Your other open bets stay in play and settle without you. You

@@ -28,7 +28,7 @@ const sections = [
   },
   {
     title: 'Privacy inside the app',
-    body: "Barbets' whole point is that a market can be about you without you being able to see it exists until it resolves. That privacy model governs what other members of your groups can see about you inside the app, separate from and in addition to this policy.",
+    body: "Barbets' whole point is that a market can be about you without you being able to see what it's about until it resolves. You're told one exists, never its title, description, or who else is involved. That privacy model governs what other members of your groups can see about you inside the app, separate from and in addition to this policy.",
   },
   {
     title: 'Deleting your account',
