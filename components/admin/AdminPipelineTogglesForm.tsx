@@ -8,6 +8,11 @@ const PIPELINE_LABEL: Record<PipelineSetting['pipeline'], string> = {
   weather: 'Weather (api.weather.gov)',
 };
 
+const PIPELINE_SCHEDULE: Record<PipelineSetting['pipeline'], string> = {
+  sports: 'Creates markets every 12h, resolves every 30min',
+  weather: 'Creates markets daily at noon, resolves every 30min',
+};
+
 /** The kill switch for the two auto-generated market pipelines. Each Edge Function checks its own
     row before creating or resolving anything, so flipping this off here stops new markets without
     a redeploy. Seeded off — see 20260826130000_pipeline_settings.sql. */
@@ -33,8 +38,15 @@ export function AdminPipelineTogglesForm({ settings }: { settings: PipelineSetti
       {error && <p className="text-sm text-danger-700">{error}</p>}
       <div className="divide-y divide-espresso-50 rounded-xl border border-espresso-100">
         {rows.map((r) => (
-          <label key={r.pipeline} className="flex items-center justify-between gap-2 px-3 py-2.5">
-            <span className="text-sm font-semibold text-espresso-800">{PIPELINE_LABEL[r.pipeline]}</span>
+          <label key={r.pipeline} className="flex items-center justify-between gap-3 px-3 py-2.5">
+            <span className="flex flex-col">
+              <span className="text-sm font-semibold text-espresso-800">{PIPELINE_LABEL[r.pipeline]}</span>
+              <span className="text-xs text-espresso-400">
+                {r.enabled
+                  ? `On. ${PIPELINE_SCHEDULE[r.pipeline]}.`
+                  : 'Off. Scheduled runs no-op, nothing is created or resolved.'}
+              </span>
+            </span>
             <input
               type="checkbox"
               disabled={isPending}

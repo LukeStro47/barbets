@@ -105,8 +105,11 @@ export default async function AdminPage() {
         <div>
           <h2 className="font-semibold text-espresso-800">Auto-generated market pipelines</h2>
           <p className="text-sm text-espresso-500">
-            Kill switch for the Sports and Weather system markets — off means the scheduled job no-ops
-            instead of creating or resolving anything.
+            Each pipeline has one on/off switch that covers both its jobs: creating new markets on
+            schedule and resolving ones that have finished. Off means every scheduled run for that
+            pipeline no-ops immediately, nothing is created and nothing is resolved. It does not touch
+            markets already created; those just sit unresolved until you turn the pipeline back on or
+            resolve them by hand.
           </p>
         </div>
         <AdminPipelineTogglesForm settings={pipelineSettings ?? []} />

@@ -33,7 +33,7 @@ const SLIDES: Slide[] = [
   {
     icon: '👤',
     title: 'Markets can be about a friend',
-    body: "@Mention someone, and they won't see it exists, anywhere, until it resolves. Then they see everything.",
+    body: "@Mention someone, and they'll know a market's about them, but not what it's about, until it resolves. Then they see everything.",
   },
   {
     icon: '⚖️',
