@@ -22,7 +22,8 @@ export interface Market {
   line: number | null;
   /** over_under only, e.g. "$", "min", "pts". */
   unit: string | null;
-  creator_id: string;
+  /** Null for a system-generated market (Sports/Weather pipelines), or a market whose creator has since deleted their account. */
+  creator_id: string | null;
   sponsor_id: string | null;
   closes_at: string;
   status: 'pending_sponsor' | 'open' | 'closed' | 'proposed' | 'disputed' | 'resolved' | 'voided';

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createTestUsers, cleanupTestUsers, backdate, adminClient, type TestUser } from './helpers/testUsers';
-import { setupGroup, fastForwardCloseTime, type GroupRow } from './helpers/scenarios';
+import { setupGroup, fastForwardCloseTime, createMarket, type GroupRow } from './helpers/scenarios';
 
 /** Grants platform-admin authority to a test user directly via the service-role client — same
     zero-policy table create_public_group()/assign_group_moderator() gate on, no app-level flow to
@@ -305,6 +305,183 @@ describe('public group market gates: mod-only creation, no subjects', () => {
   });
 });
 
+describe('void_market_by_owner: mod gate for public groups', () => {
+  let users: Record<string, TestUser>;
+  let group: PublicGroupRow;
+
+  beforeAll(async () => {
+    users = await createTestUsers('pgvoid', ['admin', 'mod', 'member']);
+    await makeAdmin(users.admin);
+    group = await createPublicGroup(users.admin);
+    await users.mod.client.rpc('join_public_group', { p_group_id: group.id, p_nickname: 'pgvmod' });
+    await users.member.client.rpc('join_public_group', { p_group_id: group.id, p_nickname: 'pgvmember' });
+    await users.admin.client.rpc('assign_group_moderator', {
+      p_group_id: group.id,
+      p_target_user_id: users.mod.id,
+      p_is_moderator: true,
+    });
+  });
+
+  afterAll(async () => {
+    await cleanupTestUsers(users);
+  });
+
+  async function createVoidableMarket() {
+    const { data, error } = await users.admin.client.rpc('create_market', {
+      p_group_id: group.id,
+      p_title: `Voidable ${Date.now()}`,
+      p_description: 'test',
+      p_market_type: 'yes_no',
+      p_closes_at: new Date(Date.now() + 600_000).toISOString(),
+    });
+    expect(error).toBeNull();
+    return Array.isArray(data) ? data[0] : data;
+  }
+
+  test('a regular member cannot void a market', async () => {
+    const market = await createVoidableMarket();
+    const { error } = await users.member.client.rpc('void_market_by_owner', { p_market_id: market.id });
+    expect(error?.message).toMatch(/forbidden/);
+  });
+
+  test('a moderator (not the owner) can void a market', async () => {
+    const market = await createVoidableMarket();
+    const { error } = await users.mod.client.rpc('void_market_by_owner', { p_market_id: market.id });
+    expect(error).toBeNull();
+
+    const { data: voided } = await adminClient.from('markets').select('status, outcome').eq('id', market.id).single();
+    expect(voided!.status).toBe('voided');
+    expect(voided!.outcome).toBe('void');
+  });
+
+  test('a private group is unaffected: a non-owner member still cannot void, moderator role or not', async () => {
+    const privateGroup = await setupGroup(users.admin, [users.mod]);
+    const { data: marketData, error: createErr } = await users.admin.client.rpc('create_market', {
+      p_group_id: privateGroup.id,
+      p_title: 'Private voidable',
+      p_description: 'test',
+      p_market_type: 'yes_no',
+      p_closes_at: new Date(Date.now() + 600_000).toISOString(),
+    });
+    expect(createErr).toBeNull();
+    const market = Array.isArray(marketData) ? marketData[0] : marketData;
+
+    const { error } = await users.mod.client.rpc('void_market_by_owner', { p_market_id: market.id });
+    expect(error?.message).toMatch(/forbidden/);
+  });
+});
+
+describe('_create_system_market / _resolve_system_market: the actor-less pipeline functions', () => {
+  let users: Record<string, TestUser>;
+  let group: PublicGroupRow;
+
+  beforeAll(async () => {
+    users = await createTestUsers('pgsys', ['admin', 'winner', 'loser']);
+    await makeAdmin(users.admin);
+    group = await createPublicGroup(users.admin);
+    await users.winner.client.rpc('join_public_group', { p_group_id: group.id, p_nickname: 'syswin' });
+    await users.loser.client.rpc('join_public_group', { p_group_id: group.id, p_nickname: 'syslose' });
+  });
+
+  afterAll(async () => {
+    await cleanupTestUsers(users);
+  });
+
+  test('rejects a private group outright', async () => {
+    const privateGroup = await setupGroup(users.admin, []);
+    const { error } = await adminClient.rpc('_create_system_market', {
+      p_group_id: privateGroup.id,
+      p_title: 'Should fail',
+      p_description: 'test',
+      p_market_type: 'yes_no',
+      p_closes_at: new Date(Date.now() + 600_000).toISOString(),
+    });
+    expect(error?.message).toMatch(/invalid_operation/);
+  });
+
+  test('rejects multiple_choice', async () => {
+    const { error } = await adminClient.rpc('_create_system_market', {
+      p_group_id: group.id,
+      p_title: 'Should fail',
+      p_description: 'test',
+      p_market_type: 'multiple_choice',
+      p_closes_at: new Date(Date.now() + 600_000).toISOString(),
+    });
+    expect(error?.message).toMatch(/invalid_operation/);
+  });
+
+  test('creates a market with no creator, already open, no auth.uid() in context', async () => {
+    // adminClient is the service-role client -- no user session, no JWT, so auth.uid() is
+    // genuinely NULL here, the same as a real cron-triggered Edge Function call. This is the
+    // actual shape that bit end_season() before it was split into an actor-less core (see
+    // ARCHITECTURE.md) -- a test that only ever calls through a real user session would miss it.
+    const { data, error } = await adminClient.rpc('_create_system_market', {
+      p_group_id: group.id,
+      p_title: 'Will the system win?',
+      p_description: 'Auto-generated test market',
+      p_market_type: 'yes_no',
+      p_closes_at: new Date(Date.now() + 600_000).toISOString(),
+    });
+    expect(error).toBeNull();
+    const market = Array.isArray(data) ? data[0] : data;
+    expect(market.status).toBe('open');
+    expect(market.creator_id).toBeNull();
+  });
+
+  test('full cycle: create, bet, resolve -- money conserves with a null creator_id throughout', async () => {
+    const { data: marketData, error: createErr } = await adminClient.rpc('_create_system_market', {
+      p_group_id: group.id,
+      p_title: 'Full cycle system market',
+      p_description: 'test',
+      p_market_type: 'yes_no',
+      p_closes_at: new Date(Date.now() + 600_000).toISOString(),
+    });
+    expect(createErr).toBeNull();
+    const market = Array.isArray(marketData) ? marketData[0] : marketData;
+
+    const { error: betWinErr } = await users.winner.client.rpc('place_bet', { p_market_id: market.id, p_side: 'yes', p_amount: 100 });
+    expect(betWinErr).toBeNull();
+    const { error: betLoseErr } = await users.loser.client.rpc('place_bet', { p_market_id: market.id, p_side: 'no', p_amount: 100 });
+    expect(betLoseErr).toBeNull();
+
+    const { data: resolvedData, error: resolveErr } = await adminClient.rpc('_resolve_system_market', {
+      p_market_id: market.id,
+      p_outcome: 'yes',
+    });
+    expect(resolveErr).toBeNull();
+    const resolved = Array.isArray(resolvedData) ? resolvedData[0] : resolvedData;
+    // Instant finalize, same as any public-group market -- never sits in 'proposed'.
+    expect(resolved.status).toBe('resolved');
+    expect(resolved.outcome).toBe('yes');
+
+    const { data: winnerMembership } = await adminClient
+      .from('memberships')
+      .select('balance')
+      .eq('group_id', group.id)
+      .eq('user_id', users.winner.id)
+      .single();
+    // Seeded 1000, bet 100, wins the whole 200 pool.
+    expect(winnerMembership!.balance).toBe(1100);
+
+    const { data: proposal } = await adminClient
+      .from('resolution_proposals')
+      .select('proposer_id')
+      .eq('market_id', market.id)
+      .single();
+    expect(proposal!.proposer_id).toBeNull();
+  });
+
+  test('_resolve_system_market refuses a market in a private group', async () => {
+    const privateGroup = await setupGroup(users.admin, [users.winner]);
+    const privMarket = await createMarket(users.admin, privateGroup.id);
+    const { error } = await adminClient.rpc('_resolve_system_market', {
+      p_market_id: privMarket.id,
+      p_outcome: 'yes',
+    });
+    expect(error?.message).toMatch(/invalid_operation/);
+  });
+});
+
 describe('awards_enabled = false: a public group never writes group_titles', () => {
   test('a resolved market with a real win writes no risk_taker row for a public group, but does for an otherwise-identical private group', async () => {
     const users = await createTestUsers('pgawd', ['admin', 'winner', 'loser']);
@@ -392,5 +569,53 @@ describe('awards_enabled = false: a public group never writes group_titles', () 
     } finally {
       await cleanupTestUsers(users);
     }
+  });
+});
+
+describe('pipeline_settings: the auto-generated-market kill switch', () => {
+  let users: Record<string, TestUser>;
+
+  beforeAll(async () => {
+    users = await createTestUsers('pgpipe', ['admin', 'notadmin']);
+    await makeAdmin(users.admin);
+  });
+
+  afterAll(async () => {
+    await cleanupTestUsers(users);
+  });
+
+  test('a non-admin cannot read or change pipeline settings', async () => {
+    const { error: listErr } = await users.notadmin.client.rpc('list_pipeline_settings');
+    expect(listErr?.message).toMatch(/forbidden/);
+
+    const { error: setErr } = await users.notadmin.client.rpc('set_pipeline_enabled', { p_pipeline: 'sports', p_enabled: true });
+    expect(setErr?.message).toMatch(/forbidden/);
+  });
+
+  test('both pipelines exist and start disabled', async () => {
+    const { data, error } = await users.admin.client.rpc('list_pipeline_settings');
+    expect(error).toBeNull();
+    const byPipeline = new Map((data ?? []).map((r: { pipeline: string; enabled: boolean }) => [r.pipeline, r.enabled]));
+    expect(byPipeline.get('sports')).toBe(false);
+    expect(byPipeline.get('weather')).toBe(false);
+  });
+
+  test('an admin can flip a pipeline on and back off', async () => {
+    const { error: onErr } = await users.admin.client.rpc('set_pipeline_enabled', { p_pipeline: 'weather', p_enabled: true });
+    expect(onErr).toBeNull();
+
+    const { data: afterOn } = await adminClient.from('pipeline_settings').select('enabled').eq('pipeline', 'weather').single();
+    expect(afterOn!.enabled).toBe(true);
+
+    const { error: offErr } = await users.admin.client.rpc('set_pipeline_enabled', { p_pipeline: 'weather', p_enabled: false });
+    expect(offErr).toBeNull();
+
+    const { data: afterOff } = await adminClient.from('pipeline_settings').select('enabled').eq('pipeline', 'weather').single();
+    expect(afterOff!.enabled).toBe(false);
+  });
+
+  test('an unknown pipeline name is rejected', async () => {
+    const { error } = await users.admin.client.rpc('set_pipeline_enabled', { p_pipeline: 'crypto', p_enabled: true });
+    expect(error?.message).toMatch(/not_found/);
   });
 });

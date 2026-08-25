@@ -1,0 +1,128 @@
+// Morning job: creates a "will it rain" and a "will it hit X°F" market per city in CITIES,
+// closing at the end of the day's forecast period, in the seeded "Weather" public group. Free,
+// keyless, U.S. federal public-domain data (api.weather.gov). Checked in against
+// pipeline_settings before doing anything, same as weather-resolve-markets and both sports
+// functions -- see the admin console's pipeline toggle.
+//
+// No shared metadata table linking a market back to its city/station: weather-resolve-markets
+// re-derives the city from the market's title (title format is fixed and only ever produced by
+// this function) and looks it up in its own copy of CITIES. Same "no shared folder, each
+// function is self-contained" convention send-push already established for this project.
+import { createClient } from 'npm:@supabase/supabase-js@2';
+
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+const USER_AGENT = '(barbets-app, barbets-app@example.com)';
+
+const CITIES = [
+  { name: 'New York', lat: 40.7128, lon: -74.006 },
+  { name: 'Chicago', lat: 41.8781, lon: -87.6298 },
+  { name: 'Los Angeles', lat: 34.0522, lon: -118.2437 },
+];
+
+interface ForecastPeriod {
+  name: string;
+  endTime: string;
+  temperature: number;
+  shortForecast: string;
+}
+
+async function nwsFetch(url: string): Promise<any> {
+  const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT, Accept: 'application/geo+json' } });
+  if (!res.ok) throw new Error(`NWS request failed (${res.status}): ${url}`);
+  return res.json();
+}
+
+/** Deterministic, not random -- sweep_failures upserts on (sweep, subject_id), so the same
+    logical failure (same city, same day) needs to hash to the same id across retries or every
+    run looks like a brand new failure and the attempt counter never climbs. */
+async function stableId(input: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
+  const bytes = new Uint8Array(digest).slice(0, 16);
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+}
+
+async function recordFailure(subject: string, err: unknown) {
+  const message = err instanceof Error ? err.message : String(err);
+  const { error } = await admin.rpc('_record_sweep_failure', {
+    p_sweep: 'weather_market_create',
+    p_subject_id: await stableId(subject),
+    p_sqlstate: 'EDGEFN',
+    p_message: message,
+    p_context: err instanceof Error ? (err.stack ?? null) : null,
+  });
+  if (error) console.error(`recordFailure itself failed for ${subject}:`, error.message);
+}
+
+Deno.serve(async () => {
+  const { data: setting } = await admin.from('pipeline_settings').select('enabled').eq('pipeline', 'weather').single();
+  if (!setting?.enabled) return new Response('weather pipeline disabled', { status: 200 });
+
+  const { data: group, error: groupErr } = await admin
+    .from('groups')
+    .select('id')
+    .eq('name', 'Weather')
+    .eq('is_public', true)
+    .maybeSingle();
+  if (groupErr || !group) {
+    console.error('Weather group not found:', groupErr?.message);
+    return new Response('Weather group not found', { status: 500 });
+  }
+
+  let created = 0;
+  let failed = 0;
+
+  for (const city of CITIES) {
+    try {
+      const point = await nwsFetch(`https://api.weather.gov/points/${city.lat},${city.lon}`);
+      const forecast = await nwsFetch(point.properties.forecast);
+      const period: ForecastPeriod = forecast.properties.periods[0];
+      const closesAt = period.endTime;
+
+      const rainTitle = `Will it rain in ${city.name} today?`;
+      const tempTitle = `Will ${city.name} hit ${period.temperature}°F today?`;
+
+      const { data: existing } = await admin
+        .from('markets')
+        .select('id, title')
+        .eq('group_id', group.id)
+        .eq('closes_at', closesAt)
+        .in('title', [rainTitle, tempTitle]);
+      const existingTitles = new Set((existing ?? []).map((m: { title: string }) => m.title));
+
+      if (!existingTitles.has(rainTitle)) {
+        const { error } = await admin.rpc('_create_system_market', {
+          p_group_id: group.id,
+          p_title: rainTitle,
+          p_description: `Auto-generated from the National Weather Service forecast for ${city.name}: "${period.shortForecast}."`,
+          p_market_type: 'yes_no',
+          p_closes_at: closesAt,
+        });
+        if (error) throw new Error(`rain market: ${error.message}`);
+        created++;
+      }
+
+      if (!existingTitles.has(tempTitle)) {
+        const { error } = await admin.rpc('_create_system_market', {
+          p_group_id: group.id,
+          p_title: tempTitle,
+          p_description: `Auto-generated from the National Weather Service forecast for ${city.name}, which called for a high of ${period.temperature}°F.`,
+          p_market_type: 'over_under',
+          p_closes_at: closesAt,
+          p_line: period.temperature,
+          p_unit: '°F',
+        });
+        if (error) throw new Error(`temp market: ${error.message}`);
+        created++;
+      }
+    } catch (err) {
+      failed++;
+      await recordFailure(`${city.name}-${new Date().toISOString().slice(0, 10)}`, err);
+    }
+  }
+
+  return new Response(JSON.stringify({ created, failed }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+});

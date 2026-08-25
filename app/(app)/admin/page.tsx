@@ -4,7 +4,9 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { AdminBroadcastForm } from '@/components/admin/AdminBroadcastForm';
 import { CreatePublicGroupForm, ManageModeratorsPanel } from '@/components/admin/AdminPublicGroupsForm';
+import { AdminPipelineTogglesForm } from '@/components/admin/AdminPipelineTogglesForm';
 import { formatTokens } from '@/lib/formatNumber';
+import type { PipelineSetting } from '@/lib/actions/admin';
 
 function StatTile({ label, value }: { label: string; value: number }) {
   return (
@@ -23,16 +25,18 @@ export default async function AdminPage() {
   const { data: isAdmin } = await supabase.rpc('is_platform_admin');
   if (!isAdmin) notFound();
 
-  const [{ data: stats }, { data: groups }, { data: members }, { data: publicGroups }] = (await Promise.all([
+  const [{ data: stats }, { data: groups }, { data: members }, { data: publicGroups }, { data: pipelineSettings }] = (await Promise.all([
     supabase.rpc('get_platform_admin_stats').single(),
     supabase.rpc('list_groups_for_admin'),
     supabase.rpc('list_group_members_for_admin'),
     supabase.rpc('list_public_groups'),
+    supabase.rpc('list_pipeline_settings'),
   ])) as [
     { data: { active_groups: number; total_markets: number; total_users: number } | null },
     { data: { id: string; name: string; member_count: number }[] | null },
     { data: { group_id: string; user_id: string; nickname: string }[] | null },
     { data: { id: string; name: string; avatar_key: string | null; category: 'generic' | 'campus'; member_count: number }[] | null },
+    { data: PipelineSetting[] | null },
   ];
 
   const membersByGroup = new Map<string, { userId: string; nickname: string }[]>();
@@ -95,6 +99,17 @@ export default async function AdminPage() {
             ))}
           </div>
         )}
+      </Card>
+
+      <Card className="space-y-3">
+        <div>
+          <h2 className="font-semibold text-espresso-800">Auto-generated market pipelines</h2>
+          <p className="text-sm text-espresso-500">
+            Kill switch for the Sports and Weather system markets — off means the scheduled job no-ops
+            instead of creating or resolving anything.
+          </p>
+        </div>
+        <AdminPipelineTogglesForm settings={pipelineSettings ?? []} />
       </Card>
     </main>
   );
