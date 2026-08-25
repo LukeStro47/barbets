@@ -133,10 +133,14 @@ export default async function RevealPage({ params }: { params: Promise<{ groupId
         isSubjectOfThisMarket={isSubjectOfThisMarket}
       />
       <p className="text-center text-xs text-espresso-400">
-        Started by <Mention nickname={creator?.nickname ?? ''} />
+        {marketRow.creator_id && (
+          <>
+            Started by <Mention nickname={creator?.nickname ?? ''} />
+          </>
+        )}
         {sponsor && (
           <>
-            {' · Endorsed by '}
+            {marketRow.creator_id ? ' · Endorsed by ' : 'Endorsed by '}
             <Mention nickname={sponsor.nickname ?? ''} />
           </>
         )}

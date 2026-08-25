@@ -85,3 +85,28 @@ export async function assignGroupModerator(groupId: string, targetUserId: string
   revalidatePath('/admin');
   return result;
 }
+
+export interface PipelineSetting {
+  pipeline: 'sports' | 'weather';
+  enabled: boolean;
+  updated_at: string;
+}
+
+/** Admin-only: current on/off state of the auto-generated Sports and Weather market pipelines.
+    Not routed through runRpc() — table-returning, same note as listGroupModeratorCandidates(). */
+export async function listPipelineSettings(): Promise<ActionResult<PipelineSetting[]>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('list_pipeline_settings');
+  if (error) return { error: friendlyMessage(toActionError(error)) };
+  return { data: (data ?? []) as PipelineSetting[] };
+}
+
+/** Admin-only: the kill switch each pipeline's Edge Function checks before creating or resolving
+    any market. Seeded off — see 20260826130000_pipeline_settings.sql. */
+export async function setPipelineEnabled(pipeline: 'sports' | 'weather', enabled: boolean): Promise<ActionResult<null>> {
+  const supabase = await createClient();
+  const result = await runRpc<null>(await supabase.rpc('set_pipeline_enabled', { p_pipeline: pipeline, p_enabled: enabled }));
+  if (result.error) return result;
+  revalidatePath('/admin');
+  return result;
+}
