@@ -371,6 +371,111 @@ describe('void_market_by_owner: mod gate for public groups', () => {
   });
 });
 
+describe('propose_resolution: mod gate for public groups', () => {
+  let users: Record<string, TestUser>;
+  let group: PublicGroupRow;
+
+  beforeAll(async () => {
+    users = await createTestUsers('pgres', ['admin', 'mod', 'member']);
+    await makeAdmin(users.admin);
+    group = await createPublicGroup(users.admin);
+    await users.mod.client.rpc('join_public_group', { p_group_id: group.id, p_nickname: 'pgrmod' });
+    await users.member.client.rpc('join_public_group', { p_group_id: group.id, p_nickname: 'pgrmember' });
+    await users.admin.client.rpc('assign_group_moderator', {
+      p_group_id: group.id,
+      p_target_user_id: users.mod.id,
+      p_is_moderator: true,
+    });
+  });
+
+  afterAll(async () => {
+    await cleanupTestUsers(users);
+  });
+
+  async function createResolvableMarket() {
+    const { data, error } = await users.admin.client.rpc('create_market', {
+      p_group_id: group.id,
+      p_title: `Resolvable ${Date.now()}`,
+      p_description: 'test',
+      p_market_type: 'yes_no',
+      p_closes_at: new Date(Date.now() + 600_000).toISOString(),
+    });
+    expect(error).toBeNull();
+    return Array.isArray(data) ? data[0] : data;
+  }
+
+  test('a regular member cannot resolve a market', async () => {
+    const market = await createResolvableMarket();
+    const { error } = await users.member.client.rpc('propose_resolution', {
+      p_market_id: market.id,
+      p_outcome: 'yes',
+      p_justification: null,
+      p_actual_value: null,
+    });
+    expect(error?.message).toMatch(/forbidden/);
+    expect(error?.message).toMatch(/moderator/);
+
+    // Confirm it's still genuinely open -- the rejected call didn't half-apply.
+    const { data: stillOpen } = await adminClient.from('markets').select('status').eq('id', market.id).single();
+    expect(stillOpen!.status).toBe('open');
+  });
+
+  test('the owner can resolve a market (not just a moderator)', async () => {
+    const market = await createResolvableMarket();
+    const { error } = await users.admin.client.rpc('propose_resolution', {
+      p_market_id: market.id,
+      p_outcome: 'yes',
+      p_justification: null,
+      p_actual_value: null,
+    });
+    expect(error).toBeNull();
+
+    const { data: resolved } = await adminClient.from('markets').select('status, outcome').eq('id', market.id).single();
+    expect(resolved!.status).toBe('resolved');
+    expect(resolved!.outcome).toBe('yes');
+  });
+
+  test('a moderator (not the owner) can resolve a market, and it instant-finalizes', async () => {
+    const market = await createResolvableMarket();
+    const { error } = await users.mod.client.rpc('propose_resolution', {
+      p_market_id: market.id,
+      p_outcome: 'no',
+      p_justification: null,
+      p_actual_value: null,
+    });
+    expect(error).toBeNull();
+
+    const { data: resolved } = await adminClient.from('markets').select('status, outcome').eq('id', market.id).single();
+    expect(resolved!.status).toBe('resolved');
+    expect(resolved!.outcome).toBe('no');
+  });
+
+  test('a private group is unaffected: a regular member can still resolve a market', async () => {
+    const privateGroup = await setupGroup(users.admin, [users.member]);
+    const { data: marketData, error: createErr } = await users.admin.client.rpc('create_market', {
+      p_group_id: privateGroup.id,
+      p_title: 'Private resolvable',
+      p_description: 'test',
+      p_market_type: 'yes_no',
+      p_closes_at: new Date(Date.now() + 600_000).toISOString(),
+    });
+    expect(createErr).toBeNull();
+    const market = Array.isArray(marketData) ? marketData[0] : marketData;
+    // A private group defaults require_endorsement on, so the market needs a sponsor before it's
+    // open for a resolution proposal -- unrelated to the mod gate this test is actually checking.
+    const { error: sponsorErr } = await users.member.client.rpc('sponsor_market', { p_market_id: market.id });
+    expect(sponsorErr).toBeNull();
+
+    const { error } = await users.member.client.rpc('propose_resolution', {
+      p_market_id: market.id,
+      p_outcome: 'yes',
+      p_justification: null,
+      p_actual_value: null,
+    });
+    expect(error).toBeNull();
+  });
+});
+
 describe('_create_system_market / _resolve_system_market: the actor-less pipeline functions', () => {
   let users: Record<string, TestUser>;
   let group: PublicGroupRow;
@@ -512,7 +617,9 @@ describe('awards_enabled = false: a public group never writes group_titles', () 
       // No backdate/finalize_market call here: propose_resolution() finalizes a public group's
       // market in the same transaction (see 20260825110000), so it's already resolved the moment
       // this returns — a separate finalize_market() call would find nothing left to finalize.
-      const { error: proposeErr } = await users.winner.client.rpc('propose_resolution', {
+      // Proposed by the owner (users.admin), not winner -- propose_resolution() is mod-or-owner
+      // gated for a public group (20260827100000) and winner is a plain member here.
+      const { error: proposeErr } = await users.admin.client.rpc('propose_resolution', {
         p_market_id: pubMarket.id,
         p_outcome: 'yes',
         p_justification: null,

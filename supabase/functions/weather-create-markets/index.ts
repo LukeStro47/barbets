@@ -22,6 +22,13 @@ const CITIES = [
   { name: 'Los Angeles', lat: 34.0522, lon: -118.2437 },
 ];
 
+// Daily highs are typically reached mid-afternoon, well before a forecast period's own endTime
+// (NWS "Today" periods commonly run until 18:00 local) -- a temperature market that stayed open
+// that long was betting on an already-decided outcome for hours. 5pm local is a deliberately
+// simple approximation, not a per-city climatological cutoff; the rain market keeps using the
+// forecast period's actual endTime, since rain can happen any time through the day.
+const TEMP_MARKET_CLOSE_HOUR_LOCAL = 17;
+
 interface ForecastPeriod {
   name: string;
   endTime: string;
@@ -33,6 +40,33 @@ async function nwsFetch(url: string): Promise<any> {
   const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT, Accept: 'application/geo+json' } });
   if (!res.ok) throw new Error(`NWS request failed (${res.status}): ${url}`);
   return res.json();
+}
+
+/** The UTC instant for `hour`:00 local wall-clock time, today, in `timeZone` -- handles DST
+    correctly with no timezone library. "Today" is read from `timeZone` itself, not from UTC's
+    own date, since those can disagree depending on what time this happens to run. Standard trick
+    for the hour itself: format an initial UTC guess back through the target zone, then correct
+    by however far off that reading is from the guess. */
+function localHourTodayToUtcIso(timeZone: string, hour: number): string {
+  const now = new Date();
+  const dateFmt = new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' });
+  const dateParts = Object.fromEntries(dateFmt.formatToParts(now).map((p) => [p.type, p.value]));
+  const guess = new Date(Date.UTC(Number(dateParts.year), Number(dateParts.month) - 1, Number(dateParts.day), hour, 0, 0));
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+  const parts = Object.fromEntries(fmt.formatToParts(guess).map((p) => [p.type, p.value]));
+  const hourPart = parts.hour === '24' ? 0 : Number(parts.hour);
+  const readAsUtc = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), hourPart, Number(parts.minute), Number(parts.second));
+  const offsetMs = readAsUtc - guess.getTime();
+  return new Date(guess.getTime() - offsetMs).toISOString();
 }
 
 /** Deterministic, not random -- sweep_failures upserts on (sweep, subject_id), so the same
@@ -80,38 +114,43 @@ Deno.serve(async () => {
       const point = await nwsFetch(`https://api.weather.gov/points/${city.lat},${city.lon}`);
       const forecast = await nwsFetch(point.properties.forecast);
       const period: ForecastPeriod = forecast.properties.periods[0];
-      const closesAt = period.endTime;
+      const timeZone: string = point.properties.timeZone;
 
       const rainTitle = `Will it rain in ${city.name} today?`;
+      const rainClosesAt = period.endTime;
+
       const tempTitle = `Will ${city.name} hit ${period.temperature}°F today?`;
+      const tempClosesAt = localHourTodayToUtcIso(timeZone, TEMP_MARKET_CLOSE_HOUR_LOCAL);
 
       const { data: existing } = await admin
         .from('markets')
-        .select('id, title')
+        .select('id, title, closes_at')
         .eq('group_id', group.id)
-        .eq('closes_at', closesAt)
         .in('title', [rainTitle, tempTitle]);
-      const existingTitles = new Set((existing ?? []).map((m: { title: string }) => m.title));
+      const existingByTitleAndClose = new Set((existing ?? []).map((m: { title: string; closes_at: string }) => `${m.title}|${m.closes_at}`));
 
-      if (!existingTitles.has(rainTitle)) {
+      if (!existingByTitleAndClose.has(`${rainTitle}|${rainClosesAt}`)) {
         const { error } = await admin.rpc('_create_system_market', {
           p_group_id: group.id,
           p_title: rainTitle,
           p_description: `Auto-generated from the National Weather Service forecast for ${city.name}: "${period.shortForecast}."`,
           p_market_type: 'yes_no',
-          p_closes_at: closesAt,
+          p_closes_at: rainClosesAt,
         });
         if (error) throw new Error(`rain market: ${error.message}`);
         created++;
       }
 
-      if (!existingTitles.has(tempTitle)) {
+      // Only created if tempClosesAt is still in the future -- close enough to "now" (e.g. a
+      // late/retried run) that a 5pm-local cutoff has already passed shouldn't create a market
+      // that would fail create_market's own "closes_at must be in the future" check.
+      if (new Date(tempClosesAt).getTime() > Date.now() && !existingByTitleAndClose.has(`${tempTitle}|${tempClosesAt}`)) {
         const { error } = await admin.rpc('_create_system_market', {
           p_group_id: group.id,
           p_title: tempTitle,
-          p_description: `Auto-generated from the National Weather Service forecast for ${city.name}, which called for a high of ${period.temperature}°F.`,
+          p_description: `Auto-generated from the National Weather Service forecast for ${city.name}, which called for a high of ${period.temperature}°F. Closes at 5pm local, around when the day's high is typically reached.`,
           p_market_type: 'over_under',
-          p_closes_at: closesAt,
+          p_closes_at: tempClosesAt,
           p_line: period.temperature,
           p_unit: '°F',
         });

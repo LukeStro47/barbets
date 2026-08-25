@@ -37,11 +37,16 @@ export function ProposeResolutionCard({
   market,
   options,
   resolutionWindowHours,
+  canResolve = true,
 }: {
   groupId: string;
   market: Market;
   options: MarketOption[] | null;
   resolutionWindowHours: number;
+  /** False for a public-group member who isn't a moderator/owner — the Postgres check
+      (propose_resolution()'s is_public branch) is what's actually load-bearing; this just
+      keeps a regular member from seeing a button that would only come back as an error. */
+  canResolve?: boolean;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +67,8 @@ export function ProposeResolutionCard({
       if (photoPreview) URL.revokeObjectURL(photoPreview);
     };
   }, [photoPreview]);
+
+  if (!canResolve) return null;
 
   async function applyPhotoFile(file: File) {
     const compressed = await compressImage(file);

@@ -89,12 +89,12 @@ export default async function MarketDetailPage({
     { data: groupSettings },
     { count: tableSize },
   ] = await Promise.all([
-    supabase.from('memberships').select('balance').eq('group_id', groupId).eq('user_id', user.id).single(),
+    supabase.from('memberships').select('balance, role').eq('group_id', groupId).eq('user_id', user.id).single(),
     supabase.from('market_subjects').select('user_id').eq('market_id', marketId),
     isMultipleChoice
       ? supabase.from('market_options').select('id, market_id, label, sort_order').eq('market_id', marketId).order('sort_order')
       : Promise.resolve({ data: null }),
-    supabase.from('groups').select('owner_id, name').eq('id', groupId).single(),
+    supabase.from('groups').select('owner_id, name, is_public').eq('id', groupId).single(),
     supabase
       .from('resolution_clarifications')
       .select('id, requester_id, question, created_at')
@@ -110,6 +110,10 @@ export default async function MarketDetailPage({
   const isOwner = group?.owner_id === user?.id;
   const groupName = group?.name ?? 'Group';
   const resolutionWindowHours = groupSettings?.resolution_window_hours ?? 8;
+  // Public groups: only mods (or the owner) can resolve a market -- see
+  // supabase/migrations/20260827100000_propose_resolution_mod_gate.sql. Always true for a
+  // private group, where any member can propose a resolution.
+  const canResolve = !group?.is_public || isOwner || membership?.role === 'moderator';
 
   const subjectUserIds = (subjectRows ?? []).map((s) => s.user_id);
   const ownerIsSubject = !!group?.owner_id && subjectUserIds.includes(group.owner_id);
@@ -430,6 +434,7 @@ export default async function MarketDetailPage({
                 market={marketRow}
                 options={marketOptions}
                 resolutionWindowHours={resolutionWindowHours}
+                canResolve={canResolve}
               />
             </ResolutionTimeline>
           </Card>
@@ -545,6 +550,7 @@ export default async function MarketDetailPage({
                 market={marketRow}
                 options={marketOptions}
                 resolutionWindowHours={resolutionWindowHours}
+                canResolve={canResolve}
               />
             </ResolutionTimeline>
           </Card>
