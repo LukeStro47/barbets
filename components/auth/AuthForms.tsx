@@ -6,6 +6,7 @@ import { signIn, signUp } from '@/lib/actions/auth';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { CheckIcon } from '@/components/ui/icons';
+import { TurnstileField } from '@/components/auth/TurnstileField';
 
 export function SignInForm({ next }: { next?: string }) {
   const [state, formAction, isPending] = useActionState(signIn, null);
@@ -17,6 +18,7 @@ export function SignInForm({ next }: { next?: string }) {
         <Field label="Email" name="email" type="email" autoComplete="email" required />
         <Field label="Password" name="password" type="password" autoComplete="current-password" required />
       </div>
+      <TurnstileField resetKey={state} />
       <Button type="submit" variant="accent" size="xl" disabled={isPending} className="mt-9 w-full">
         Sign in
       </Button>
@@ -106,6 +108,8 @@ export function SignUpForm({ next }: { next?: string }) {
           , including not posting abusive content.
         </span>
       </label>
+
+      <TurnstileField resetKey={state} />
 
       <Button
         type="submit"
