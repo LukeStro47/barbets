@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { CheckIcon } from '@/components/ui/icons';
 import { TurnstileField } from '@/components/auth/TurnstileField';
+import { CONFIRM_CODE_LENGTH, ConfirmCodeBoxes } from '@/components/auth/ConfirmCodeBoxes';
 
 export function SignInForm({ next }: { next?: string }) {
   const [state, formAction, isPending] = useActionState(signIn, null);
@@ -131,11 +132,14 @@ export function SignUpForm({ next }: { next?: string }) {
 }
 
 /** Shown in place of the sign-up form once the account is created. The confirmation email
- *  carries both a link and a 6-digit code; this lets people confirm without leaving the app to
- *  find and tap the link, while the link still works as a fallback for anyone who taps it instead. */
+ *  carries both a link and an 8-digit code; this lets people confirm without leaving the app to
+ *  find and tap the link, while the link still works as a fallback for anyone who taps it instead.
+ *  The code is entered box-per-digit, the same shape as an invite code (InviteCodeBoxes) rather
+ *  than a plain text field, so it reads the same way anything else you "type a code in" does. */
 function ConfirmEmailForm({ email, next }: { email: string; next?: string }) {
   const [state, formAction, isPending] = useActionState(confirmSignup, null);
   const [resendState, resendAction, isResending] = useActionState(resendSignupCode, null);
+  const [code, setCode] = useState('');
 
   return (
     <div className="mt-9">
@@ -146,18 +150,14 @@ function ConfirmEmailForm({ email, next }: { email: string; next?: string }) {
         {state?.error && <p className="mb-4 text-sm text-danger-700">{state.error}</p>}
         <input type="hidden" name="email" value={email} />
         {next && <input type="hidden" name="next" value={next} />}
-        <Field
-          label="6-digit code"
-          name="token"
-          type="text"
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          maxLength={6}
-          placeholder="000000"
-          autoFocus
-          required
-        />
-        <Button type="submit" variant="accent" size="xl" disabled={isPending} className="mt-7 w-full">
+        <ConfirmCodeBoxes onChange={setCode} />
+        <Button
+          type="submit"
+          variant="accent"
+          size="xl"
+          disabled={isPending || code.length < CONFIRM_CODE_LENGTH}
+          className="mt-7 w-full"
+        >
           Confirm email
         </Button>
       </form>
