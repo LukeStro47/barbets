@@ -8,7 +8,7 @@ import { useRef, useState } from 'react';
  *  assumption, not a default. If that setting is ever changed, the code entered here will never
  *  reach this many digits (or will fill these boxes with leftover digits from a shorter code),
  *  and this constant is what needs updating to match. */
-export const CONFIRM_CODE_LENGTH = 8;
+export const CONFIRM_CODE_LENGTH = 6;
 
 /** Digit-per-box entry for the sign-up confirmation code, the same shape as InviteCodeBoxes
  *  (components/groups/InviteCodeBoxes.tsx) so a code someone's typing in from an email reads the

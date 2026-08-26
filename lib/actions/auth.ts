@@ -66,7 +66,7 @@ export async function signUp(_prevState: AuthActionState | null, formData: FormD
   if (error) return { error: error.message };
   if (!data.session) {
     // Email confirmation is required on this Supabase project, so no
-    // session (and no cookie) exists yet. The caller shows an 8-digit code
+    // session (and no cookie) exists yet. The caller shows a 6-digit code
     // entry screen (confirmSignup below) rather than dropping the user off
     // to go check their inbox unassisted.
     return { success: true };
@@ -76,7 +76,7 @@ export async function signUp(_prevState: AuthActionState | null, formData: FormD
 }
 
 /** The signup confirmation email carries both a link (handled by app/auth/confirm/route.ts)
- *  and an 8-digit code; this is the code path, entered inline on the sign-up screen instead of
+ *  and a 6-digit code; this is the code path, entered inline on the sign-up screen instead of
  *  making the user leave the app to find and tap a link. verifyOtp establishes a real session on
  *  success, same as the link does. Not gated by Turnstile: it only checks a code against the
  *  email that just went through the gated signUp() call above, it never sends anything. */
