@@ -101,7 +101,15 @@ Deno.serve(async () => {
           p_market_id: market.id,
           p_outcome: rained ? 'yes' : 'no',
         });
-        if (error) throw new Error(`resolve rain market: ${error.message}`);
+        if (error) {
+          // Nothing stops a moderator from hand-resolving a system market through the ordinary
+          // UI (is_system_market doesn't gate propose_resolution) -- if they beat this run to it
+          // (or an overlapping run did), the market has already moved past open/closed and this
+          // raises "not awaiting a resolution proposal." That's someone/something else already
+          // having handled it, not a real failure, and not this run's resolve to count either.
+          if (error.message.includes('not awaiting a resolution proposal')) continue;
+          throw new Error(`resolve rain market: ${error.message}`);
+        }
         resolved++;
       } else if (tempMatch) {
         if (obs.tempF === null) throw new Error('station has no current temperature reading');
@@ -110,7 +118,10 @@ Deno.serve(async () => {
           p_outcome: obs.tempF >= market.line ? 'over' : 'under',
           p_actual_value: obs.tempF,
         });
-        if (error) throw new Error(`resolve temp market: ${error.message}`);
+        if (error) {
+          if (error.message.includes('not awaiting a resolution proposal')) continue;
+          throw new Error(`resolve temp market: ${error.message}`);
+        }
         resolved++;
       } else {
         throw new Error(`title matched neither rain nor temp pattern: "${market.title}"`);

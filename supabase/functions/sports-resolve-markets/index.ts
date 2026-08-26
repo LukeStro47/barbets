@@ -100,7 +100,16 @@ Deno.serve(async () => {
 
         const outcome = homeScore === awayScore ? 'void' : homeScore > awayScore ? 'yes' : 'no';
         const { error } = await admin.rpc('_resolve_system_market', { p_market_id: market.id, p_outcome: outcome });
-        if (error) throw new Error(`resolve: ${error.message}`);
+        if (error) {
+          // Nothing stops a moderator from hand-resolving a system market through the ordinary
+          // UI (is_system_market doesn't gate propose_resolution), and status is checked here
+          // client-side before this call takes its own row lock -- so a market that moved past
+          // open/closed in the gap between those two reads (a mod's own resolve, or another
+          // overlapping run) races this one to "not awaiting a resolution proposal" once in a
+          // while. That's someone/something else already having handled it, not a real failure.
+          if (error.message.includes('not awaiting a resolution proposal')) continue;
+          throw new Error(`resolve: ${error.message}`);
+        }
         resolved++;
       } catch (err) {
         failed++;
