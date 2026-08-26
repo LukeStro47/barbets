@@ -68,6 +68,7 @@ Deno.serve(async () => {
 
   let created = 0;
   let failed = 0;
+  const createdMarketIds: string[] = [];
 
   for (const sport of SPORTS) {
     let events: OddsApiEvent[];
@@ -102,7 +103,7 @@ Deno.serve(async () => {
           .maybeSingle();
         if (existing) continue;
 
-        const { error } = await admin.rpc('_create_system_market', {
+        const { data, error } = await admin.rpc('_create_system_market', {
           p_group_id: group.id,
           p_title: title,
           p_description: `Auto-generated from The Odds API. Resolves once the game is final; a tie voids the market.`,
@@ -111,11 +112,19 @@ Deno.serve(async () => {
         });
         if (error) throw new Error(`create_market: ${error.message}`);
         created++;
+        if (data?.id) createdMarketIds.push(data.id);
       } catch (err) {
         failed++;
         await recordFailure(`event-${event.id}`, err);
       }
     }
+  }
+
+  // One push per run, not one per market -- a run that finds several games at once (common with
+  // three leagues polled every run) should read as "new markets, come take a look" rather than a
+  // burst of identically-shaped pushes. See _notify_system_markets_created().
+  if (createdMarketIds.length > 0) {
+    await admin.rpc('_notify_system_markets_created', { p_group_id: group.id, p_market_ids: createdMarketIds });
   }
 
   await admin.rpc('_record_pipeline_run', { p_pipeline: 'sports', p_job: 'create', p_succeeded: created, p_failed: failed });

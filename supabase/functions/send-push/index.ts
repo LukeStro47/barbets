@@ -381,6 +381,19 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
     };
   }
 
+  // Sports/Weather pipelines: a single create-run that added 2+ markets at once collapses into
+  // this one push instead of one market_opened per market -- see _notify_system_markets_created()
+  // in the migration that introduced this event type. No market_id to link to (several markets,
+  // not one), so this deep-links at the group itself.
+  if (event.event_type === 'system_markets_opened') {
+    const group = await groupRow(event.group_id);
+    return {
+      title: group.name,
+      body: `New markets just opened in ${group.name}. Take a look and get your bets in.`,
+      url: `/groups/${event.group_id}`,
+    };
+  }
+
   if (event.event_type === 'admin_broadcast') {
     return {
       title: event.custom_title!,

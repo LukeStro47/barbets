@@ -19,6 +19,10 @@ export default async function AppLayout({ children, modal }: { children: React.R
     .select('id, name, avatar_key, owner_id, is_public, memberships(status, user_id, nickname, role)')
     .order('created_at', { ascending: false });
 
+  // Sports/Weather are pipeline-only boards - see create_market()'s unconditional gate in
+  // supabase/migrations/20260828130000_public_group_pipeline_notifications.sql.
+  const SYSTEM_PIPELINE_GROUP_NAMES = new Set(['Sports', 'Weather']);
+
   const groupIds = (groupRows ?? []).map((g) => g.id);
   const { data: settingsRows } =
     groupIds.length > 0
@@ -75,6 +79,10 @@ export default async function AppLayout({ children, modal }: { children: React.R
   // with seasons off, so those checks alone never block a regular member here.
   for (const g of groupRows ?? []) {
     if (!g.is_public) continue;
+    if (SYSTEM_PIPELINE_GROUP_NAMES.has(g.name)) {
+      bettingStatusByGroup[g.id] = { blocked: true, reason: 'system_pipeline' };
+      continue;
+    }
     const myMembership = (g.memberships ?? []).find((m: { user_id: string }) => m.user_id === user.id);
     const isModOrOwner = g.owner_id === user.id || myMembership?.role === 'moderator';
     if (!isModOrOwner) {

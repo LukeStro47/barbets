@@ -15,9 +15,9 @@ interface PublicGroupRow extends GroupRow {
   category: string;
 }
 
-async function createPublicGroup(admin: TestUser, category: 'generic' | 'campus' = 'generic') {
+async function createPublicGroup(admin: TestUser, category: 'generic' | 'campus' = 'generic', name?: string) {
   const { data, error } = await admin.client.rpc('create_public_group', {
-    p_name: `Public Test Group ${Date.now()}`,
+    p_name: name ?? `Public Test Group ${Date.now()}`,
     p_category: category,
     p_seed_amount: 1000,
     p_nickname: admin.tag,
@@ -25,6 +25,35 @@ async function createPublicGroup(admin: TestUser, category: 'generic' | 'campus'
   });
   if (error || !data) throw new Error(`createPublicGroup: ${error?.message}`);
   return (Array.isArray(data) ? data[0] : data) as PublicGroupRow;
+}
+
+async function subscribe(user: TestUser) {
+  const { error } = await adminClient.from('push_subscriptions').insert({
+    user_id: user.id,
+    endpoint: `https://example.com/push/${user.id}-${Date.now()}`,
+    p256dh: 'p256dh',
+    auth_key: 'auth-key',
+  });
+  if (error) throw error;
+}
+
+async function latestEvent(eventType: string, groupId: string) {
+  const { data, error } = await adminClient
+    .from('notification_events')
+    .select('id, event_type, market_id, actor_id')
+    .eq('event_type', eventType)
+    .eq('group_id', groupId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+async function recipientIds(eventId: string): Promise<string[]> {
+  const { data, error } = await adminClient.rpc('get_event_recipients', { p_event_id: eventId });
+  if (error) throw error;
+  return (data as { user_id: string }[]).map((r) => r.user_id).sort();
 }
 
 describe('create_public_group / list_public_groups', () => {
@@ -724,5 +753,324 @@ describe('pipeline_settings: the auto-generated-market kill switch', () => {
   test('an unknown pipeline name is rejected', async () => {
     const { error } = await users.admin.client.rpc('set_pipeline_enabled', { p_pipeline: 'crypto', p_enabled: true });
     expect(error?.message).toMatch(/not_found/);
+  });
+});
+
+describe('Sports/Weather are pipeline-only boards: create_market rejects everyone, mods included', () => {
+  let users: Record<string, TestUser>;
+  let sportsGroup: PublicGroupRow;
+
+  beforeAll(async () => {
+    users = await createTestUsers('pgpipeblock', ['admin', 'mod']);
+    await makeAdmin(users.admin);
+    // Matched by name only (20260828130000) — a test group named exactly 'Sports' exercises the
+    // same gate as the real seeded group without touching it. There's no unique constraint on
+    // groups.name, so this can't collide with the real one.
+    sportsGroup = await createPublicGroup(users.admin, 'generic', 'Sports');
+    await users.mod.client.rpc('join_public_group', { p_group_id: sportsGroup.id, p_nickname: 'pgpipemod' });
+    await users.admin.client.rpc('assign_group_moderator', {
+      p_group_id: sportsGroup.id,
+      p_target_user_id: users.mod.id,
+      p_is_moderator: true,
+    });
+  });
+
+  afterAll(async () => {
+    await cleanupTestUsers(users);
+  });
+
+  test('the owner cannot hand-create a market', async () => {
+    const { error } = await users.admin.client.rpc('create_market', {
+      p_group_id: sportsGroup.id,
+      p_title: 'Should fail',
+      p_description: 'test',
+      p_market_type: 'yes_no',
+      p_closes_at: new Date(Date.now() + 600_000).toISOString(),
+    });
+    expect(error?.message).toMatch(/invalid_operation/);
+    expect(error?.message).toMatch(/automatically/);
+  });
+
+  test('an assigned moderator cannot hand-create a market either', async () => {
+    const { error } = await users.mod.client.rpc('create_market', {
+      p_group_id: sportsGroup.id,
+      p_title: 'Should also fail',
+      p_description: 'test',
+      p_market_type: 'yes_no',
+      p_closes_at: new Date(Date.now() + 600_000).toISOString(),
+    });
+    expect(error?.message).toMatch(/invalid_operation/);
+  });
+
+  test('an otherwise-identical public group not named Sports/Weather is unaffected', async () => {
+    const ordinaryGroup = await createPublicGroup(users.admin);
+    const { error } = await users.admin.client.rpc('create_market', {
+      p_group_id: ordinaryGroup.id,
+      p_title: 'Should succeed',
+      p_description: 'test',
+      p_market_type: 'yes_no',
+      p_closes_at: new Date(Date.now() + 600_000).toISOString(),
+    });
+    expect(error).toBeNull();
+  });
+});
+
+describe('public group notifications: bettor-only fan-out for closed/resolved markets', () => {
+  let users: Record<string, TestUser>;
+  let group: PublicGroupRow;
+
+  beforeAll(async () => {
+    users = await createTestUsers('pgbet', ['admin', 'bettor', 'other']);
+    await makeAdmin(users.admin);
+    group = await createPublicGroup(users.admin);
+    await users.bettor.client.rpc('join_public_group', { p_group_id: group.id, p_nickname: 'pgbetbettor' });
+    await users.other.client.rpc('join_public_group', { p_group_id: group.id, p_nickname: 'pgbetother' });
+    for (const u of [users.admin, users.bettor, users.other]) await subscribe(u);
+  });
+
+  afterAll(async () => {
+    await cleanupTestUsers(users);
+  });
+
+  test('market_opened still reaches everyone (nobody could have bet yet)', async () => {
+    const { data, error } = await users.admin.client.rpc('create_market', {
+      p_group_id: group.id,
+      p_title: `Opened fanout ${Date.now()}`,
+      p_description: 'test',
+      p_market_type: 'yes_no',
+      p_closes_at: new Date(Date.now() + 600_000).toISOString(),
+    });
+    expect(error).toBeNull();
+    const market = Array.isArray(data) ? data[0] : data;
+
+    const event = await latestEvent('market_opened', group.id);
+    expect(event.market_id).toBe(market.id);
+    const recipients = await recipientIds(event.id);
+    // admin is the actor (excluded); bettor and other both still hear about a market they
+    // haven't had a chance to bet on yet.
+    expect(recipients.sort()).toEqual([users.bettor.id, users.other.id].sort());
+  });
+
+  test('market_closed and market_resolved only reach whoever actually bet', async () => {
+    const { data, error } = await users.admin.client.rpc('create_market', {
+      p_group_id: group.id,
+      p_title: `Closed/resolved fanout ${Date.now()}`,
+      p_description: 'test',
+      p_market_type: 'yes_no',
+      p_closes_at: new Date(Date.now() + 2000).toISOString(),
+    });
+    expect(error).toBeNull();
+    const market = Array.isArray(data) ? data[0] : data;
+
+    // Only bettor ever bets on this one — admin (the creator) and other never do.
+    const { error: betErr } = await users.bettor.client.rpc('place_bet', { p_market_id: market.id, p_side: 'yes', p_amount: 10 });
+    expect(betErr).toBeNull();
+
+    await fastForwardCloseTime(market.id, 2000);
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    await adminClient.rpc('expire_stale');
+
+    const closedEvent = await latestEvent('market_closed', group.id);
+    expect(closedEvent.market_id).toBe(market.id);
+    const closedRecipients = await recipientIds(closedEvent.id);
+    expect(closedRecipients).toEqual([users.bettor.id]);
+
+    const { error: proposeErr } = await users.admin.client.rpc('propose_resolution', {
+      p_market_id: market.id,
+      p_outcome: 'yes',
+      p_justification: null,
+      p_actual_value: null,
+    });
+    expect(proposeErr).toBeNull();
+
+    const resolvedEvent = await latestEvent('market_resolved', group.id);
+    expect(resolvedEvent.market_id).toBe(market.id);
+    const resolvedRecipients = await recipientIds(resolvedEvent.id);
+    // admin proposed it (excluded as actor, and never bet either way); other never bet.
+    expect(resolvedRecipients).toEqual([users.bettor.id]);
+  });
+
+  test('a private group is unaffected: closed/resolved still reach non-bettors too', async () => {
+    const privateGroup = await setupGroup(users.admin, [users.bettor, users.other]);
+    for (const u of [users.bettor, users.other]) await subscribe(u);
+    const market = await createMarket(users.admin, privateGroup.id, { closesInMs: 2000 });
+    await users.bettor.client.rpc('sponsor_market', { p_market_id: market.id });
+    await users.bettor.client.rpc('place_bet', { p_market_id: market.id, p_side: 'yes', p_amount: 10 });
+    await fastForwardCloseTime(market.id, 2000);
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    await adminClient.rpc('expire_stale');
+
+    const closedEvent = await latestEvent('market_closed', privateGroup.id);
+    const closedRecipients = await recipientIds(closedEvent.id);
+    // other never bet, but this is a private group -- unaffected by the public-group-only filter.
+    expect(closedRecipients).toContain(users.other.id);
+  });
+});
+
+describe('system_markets_opened: one push per pipeline run, not one per market', () => {
+  let users: Record<string, TestUser>;
+  let group: PublicGroupRow;
+
+  beforeAll(async () => {
+    users = await createTestUsers('pgsysntf', ['admin']);
+    await makeAdmin(users.admin);
+    group = await createPublicGroup(users.admin);
+  });
+
+  afterAll(async () => {
+    await cleanupTestUsers(users);
+  });
+
+  async function eventCount(eventType: string) {
+    const { count, error } = await adminClient
+      .from('notification_events')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_type', eventType)
+      .eq('group_id', group.id);
+    if (error) throw error;
+    return count ?? 0;
+  }
+
+  test('_create_system_market no longer emits market_opened itself', async () => {
+    const before = await eventCount('market_opened');
+    const { error } = await adminClient.rpc('_create_system_market', {
+      p_group_id: group.id,
+      p_title: `No auto-emit ${Date.now()}`,
+      p_description: 'test',
+      p_market_type: 'yes_no',
+      p_closes_at: new Date(Date.now() + 600_000).toISOString(),
+    });
+    expect(error).toBeNull();
+    const after = await eventCount('market_opened');
+    expect(after).toBe(before);
+  });
+
+  test('a single-market run gets the normal named market_opened push', async () => {
+    const { data, error } = await adminClient.rpc('_create_system_market', {
+      p_group_id: group.id,
+      p_title: `Single run ${Date.now()}`,
+      p_description: 'test',
+      p_market_type: 'yes_no',
+      p_closes_at: new Date(Date.now() + 600_000).toISOString(),
+    });
+    expect(error).toBeNull();
+    const market = Array.isArray(data) ? data[0] : data;
+
+    const { error: notifyErr } = await adminClient.rpc('_notify_system_markets_created', {
+      p_group_id: group.id,
+      p_market_ids: [market.id],
+    });
+    expect(notifyErr).toBeNull();
+
+    const event = await latestEvent('market_opened', group.id);
+    expect(event.market_id).toBe(market.id);
+  });
+
+  test('a multi-market run gets one consolidated system_markets_opened push instead', async () => {
+    const before = await eventCount('market_opened');
+
+    const marketIds: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      const { data, error } = await adminClient.rpc('_create_system_market', {
+        p_group_id: group.id,
+        p_title: `Multi run ${Date.now()}-${i}`,
+        p_description: 'test',
+        p_market_type: 'yes_no',
+        p_closes_at: new Date(Date.now() + 600_000).toISOString(),
+      });
+      expect(error).toBeNull();
+      const market = Array.isArray(data) ? data[0] : data;
+      marketIds.push(market.id);
+    }
+
+    const { error: notifyErr } = await adminClient.rpc('_notify_system_markets_created', {
+      p_group_id: group.id,
+      p_market_ids: marketIds,
+    });
+    expect(notifyErr).toBeNull();
+
+    // Exactly one consolidated event, and no new market_opened events from this run.
+    const consolidatedEvent = await latestEvent('system_markets_opened', group.id);
+    expect(consolidatedEvent.market_id).toBeNull();
+    const after = await eventCount('market_opened');
+    expect(after).toBe(before);
+  });
+
+  test('an empty run is a no-op', async () => {
+    const beforeOpened = await eventCount('market_opened');
+    const beforeConsolidated = await eventCount('system_markets_opened');
+
+    const { error } = await adminClient.rpc('_notify_system_markets_created', { p_group_id: group.id, p_market_ids: [] });
+    expect(error).toBeNull();
+
+    expect(await eventCount('market_opened')).toBe(beforeOpened);
+    expect(await eventCount('system_markets_opened')).toBe(beforeConsolidated);
+  });
+});
+
+describe('Weather skips the market_closed push (resolves within minutes of its own close)', () => {
+  let users: Record<string, TestUser>;
+  let weatherGroup: PublicGroupRow;
+  let sportsGroup: PublicGroupRow;
+
+  beforeAll(async () => {
+    users = await createTestUsers('pgwxclose', ['admin']);
+    await makeAdmin(users.admin);
+    // Matched by name (20260828130000) -- test groups, not the real seeded ones.
+    weatherGroup = await createPublicGroup(users.admin, 'generic', 'Weather');
+    sportsGroup = await createPublicGroup(users.admin, 'generic', 'Sports');
+  });
+
+  afterAll(async () => {
+    await cleanupTestUsers(users);
+  });
+
+  test('a Weather system market closes normally but emits no market_closed event', async () => {
+    const { data, error } = await adminClient.rpc('_create_system_market', {
+      p_group_id: weatherGroup.id,
+      p_title: `Will it rain in Testville today? ${Date.now()}`,
+      p_description: 'test',
+      p_market_type: 'yes_no',
+      p_closes_at: new Date(Date.now() + 2000).toISOString(),
+    });
+    expect(error).toBeNull();
+    const market = Array.isArray(data) ? data[0] : data;
+
+    await fastForwardCloseTime(market.id, 2000);
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    await adminClient.rpc('expire_stale');
+
+    const { data: closedMarket } = await adminClient.from('markets').select('status').eq('id', market.id).single();
+    expect(closedMarket!.status).toBe('closed');
+
+    const { data: closedEvents } = await adminClient
+      .from('notification_events')
+      .select('id')
+      .eq('event_type', 'market_closed')
+      .eq('market_id', market.id);
+    expect(closedEvents ?? []).toHaveLength(0);
+  });
+
+  test('a Sports system market still gets the market_closed push (real live-game gap)', async () => {
+    const { data, error } = await adminClient.rpc('_create_system_market', {
+      p_group_id: sportsGroup.id,
+      p_title: `Will the Testers beat the Others? ${Date.now()}`,
+      p_description: 'test',
+      p_market_type: 'yes_no',
+      p_closes_at: new Date(Date.now() + 2000).toISOString(),
+    });
+    expect(error).toBeNull();
+    const market = Array.isArray(data) ? data[0] : data;
+
+    await fastForwardCloseTime(market.id, 2000);
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    await adminClient.rpc('expire_stale');
+
+    const { data: closedEvents } = await adminClient
+      .from('notification_events')
+      .select('id')
+      .eq('event_type', 'market_closed')
+      .eq('market_id', market.id);
+    expect(closedEvents ?? []).toHaveLength(1);
   });
 });
