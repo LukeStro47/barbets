@@ -1,12 +1,12 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useRef, useState } from 'react';
 import Link from 'next/link';
 import { confirmSignup, resendSignupCode, signIn, signUp } from '@/lib/actions/auth';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { CheckIcon } from '@/components/ui/icons';
-import { TurnstileField } from '@/components/auth/TurnstileField';
+import { DeferredTurnstileButton, TurnstileField } from '@/components/auth/TurnstileField';
 import { CONFIRM_CODE_LENGTH, ConfirmCodeBoxes } from '@/components/auth/ConfirmCodeBoxes';
 
 export function SignInForm({ next }: { next?: string }) {
@@ -140,6 +140,7 @@ function ConfirmEmailForm({ email, next }: { email: string; next?: string }) {
   const [state, formAction, isPending] = useActionState(confirmSignup, null);
   const [resendState, resendAction, isResending] = useActionState(resendSignupCode, null);
   const [code, setCode] = useState('');
+  const resendFormRef = useRef<HTMLFormElement>(null);
 
   return (
     <div className="mt-9">
@@ -162,20 +163,20 @@ function ConfirmEmailForm({ email, next }: { email: string; next?: string }) {
         </Button>
       </form>
 
-      <form action={resendAction} className="mt-5">
+      <form ref={resendFormRef} action={resendAction} className="mt-5">
         <input type="hidden" name="email" value={email} />
-        <TurnstileField resetKey={resendState} />
         {resendState?.error && <p className="mb-2 text-sm text-danger-700">{resendState.error}</p>}
         {resendState?.success ? (
           <p className="text-center text-sm text-espresso-400">Code sent again, check your email.</p>
         ) : (
-          <button
-            type="submit"
+          <DeferredTurnstileButton
+            formRef={resendFormRef}
+            resetKey={resendState}
             disabled={isResending}
             className="block w-full text-center text-sm font-semibold text-honey-700"
           >
             Didn&apos;t get it? Resend code
-          </button>
+          </DeferredTurnstileButton>
         )}
       </form>
     </div>
