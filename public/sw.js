@@ -54,12 +54,18 @@ self.addEventListener('fetch', (event) => {
       // A failed page navigation (offline, DNS down, etc.) should land on the dedicated offline
       // page, not a stale snapshot of the marketing landing page from install time, which for a
       // logged-in visitor makes no sense and reads as a broken app rather than "you're offline."
-      // Non-navigation requests (data/RSC fetches, images) just fail, since there's nothing sane
-      // to substitute for them.
+      // Non-navigation requests (data/RSC fetches, images, third-party scripts) just fail, since
+      // there's nothing sane to substitute for them - but respondWith() must always get back a
+      // real Response. Falling through to `undefined` here (as this used to) throws "Failed to
+      // convert value to 'Response'" and takes the whole page down with it, so every branch below
+      // ends in a Response one way or another: the cached copy, the offline page, or a network
+      // error Response standing in for "this fetch genuinely failed."
       .catch(() =>
-        caches
-          .match(event.request)
-          .then((cached) => cached || (event.request.mode === 'navigate' ? caches.match('/offline') : undefined))
+        caches.match(event.request).then((cached) => {
+          if (cached) return cached;
+          if (event.request.mode === 'navigate') return caches.match('/offline').then((offline) => offline || Response.error());
+          return Response.error();
+        })
       )
   );
 });
