@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from 'react';
 import Link from 'next/link';
-import { signIn, signUp } from '@/lib/actions/auth';
+import { confirmSignup, resendSignupCode, signIn, signUp } from '@/lib/actions/auth';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { CheckIcon } from '@/components/ui/icons';
@@ -35,19 +35,25 @@ export function SignInForm({ next }: { next?: string }) {
 export function SignUpForm({ next }: { next?: string }) {
   const [state, formAction, isPending] = useActionState(signUp, null);
   const [agreed, setAgreed] = useState(false);
+  const [email, setEmail] = useState('');
   if (state?.success) {
-    return (
-      <p className="mt-9 text-sm text-honey-700">
-        Account created, check your email and click the confirmation link, then sign in.
-      </p>
-    );
+    return <ConfirmEmailForm email={email} next={next} />;
   }
   return (
     <form action={formAction} className="mt-8">
       {state?.error && <p className="mb-4 text-sm text-danger-700">{state.error}</p>}
       {next && <input type="hidden" name="next" value={next} />}
       <div className="flex flex-col gap-6">
-        <Field label="Email" name="email" type="email" placeholder="you@wherever.com" autoComplete="email" required />
+        <Field
+          label="Email"
+          name="email"
+          type="email"
+          placeholder="you@wherever.com"
+          autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
         <Field
           label="Password"
           name="password"
@@ -121,5 +127,57 @@ export function SignUpForm({ next }: { next?: string }) {
         Create account
       </Button>
     </form>
+  );
+}
+
+/** Shown in place of the sign-up form once the account is created. The confirmation email
+ *  carries both a link and a 6-digit code; this lets people confirm without leaving the app to
+ *  find and tap the link, while the link still works as a fallback for anyone who taps it instead. */
+function ConfirmEmailForm({ email, next }: { email: string; next?: string }) {
+  const [state, formAction, isPending] = useActionState(confirmSignup, null);
+  const [resendState, resendAction, isResending] = useActionState(resendSignupCode, null);
+
+  return (
+    <div className="mt-9">
+      <p className="text-sm text-honey-700">
+        Account created. We sent a code to {email}, enter it below to confirm.
+      </p>
+      <form action={formAction} className="mt-6">
+        {state?.error && <p className="mb-4 text-sm text-danger-700">{state.error}</p>}
+        <input type="hidden" name="email" value={email} />
+        {next && <input type="hidden" name="next" value={next} />}
+        <Field
+          label="6-digit code"
+          name="token"
+          type="text"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          maxLength={6}
+          placeholder="000000"
+          autoFocus
+          required
+        />
+        <Button type="submit" variant="accent" size="xl" disabled={isPending} className="mt-7 w-full">
+          Confirm email
+        </Button>
+      </form>
+
+      <form action={resendAction} className="mt-5">
+        <input type="hidden" name="email" value={email} />
+        <TurnstileField resetKey={resendState} />
+        {resendState?.error && <p className="mb-2 text-sm text-danger-700">{resendState.error}</p>}
+        {resendState?.success ? (
+          <p className="text-center text-sm text-espresso-400">Code sent again, check your email.</p>
+        ) : (
+          <button
+            type="submit"
+            disabled={isResending}
+            className="block w-full text-center text-sm font-semibold text-honey-700"
+          >
+            Didn&apos;t get it? Resend code
+          </button>
+        )}
+      </form>
+    </div>
   );
 }

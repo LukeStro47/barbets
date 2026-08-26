@@ -172,8 +172,11 @@ components/
                  line + value), StatusPill, NavRowContent (see the design note below)
   auth/        — AuthScreen (the shell every pre-group form screen shares: back + coin header,
                  headline, subhead), AuthTabs (owns the whole sign in / sign up screen, not just
-                 the form), AuthForms, ForgotPasswordForm, ResetPasswordForm,
-                 TurnstileField (see "Signup abuse protection" below)
+                 the form), AuthForms (SignInForm, SignUpForm, and the ConfirmEmailForm that
+                 replaces SignUpForm once the account exists - a 6-digit code entered inline,
+                 verified via confirmSignup/resendSignupCode in lib/actions/auth.ts; the
+                 confirmation email's link still works too, as a fallback), ForgotPasswordForm,
+                 ResetPasswordForm, TurnstileField (see "Signup abuse protection" below)
   markets/     — MarketCard, MarketActions, MarketForms (the 3-step create wizard), OddsBar, ReactionBar, ...
                  the market-page template (see "The market page template" below):
                    TicketCard          — the outlined ticket shell every slot-1/2 card is built on
@@ -502,17 +505,21 @@ one sign-in at the moment of account creation, never seen again, ~15-25 accounts
 `scripts/cleanup-spam-accounts.mjs` (see the "Project structure" tree above). Signup now has two
 independent layers against a repeat:
 
-1. **Cloudflare Turnstile**, wired into all three forms that touch `supabase.auth` -
-   `SignUpForm`, `SignInForm`, `ForgotPasswordForm` (`components/auth/TurnstileField.tsx`).
-   Supabase's captcha toggle (Authentication > Attack Protection > Enable CAPTCHA protection) is
-   all-or-nothing across sign up, sign in, and password recovery, not something you can enable
-   per endpoint, so all three forms carry the widget even though only sign-up was ever the
-   target. `TurnstileField` renders with `appearance: 'interaction-only'`, so it takes no space
-   and shows nothing to a legitimate visitor; Cloudflare only surfaces a visible challenge when
-   its risk signals actually call for one. The widget's own hidden `cf-turnstile-response` input
-   rides along in the form's normal `FormData`, so the Server Actions in `lib/actions/auth.ts`
-   just read `formData.get('cf-turnstile-response')` and pass it through as `options.captchaToken`
-   - no client-side token plumbing needed. The Turnstile secret key lives only in the Supabase
+1. **Cloudflare Turnstile**, wired into every form that sends mail through `supabase.auth` -
+   `SignUpForm`, `SignInForm`, `ForgotPasswordForm`, and `ConfirmEmailForm`'s resend button
+   (`resendSignupCode`) (`components/auth/TurnstileField.tsx`). Supabase's captcha toggle
+   (Authentication > Attack Protection > Enable CAPTCHA protection) is all-or-nothing across sign
+   up, sign in, password recovery, and OTP resend, not something you can enable per endpoint, so
+   all of these carry the widget even though only sign-up was ever the target. `confirmSignup`
+   (the code-entry submit itself) is the one exception - `verifyOtp` only checks a code against an
+   email that already passed the gated `signUp()` call, it never sends anything, so there's
+   nothing here for Turnstile to protect. `TurnstileField` renders with
+   `appearance: 'interaction-only'`, so it takes no space and shows nothing to a legitimate
+   visitor; Cloudflare only surfaces a visible challenge when its risk signals actually call for
+   one. The widget's own hidden `cf-turnstile-response` input rides along in the form's normal
+   `FormData`, so the Server Actions in `lib/actions/auth.ts` just read
+   `formData.get('cf-turnstile-response')` and pass it through as `options.captchaToken` - no
+   client-side token plumbing needed. The Turnstile secret key lives only in the Supabase
    dashboard, never in this repo; `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (public by design) is the only
    half that's an env var here.
 
@@ -530,6 +537,14 @@ independent layers against a repeat:
    yet. Flip `APP_ONLY_SIGNUP_ENABLED=true` in Vercel once that rollout is far enough along. A web
    visitor who fails the check (once enabled) sees an error directing them to `/download` on the
    marketing site rather than a dead end.
+
+**The Confirm signup email leads with the code, not the link**, matching `ConfirmEmailForm` being
+the primary way to finish signing up. This lives entirely in the Supabase dashboard (Authentication
+> Email Templates > Confirm signup), not in git, the same manual-edit-only setup the customized
+Reset Password template already relies on (see "Password recovery uses `verifyOtp`, not PKCE code
+exchange" under "Notable design decisions worth remembering" below) - there's no local copy to
+diff against, so if the email ever reverts to looking like the link-first default, it was changed
+back (or reset) directly in the dashboard.
 
 ## Notifications
 

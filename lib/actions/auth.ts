@@ -66,13 +66,42 @@ export async function signUp(_prevState: AuthActionState | null, formData: FormD
   if (error) return { error: error.message };
   if (!data.session) {
     // Email confirmation is required on this Supabase project, so no
-    // session (and no cookie) exists yet. The profile row gets created on
-    // first sign-in instead. Send people back to /login with a clear next
-    // step rather than redirecting somewhere that needs a session.
+    // session (and no cookie) exists yet. The caller shows a 6-digit code
+    // entry screen (confirmSignup below) rather than dropping the user off
+    // to go check their inbox unassisted.
     return { success: true };
   }
   await ensureProfileRow(supabase, data.session.user.id);
   redirect(next);
+}
+
+/** The signup confirmation email carries both a link (handled by app/auth/confirm/route.ts)
+ *  and a 6-digit code; this is the code path, entered inline on the sign-up screen instead of
+ *  making the user leave the app to find and tap a link. verifyOtp establishes a real session on
+ *  success, same as the link does. Not gated by Turnstile: it only checks a code against the
+ *  email that just went through the gated signUp() call above, it never sends anything. */
+export async function confirmSignup(_prevState: AuthActionState | null, formData: FormData): Promise<AuthActionState> {
+  const email = String(formData.get('email'));
+  const token = String(formData.get('token')).trim();
+  const next = safeNext(formData.get('next'), '/groups');
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'signup' });
+  if (error) return { error: error.message };
+  if (!data.user) return { error: 'Something went wrong confirming that code, try again.' };
+  await ensureProfileRow(supabase, data.user.id);
+  redirect(next);
+}
+
+/** Re-sends the signup confirmation email (link + code). Unlike verifyOtp above, this does send
+ *  mail, so it carries Turnstile like the other supabase.auth-touching forms (see "Signup abuse
+ *  protection" in ARCHITECTURE.md). */
+export async function resendSignupCode(_prevState: AuthActionState | null, formData: FormData): Promise<AuthActionState> {
+  const email = String(formData.get('email'));
+  const captchaToken = String(formData.get('cf-turnstile-response') || '');
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resend({ type: 'signup', email, options: { captchaToken } });
+  if (error) return { error: error.message };
+  return { success: true };
 }
 
 export async function signIn(_prevState: AuthActionState | null, formData: FormData): Promise<AuthActionState | null> {
