@@ -33,6 +33,13 @@ export function SignInForm({ next }: { next?: string }) {
 export function SignUpForm({ next }: { next?: string }) {
   const [state, formAction, isPending] = useActionState(signUp, null);
   const [agreed, setAgreed] = useState(false);
+  if (state?.success) {
+    return (
+      <p className="mt-9 text-sm text-honey-700">
+        Account created, check your email and click the confirmation link, then sign in.
+      </p>
+    );
+  }
   return (
     <form action={formAction} className="mt-8">
       {state?.error && <p className="mb-4 text-sm text-danger-700">{state.error}</p>}
@@ -44,6 +51,14 @@ export function SignUpForm({ next }: { next?: string }) {
           name="password"
           type="password"
           placeholder="6 characters or more"
+          autoComplete="new-password"
+          required
+        />
+        <Field
+          label="Confirm password"
+          name="confirmPassword"
+          type="password"
+          placeholder="Type it again"
           autoComplete="new-password"
           required
         />

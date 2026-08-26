@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 
 export interface AuthActionState {
   error?: string;
+  success?: boolean;
 }
 
 /** Only ever redirect to a relative in-app path — never follow an absolute/external URL from form input. */
@@ -23,6 +24,8 @@ export async function signUp(_prevState: AuthActionState | null, formData: FormD
   if (formData.get('agreeTerms') !== 'on') return { error: 'You need to agree to the Terms of use and Privacy policy first.' };
   const email = String(formData.get('email'));
   const password = String(formData.get('password'));
+  const confirmPassword = String(formData.get('confirmPassword'));
+  if (password !== confirmPassword) return { error: "Passwords don't match." };
   const next = safeNext(formData.get('next'), '/groups');
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({ email, password });
@@ -32,7 +35,7 @@ export async function signUp(_prevState: AuthActionState | null, formData: FormD
     // session (and no cookie) exists yet. The profile row gets created on
     // first sign-in instead. Send people back to /login with a clear next
     // step rather than redirecting somewhere that needs a session.
-    return { error: 'Account created, check your email and click the confirmation link, then sign in.' };
+    return { success: true };
   }
   await ensureProfileRow(supabase, data.session.user.id);
   redirect(next);
