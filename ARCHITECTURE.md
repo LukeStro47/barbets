@@ -517,14 +517,22 @@ independent layers against a repeat:
    (the code-entry submit itself) is the one exception - `verifyOtp` only checks a code against an
    email that already passed the gated `signUp()` call, it never sends anything, so there's
    nothing here for Turnstile to protect. `TurnstileField` renders with
-   `appearance: 'interaction-only'`, so it takes no space and shows nothing to a legitimate
-   visitor; Cloudflare only surfaces a visible challenge when its risk signals actually call for
-   one. The widget's own hidden `cf-turnstile-response` input rides along in the form's normal
-   `FormData`, so the Server Actions in `lib/actions/auth.ts` just read
-   `formData.get('cf-turnstile-response')` and pass it through as `options.captchaToken` - no
-   client-side token plumbing needed. The Turnstile secret key lives only in the Supabase
-   dashboard, never in this repo; `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (public by design) is the only
-   half that's an env var here.
+   `appearance: 'interaction-only'` and `size: 'flexible'`, so it takes no space, shows nothing to
+   a legitimate visitor, and fills its container's width instead of a fixed 300px box that sat
+   oddly against the full-width fields around it on narrow screens; Cloudflare only surfaces a
+   visible challenge when its risk signals actually call for one. `ConfirmEmailForm`'s resend
+   button uses the separate `DeferredTurnstileButton` instead of `TurnstileField` - a plain
+   `TurnstileField` there starts its own risk check the moment `ConfirmEmailForm` mounts, right
+   after the person just cleared the sign-up form's check, so it would often ask for a second
+   check before "resend" was ever clicked. `DeferredTurnstileButton` uses
+   `execution`/`appearance: 'execute'` so nothing runs until its button is actually clicked, at
+   which point it calls `ref.execute()`, awaits the token, and submits the form itself - meaning
+   most people who never need a resend only ever see one check, for sign-up. The widget's own
+   hidden `cf-turnstile-response` input rides along in the form's normal `FormData` either way, so
+   the Server Actions in `lib/actions/auth.ts` just read `formData.get('cf-turnstile-response')`
+   and pass it through as `options.captchaToken` - no client-side token plumbing needed. The
+   Turnstile secret key lives only in the Supabase dashboard, never in this repo;
+   `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (public by design) is the only half that's an env var here.
 
 2. **New accounts are app-only - built, but not yet switched on.** `checkSignupFromApp()` in
    `lib/actions/auth.ts` rejects `signUp()` in production unless the request's `user-agent` header
