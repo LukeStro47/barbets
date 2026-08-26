@@ -22,8 +22,8 @@ begin
   end if;
 
   if not exists (select 1 from groups where name = 'Sports' and owner_id = v_owner_id) then
-    insert into groups (name, owner_id, invite_code, is_public, category)
-    values ('Sports', v_owner_id, _generate_invite_code(), true, 'generic')
+    insert into groups (name, owner_id, invite_code, is_public, category, avatar_key)
+    values ('Sports', v_owner_id, _generate_invite_code(), true, 'generic', 'football')
     returning id into v_group_id;
 
     insert into group_settings (
@@ -34,8 +34,8 @@ begin
   end if;
 
   if not exists (select 1 from groups where name = 'Weather' and owner_id = v_owner_id) then
-    insert into groups (name, owner_id, invite_code, is_public, category)
-    values ('Weather', v_owner_id, _generate_invite_code(), true, 'generic')
+    insert into groups (name, owner_id, invite_code, is_public, category, avatar_key)
+    values ('Weather', v_owner_id, _generate_invite_code(), true, 'generic', 'weather')
     returning id into v_group_id;
 
     insert into group_settings (
