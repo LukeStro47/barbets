@@ -21,6 +21,15 @@ const SPORTS = ['baseball_mlb', 'basketball_nba', 'americanfootball_nfl'];
 // hours" market, not a standing board of every game this week.
 const LOOKAHEAD_MS = 12 * 3600_000;
 
+// Safety margin on the near side of the window too: this run's own JS Date.now() check happens
+// before a couple of network round trips to Postgres (the existing-market lookup, then the create
+// call itself), and _create_system_market() runs the identical "must be in the future" check again
+// once it gets there. A game starting only a second or two out could pass the check here and still
+// lose that race against the DB's own now(), producing a permanently stuck "closes_at must be in
+// the future" sweep_failures row -- the next run never retries it, since by then the game is
+// clearly in the past and gets filtered out before ever reaching create_market again.
+const CREATE_MIN_LEAD_MS = 2 * 60_000;
+
 interface OddsApiEvent {
   id: string;
   commence_time: string;
@@ -87,9 +96,9 @@ Deno.serve(async () => {
       const commenceMs = new Date(event.commence_time).getTime();
       // The free /events endpoint keeps returning a game for a while after it has actually
       // started (live, or even final), not just upcoming ones -- skip those too, the same way
-      // weather-create-markets skips a temp market whose 5pm-local close has already passed,
-      // or _create_system_market rejects it with "closes_at must be in the future" every run.
-      if (commenceMs > cutoff || commenceMs <= Date.now()) continue;
+      // weather-create-markets skips a market whose noon-local close has already passed, or
+      // _create_system_market rejects it with "closes_at must be in the future" every run.
+      if (commenceMs > cutoff || commenceMs <= Date.now() + CREATE_MIN_LEAD_MS) continue;
 
       try {
         const title = marketTitle(event.home_team, event.away_team);

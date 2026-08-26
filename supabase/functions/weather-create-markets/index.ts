@@ -1,6 +1,6 @@
 // Morning job: creates a "will it rain" and a "will it hit X°F" market per city in CITIES,
-// closing at the end of the day's forecast period, in the seeded "Weather" public group. Free,
-// keyless, U.S. federal public-domain data (api.weather.gov). Checked in against
+// both closing at noon local, in the seeded "Weather" public group. Free, keyless, U.S. federal
+// public-domain data (api.weather.gov). Checked in against
 // pipeline_settings before doing anything, same as weather-resolve-markets and both sports
 // functions -- see the admin console's pipeline toggle.
 //
@@ -22,12 +22,22 @@ const CITIES = [
   { name: 'Los Angeles', lat: 34.0522, lon: -118.2437 },
 ];
 
-// Daily highs are typically reached mid-afternoon, well before a forecast period's own endTime
-// (NWS "Today" periods commonly run until 18:00 local) -- a temperature market that stayed open
-// that long was betting on an already-decided outcome for hours. 5pm local is a deliberately
-// simple approximation, not a per-city climatological cutoff; the rain market keeps using the
-// forecast period's actual endTime, since rain can happen any time through the day.
-const TEMP_MARKET_CLOSE_HOUR_LOCAL = 17;
+// Both markets close at noon local, not at the forecast period's own endTime (commonly 18:00+
+// local) or some other afternoon/evening cutoff tried previously. Anything later leaves the
+// market open well past the point where anyone can just look outside (for rain) or check a
+// weather app (for the day's high, typically reached mid-afternoon) and bet with near-certainty.
+// Noon is a deliberately simple, fixed cutoff, not a per-city climatological one -- both markets
+// still resolve later in the day against the real outcome (weather-resolve-markets), so this only
+// shortens the betting window, not the coverage.
+const WEATHER_MARKET_CLOSE_HOUR_LOCAL = 12;
+
+// Safety margin between "closes_at is in the future" (checked here) and the same check
+// _create_system_market() runs in Postgres moments later, after a couple of network round trips --
+// without it, a closes_at only a second or two out could pass this check and still lose the race
+// against the DB's own now(), producing a permanently stuck "closes_at must be in the future"
+// sweep_failures row (the run that created it never retries, since a later run recomputes noon for
+// a new day rather than re-attempting the same one).
+const MIN_LEAD_MS = 2 * 60_000;
 
 interface ForecastPeriod {
   name: string;
@@ -117,11 +127,10 @@ Deno.serve(async () => {
       const period: ForecastPeriod = forecast.properties.periods[0];
       const timeZone: string = point.properties.timeZone;
 
-      const rainTitle = `Will it rain in ${city.name} today?`;
-      const rainClosesAt = period.endTime;
+      const closesAt = localHourTodayToUtcIso(timeZone, WEATHER_MARKET_CLOSE_HOUR_LOCAL);
 
+      const rainTitle = `Will it rain in ${city.name} today?`;
       const tempTitle = `Will ${city.name} hit ${period.temperature}°F today?`;
-      const tempClosesAt = localHourTodayToUtcIso(timeZone, TEMP_MARKET_CLOSE_HOUR_LOCAL);
 
       const { data: existing } = await admin
         .from('markets')
@@ -130,29 +139,32 @@ Deno.serve(async () => {
         .in('title', [rainTitle, tempTitle]);
       const existingByTitleAndClose = new Set((existing ?? []).map((m: { title: string; closes_at: string }) => `${m.title}|${m.closes_at}`));
 
-      if (!existingByTitleAndClose.has(`${rainTitle}|${rainClosesAt}`)) {
+      // Only created if closesAt is still comfortably in the future -- close enough to "now"
+      // (e.g. a late/retried run) that the noon-local cutoff has already passed, or is only
+      // seconds away, shouldn't create a market that would lose the race against
+      // create_market's own "closes_at must be in the future" check.
+      const stillWorthCreating = new Date(closesAt).getTime() > Date.now() + MIN_LEAD_MS;
+
+      if (stillWorthCreating && !existingByTitleAndClose.has(`${rainTitle}|${closesAt}`)) {
         const { data, error } = await admin.rpc('_create_system_market', {
           p_group_id: group.id,
           p_title: rainTitle,
-          p_description: `Auto-generated from the National Weather Service forecast for ${city.name}: "${period.shortForecast}."`,
+          p_description: `Auto-generated from the National Weather Service forecast for ${city.name}: "${period.shortForecast}." Closes at noon local, before most of the day's actual weather is knowable.`,
           p_market_type: 'yes_no',
-          p_closes_at: rainClosesAt,
+          p_closes_at: closesAt,
         });
         if (error) throw new Error(`rain market: ${error.message}`);
         created++;
         if (data?.id) createdMarketIds.push(data.id);
       }
 
-      // Only created if tempClosesAt is still in the future -- close enough to "now" (e.g. a
-      // late/retried run) that a 5pm-local cutoff has already passed shouldn't create a market
-      // that would fail create_market's own "closes_at must be in the future" check.
-      if (new Date(tempClosesAt).getTime() > Date.now() && !existingByTitleAndClose.has(`${tempTitle}|${tempClosesAt}`)) {
+      if (stillWorthCreating && !existingByTitleAndClose.has(`${tempTitle}|${closesAt}`)) {
         const { data, error } = await admin.rpc('_create_system_market', {
           p_group_id: group.id,
           p_title: tempTitle,
-          p_description: `Auto-generated from the National Weather Service forecast for ${city.name}, which called for a high of ${period.temperature}°F. Closes at 5pm local, around when the day's high is typically reached.`,
+          p_description: `Auto-generated from the National Weather Service forecast for ${city.name}, which called for a high of ${period.temperature}°F. Closes at noon local, well before the day's high is typically reached.`,
           p_market_type: 'over_under',
-          p_closes_at: tempClosesAt,
+          p_closes_at: closesAt,
           p_line: period.temperature,
           p_unit: '°F',
         });
