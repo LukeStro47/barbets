@@ -172,7 +172,8 @@ components/
                  line + value), StatusPill, NavRowContent (see the design note below)
   auth/        — AuthScreen (the shell every pre-group form screen shares: back + coin header,
                  headline, subhead), AuthTabs (owns the whole sign in / sign up screen, not just
-                 the form), AuthForms, ForgotPasswordForm, ResetPasswordForm
+                 the form), AuthForms, ForgotPasswordForm, ResetPasswordForm,
+                 TurnstileField (see "Signup abuse protection" below)
   markets/     — MarketCard, MarketActions, MarketForms (the 3-step create wizard), OddsBar, ReactionBar, ...
                  the market-page template (see "The market page template" below):
                    TicketCard          — the outlined ticket shell every slot-1/2 card is built on
@@ -262,6 +263,12 @@ tests/integration/          — Vitest, run against a real hosted Supabase proje
 .github/workflows/ci.yml    — typecheck + build, and migrate-staging + integration tests
 .github/scripts/            — slack-ci-failure.mjs (Block Kit for a red run),
                               migration-nudge.mjs (the push-before-you-merge reminder)
+scripts/cleanup-spam-accounts.mjs — one-off admin tool, not run by CI: reports (dry run by
+                              default) or deletes auth users with no membership row, i.e.
+                              accounts that never joined or created a group. See "Signup abuse
+                              protection" below for why this exists.
+.bulk_cleanup.mjs           — CI-only, unrelated to the above: deletes bb-* integration test
+                              users and their groups after every test run (see its own comments)
 public/
   manifest.json, sw.js      — PWA manifest + hand-rolled service worker
   offline.html              — native (Capacitor) offline fallback, bundled via server.errorPath
@@ -486,6 +493,43 @@ type ActionResult<T> = { data: T; error?: undefined } | { data?: undefined; erro
 Read-only Server Components query `visible_markets` and read-only RPCs directly — those still throw/404 via `notFoundIfEmpty()`, since that path isn't subject to the same Server Action redaction.
 
 There is exactly one **read-only Server Action**, `loadMoreSettledMarkets()` in `lib/actions/feed.ts`, behind the group feed's "Load more" button. It calls no RPC, but it still returns an `ActionResult<T>` for the reason above: the redaction rule is about *how a Server Action fails*, not about whether it mutates, and the button needs copy it can actually render. It does no membership check of its own — `visible_markets` is the choke point, and a caller who isn't in the group gets an empty page, indistinguishable from having reached the end of the list.
+
+## Signup abuse protection
+
+Starting 2026-08-10, a bot began hitting the public signup form continuously: confirmed email,
+one sign-in at the moment of account creation, never seen again, ~15-25 accounts a day. By
+2026-08-26, 271 of the app's accounts fit that exact pattern and were removed with
+`scripts/cleanup-spam-accounts.mjs` (see the "Project structure" tree above). Signup now has two
+independent layers against a repeat:
+
+1. **Cloudflare Turnstile**, wired into all three forms that touch `supabase.auth` -
+   `SignUpForm`, `SignInForm`, `ForgotPasswordForm` (`components/auth/TurnstileField.tsx`).
+   Supabase's captcha toggle (Authentication > Attack Protection > Enable CAPTCHA protection) is
+   all-or-nothing across sign up, sign in, and password recovery, not something you can enable
+   per endpoint, so all three forms carry the widget even though only sign-up was ever the
+   target. `TurnstileField` renders with `appearance: 'interaction-only'`, so it takes no space
+   and shows nothing to a legitimate visitor; Cloudflare only surfaces a visible challenge when
+   its risk signals actually call for one. The widget's own hidden `cf-turnstile-response` input
+   rides along in the form's normal `FormData`, so the Server Actions in `lib/actions/auth.ts`
+   just read `formData.get('cf-turnstile-response')` and pass it through as `options.captchaToken`
+   - no client-side token plumbing needed. The Turnstile secret key lives only in the Supabase
+   dashboard, never in this repo; `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (public by design) is the only
+   half that's an env var here.
+
+2. **New accounts are app-only - built, but not yet switched on.** `checkSignupFromApp()` in
+   `lib/actions/auth.ts` rejects `signUp()` in production unless the request's `user-agent` header
+   contains `BarbetsApp`, a marker `capacitor.config.ts` appends via `appendUserAgent` - only the
+   native app's WebView sets it, since `app.mybarbets.com` is a normal public URL any browser can
+   also load directly. This is a soft gate, not a security boundary: a script can set any user
+   agent it likes, so it stops the "visit the page, fill the form" path a bot takes, not a
+   determined attacker who specifically targets it. Turnstile above is what actually has to hold.
+   It's gated behind `APP_ONLY_SIGNUP_ENABLED` (unset/anything but `"true"` = off) as well as the
+   same `VERCEL_ENV`-first production check `lib/errorReporter.ts` uses, and ships **disabled**:
+   turning it on before a native build carrying the UA marker has cleared both app stores would
+   lock out every existing install, not just browser visitors, since none of them send the marker
+   yet. Flip `APP_ONLY_SIGNUP_ENABLED=true` in Vercel once that rollout is far enough along. A web
+   visitor who fails the check (once enabled) sees an error directing them to `/download` on the
+   marketing site rather than a dead end.
 
 ## Notifications
 

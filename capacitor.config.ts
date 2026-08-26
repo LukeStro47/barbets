@@ -9,6 +9,10 @@ const config: CapacitorConfig = {
   appId: 'com.mybarbets.app',
   appName: 'Barbets',
   webDir: 'public',
+  // Tags the WebView's navigator.userAgent so the server can tell a real app install apart from
+  // someone just visiting app.mybarbets.com in a browser (see checkSignupFromApp in
+  // lib/actions/auth.ts) — new accounts are app-only, this is what proves a signup came from here.
+  appendUserAgent: 'BarbetsApp',
   server: {
     // The app's canonical origin. Changing this is a store release, not a deploy -- and it signs
     // out every existing install once, because Supabase sessions are @supabase/ssr cookies and

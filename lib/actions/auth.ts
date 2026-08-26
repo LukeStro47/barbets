@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
+import { SITE_ORIGIN } from '@/lib/appOrigin';
 
 export interface AuthActionState {
   error?: string;
@@ -15,6 +16,36 @@ function safeNext(next: FormDataEntryValue | null, fallback: string): string {
   return value.startsWith('/') && !value.startsWith('//') ? value : fallback;
 }
 
+/** Vercel sets VERCEL_ENV on every deployment; preview builds run with NODE_ENV=production too,
+ *  so NODE_ENV alone would gate preview traffic as well. Where VERCEL_ENV exists it is the
+ *  authority, and only 'production' enforces the app-only signup gate below, so local dev and
+ *  preview deploys stay signup-able from a plain browser for testing. */
+const IS_PRODUCTION = process.env.VERCEL_ENV
+  ? process.env.VERCEL_ENV === 'production'
+  : process.env.NODE_ENV === 'production';
+
+/** Appended to the WebView's user agent by capacitor.config.ts's `appendUserAgent` — only the native app sets this. */
+const NATIVE_APP_UA_MARKER = 'BarbetsApp';
+
+/** Off until a native build carrying `appendUserAgent` has actually shipped through both stores —
+ *  turning the gate on before that would lock out every current install, not just browser
+ *  visitors, since no existing install sends the marker yet. Flip to 'true' once that rollout is
+ *  far enough along. Turnstile below is already live either way; this is the second, later layer. */
+const APP_ONLY_SIGNUP_ENABLED = process.env.APP_ONLY_SIGNUP_ENABLED === 'true';
+
+/** New accounts are app-only. app.mybarbets.com is reachable from any browser (it's also the
+ *  origin the native app's WebView loads), which made it an easy target for signup bots hitting
+ *  the page directly. This doesn't stop a determined attacker by itself, forging a user agent is
+ *  trivial. Turnstile below is the real defense against that. This exists to close the plain
+ *  "visit the site, fill the form" path for anyone who isn't in the app. */
+async function checkSignupFromApp(): Promise<AuthActionState | null> {
+  if (!IS_PRODUCTION || !APP_ONLY_SIGNUP_ENABLED) return null;
+  const h = await headers();
+  const ua = h.get('user-agent') ?? '';
+  if (ua.includes(NATIVE_APP_UA_MARKER)) return null;
+  return { error: `Create your account in the Barbets app. Download it at ${SITE_ORIGIN}/download, then sign up from there.` };
+}
+
 /** Ensures the public.users profile row exists — required before create_group/join_group etc. will work (memberships.user_id is a foreign key into users). Idempotent: a repeat call for an already-onboarded user is a silent no-op. */
 async function ensureProfileRow(supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<void> {
   await supabase.from('users').upsert({ id: userId }, { onConflict: 'id', ignoreDuplicates: true });
@@ -22,13 +53,16 @@ async function ensureProfileRow(supabase: Awaited<ReturnType<typeof createClient
 
 export async function signUp(_prevState: AuthActionState | null, formData: FormData): Promise<AuthActionState | null> {
   if (formData.get('agreeTerms') !== 'on') return { error: 'You need to agree to the Terms of use and Privacy policy first.' };
+  const appOnlyError = await checkSignupFromApp();
+  if (appOnlyError) return appOnlyError;
   const email = String(formData.get('email'));
   const password = String(formData.get('password'));
   const confirmPassword = String(formData.get('confirmPassword'));
   if (password !== confirmPassword) return { error: "Passwords don't match." };
+  const captchaToken = String(formData.get('cf-turnstile-response') || '');
   const next = safeNext(formData.get('next'), '/groups');
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const { data, error } = await supabase.auth.signUp({ email, password, options: { captchaToken } });
   if (error) return { error: error.message };
   if (!data.session) {
     // Email confirmation is required on this Supabase project, so no
@@ -44,9 +78,10 @@ export async function signUp(_prevState: AuthActionState | null, formData: FormD
 export async function signIn(_prevState: AuthActionState | null, formData: FormData): Promise<AuthActionState | null> {
   const email = String(formData.get('email'));
   const password = String(formData.get('password'));
+  const captchaToken = String(formData.get('cf-turnstile-response') || '');
   const next = safeNext(formData.get('next'), '/groups');
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken } });
   if (error) return { error: error.message };
   await ensureProfileRow(supabase, data.user.id);
   redirect(next);
@@ -80,9 +115,10 @@ export async function requestPasswordReset(
   formData: FormData
 ): Promise<RequestPasswordResetState> {
   const email = String(formData.get('email'));
+  const captchaToken = String(formData.get('cf-turnstile-response') || '');
   const origin = await getOrigin();
   const supabase = await createClient();
-  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${origin}/reset-password` });
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${origin}/reset-password`, captchaToken });
   if (error) return { error: error.message };
   return { success: true };
 }
