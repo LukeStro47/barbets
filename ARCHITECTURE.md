@@ -174,7 +174,7 @@ components/
   auth/        — AuthScreen (the shell every pre-group form screen shares: back + coin header,
                  headline, subhead), AuthTabs (owns the whole sign in / sign up screen, not just
                  the form), AuthForms (SignInForm, SignUpForm, and the ConfirmEmailForm that
-                 replaces SignUpForm once the account exists - an 8-digit code entered inline via
+                 replaces SignUpForm once the account exists - a 6-digit code entered inline via
                  ConfirmCodeBoxes, verified via confirmSignup/resendSignupCode in
                  lib/actions/auth.ts; the confirmation email's link still works too, as a
                  fallback), ConfirmCodeBoxes (box-per-digit entry, the same shape as the invite
@@ -554,14 +554,18 @@ clicking it verifies against Supabase's own hosted endpoint and redirects with t
 URL fragment this app's server-rendered pages never see, landing signed-out on the splash with no
 sign anything happened. See the design-decision note just referenced for why.
 
-**The code is 8 digits because that's the project's Authentication > Emails > "OTP Length"
-setting, not a Barbets choice** - `ConfirmCodeBoxes`' `CONFIRM_CODE_LENGTH` hardcodes that number
-of boxes, since there's no runtime way for the client to ask Supabase how long the code it just
-emailed is. `supabase/config.toml`'s `[auth.email] otp_length` mirrors it for local dev parity,
-and both were already caught once drifting (`6` locally, `8` in production - the project default).
-If the dashboard setting is ever changed, `CONFIRM_CODE_LENGTH` needs changing to match, or nobody
-can ever fill the last box (too long) or the boxes fill with a stray leftover digit (too short) and
-"Confirm email" never enables.
+**The code is however many digits the project's Authentication > Emails > "OTP Length" setting
+says, not a Barbets choice** (6 as of this writing) - `ConfirmCodeBoxes`' `CONFIRM_CODE_LENGTH`
+hardcodes that same number of boxes, since there's no runtime way for the client to ask Supabase
+how long the code it just emailed is. `supabase/config.toml`'s `[auth.email] otp_length` mirrors it
+for local dev parity, and the two were already caught drifting once (project default of 8 in
+production against a stale `6` locally, before the project was deliberately changed to 6 for
+shorter/faster entry). If the dashboard setting is ever changed again, `CONFIRM_CODE_LENGTH` needs
+changing to match, or nobody can ever fill the last box (too long) or the boxes fill with a stray
+leftover digit (too short) and "Confirm email" never enables. Changing the dashboard setting itself
+has to happen by hand too - it's one field among many in the project's live auth config, and
+`supabase config push` pushes that whole file, clobbering unrelated settings intentionally
+different between local and production (see "Signup abuse protection" above).
 
 ## Notifications
 

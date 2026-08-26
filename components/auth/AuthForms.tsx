@@ -132,7 +132,7 @@ export function SignUpForm({ next }: { next?: string }) {
 }
 
 /** Shown in place of the sign-up form once the account is created. The confirmation email
- *  carries both a link and an 8-digit code; this lets people confirm without leaving the app to
+ *  carries both a link and a 6-digit code; this lets people confirm without leaving the app to
  *  find and tap the link, while the link still works as a fallback for anyone who taps it instead.
  *  The code is entered box-per-digit, the same shape as an invite code (InviteCodeBoxes) rather
  *  than a plain text field, so it reads the same way anything else you "type a code in" does. */
