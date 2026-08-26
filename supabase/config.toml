@@ -228,8 +228,11 @@ enable_confirmations = false
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
 max_frequency = "1s"
-# Number of characters used in the email OTP.
-otp_length = 6
+# Number of characters used in the email OTP. Must match the linked project's actual
+# Authentication > Emails > "OTP Length" setting - components/auth/ConfirmCodeBoxes.tsx hardcodes
+# CONFIRM_CODE_LENGTH to this same number of boxes, since there's no runtime way for the client to
+# ask Supabase how long the code it just emailed is. Change one, change both.
+otp_length = 8
 # Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 3600
 
