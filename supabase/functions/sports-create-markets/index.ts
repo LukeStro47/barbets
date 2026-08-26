@@ -83,7 +83,12 @@ Deno.serve(async () => {
 
     const cutoff = Date.now() + LOOKAHEAD_MS;
     for (const event of events) {
-      if (new Date(event.commence_time).getTime() > cutoff) continue;
+      const commenceMs = new Date(event.commence_time).getTime();
+      // The free /events endpoint keeps returning a game for a while after it has actually
+      // started (live, or even final), not just upcoming ones -- skip those too, the same way
+      // weather-create-markets skips a temp market whose 5pm-local close has already passed,
+      // or _create_system_market rejects it with "closes_at must be in the future" every run.
+      if (commenceMs > cutoff || commenceMs <= Date.now()) continue;
 
       try {
         const title = marketTitle(event.home_team, event.away_team);
