@@ -22,7 +22,7 @@ export type NavGroup = { id: string; name: string; avatarKey: string | null; met
  * its last few markets to finish resolving. */
 export interface GroupBettingStatus {
   blocked: boolean;
-  reason?: 'owner_off' | 'season_intermission' | 'season_winding_down' | 'not_moderator';
+  reason?: 'owner_off' | 'season_intermission' | 'season_winding_down' | 'not_moderator' | 'system_pipeline';
   ownerNickname?: string;
   seasonName?: string;
 }
@@ -246,9 +246,11 @@ export function BottomNav({
               ? 'Betting is closed between seasons'
               : bettingStatus?.reason === 'season_winding_down'
                 ? 'No new markets right now'
-                : bettingStatus?.reason === 'not_moderator'
-                  ? 'Only moderators can start a market here'
-                  : 'Betting is turned off'}
+                : bettingStatus?.reason === 'system_pipeline'
+                  ? 'Markets here are created automatically'
+                  : bettingStatus?.reason === 'not_moderator'
+                    ? 'Only moderators can start a market here'
+                    : 'Betting is turned off'}
           </p>
           <p className="text-sm text-espresso-500">
             {bettingStatus?.reason === 'season_intermission' ? (
@@ -258,6 +260,8 @@ export function BottomNav({
               </>
             ) : bettingStatus?.reason === 'season_winding_down' ? (
               `No new markets while ${bettingStatus.seasonName ?? 'the season'} finishes resolving.`
+            ) : bettingStatus?.reason === 'system_pipeline' ? (
+              "This group's markets come from an automated schedule, so nobody, not even a moderator, creates one by hand here."
             ) : bettingStatus?.reason === 'not_moderator' ? (
               'This is a public group, so market creation is limited to its moderators to keep the auto-generated schedule tidy.'
             ) : (

@@ -108,6 +108,7 @@ Deno.serve(async () => {
 
   let created = 0;
   let failed = 0;
+  const createdMarketIds: string[] = [];
 
   for (const city of CITIES) {
     try {
@@ -130,7 +131,7 @@ Deno.serve(async () => {
       const existingByTitleAndClose = new Set((existing ?? []).map((m: { title: string; closes_at: string }) => `${m.title}|${m.closes_at}`));
 
       if (!existingByTitleAndClose.has(`${rainTitle}|${rainClosesAt}`)) {
-        const { error } = await admin.rpc('_create_system_market', {
+        const { data, error } = await admin.rpc('_create_system_market', {
           p_group_id: group.id,
           p_title: rainTitle,
           p_description: `Auto-generated from the National Weather Service forecast for ${city.name}: "${period.shortForecast}."`,
@@ -139,13 +140,14 @@ Deno.serve(async () => {
         });
         if (error) throw new Error(`rain market: ${error.message}`);
         created++;
+        if (data?.id) createdMarketIds.push(data.id);
       }
 
       // Only created if tempClosesAt is still in the future -- close enough to "now" (e.g. a
       // late/retried run) that a 5pm-local cutoff has already passed shouldn't create a market
       // that would fail create_market's own "closes_at must be in the future" check.
       if (new Date(tempClosesAt).getTime() > Date.now() && !existingByTitleAndClose.has(`${tempTitle}|${tempClosesAt}`)) {
-        const { error } = await admin.rpc('_create_system_market', {
+        const { data, error } = await admin.rpc('_create_system_market', {
           p_group_id: group.id,
           p_title: tempTitle,
           p_description: `Auto-generated from the National Weather Service forecast for ${city.name}, which called for a high of ${period.temperature}°F. Closes at 5pm local, around when the day's high is typically reached.`,
@@ -156,11 +158,19 @@ Deno.serve(async () => {
         });
         if (error) throw new Error(`temp market: ${error.message}`);
         created++;
+        if (data?.id) createdMarketIds.push(data.id);
       }
     } catch (err) {
       failed++;
       await recordFailure(`${city.name}-${new Date().toISOString().slice(0, 10)}`, err);
     }
+  }
+
+  // One push per run, not one per city/market -- weather can create up to six markets in a single
+  // morning run (rain + temp across three cities), which should read as "new markets, come take a
+  // look" rather than six near-identical pushes. See _notify_system_markets_created().
+  if (createdMarketIds.length > 0) {
+    await admin.rpc('_notify_system_markets_created', { p_group_id: group.id, p_market_ids: createdMarketIds });
   }
 
   await admin.rpc('_record_pipeline_run', { p_pipeline: 'weather', p_job: 'create', p_succeeded: created, p_failed: failed });

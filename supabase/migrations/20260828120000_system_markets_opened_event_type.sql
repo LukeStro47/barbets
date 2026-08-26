@@ -1,0 +1,12 @@
+-- New event type for the Sports/Weather pipelines: when a single create-markets run adds two or
+-- more markets at once (weather can create up to six in one morning run across its city list;
+-- sports creates one per game and a run can easily cover several), one consolidated push ("new
+-- markets just opened") replaces what would otherwise be one market_opened push per market. A
+-- run that creates exactly one market keeps the existing named market_opened push -- see
+-- _notify_system_markets_created() in the next migration, which is what decides which of the two
+-- happens.
+--
+-- Own migration file because a new enum value can't be used in the same transaction that adds
+-- it -- same reason every other notification_event_type addition in this project's history gets
+-- its own file.
+alter type notification_event_type add value 'system_markets_opened';

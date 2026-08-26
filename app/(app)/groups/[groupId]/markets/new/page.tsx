@@ -33,6 +33,13 @@ export default async function NewMarketPage({
     notFound();
   }
 
+  // Sports/Weather are pipeline-only boards — nobody hand-creates a market there, not even the
+  // owner or a moderator. See create_market()'s matching gate in
+  // supabase/migrations/20260828130000_public_group_pipeline_notifications.sql.
+  if (group?.is_public && (group.name === 'Sports' || group.name === 'Weather')) {
+    notFound();
+  }
+
   // A market's creator can never be its own subject, so they're not a valid @mention target here.
   // Alphabetical because the only way to find a name in a chip strip is to look for it, and
   // membership order (which is what the query returns) is an order nobody can predict.
