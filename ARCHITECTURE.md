@@ -38,8 +38,9 @@ If you're an agent and the user asks for a change that clearly warrants a doc up
 app/
   (auth)/login                        — sign in/up (no separate profile-claim step)
   (auth)/forgot-password, reset-password — password recovery pair (see auth/confirm below)
-  auth/confirm/route.ts               — target of Supabase's recovery email link; verifyOtp,
-                                         not the PKCE code-exchange pattern
+  auth/confirm/route.ts               — target of both the recovery and signup confirmation
+                                         email links; verifyOtp, not the PKCE code-exchange
+                                         pattern
   (app)/groups, groups/[groupId]/...  — group hub, feed, leaderboard, awards, bets,
                                          settings, settings/edit (owner-only, 404s for
                                          anyone else), seasons (the settled-market
@@ -546,7 +547,12 @@ the primary way to finish signing up. This lives entirely in the Supabase dashbo
 Reset Password template already relies on (see "Password recovery uses `verifyOtp`, not PKCE code
 exchange" under "Notable design decisions worth remembering" below) - there's no local copy to
 diff against, so if the email ever reverts to looking like the link-first default, it was changed
-back (or reset) directly in the dashboard.
+back (or reset) directly in the dashboard. **The link's `href` needs the same `/auth/confirm`
+customization the recovery template already has** - `{{ .SiteURL }}/auth/confirm?token_hash={{
+.TokenHash }}&type=signup&next=/groups` instead of the default `{{ .ConfirmationURL }}` - or
+clicking it verifies against Supabase's own hosted endpoint and redirects with the session in a
+URL fragment this app's server-rendered pages never see, landing signed-out on the splash with no
+sign anything happened. See the design-decision note just referenced for why.
 
 ## Notifications
 
@@ -654,7 +660,7 @@ Two filters keep the channel honest, and both matter more here than in a typical
 
 **The beta gate is a single flag, currently off.** `lib/betaGate.ts` exports `BETA_GATE_ENABLED` (`false` today), a shared code, and a cookie name; when on, `proxy.ts` bounces an uncookied `/login` to `/under-construction`, and `checkBetaCode()` sets a 30-day httpOnly cookie on a correct code. It's built to be deleted — turning the flag off is enough, and nothing else in the app depends on it. Its `safeNext()` only ever redirects to a relative in-app path, never an absolute URL from form input; `app/auth/confirm/route.ts` applies the identical guard to its own `next` param.
 
-**Password recovery uses `verifyOtp`, not PKCE code exchange.** Supabase's Reset Password email template is customized to point at `/auth/confirm` with `token_hash`/`type`/`next` instead of the default `{{ .ConfirmationURL }}`; that route establishes a real session from the recovery token and hands off to `/reset-password` to actually set the new password. If recovery emails ever stop working, check that template first — the flow depends on it not being reverted to the default.
+**Both recovery and signup confirmation emails use `verifyOtp`, not PKCE code exchange, and both had to be pointed at `/auth/confirm` by hand.** Supabase's default `{{ .ConfirmationURL }}` link verifies against Supabase's own hosted `/auth/v1/verify` endpoint and redirects back with the session in a URL fragment, fine for a client-only SPA but invisible to this app's server-rendered pages (fragments never reach the server) — clicking it landed a freshly confirmed signup right back on the signed-out splash with nothing to show for it, indistinguishable from the link having failed. Both the Reset Password and Confirm signup templates are customized in the Supabase dashboard to link to `/auth/confirm` with `token_hash`/`type`/`next` instead; that route calls `verifyOtp` server-side, which sets the session as a cookie the next request actually sees, then redirects to `next` (`/reset-password` for recovery, `/groups` for signup — landing signed in, inside the app, is itself the confirmation that it worked). Signup additionally needs `ensureProfileRow()` here (recovery's user already has one, so it's a harmless no-op there), and a failed/expired link needs to land somewhere sensible for *that* flow — recovery back on `/forgot-password`, signup back on `/login?mode=signup` — rather than always the recovery page regardless of which one failed. If either email's link ever stops working, check its template's `href` first — this flow depends on it not being reverted to the default.
 
 ## Public groups
 
