@@ -20,7 +20,7 @@ const sections = [
   },
   {
     title: "What we don't do",
-    body: "No ads, no ad tracking, no analytics or tracking SDKs of any kind, and we never sell or share your data with third parties for marketing. Barbets never involves real money. Tokens have no cash value and can't be bought, sold, or withdrawn.",
+    body: "No ads, no ad tracking, and no cross-site or cross-app tracking SDKs of any kind. We never sell or share your data with third parties for marketing. The one exception is a scan log for our printed cards and NFC tags (see mybarbets.com/privacy), which is first-party and never identifies who scanned anything. Barbets never involves real money. Tokens have no cash value and can't be bought, sold, or withdrawn.",
   },
   {
     title: 'Who processes your data',

@@ -5,8 +5,9 @@ import { Card } from '@/components/ui/Card';
 import { AdminBroadcastForm } from '@/components/admin/AdminBroadcastForm';
 import { CreatePublicGroupForm, ManageModeratorsPanel } from '@/components/admin/AdminPublicGroupsForm';
 import { AdminPipelineTogglesForm } from '@/components/admin/AdminPipelineTogglesForm';
+import { QrScanTotalsCard } from '@/components/admin/QrScanTotalsCard';
 import { formatTokens } from '@/lib/formatNumber';
-import type { PipelineHealth, PipelineSetting } from '@/lib/actions/admin';
+import type { PipelineHealth, PipelineSetting, QrScanTotal } from '@/lib/actions/admin';
 
 function StatTile({ label, value }: { label: string; value: number }) {
   return (
@@ -25,22 +26,31 @@ export default async function AdminPage() {
   const { data: isAdmin } = await supabase.rpc('is_platform_admin');
   if (!isAdmin) notFound();
 
-  const [{ data: stats }, { data: groups }, { data: members }, { data: publicGroups }, { data: pipelineSettings }, { data: pipelineHealth }] =
-    (await Promise.all([
-      supabase.rpc('get_platform_admin_stats').single(),
-      supabase.rpc('list_groups_for_admin'),
-      supabase.rpc('list_group_members_for_admin'),
-      supabase.rpc('list_public_groups'),
-      supabase.rpc('list_pipeline_settings'),
-      supabase.rpc('list_pipeline_health'),
-    ])) as [
-      { data: { active_groups: number; total_markets: number; total_users: number } | null },
-      { data: { id: string; name: string; member_count: number }[] | null },
-      { data: { group_id: string; user_id: string; nickname: string }[] | null },
-      { data: { id: string; name: string; avatar_key: string | null; category: 'generic' | 'campus'; member_count: number }[] | null },
-      { data: PipelineSetting[] | null },
-      { data: PipelineHealth[] | null },
-    ];
+  const [
+    { data: stats },
+    { data: groups },
+    { data: members },
+    { data: publicGroups },
+    { data: pipelineSettings },
+    { data: pipelineHealth },
+    { data: qrScanTotals },
+  ] = (await Promise.all([
+    supabase.rpc('get_platform_admin_stats').single(),
+    supabase.rpc('list_groups_for_admin'),
+    supabase.rpc('list_group_members_for_admin'),
+    supabase.rpc('list_public_groups'),
+    supabase.rpc('list_pipeline_settings'),
+    supabase.rpc('list_pipeline_health'),
+    supabase.rpc('list_qr_scan_totals'),
+  ])) as [
+    { data: { active_groups: number; total_markets: number; total_users: number } | null },
+    { data: { id: string; name: string; member_count: number }[] | null },
+    { data: { group_id: string; user_id: string; nickname: string }[] | null },
+    { data: { id: string; name: string; avatar_key: string | null; category: 'generic' | 'campus'; member_count: number }[] | null },
+    { data: PipelineSetting[] | null },
+    { data: PipelineHealth[] | null },
+    { data: QrScanTotal[] | null },
+  ];
 
   const membersByGroup = new Map<string, { userId: string; nickname: string }[]>();
   for (const m of members ?? []) {
@@ -118,6 +128,17 @@ export default async function AdminPage() {
           </p>
         </div>
         <AdminPipelineTogglesForm settings={pipelineSettings ?? []} health={pipelineHealth ?? []} />
+      </Card>
+
+      <Card className="space-y-3">
+        <div>
+          <h2 className="font-semibold text-espresso-800">QR scan totals</h2>
+          <p className="text-sm text-espresso-500">
+            Printed cards all scan as <span className="font-mono">card</span>; location-specific NFC tags get their
+            own batch (e.g. <span className="font-mono">rutgers</span>). Logged before install, so this counts scans, not signups.
+          </p>
+        </div>
+        <QrScanTotalsCard totals={qrScanTotals ?? []} />
       </Card>
     </main>
   );

@@ -131,3 +131,24 @@ export async function listPipelineHealth(): Promise<ActionResult<PipelineHealth[
   if (error) return { error: friendlyMessage(toActionError(error)) };
   return { data: (data ?? []) as PipelineHealth[] };
 }
+
+export interface QrScanTotal {
+  batch: string;
+  total_count: number;
+  android_count: number;
+  ios_count: number;
+  other_count: number;
+  first_scanned_at: string;
+  last_scanned_at: string;
+}
+
+/** Admin-only: per-batch scan counts for printed cards and NFC tags, logged by barbets-www's
+    /go/[batch] route (a separate repo) via log_qr_scan(). Not routed through runRpc() —
+    table-returning, same note as listGroupModeratorCandidates(). See
+    20260828150000_list_qr_scan_totals.sql and ARCHITECTURE.md's "Postgres functions" section. */
+export async function listQrScanTotals(): Promise<ActionResult<QrScanTotal[]>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('list_qr_scan_totals');
+  if (error) return { error: friendlyMessage(toActionError(error)) };
+  return { data: (data ?? []) as QrScanTotal[] };
+}
