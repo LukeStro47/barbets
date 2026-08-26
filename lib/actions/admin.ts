@@ -110,3 +110,24 @@ export async function setPipelineEnabled(pipeline: 'sports' | 'weather', enabled
   revalidatePath('/admin');
   return result;
 }
+
+export interface PipelineHealth {
+  pipeline: 'sports' | 'weather';
+  job: 'create' | 'resolve';
+  last_run_at: string | null;
+  last_run_succeeded: number | null;
+  last_run_failed: number | null;
+  open_failure_count: number;
+  last_failure_at: string | null;
+  last_failure_message: string | null;
+}
+
+/** Admin-only: last-run counts and open sweep_failures for each of the 4 pipeline jobs (sports
+    create/resolve, weather create/resolve). Not routed through runRpc() — table-returning, same
+    note as listGroupModeratorCandidates(). See 20260828110000_pipeline_health.sql. */
+export async function listPipelineHealth(): Promise<ActionResult<PipelineHealth[]>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('list_pipeline_health');
+  if (error) return { error: friendlyMessage(toActionError(error)) };
+  return { data: (data ?? []) as PipelineHealth[] };
+}

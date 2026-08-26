@@ -15,12 +15,14 @@ export const GROUP_AVATARS = [
   { key: 'chip', label: 'Chip' },
   { key: 'dice', label: 'Dice' },
   { key: 'eight-ball', label: 'Eight ball' },
+  { key: 'football', label: 'Football' },
   { key: 'horseshoe', label: 'Horseshoe' },
   { key: 'oracle', label: 'Oracle' },
   { key: 'roulette', label: 'Roulette' },
   { key: 'ticket', label: 'Ticket' },
   { key: 'trophy', label: 'Trophy' },
   { key: 'up', label: 'Up' },
+  { key: 'weather', label: 'Weather' },
 ] as const;
 
 export type GroupAvatarKey = (typeof GROUP_AVATARS)[number]['key'];
