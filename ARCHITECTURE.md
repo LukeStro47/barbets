@@ -554,6 +554,15 @@ clicking it verifies against Supabase's own hosted endpoint and redirects with t
 URL fragment this app's server-rendered pages never see, landing signed-out on the splash with no
 sign anything happened. See the design-decision note just referenced for why.
 
+**The code is 8 digits because that's the project's Authentication > Emails > "OTP Length"
+setting, not a Barbets choice** - `ConfirmCodeBoxes`' `CONFIRM_CODE_LENGTH` hardcodes that number
+of boxes, since there's no runtime way for the client to ask Supabase how long the code it just
+emailed is. `supabase/config.toml`'s `[auth.email] otp_length` mirrors it for local dev parity,
+and both were already caught once drifting (`6` locally, `8` in production - the project default).
+If the dashboard setting is ever changed, `CONFIRM_CODE_LENGTH` needs changing to match, or nobody
+can ever fill the last box (too long) or the boxes fill with a stray leftover digit (too short) and
+"Confirm email" never enables.
+
 ## Notifications
 
 `notification_events` is an internal queue table (no RLS policies at all — only `service_role` touches it) written transactionally by whichever Postgres function causes a notifiable transition. This is deliberate: several transitions (market auto-close, auto-finalize, auto-end-season) only ever happen via the `expire_stale()` cron job, so hooking notifications into Next.js Server Actions would silently miss most of them. Writing the event *inside* the same Postgres transaction that changed the state means "this happened, exactly once" is transactionally safe, decoupled from "send a push" (network I/O, retryable).

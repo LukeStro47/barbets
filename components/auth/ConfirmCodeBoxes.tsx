@@ -2,6 +2,12 @@
 
 import { useRef, useState } from 'react';
 
+/** Must match the Supabase project's actual Authentication > Emails > "OTP Length" setting
+ *  (mirrored for local dev in supabase/config.toml's `[auth.email] otp_length`) - there's no
+ *  runtime way to ask Supabase how long the code it just emailed is, so this is a hardcoded
+ *  assumption, not a default. If that setting is ever changed, the code entered here will never
+ *  reach this many digits (or will fill these boxes with leftover digits from a shorter code),
+ *  and this constant is what needs updating to match. */
 export const CONFIRM_CODE_LENGTH = 8;
 
 /** Digit-per-box entry for the sign-up confirmation code, the same shape as InviteCodeBoxes
