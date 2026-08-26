@@ -46,8 +46,8 @@ async function checkSignupFromApp(): Promise<AuthActionState | null> {
   return { error: `Create your account in the Barbets app. Download it at ${SITE_ORIGIN}/download, then sign up from there.` };
 }
 
-/** Ensures the public.users profile row exists — required before create_group/join_group etc. will work (memberships.user_id is a foreign key into users). Idempotent: a repeat call for an already-onboarded user is a silent no-op. */
-async function ensureProfileRow(supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<void> {
+/** Ensures the public.users profile row exists — required before create_group/join_group etc. will work (memberships.user_id is a foreign key into users). Idempotent: a repeat call for an already-onboarded user is a silent no-op. Exported for app/auth/confirm/route.ts, which needs it too for a signup confirmed via the email link rather than the code. */
+export async function ensureProfileRow(supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<void> {
   await supabase.from('users').upsert({ id: userId }, { onConflict: 'id', ignoreDuplicates: true });
 }
 
