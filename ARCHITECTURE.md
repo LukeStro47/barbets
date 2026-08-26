@@ -173,9 +173,11 @@ components/
   auth/        — AuthScreen (the shell every pre-group form screen shares: back + coin header,
                  headline, subhead), AuthTabs (owns the whole sign in / sign up screen, not just
                  the form), AuthForms (SignInForm, SignUpForm, and the ConfirmEmailForm that
-                 replaces SignUpForm once the account exists - a 6-digit code entered inline,
-                 verified via confirmSignup/resendSignupCode in lib/actions/auth.ts; the
-                 confirmation email's link still works too, as a fallback), ForgotPasswordForm,
+                 replaces SignUpForm once the account exists - an 8-digit code entered inline via
+                 ConfirmCodeBoxes, verified via confirmSignup/resendSignupCode in
+                 lib/actions/auth.ts; the confirmation email's link still works too, as a
+                 fallback), ConfirmCodeBoxes (box-per-digit entry, the same shape as the invite
+                 code's InviteCodeBoxes in components/groups/), ForgotPasswordForm,
                  ResetPasswordForm, TurnstileField (see "Signup abuse protection" below)
   markets/     — MarketCard, MarketActions, MarketForms (the 3-step create wizard), OddsBar, ReactionBar, ...
                  the market-page template (see "The market page template" below):
