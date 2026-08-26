@@ -528,7 +528,13 @@ independent layers against a repeat:
    `formData.get('cf-turnstile-response')` and pass it through as `options.captchaToken` - no
    client-side token plumbing needed. The Turnstile secret key lives only in the Supabase
    dashboard, never in this repo; `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (public by design) is the only
-   half that's an env var here.
+   half that's an env var here. **The all-or-nothing part reaches past this repo too**:
+   `barbets-admin`'s sign-in form (`admin.mybarbets.com`) calls the same project's
+   `signInWithPassword`, so it needs the identical widget/`captchaToken` wiring or every admin
+   login fails with "captcha protection: request disallowed" - discovered live when that site's
+   login form first shipped without it. Any future app added against this Supabase project
+   inherits the same requirement for every `supabase.auth` call it makes, not just the ones that
+   send mail.
 
 2. **New accounts are app-only - built, but not yet switched on.** `checkSignupFromApp()` in
    `lib/actions/auth.ts` rejects `signUp()` in production unless the request's `user-agent` header
