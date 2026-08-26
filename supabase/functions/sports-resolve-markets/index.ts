@@ -109,5 +109,7 @@ Deno.serve(async () => {
     }
   }
 
+  await admin.rpc('_record_pipeline_run', { p_pipeline: 'sports', p_job: 'resolve', p_succeeded: resolved, p_failed: failed });
+
   return new Response(JSON.stringify({ resolved, failed }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 });

@@ -163,5 +163,7 @@ Deno.serve(async () => {
     }
   }
 
+  await admin.rpc('_record_pipeline_run', { p_pipeline: 'weather', p_job: 'create', p_succeeded: created, p_failed: failed });
+
   return new Response(JSON.stringify({ created, failed }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 });

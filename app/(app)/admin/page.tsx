@@ -6,7 +6,7 @@ import { AdminBroadcastForm } from '@/components/admin/AdminBroadcastForm';
 import { CreatePublicGroupForm, ManageModeratorsPanel } from '@/components/admin/AdminPublicGroupsForm';
 import { AdminPipelineTogglesForm } from '@/components/admin/AdminPipelineTogglesForm';
 import { formatTokens } from '@/lib/formatNumber';
-import type { PipelineSetting } from '@/lib/actions/admin';
+import type { PipelineHealth, PipelineSetting } from '@/lib/actions/admin';
 
 function StatTile({ label, value }: { label: string; value: number }) {
   return (
@@ -25,19 +25,22 @@ export default async function AdminPage() {
   const { data: isAdmin } = await supabase.rpc('is_platform_admin');
   if (!isAdmin) notFound();
 
-  const [{ data: stats }, { data: groups }, { data: members }, { data: publicGroups }, { data: pipelineSettings }] = (await Promise.all([
-    supabase.rpc('get_platform_admin_stats').single(),
-    supabase.rpc('list_groups_for_admin'),
-    supabase.rpc('list_group_members_for_admin'),
-    supabase.rpc('list_public_groups'),
-    supabase.rpc('list_pipeline_settings'),
-  ])) as [
-    { data: { active_groups: number; total_markets: number; total_users: number } | null },
-    { data: { id: string; name: string; member_count: number }[] | null },
-    { data: { group_id: string; user_id: string; nickname: string }[] | null },
-    { data: { id: string; name: string; avatar_key: string | null; category: 'generic' | 'campus'; member_count: number }[] | null },
-    { data: PipelineSetting[] | null },
-  ];
+  const [{ data: stats }, { data: groups }, { data: members }, { data: publicGroups }, { data: pipelineSettings }, { data: pipelineHealth }] =
+    (await Promise.all([
+      supabase.rpc('get_platform_admin_stats').single(),
+      supabase.rpc('list_groups_for_admin'),
+      supabase.rpc('list_group_members_for_admin'),
+      supabase.rpc('list_public_groups'),
+      supabase.rpc('list_pipeline_settings'),
+      supabase.rpc('list_pipeline_health'),
+    ])) as [
+      { data: { active_groups: number; total_markets: number; total_users: number } | null },
+      { data: { id: string; name: string; member_count: number }[] | null },
+      { data: { group_id: string; user_id: string; nickname: string }[] | null },
+      { data: { id: string; name: string; avatar_key: string | null; category: 'generic' | 'campus'; member_count: number }[] | null },
+      { data: PipelineSetting[] | null },
+      { data: PipelineHealth[] | null },
+    ];
 
   const membersByGroup = new Map<string, { userId: string; nickname: string }[]>();
   for (const m of members ?? []) {
@@ -109,10 +112,12 @@ export default async function AdminPage() {
             schedule and resolving ones that have finished. Off means every scheduled run for that
             pipeline no-ops immediately, nothing is created and nothing is resolved. It does not touch
             markets already created; those just sit unresolved until you turn the pipeline back on or
-            resolve them by hand.
+            resolve them by hand. Flipping it either way asks for confirmation first, since going on
+            starts real external API calls and real market creation, and going off leaves anything
+            in flight unresolved until it's back on.
           </p>
         </div>
-        <AdminPipelineTogglesForm settings={pipelineSettings ?? []} />
+        <AdminPipelineTogglesForm settings={pipelineSettings ?? []} health={pipelineHealth ?? []} />
       </Card>
     </main>
   );
