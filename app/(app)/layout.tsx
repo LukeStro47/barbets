@@ -14,6 +14,11 @@ export default async function AppLayout({ children, modal }: { children: React.R
   // requireUser() for itself. See the note on requireUser.
   const user = await requireUser(supabase);
 
+  // Stamps users.last_active_at for the admin site's WAU/MAU dashboards. Debounced server-side
+  // (touch_last_active only writes if the existing stamp is missing or >15 minutes old), so this
+  // is safe to call unconditionally on every authenticated page load.
+  await supabase.rpc('touch_last_active');
+
   const { data: groupRows } = await supabase
     .from('groups')
     .select('id, name, avatar_key, owner_id, is_public, memberships(status, user_id, nickname, role)')

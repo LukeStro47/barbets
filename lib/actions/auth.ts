@@ -72,6 +72,7 @@ export async function signUp(_prevState: AuthActionState | null, formData: FormD
     return { success: true };
   }
   await ensureProfileRow(supabase, data.session.user.id);
+  await supabase.rpc('record_signup');
   redirect(next);
 }
 
@@ -89,6 +90,7 @@ export async function confirmSignup(_prevState: AuthActionState | null, formData
   if (error) return { error: error.message };
   if (!data.user) return { error: 'Something went wrong confirming that code, try again.' };
   await ensureProfileRow(supabase, data.user.id);
+  await supabase.rpc('record_signup');
   redirect(next);
 }
 
