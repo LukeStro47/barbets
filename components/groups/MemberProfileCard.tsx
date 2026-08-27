@@ -15,7 +15,8 @@ import type { MemberProfileData } from '@/lib/memberProfile';
  * See lib/memberProfile.ts for where `data` comes from.
  */
 export function MemberProfileCard({ data }: { data: MemberProfileData }) {
-  const { stats, groupId, groupName, standing, awards, isYou, net, sinceLabel, avatarUpdatedAt, avatarPresetKey, isPublicGroup } = data;
+  const { stats, groupId, groupName, standing, awards, isYou, net, sinceLabel, avatarUpdatedAt, avatarPresetKey, isPublicGroup, hidesPipelineStats } =
+    data;
 
   return (
     <>
@@ -53,41 +54,56 @@ export function MemberProfileCard({ data }: { data: MemberProfileData }) {
             <p className="font-display text-2xl font-extrabold tabular-nums text-espresso-950">{standing}</p>
             <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-espresso-400 uppercase">Standing</p>
           </div>
-          <div>
-            <p className="font-display text-2xl font-extrabold tabular-nums text-espresso-950">
-              {stats.accuracy_pct == null ? '—' : `${stats.accuracy_pct}%`}
-            </p>
-            <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-espresso-400 uppercase">Accuracy</p>
-          </div>
-          <div>
-            <p className={`font-display text-2xl font-extrabold tabular-nums ${net >= 0 ? 'text-honey-600' : 'text-espresso-400'}`}>
-              {formatSignedTokens(net)}
-            </p>
-            <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-espresso-400 uppercase">All-time net</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 border-t border-espresso-100 pt-4 text-sm">
-          <div>
-            <p className="font-semibold text-espresso-700">Tokens wagered</p>
-            <p className="text-espresso-500">{formatTokens(Number(stats.tokens_wagered))} lifetime</p>
-          </div>
-          <div>
-            <p className="font-semibold text-espresso-700">Settled bets</p>
-            <p className="text-espresso-500">{stats.settled_bet_count}</p>
-          </div>
-        </div>
-
-        <div className="border-t border-espresso-100 pt-4">
-          <p className="text-[10.5px] font-bold tracking-[0.07em] text-espresso-400 uppercase">Best call</p>
-          {stats.best_call_multiple ? (
-            <p className="mt-1 text-sm font-bold text-espresso-900">
-              {stats.best_call_multiple.toFixed(1)}&times; on &ldquo;{stats.best_call_title}&rdquo;
-            </p>
+          {hidesPipelineStats ? (
+            <div className="col-span-2">
+              <p className={`font-display text-2xl font-extrabold tabular-nums ${net >= 0 ? 'text-honey-600' : 'text-espresso-400'}`}>
+                {formatSignedTokens(net)}
+              </p>
+              <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-espresso-400 uppercase">All-time net</p>
+            </div>
           ) : (
-            <p className="mt-1 text-sm text-espresso-400">Nothing settled yet.</p>
+            <>
+              <div>
+                <p className="font-display text-2xl font-extrabold tabular-nums text-espresso-950">
+                  {stats.accuracy_pct == null ? '—' : `${stats.accuracy_pct}%`}
+                </p>
+                <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-espresso-400 uppercase">Accuracy</p>
+              </div>
+              <div>
+                <p className={`font-display text-2xl font-extrabold tabular-nums ${net >= 0 ? 'text-honey-600' : 'text-espresso-400'}`}>
+                  {formatSignedTokens(net)}
+                </p>
+                <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-espresso-400 uppercase">All-time net</p>
+              </div>
+            </>
           )}
         </div>
+
+        {!hidesPipelineStats && (
+          <div className="grid grid-cols-2 gap-3 border-t border-espresso-100 pt-4 text-sm">
+            <div>
+              <p className="font-semibold text-espresso-700">Tokens wagered</p>
+              <p className="text-espresso-500">{formatTokens(Number(stats.tokens_wagered))} lifetime</p>
+            </div>
+            <div>
+              <p className="font-semibold text-espresso-700">Settled bets</p>
+              <p className="text-espresso-500">{stats.settled_bet_count}</p>
+            </div>
+          </div>
+        )}
+
+        {!hidesPipelineStats && (
+          <div className="border-t border-espresso-100 pt-4">
+            <p className="text-[10.5px] font-bold tracking-[0.07em] text-espresso-400 uppercase">Best call</p>
+            {stats.best_call_multiple ? (
+              <p className="mt-1 text-sm font-bold text-espresso-900">
+                {stats.best_call_multiple.toFixed(1)}&times; on &ldquo;{stats.best_call_title}&rdquo;
+              </p>
+            ) : (
+              <p className="mt-1 text-sm text-espresso-400">Nothing settled yet.</p>
+            )}
+          </div>
+        )}
       </Card>
 
       {awards.length > 0 && (
