@@ -27,8 +27,8 @@ export interface MemberStats {
   joined_at: string;
   net: number;
   accuracy_pct: number | null;
-  settled_bet_count: number;
-  tokens_wagered: number;
+  settled_bet_count: number | null;
+  tokens_wagered: number | null;
   best_call_multiple: number | null;
   best_call_title: string | null;
 }
@@ -54,6 +54,12 @@ export interface MemberProfileData {
       placeholder. MemberProfileCard reads this rather than inferring it from both avatar fields
       being null, since that's also what an ordinary member with no photo looks like. */
   isPublicGroup: boolean;
+  /** Sports/Weather markets get pruned to the 10 most recent resolved/voided once
+      _prune_resolved_system_markets() runs, which erodes accuracy/tokens-wagered/settled-bets/
+      best-call over time (get_member_stats already returns null for all four there instead of a
+      shrinking number) -- MemberProfileCard reads this to drop those cards from the layout
+      entirely rather than showing stale-looking dashes. */
+  hidesPipelineStats: boolean;
 }
 
 /**
@@ -146,5 +152,6 @@ export async function getMemberProfileData(groupId: string, membershipId: string
     avatarUpdatedAt: group?.is_public ? null : (avatarRow?.avatar_updated_at ?? null),
     avatarPresetKey: group?.is_public ? null : (avatarRow?.avatar_preset_key ?? null),
     isPublicGroup: !!group?.is_public,
+    hidesPipelineStats: !!group?.is_public && (group?.name === 'Sports' || group?.name === 'Weather'),
   };
 }
