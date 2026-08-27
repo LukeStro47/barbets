@@ -31,11 +31,18 @@ function toLocalDatetimeInputValue(date: Date): string {
 }
 
 /**
- * Owner-only sheet opened by SeasonSetupCard's Continue button — name, length, reseed amount, and
+ * Owner-only sheet opened by SeasonSetupCard's Configure button — name, length, reseed amount, and
  * the roster (boot + transfer ownership), all without leaving the group hub, ending in the same
  * action that actually starts the season. `update_group_settings` is a full-object RPC, not a
  * patch, so `continueToSeason()` below submits every field from `settings` unchanged except the
  * two this sheet actually edits — same pattern EditSettingsForm uses on /settings/edit.
+ *
+ * Banded header + `border-t`-divided `p-[18px]` sections, the same shell ProposeResolutionCard/
+ * MarketOverflowMenu use — this used to be its own one-off layout (a plain title paragraph, `p-5`,
+ * manual `mt-*` spacing between sections) that read as a different kind of thing from every other
+ * sheet in the app. No paired cancel button next to Continue: unlike a destructive confirmation,
+ * there's nothing here that needs a deliberate "no" — the backdrop tap every other Modal already
+ * closes on is enough.
  */
 export function SeasonSetupEditSheet({
   groupId,
@@ -110,16 +117,18 @@ export function SeasonSetupEditSheet({
   const transferTargets = members.filter((m) => !m.isOwner && m.status === 'active').map((m) => ({ userId: m.userId, nickname: m.nickname }));
 
   return (
-    <Modal onClose={onClose} padded={false} panelClassName="max-w-sm rounded-2xl">
-      <div className="max-h-[80vh] overflow-y-auto p-5">
-        <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">Season {seasonNumber} setup</p>
+    <Modal onClose={onClose} padded={false} panelClassName="max-h-[85dvh] overflow-x-hidden overflow-y-auto">
+      <div className="flex items-center justify-between gap-3 bg-espresso-50 px-[18px] py-[13px]">
+        <p className="text-xs font-extrabold tracking-[0.06em] text-espresso-800 uppercase">Season {seasonNumber} setup</p>
+      </div>
 
-        <div className="mt-4 space-y-1.5">
+      <div className="flex flex-col gap-4 p-[18px]">
+        <div className="space-y-1.5">
           <p className="text-xs font-bold text-espresso-500">Name</p>
           <SeasonNameEditor groupId={groupId} seasonId={seasonId} currentName={seasonName} seasonNumber={seasonNumber} />
         </div>
 
-        <div className="mt-4 space-y-2">
+        <div className="space-y-2">
           <p className="text-xs font-bold text-espresso-500">Length</p>
           <div className="flex flex-wrap gap-1.5">
             {LENGTH_OPTIONS.map((len) => (
@@ -148,7 +157,7 @@ export function SeasonSetupEditSheet({
           )}
         </div>
 
-        <div className="mt-4 space-y-1.5">
+        <div className="space-y-1.5">
           <label className="block text-xs font-bold text-espresso-500" htmlFor="setup-seed-amount">
             Reseed each member with
           </label>
@@ -162,43 +171,41 @@ export function SeasonSetupEditSheet({
           />
         </div>
 
-        {error && <p className="mt-3 text-sm text-danger-700">{error}</p>}
-        <div className="mt-3 flex gap-2">
-          <Button type="button" variant="outline" size="sm" className="flex-1" disabled={isPending} onClick={onClose}>
-            Not yet
-          </Button>
-          <Button type="button" size="sm" className="flex-1" disabled={isPending} onClick={continueToSeason}>
-            {isPending ? 'Starting…' : `Continue (${playingCount} playing)`}
-          </Button>
-        </div>
-        <p className="mt-2 text-center text-[11.5px] text-espresso-400">Betting stays paused until you open it.</p>
+        {error && <p className="text-sm text-danger-700">{error}</p>}
+      </div>
 
-        <div className="mt-5 border-t border-espresso-100 pt-4">
-          <p className="text-xs font-bold text-espresso-500">Roster</p>
-          <p className="mt-1 text-[11.5px] leading-[1.4] text-espresso-400">
-            Removing someone here removes them from the group entirely, not just the next season. They can&apos;t rejoin.
-          </p>
-          <div className="mt-2.5 divide-y divide-espresso-50 rounded-[14px] border border-espresso-100">
-            {removableMembers.map((m) => (
-              <div key={m.userId} className="flex items-center justify-between gap-3 px-3.5 py-2.5">
-                <span className="min-w-0 truncate text-sm text-espresso-800">
-                  <Mention nickname={m.nickname} className="font-semibold" />
-                  {m.status === 'dormant' && <span className="ml-1.5 text-[11.5px] text-espresso-400">dormant</span>}
-                </span>
-                <RemoveMemberButton groupId={groupId} userId={m.userId} nickname={m.nickname} />
-              </div>
-            ))}
-            {removableMembers.length === 0 && <p className="px-3.5 py-2.5 text-sm text-espresso-400">Nobody else in the group yet.</p>}
-          </div>
-          <button
-            type="button"
-            onClick={() => setTransferOpen(true)}
-            className="mt-2.5 w-full rounded-[14px] border border-espresso-200 px-3.5 py-2.5 text-left text-sm font-semibold text-espresso-800 hover:bg-espresso-50"
-          >
-            Transfer ownership
-            <span className="mt-0.5 block text-[11.5px] font-normal text-espresso-400">You stay in the group as a regular member.</span>
-          </button>
+      <div className="border-t border-espresso-50 px-[18px] py-[14px]">
+        <Button type="button" size="lg" className="w-full" disabled={isPending} onClick={continueToSeason}>
+          {isPending ? 'Starting…' : `Continue (${playingCount} playing)`}
+        </Button>
+        <p className="mt-2 text-center text-[11.5px] text-espresso-400">Betting starts paused until you open it.</p>
+      </div>
+
+      <div className="border-t border-espresso-50 p-[18px]">
+        <p className="text-xs font-bold text-espresso-500">Roster</p>
+        <p className="mt-1 text-[11.5px] leading-[1.4] text-espresso-400">
+          Removing someone here removes them from the group entirely, not just the next season. They can&apos;t rejoin.
+        </p>
+        <div className="mt-2.5 divide-y divide-espresso-50 rounded-[14px] border border-espresso-100">
+          {removableMembers.map((m) => (
+            <div key={m.userId} className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+              <span className="min-w-0 truncate text-sm text-espresso-800">
+                <Mention nickname={m.nickname} className="font-semibold" />
+                {m.status === 'dormant' && <span className="ml-1.5 text-[11.5px] text-espresso-400">dormant</span>}
+              </span>
+              <RemoveMemberButton groupId={groupId} userId={m.userId} nickname={m.nickname} />
+            </div>
+          ))}
+          {removableMembers.length === 0 && <p className="px-3.5 py-2.5 text-sm text-espresso-400">Nobody else in the group yet.</p>}
         </div>
+        <button
+          type="button"
+          onClick={() => setTransferOpen(true)}
+          className="mt-2.5 w-full rounded-[14px] border border-espresso-200 px-3.5 py-2.5 text-left text-sm font-semibold text-espresso-800 hover:bg-espresso-50"
+        >
+          Transfer ownership
+          <span className="mt-0.5 block text-[11.5px] font-normal text-espresso-400">You stay in the group as a regular member.</span>
+        </button>
       </div>
 
       {transferOpen && <TransferOwnershipSheet groupId={groupId} members={transferTargets} onClose={() => setTransferOpen(false)} />}

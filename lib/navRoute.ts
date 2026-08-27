@@ -37,6 +37,15 @@ export function getRouteGroupId(pathname: string): string | null {
   return match[1] === 'new' ? null : match[1];
 }
 
+/** The one route `@modal` intercepts (see `app/(app)/@modal/(.)groups/[groupId]/members/
+ * [membershipId]`) — a same-app tap on a name opens it as a centered dialog over whatever page
+ * is already showing, rather than replacing that page's content. The URL still changes to this
+ * path, though, which matters to anything keying off `usePathname()` for real page-to-page
+ * transitions (see PageTransition): opening/closing this dialog is not one of those. */
+export function isMemberProfileModalRoute(pathname: string): boolean {
+  return /^\/groups\/[^/]+\/members\/[^/]+\/?$/.test(pathname);
+}
+
 export function getActiveNavTab(pathname: string): NavTab | null {
   if (pathname === '/profile') return 'you';
   if (pathname === '/groups') return 'home';

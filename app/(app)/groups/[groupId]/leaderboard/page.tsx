@@ -98,14 +98,8 @@ export default async function LeaderboardPage({
         );
   const avatarByUser = new Map((avatarRows ?? []).map((r) => [r.id, r]));
 
-  const [{ data: titleRows }, { count: totalBetCount }] = await Promise.all([
-    supabase.from('group_titles').select('title_key, user_id, stat_value').eq('group_id', groupId),
-    supabase.from('bets').select('id, markets!inner(group_id)', { count: 'exact', head: true }).eq('markets.group_id', groupId),
-  ]);
+  const { data: titleRows } = await supabase.from('group_titles').select('title_key, user_id, stat_value').eq('group_id', groupId);
   const yourTitleCount = ((titleRows ?? []) as GroupTitleRow[]).filter((r) => r.user_id && r.user_id === user?.id).length;
-  // Every member is still tied at the seed amount, so "leader" is just whoever the query happened
-  // to sort first — the hero and the standings list both soften their language for it below.
-  const noBetsPlaced = (totalBetCount ?? 0) === 0;
 
   // ---- The hero: who's in front, and where you are relative to them. Both figures already exist
   // in `members`; the only extra read is the season this is all happening in.
@@ -122,14 +116,26 @@ export default async function LeaderboardPage({
   // season-over framing. Note `latestSeason` is the *next* season's row once intermission starts
   // (see _finalize_season), so the season this page is actually recapping is number - 1.
   const { data: latestSeason } = settings?.seasons_enabled
-    ? await supabase.from('seasons').select('number, name, started_at, status').eq('group_id', groupId).order('number', { ascending: false }).limit(1).maybeSingle()
+    ? await supabase.from('seasons').select('id, number, name, started_at, status').eq('group_id', groupId).order('number', { ascending: false }).limit(1).maybeSingle()
     : { data: null };
   const isIntermission = latestSeason?.status === 'intermission';
   const heroSeason = latestSeason?.status === 'active' ? latestSeason : null;
 
   const { data: endedSeason } = isIntermission
-    ? await supabase.from('seasons').select('number, name').eq('group_id', groupId).eq('number', latestSeason!.number - 1).maybeSingle()
+    ? await supabase.from('seasons').select('id, number, name').eq('group_id', groupId).eq('number', latestSeason!.number - 1).maybeSingle()
     : { data: null };
+
+  // Scoped to whichever season the standings below actually reflect — an active season's own
+  // bets, or the just-ended one during intermission's frozen final view — not the group's whole
+  // history, since a brand-new season starts everyone tied again regardless of how many seasons
+  // came before it. Off entirely (seasons disabled), there's only the one continuous history.
+  const scopeSeasonId = heroSeason?.id ?? endedSeason?.id ?? null;
+  const { count: totalBetCount } = scopeSeasonId
+    ? await supabase.from('bets').select('id, markets!inner(season_id)', { count: 'exact', head: true }).eq('markets.season_id', scopeSeasonId)
+    : await supabase.from('bets').select('id, markets!inner(group_id)', { count: 'exact', head: true }).eq('markets.group_id', groupId);
+  // Every member is still tied at the seed amount, so "leader" is just whoever the query happened
+  // to sort first — the hero and the standings list both soften their language for it below.
+  const noBetsPlaced = (totalBetCount ?? 0) === 0;
 
   // members is sorted by live balance, which during intermission is exactly the frozen final
   // standing — nothing touches it again until start_season reseeds everyone — so the "final
@@ -139,7 +145,7 @@ export default async function LeaderboardPage({
   const yourRank = members.findIndex((m: any) => m.user_id === user?.id) + 1;
 
   const seasonLine = heroSeason
-    ? `${heroSeason.name ?? `Season ${heroSeason.number}`} · day ${Math.max(
+    ? `${heroSeason.name ?? `Season ${heroSeason.number}`} · Day ${Math.max(
         1,
         Math.floor((Date.now() - new Date(heroSeason.started_at).getTime()) / (24 * 60 * 60_000)) + 1
       )}`

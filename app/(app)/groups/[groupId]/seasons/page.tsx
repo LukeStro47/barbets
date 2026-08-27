@@ -52,9 +52,12 @@ export default async function SeasonsArchivePage({
   const selectedSeason = requested === 'all' ? null : archivedSeasons.find((s) => s.number === requested) ?? archivedSeasons[0] ?? null;
   const selectedValue = selectedSeason ? String(selectedSeason.number) : 'all';
 
+  // "All time" is a distinct view only once there's more than one season to span — with just one
+  // archived season it would show the exact same markets as that season's own chip, so it's
+  // dropped rather than offered as a redundant second way to see the same thing.
   const chipOptions: SeasonChipOption[] = [
     ...archivedSeasons.map((s) => ({ value: String(s.number), label: s.name ?? `Season ${s.number}` })),
-    { value: 'all', label: 'All time' },
+    ...(archivedSeasons.length > 1 ? [{ value: 'all', label: 'All time' }] : []),
   ];
 
   const settledPage = await getSettledMarkets(supabase, groupId, user.id, null, selectedSeason?.id);

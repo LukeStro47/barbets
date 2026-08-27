@@ -344,9 +344,6 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
             )}
           </div>
         )}
-        {season && season.status === 'active' && !season.betting_open && isOwner && (
-          <OpenSeasonBettingButton groupId={groupId} seasonId={season.id} />
-        )}
       </div>
 
       <div className="mt-[18px] flex flex-col gap-[18px] pb-10">
@@ -396,6 +393,10 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
         {group!.pending_bonus_pool > 0 && <PendingBonusPoolNote amount={group!.pending_bonus_pool} />}
 
         {windingDown}
+
+        {season && season.status === 'active' && !season.betting_open && isOwner && (
+          <OpenSeasonBettingButton groupId={groupId} seasonId={season.id} />
+        )}
 
         <GroupMarketSections
           groupId={groupId}

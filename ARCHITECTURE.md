@@ -102,7 +102,10 @@ lib/
                          get a source-mapped stack out of Next (see the design note)
   navRoute.ts          — pure pathname parsing shared by BottomNav/BottomNavSpacer/PullToRefresh
                          (active tab, current group, and `isCreateFlow`: the two full-screen
-                         wizards, which hide the bar and opt out of pull-to-refresh)
+                         wizards, which hide the bar and opt out of pull-to-refresh) and by
+                         PageTransition (`isMemberProfileModalRoute`: the one route `@modal`
+                         intercepts, so opening/closing it is never treated as a real page-to-page
+                         transition — see that component)
   inviteCode.ts        — the one place that knows invite codes are 4 chars and that the retired
                          "BB-" prefix still exists in the wild
   avatars.ts           — the built-in icon set (keys + labels) and its public/ asset paths;
@@ -216,8 +219,9 @@ components/
                  this replaced the old SeasonBanner-plus-/intermission-page approach):
                    SeasonRecapHero      — the dark hero, owner (champion) vs. member (own result)
                    SeasonSetupCard / SeasonSetupEditSheet — owner-only Season N+1 decision. The
-                                          card itself is just a playing-count summary and a
-                                          Continue button; Continue opens the sheet rather than
+                                          card itself is a name/length/reseed summary line, a
+                                          playing-count/reseed-amount pair of ConsequenceRows, and
+                                          a Configure button; Configure opens the sheet rather than
                                           starting the season directly, since name/length/reseed
                                           (via updateGroupSettings) and the roster (boot via
                                           RemoveMemberButton, transfer ownership via
@@ -570,13 +574,13 @@ independent layers against a repeat:
 **The Confirm signup email leads with the code, not the link**, matching `ConfirmEmailForm` being
 the primary way to finish signing up. This lives entirely in the Supabase dashboard (Authentication
 > Email Templates > Confirm signup), not in git, the same manual-edit-only setup the customized
-Reset Password template already relies on (see "Password recovery uses `verifyOtp`, not PKCE code
+Reset Password template also needs (see "Password recovery uses `verifyOtp`, not PKCE code
 exchange" under "Notable design decisions worth remembering" below) - there's no local copy to
 diff against, so if the email ever reverts to looking like the link-first default, it was changed
-back (or reset) directly in the dashboard. **The link's `href` needs the same `/auth/confirm`
-customization the recovery template already has** - `{{ .SiteURL }}/auth/confirm?token_hash={{
-.TokenHash }}&type=signup&next=/groups` instead of the default `{{ .ConfirmationURL }}` - or
-clicking it verifies against Supabase's own hosted endpoint and redirects with the session in a
+back (or reset) directly in the dashboard. **Both link `href`s need the same `/auth/confirm`
+customization** - `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup&next=/groups`
+(recovery's is identical but for `type=recovery&next=/reset-password`) instead of the default
+`{{ .ConfirmationURL }}` - or clicking it verifies against Supabase's own hosted endpoint and redirects with the session in a
 URL fragment this app's server-rendered pages never see, landing signed-out on the splash with no
 sign anything happened. See the design-decision note just referenced for why.
 
@@ -701,7 +705,7 @@ Two filters keep the channel honest, and both matter more here than in a typical
 
 **The beta gate is a single flag, currently off.** `lib/betaGate.ts` exports `BETA_GATE_ENABLED` (`false` today), a shared code, and a cookie name; when on, `proxy.ts` bounces an uncookied `/login` to `/under-construction`, and `checkBetaCode()` sets a 30-day httpOnly cookie on a correct code. It's built to be deleted — turning the flag off is enough, and nothing else in the app depends on it. Its `safeNext()` only ever redirects to a relative in-app path, never an absolute URL from form input; `app/auth/confirm/route.ts` applies the identical guard to its own `next` param.
 
-**Both recovery and signup confirmation emails use `verifyOtp`, not PKCE code exchange, and both had to be pointed at `/auth/confirm` by hand.** Supabase's default `{{ .ConfirmationURL }}` link verifies against Supabase's own hosted `/auth/v1/verify` endpoint and redirects back with the session in a URL fragment, fine for a client-only SPA but invisible to this app's server-rendered pages (fragments never reach the server) — clicking it landed a freshly confirmed signup right back on the signed-out splash with nothing to show for it, indistinguishable from the link having failed. Both the Reset Password and Confirm signup templates are customized in the Supabase dashboard to link to `/auth/confirm` with `token_hash`/`type`/`next` instead; that route calls `verifyOtp` server-side, which sets the session as a cookie the next request actually sees, then redirects to `next` (`/reset-password` for recovery, `/groups` for signup — landing signed in, inside the app, is itself the confirmation that it worked). Signup additionally needs `ensureProfileRow()` here (recovery's user already has one, so it's a harmless no-op there), and a failed/expired link needs to land somewhere sensible for *that* flow — recovery back on `/forgot-password`, signup back on `/login?mode=signup` — rather than always the recovery page regardless of which one failed. If either email's link ever stops working, check its template's `href` first — this flow depends on it not being reverted to the default.
+**Both recovery and signup confirmation emails use `verifyOtp`, not PKCE code exchange, and both had to be pointed at `/auth/confirm` by hand.** Supabase's default `{{ .ConfirmationURL }}` link verifies against Supabase's own hosted `/auth/v1/verify` endpoint and redirects back with the session in a URL fragment, fine for a client-only SPA but invisible to this app's server-rendered pages (fragments never reach the server) — clicking it landed a freshly confirmed signup right back on the signed-out splash with nothing to show for it, indistinguishable from the link having failed. Both the Reset Password and Confirm signup templates are customized in the Supabase dashboard to link to `/auth/confirm` with `token_hash`/`type`/`next` instead; that route calls `verifyOtp` server-side, which sets the session as a cookie the next request actually sees, then redirects to `next` (`/reset-password` for recovery, `/groups` for signup — landing signed in, inside the app, is itself the confirmation that it worked). Signup additionally needs `ensureProfileRow()` here (recovery's user already has one, so it's a harmless no-op there), and a failed/expired link needs to land somewhere sensible for *that* flow — recovery back on `/forgot-password`, signup back on `/login?mode=signup` — rather than always the recovery page regardless of which one failed. If either email's link ever stops working, check its template's `href` first — this flow depends on it not being reverted to the default. **This has happened for real**: as of 2026-08-27 the Reset Password template had reverted to plain `{{ .ConfirmationURL }}` (Confirm signup was unaffected), so every recovery link hit Supabase's own verify endpoint, redirected with the session in a fragment `/reset-password` can't see, and the page fell into its no-session branch and showed "This link is invalid or has expired" for a token that had actually just been consumed successfully — a dashboard-only setting silently drifting from what this doc assumed, with no diff or CI check to catch it. Re-pointed via the Supabase management API's `PATCH /v1/projects/{ref}/config/auth` (`mailer_templates_recovery_content`), which is worth knowing about as a faster path than the dashboard UI for verifying or fixing template drift like this again.
 
 ## Public groups
 
