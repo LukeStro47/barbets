@@ -86,7 +86,10 @@ export async function signUp(_prevState: AuthActionState | null, formData: FormD
   if (password !== confirmPassword) return { error: "Passwords don't match." };
   const marketingOptIn = formData.get('marketingOptIn') === 'on';
   const captchaToken = String(formData.get('cf-turnstile-response') || '');
-  const next = safeNext(formData.get('next'), '/groups');
+  // Defaults to the walkthrough rather than /groups: a brand-new account has nothing in
+  // /groups yet anyway, and this is a new user's one guaranteed first stop. An explicit `next`
+  // (e.g. an invite link's /join/XXXX) still overrides it, same as before.
+  const next = safeNext(formData.get('next'), '/demo');
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -106,15 +109,13 @@ export async function signUp(_prevState: AuthActionState | null, formData: FormD
   redirect(next);
 }
 
-/** The signup confirmation email carries both a link (handled by app/auth/confirm/route.ts)
- *  and a 6-digit code; this is the code path, entered inline on the sign-up screen instead of
- *  making the user leave the app to find and tap a link. verifyOtp establishes a real session on
- *  success, same as the link does. Not gated by Turnstile: it only checks a code against the
- *  email that just went through the gated signUp() call above, it never sends anything. */
+/** The signup confirmation email carries only a 6-digit code (no link - see ARCHITECTURE.md),
+ *  entered inline on the sign-up screen. Not gated by Turnstile: it only checks a code against
+ *  the email that just went through the gated signUp() call above, it never sends anything. */
 export async function confirmSignup(_prevState: AuthActionState | null, formData: FormData): Promise<AuthActionState> {
   const email = String(formData.get('email'));
   const token = String(formData.get('token')).trim();
-  const next = safeNext(formData.get('next'), '/groups');
+  const next = safeNext(formData.get('next'), '/demo');
   const supabase = await createClient();
   const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'signup' });
   if (error) return { error: error.message };
@@ -124,9 +125,9 @@ export async function confirmSignup(_prevState: AuthActionState | null, formData
   redirect(next);
 }
 
-/** Re-sends the signup confirmation email (link + code). Unlike verifyOtp above, this does send
- *  mail, so it carries Turnstile like the other supabase.auth-touching forms (see "Signup abuse
- *  protection" in ARCHITECTURE.md). */
+/** Re-sends the signup confirmation code. Unlike verifyOtp above, this does send mail, so it
+ *  carries Turnstile like the other supabase.auth-touching forms (see "Signup abuse protection"
+ *  in ARCHITECTURE.md). */
 export async function resendSignupCode(_prevState: AuthActionState | null, formData: FormData): Promise<AuthActionState> {
   const email = String(formData.get('email'));
   const captchaToken = String(formData.get('cf-turnstile-response') || '');
