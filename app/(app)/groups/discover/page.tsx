@@ -43,6 +43,10 @@ export default async function DiscoverGroupsPage() {
     <main className="mx-auto max-w-lg space-y-5 px-5 py-8">
       <PageHeader title="Browse groups" subtitle={<span className="text-[12.5px] text-espresso-400">Join instantly, no invite needed</span>} />
 
+      <p className="rounded-2xl bg-paper-dim px-3.5 py-3 text-[12.5px] text-espresso-500">
+        These are here to help you get a feel for how Barbets works, before you run your own group with friends.
+      </p>
+
       {groups.length === 0 ? (
         <EmptyState icon="🔍" title="Nothing open right now" subtitle="Check back soon, or request a campus group below." />
       ) : (
