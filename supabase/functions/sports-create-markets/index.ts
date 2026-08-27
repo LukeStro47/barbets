@@ -30,6 +30,11 @@ const LOOKAHEAD_MS = 12 * 3600_000;
 // clearly in the past and gets filtered out before ever reaching create_market again.
 const CREATE_MIN_LEAD_MS = 2 * 60_000;
 
+// No more than this many Sports system markets open at once -- a run that would otherwise create
+// more just stops early, first game found first; whatever gets skipped catches up on a later run
+// once something closes.
+const OPEN_MARKET_CAP = 3;
+
 interface OddsApiEvent {
   id: string;
   commence_time: string;
@@ -75,11 +80,21 @@ Deno.serve(async () => {
     return new Response('Sports group not found', { status: 500 });
   }
 
+  const { count: openCount } = await admin
+    .from('markets')
+    .select('id', { count: 'exact', head: true })
+    .eq('group_id', group.id)
+    .eq('is_system_market', true)
+    .eq('status', 'open');
+  let openSlots = OPEN_MARKET_CAP - (openCount ?? 0);
+
   let created = 0;
   let failed = 0;
   const createdMarketIds: string[] = [];
 
   for (const sport of SPORTS) {
+    if (openSlots <= 0) break;
+
     let events: OddsApiEvent[];
     try {
       const res = await fetch(`https://api.the-odds-api.com/v4/sports/${sport}/events?apiKey=${ODDS_API_KEY}`);
@@ -93,6 +108,8 @@ Deno.serve(async () => {
 
     const cutoff = Date.now() + LOOKAHEAD_MS;
     for (const event of events) {
+      if (openSlots <= 0) break;
+
       const commenceMs = new Date(event.commence_time).getTime();
       // The free /events endpoint keeps returning a game for a while after it has actually
       // started (live, or even final), not just upcoming ones -- skip those too, the same way
@@ -121,6 +138,7 @@ Deno.serve(async () => {
         });
         if (error) throw new Error(`create_market: ${error.message}`);
         created++;
+        openSlots--;
         if (data?.id) createdMarketIds.push(data.id);
       } catch (err) {
         failed++;

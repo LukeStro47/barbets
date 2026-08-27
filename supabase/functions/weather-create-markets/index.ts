@@ -39,6 +39,11 @@ const WEATHER_MARKET_CLOSE_HOUR_LOCAL = 12;
 // a new day rather than re-attempting the same one).
 const MIN_LEAD_MS = 2 * 60_000;
 
+// No more than this many Weather system markets open at once -- a run that would otherwise create
+// more just stops early, first city/type first; whatever gets skipped catches up on a later run
+// once something closes.
+const OPEN_MARKET_CAP = 3;
+
 interface ForecastPeriod {
   name: string;
   endTime: string;
@@ -116,6 +121,14 @@ Deno.serve(async () => {
     return new Response('Weather group not found', { status: 500 });
   }
 
+  const { count: openCount } = await admin
+    .from('markets')
+    .select('id', { count: 'exact', head: true })
+    .eq('group_id', group.id)
+    .eq('is_system_market', true)
+    .eq('status', 'open');
+  let openSlots = OPEN_MARKET_CAP - (openCount ?? 0);
+
   let created = 0;
   let failed = 0;
   const createdMarketIds: string[] = [];
@@ -132,12 +145,27 @@ Deno.serve(async () => {
       const rainTitle = `Will it rain in ${city.name} today?`;
       const tempTitle = `Will ${city.name} hit ${period.temperature}°F today?`;
 
-      const { data: existing } = await admin
+      // Checked at the SQL level, not by comparing closesAt (a JS-computed ISO string) against a
+      // previously-read closes_at (Postgres's own textual serialization of the same timestamptz,
+      // a different string format that would never match a JS one) -- see ARCHITECTURE.md's note
+      // on why that used to silently never dedupe. market_type alone tells rain and temp markets
+      // apart at a given closes_at, so this also doesn't depend on the temp market's title, which
+      // embeds the live forecast temperature and can change between runs on the same day.
+      const { data: existingRain } = await admin
         .from('markets')
-        .select('id, title, closes_at')
+        .select('id')
         .eq('group_id', group.id)
-        .in('title', [rainTitle, tempTitle]);
-      const existingByTitleAndClose = new Set((existing ?? []).map((m: { title: string; closes_at: string }) => `${m.title}|${m.closes_at}`));
+        .eq('market_type', 'yes_no')
+        .eq('closes_at', closesAt)
+        .maybeSingle();
+
+      const { data: existingTemp } = await admin
+        .from('markets')
+        .select('id')
+        .eq('group_id', group.id)
+        .eq('market_type', 'over_under')
+        .eq('closes_at', closesAt)
+        .maybeSingle();
 
       // Only created if closesAt is still comfortably in the future -- close enough to "now"
       // (e.g. a late/retried run) that the noon-local cutoff has already passed, or is only
@@ -145,7 +173,7 @@ Deno.serve(async () => {
       // create_market's own "closes_at must be in the future" check.
       const stillWorthCreating = new Date(closesAt).getTime() > Date.now() + MIN_LEAD_MS;
 
-      if (stillWorthCreating && !existingByTitleAndClose.has(`${rainTitle}|${closesAt}`)) {
+      if (stillWorthCreating && !existingRain && openSlots > 0) {
         const { data, error } = await admin.rpc('_create_system_market', {
           p_group_id: group.id,
           p_title: rainTitle,
@@ -155,10 +183,11 @@ Deno.serve(async () => {
         });
         if (error) throw new Error(`rain market: ${error.message}`);
         created++;
+        openSlots--;
         if (data?.id) createdMarketIds.push(data.id);
       }
 
-      if (stillWorthCreating && !existingByTitleAndClose.has(`${tempTitle}|${closesAt}`)) {
+      if (stillWorthCreating && !existingTemp && openSlots > 0) {
         const { data, error } = await admin.rpc('_create_system_market', {
           p_group_id: group.id,
           p_title: tempTitle,
@@ -170,6 +199,7 @@ Deno.serve(async () => {
         });
         if (error) throw new Error(`temp market: ${error.message}`);
         created++;
+        openSlots--;
         if (data?.id) createdMarketIds.push(data.id);
       }
     } catch (err) {
