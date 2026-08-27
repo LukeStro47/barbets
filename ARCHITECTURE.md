@@ -151,6 +151,10 @@ lib/
                          say which titles changed hands, and to whom — shared by the group hub's
                          intermission recap and the Awards page's "lost this season" cards
   betaGate.ts          — the beta access gate's on/off flag, code, and cookie name
+  mobileGate.ts        — MobileAppGate's exemption-path list and mobile-browser UA check. See
+                         "Domains and the mybarbets.com split" under Deployment
+  appStores.ts         — GOOGLE_PLAY_URL / getAppleAppStoreUrl(), shared by MobileAppGate and the
+                         printed-QR redirect (app/go/[batch]/route.ts)
   appOrigin.ts         — APP_ORIGIN / inviteUrl() / CONTACT_EMAIL. The fixed hostname for links
                          meant to leave the app, since window.location.origin made every invite
                          shared from the native shell say barbets.vercel.app. See "Domains and
@@ -276,7 +280,9 @@ components/
                  gate even though the two components that used to show install copy from it,
                  InstallPrompt/InstallBanner, are gone — see "PWA & push" for why),
                  PushReminderModal, OfflineRetryButton, OfflineGroupBalances (offline fallback page),
-                 MovedBanner (temporary: only renders on mybarbets.com, delete after the domain move)
+                 MovedBanner (temporary: only renders on mybarbets.com, delete after the domain move),
+                 MobileAppGate (the mobile-browser access gate, mounted in app/layout.tsx — see
+                 "Domains and the mybarbets.com split")
 supabase/
   migrations/*.sql          — full schema, RLS, and every SECURITY DEFINER function
   functions/send-push/      — Deno Edge Function that drains the notification queue
@@ -860,6 +866,16 @@ What that produced, in the order it has to happen:
 `app/robots.ts` (disallow everything) is already in place. It is safe ahead of the domain move rather than after it: while `mybarbets.com` still points here it has nothing worth indexing anyway, and the marketing project serves its own permissive `robots.txt` the moment the domain moves across.
 
 **The native shell now points at `app.mybarbets.com` too** (`capacitor.config.ts`'s `server.url` and the `APP_URL` in `public/offline.html`, which is bundled rather than served and so cannot import `lib/appOrigin.ts` or be fixed by a deploy). Both native projects are synced and `versionCode` is bumped to 5 / `versionName` 1.3, so this needs a store release to reach anyone. **It signs out every existing Android user once**: sessions are `@supabase/ssr` cookies, cookies are host-scoped, and a new WebView origin means an empty cookie jar. The FCM token survives, so pushes keep arriving and open a logged-out app. Ship it with something users want and say so in the release notes. Installs that have not updated keep working, because `barbets.vercel.app` still serves this same deployment — which is why that alias stays alive rather than being retired.
+
+### The mobile-browser gate
+
+`components/pwa/MobileAppGate.tsx`, mounted in `app/layout.tsx` above `{children}` so it covers every route, is a hard access gate: on a phone/tablet's own browser (not the native app, not an installed standalone PWA), every page except `lib/mobileGate.ts`'s exemption list — `/forgot-password`, `/reset-password`, `/offline` — is replaced by a full-screen "get the app" block with no way to dismiss it and see the real page anyway. This is the enforcement half of the app-only mobile direction; removing the browser install-to-home-screen prompts (see "PWA & push") was the "stop suggesting it" half.
+
+- **Entirely client-detected, on purpose.** `Capacitor.isNativePlatform()` and a `display-mode: standalone` check are both browser-only signals with no server-visible equivalent (there's no request header for either), and `usePathname()` is what makes the gate re-evaluate correctly across a client-side navigation mid-session — an emailed `/reset-password` link's own success handler doing `router.push('/groups')` flips the gate on the instant the pathname changes, with no server-computed flag to go stale. The alternative (compute a `gated` boolean once in the server-rendered root layout) was considered and rejected specifically because a root layout doesn't re-run on a client-side route change, only a full navigation — it would have been correct on first load and silently wrong after.
+- **Why the exemption list is exactly those three and nothing else.** `/forgot-password` and `/reset-password` are Supabase Auth email-link destinations (see `auth/confirm/route.ts`), and a mailed one-time-token link has to work wherever it's tapped — there is no "hand this off to the app" equivalent for it, unlike a normal navigation. `/offline` is the service worker's own fallback for a failed navigation, not a page anyone taps into on purpose; gating a screen that needs the app store behind a screen that means there wasn't any connectivity would help nobody. Everything else — `/`, `/login`, `/join/[code]`, every signed-in page — is gated. That is deliberate: there is no "continue in browser anyway" link.
+- **No attempted deep link.** Neither Universal Links (iOS) nor App Links (Android) are configured — `capacitor.config.ts` has no `scheme` or associated-domains entry — so a fake `intent://`/custom-scheme open attempt would just silently fail. The gate's only CTA is the real store listing (`lib/appStores.ts`, shared with `app/go/[batch]/route.ts`'s printed-QR redirect), which is the one thing it can offer honestly. Wiring up real deep links is a native-config-plus-store-release project of its own, not a page like this one.
+- **Distinguishing the native app from a phone browser does not use the `appendUserAgent` marker.** `lib/actions/auth.ts`'s `NATIVE_APP_UA_MARKER` check exists there because a Server Action has no bridge object to query — but `Capacitor.isNativePlatform()` is a real, always-present check for every native build regardless of whether that particular build happens to send the marker yet, so the client-side gate uses that instead and is correct even for installs that predate the marker.
+- **Off in local dev and Vercel preview deploys** (`isProductionDeploy()`, same `VERCEL_ENV`-first reasoning as `lib/actions/auth.ts`'s `IS_PRODUCTION` — `NODE_ENV` alone reads `'production'` for a preview build too). Computed server-side in `app/layout.tsx` and handed down as a plain `enabled` prop rather than read inside `MobileAppGate` itself, since `VERCEL_ENV` isn't `NEXT_PUBLIC_`-prefixed and would just read `undefined` in the client bundle. Without this, testing or reviewing a mobile layout on an actual phone (dev server or a preview link) would mean fighting this component first.
 
 ## Copy conventions
 
