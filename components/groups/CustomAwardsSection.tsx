@@ -12,6 +12,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Mention } from '@/components/ui/Mention';
 import { AwardGlyph } from '@/components/groups/AwardGlyph';
 import { AwardIconPicker } from '@/components/groups/AwardIconPicker';
+import { ChevronRightIcon } from '@/components/ui/icons';
 
 const inputClasses =
   'w-full rounded-[10px] border border-espresso-200 bg-paper-white px-3.5 py-2.5 text-[15px] font-semibold text-espresso-950 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
@@ -118,6 +119,7 @@ export function CustomAwardsSection({
               <Mention nickname={nickname} className="block text-[12.5px] font-extrabold text-espresso-950" />
               <span className="block text-[11px] font-extrabold text-honey-700">{shape?.format(holder.stat_value) ?? ''}</span>
             </span>
+            {membershipId && <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-espresso-300" />}
           </>
         );
         return (

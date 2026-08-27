@@ -756,18 +756,19 @@ describe('pipeline_settings: the auto-generated-market kill switch', () => {
   });
 });
 
-describe('Sports/Weather are pipeline-only boards: create_market rejects everyone, mods included', () => {
+describe('Sports/Weather hand-created markets: mods and the owner can, ordinary members cannot', () => {
   let users: Record<string, TestUser>;
   let sportsGroup: PublicGroupRow;
 
   beforeAll(async () => {
-    users = await createTestUsers('pgpipeblock', ['admin', 'mod']);
+    users = await createTestUsers('pgpipeblock', ['admin', 'mod', 'member']);
     await makeAdmin(users.admin);
-    // Matched by name only (20260828130000) — a test group named exactly 'Sports' exercises the
-    // same gate as the real seeded group without touching it. There's no unique constraint on
-    // groups.name, so this can't collide with the real one.
+    // Matched by name only (20260828130000/20260830180000) — a test group named exactly 'Sports'
+    // exercises the same gate as the real seeded group without touching it. There's no unique
+    // constraint on groups.name, so this can't collide with the real one.
     sportsGroup = await createPublicGroup(users.admin, 'generic', 'Sports');
     await users.mod.client.rpc('join_public_group', { p_group_id: sportsGroup.id, p_nickname: 'pgpipemod' });
+    await users.member.client.rpc('join_public_group', { p_group_id: sportsGroup.id, p_nickname: 'pgpipemember' });
     await users.admin.client.rpc('assign_group_moderator', {
       p_group_id: sportsGroup.id,
       p_target_user_id: users.mod.id,
@@ -779,27 +780,37 @@ describe('Sports/Weather are pipeline-only boards: create_market rejects everyon
     await cleanupTestUsers(users);
   });
 
-  test('the owner cannot hand-create a market', async () => {
+  test('the owner can hand-create a market, in addition to whatever the pipeline creates', async () => {
     const { error } = await users.admin.client.rpc('create_market', {
+      p_group_id: sportsGroup.id,
+      p_title: 'Should succeed (owner)',
+      p_description: 'test',
+      p_market_type: 'yes_no',
+      p_closes_at: new Date(Date.now() + 600_000).toISOString(),
+    });
+    expect(error).toBeNull();
+  });
+
+  test('an assigned moderator can hand-create a market too', async () => {
+    const { error } = await users.mod.client.rpc('create_market', {
+      p_group_id: sportsGroup.id,
+      p_title: 'Should succeed (mod)',
+      p_description: 'test',
+      p_market_type: 'yes_no',
+      p_closes_at: new Date(Date.now() + 600_000).toISOString(),
+    });
+    expect(error).toBeNull();
+  });
+
+  test('an ordinary member still cannot hand-create a market', async () => {
+    const { error } = await users.member.client.rpc('create_market', {
       p_group_id: sportsGroup.id,
       p_title: 'Should fail',
       p_description: 'test',
       p_market_type: 'yes_no',
       p_closes_at: new Date(Date.now() + 600_000).toISOString(),
     });
-    expect(error?.message).toMatch(/invalid_operation/);
-    expect(error?.message).toMatch(/automatically/);
-  });
-
-  test('an assigned moderator cannot hand-create a market either', async () => {
-    const { error } = await users.mod.client.rpc('create_market', {
-      p_group_id: sportsGroup.id,
-      p_title: 'Should also fail',
-      p_description: 'test',
-      p_market_type: 'yes_no',
-      p_closes_at: new Date(Date.now() + 600_000).toISOString(),
-    });
-    expect(error?.message).toMatch(/invalid_operation/);
+    expect(error?.message).toMatch(/forbidden/);
   });
 
   test('an otherwise-identical public group not named Sports/Weather is unaffected', async () => {

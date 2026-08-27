@@ -29,14 +29,9 @@ export default async function NewMarketPage({
   // Public groups restrict hand-creating a market to mods/the owner — see
   // supabase/migrations/20260824120000_public_group_market_gates.sql. Same 404-not-403 posture
   // BottomNav's own pre-check and every other authorization gate in this app already uses.
+  // Sports/Weather mods (and the owner) are allowed through this same check as of
+  // 20260830180000 — no separate carve-out for those two groups anymore.
   if (group?.is_public && group.owner_id !== user.id && myMembership?.role !== 'moderator') {
-    notFound();
-  }
-
-  // Sports/Weather are pipeline-only boards — nobody hand-creates a market there, not even the
-  // owner or a moderator. See create_market()'s matching gate in
-  // supabase/migrations/20260828130000_public_group_pipeline_notifications.sql.
-  if (group?.is_public && (group.name === 'Sports' || group.name === 'Weather')) {
     notFound();
   }
 

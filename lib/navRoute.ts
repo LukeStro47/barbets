@@ -54,6 +54,9 @@ export function getActiveNavTab(pathname: string): NavTab | null {
   if (!groupId) return null;
 
   const rest = pathname.slice(`/groups/${groupId}`.length);
-  if (rest.startsWith('/leaderboard') || rest.startsWith('/awards')) return 'board';
+  // Member records (and their head-to-head comparison) are only ever reached from the
+  // leaderboard/awards pages, never from a market — so the bar should stay on Board rather
+  // than falling through to the generic Markets default.
+  if (rest.startsWith('/leaderboard') || rest.startsWith('/awards') || rest.startsWith('/members')) return 'board';
   return 'markets';
 }

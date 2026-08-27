@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { Mention } from '@/components/ui/Mention';
@@ -15,7 +14,7 @@ import type { MemberProfileData } from '@/lib/memberProfile';
  * See lib/memberProfile.ts for where `data` comes from.
  */
 export function MemberProfileCard({ data }: { data: MemberProfileData }) {
-  const { stats, groupId, groupName, standing, awards, isYou, net, sinceLabel, avatarUpdatedAt, avatarPresetKey, isPublicGroup, hidesPipelineStats } =
+  const { stats, groupName, standing, awards, isYou, net, sinceLabel, avatarUpdatedAt, avatarPresetKey, isPublicGroup, hidesPipelineStats } =
     data;
 
   return (
@@ -39,11 +38,6 @@ export function MemberProfileCard({ data }: { data: MemberProfileData }) {
               {groupName} · here since {sinceLabel}
             </p>
           </div>
-          {isYou && (
-            <Link href={`/profile?group=${groupId}`} className="shrink-0 text-[11.5px] font-bold text-honey-700">
-              Your settings ›
-            </Link>
-          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3 border-t border-espresso-100 pt-4">

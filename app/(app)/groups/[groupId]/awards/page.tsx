@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Mention } from '@/components/ui/Mention';
 import { AwardGlyph } from '@/components/groups/AwardGlyph';
+import { ChevronRightIcon } from '@/components/ui/icons';
 import { EditTitleButton } from '@/components/groups/EditTitleButton';
 import { AwardsRail, UnclaimedTitles } from '@/components/groups/AwardsSections';
 import { LostTitleCard } from '@/components/groups/LostTitleCard';
@@ -197,6 +198,7 @@ export default async function AwardsPage({ params }: { params: Promise<{ groupId
                     />
                     <span className="block text-[11px] font-extrabold text-honey-700">{TITLE_META[key].format(row.stat_value)}</span>
                   </span>
+                  {holderMembershipId && <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-espresso-300" />}
                 </>
               );
               const rowClassName = 'flex flex-1 items-center gap-[11px] rounded-2xl border border-espresso-100 bg-paper-white px-3.5 py-3';
