@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import fs from 'node:fs';
 import path from 'node:path';
+import { CURRENT_POLICY_VERSION } from '../../../lib/legal';
 
 /**
  * Credentials, in increasing order of precedence:
@@ -85,7 +86,12 @@ export async function createTestUsers(testTag: string, tags: string[]): Promise<
 
     // Mirrors the app's own auto-created profile row (no more global
     // username to claim) — nicknames are per-group now, set on join/create.
-    const { error: profileErr } = await adminClient.from('users').insert({ id: data.user.id });
+    // accepted_policy_version is stamped explicitly, same as ensureProfileRow() does for a real
+    // signup, so a test user's row isn't relying on the DB-level default (itself just a safety
+    // net for a raw insert, see 20260830230000) to happen to match today's CURRENT_POLICY_VERSION.
+    const { error: profileErr } = await adminClient
+      .from('users')
+      .insert({ id: data.user.id, accepted_policy_version: CURRENT_POLICY_VERSION });
     if (profileErr) throw new Error(`createTestUsers profile (${tag}): ${profileErr.message}`);
 
     const client = createClient(SUPABASE_URL, ANON_KEY, { auth: { autoRefreshToken: false, persistSession: false } });

@@ -16,7 +16,7 @@ export default async function NotificationSettingsPage() {
       .select('group_id, notify_group, notify_markets, notify_results, notify_admin, groups(name, avatar_key)')
       .eq('user_id', user.id)
       .in('status', ['active', 'dormant']),
-    supabase.from('users').select('notify_nudges, notify_promos').eq('id', user.id).single(),
+    supabase.from('users').select('notify_nudges, notify_promos, marketing_email_opt_in').eq('id', user.id).single(),
   ]);
 
   const groups: GroupNotificationPrefs[] = (memberships ?? []).map((m: any) => ({
@@ -38,6 +38,7 @@ export default async function NotificationSettingsPage() {
         groups={groups}
         notifyNudges={profile?.notify_nudges ?? true}
         notifyPromos={profile?.notify_promos ?? true}
+        marketingEmailOptIn={profile?.marketing_email_opt_in ?? false}
       />
     </main>
   );

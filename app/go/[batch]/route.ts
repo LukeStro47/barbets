@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GOOGLE_PLAY_URL, getAppleAppStoreUrl } from '@/lib/appStores';
 
 // Printed QR codes point at https://mybarbets.com/go/<batch> — that URL is what's on the card,
-// so it must never change. Everything about *where it sends people* (store links, once Apple's
-// listing is live; which fallback while pending) lives here instead, behind env vars, so a store
-// going live or a redirect changing is a config/redeploy, never a reprint.
+// so it must never change. Everything about *where it sends people* (store links; which fallback
+// if a store URL isn't configured) lives here instead, behind env vars, so a store going live or
+// a redirect changing is a config/redeploy, never a reprint.
 //
 // `batch` (e.g. "card") identifies the print run and is forwarded to the Play Store as an install
 // referrer — Android's Play Install Referrer API lets the app read it back after install, which is

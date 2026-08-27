@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { SITE_ORIGIN } from '@/lib/appOrigin';
+import { CURRENT_POLICY_VERSION } from '@/lib/legal';
 
 export interface AuthActionState {
   error?: string;
@@ -46,9 +47,33 @@ async function checkSignupFromApp(): Promise<AuthActionState | null> {
   return { error: `Create your account in the Barbets app. Download it at ${SITE_ORIGIN}/download, then sign up from there.` };
 }
 
-/** Ensures the public.users profile row exists — required before create_group/join_group etc. will work (memberships.user_id is a foreign key into users). Idempotent: a repeat call for an already-onboarded user is a silent no-op. Exported for app/auth/confirm/route.ts, which needs it too for a signup confirmed via the email link rather than the code. */
-export async function ensureProfileRow(supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<void> {
-  await supabase.from('users').upsert({ id: userId }, { onConflict: 'id', ignoreDuplicates: true });
+/** Ensures the public.users profile row exists — required before create_group/join_group etc. will
+ * work (memberships.user_id is a foreign key into users). Idempotent: a repeat call for an
+ * already-onboarded user is a silent no-op (ignoreDuplicates means the insert, marketing consent
+ * and policy stamp included, only ever actually lands on the very first call for a given user).
+ * Exported for app/auth/confirm/route.ts, which needs it too for a signup confirmed via the email
+ * link rather than the code.
+ *
+ * `marketingEmailOptIn` defaults to false (the safe default for signIn()'s call, an existing
+ * account with nothing to opt into) and is otherwise read from the signup form's checkbox — see
+ * signUp() below for why it travels as auth user_metadata rather than a plain argument.
+ * `accepted_policy_version` is always stamped to today's CURRENT_POLICY_VERSION: whoever is
+ * signing up just agreed to whatever's live right now via the same signup checkbox. */
+export async function ensureProfileRow(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  marketingEmailOptIn = false
+): Promise<void> {
+  await supabase.from('users').upsert(
+    {
+      id: userId,
+      marketing_email_opt_in: marketingEmailOptIn,
+      marketing_email_opt_in_at: marketingEmailOptIn ? new Date().toISOString() : null,
+      accepted_policy_version: CURRENT_POLICY_VERSION,
+      accepted_policy_at: new Date().toISOString(),
+    },
+    { onConflict: 'id', ignoreDuplicates: true }
+  );
 }
 
 export async function signUp(_prevState: AuthActionState | null, formData: FormData): Promise<AuthActionState | null> {
@@ -59,10 +84,15 @@ export async function signUp(_prevState: AuthActionState | null, formData: FormD
   const password = String(formData.get('password'));
   const confirmPassword = String(formData.get('confirmPassword'));
   if (password !== confirmPassword) return { error: "Passwords don't match." };
+  const marketingOptIn = formData.get('marketingOptIn') === 'on';
   const captchaToken = String(formData.get('cf-turnstile-response') || '');
   const next = safeNext(formData.get('next'), '/groups');
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({ email, password, options: { captchaToken } });
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { captchaToken, data: { marketing_opt_in: marketingOptIn } },
+  });
   if (error) return { error: error.message };
   if (!data.session) {
     // Email confirmation is required on this Supabase project, so no
@@ -71,7 +101,7 @@ export async function signUp(_prevState: AuthActionState | null, formData: FormD
     // to go check their inbox unassisted.
     return { success: true };
   }
-  await ensureProfileRow(supabase, data.session.user.id);
+  await ensureProfileRow(supabase, data.session.user.id, data.session.user.user_metadata?.marketing_opt_in === true);
   await supabase.rpc('record_signup');
   redirect(next);
 }
@@ -89,7 +119,7 @@ export async function confirmSignup(_prevState: AuthActionState | null, formData
   const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'signup' });
   if (error) return { error: error.message };
   if (!data.user) return { error: 'Something went wrong confirming that code, try again.' };
-  await ensureProfileRow(supabase, data.user.id);
+  await ensureProfileRow(supabase, data.user.id, data.user.user_metadata?.marketing_opt_in === true);
   await supabase.rpc('record_signup');
   redirect(next);
 }

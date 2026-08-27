@@ -37,6 +37,18 @@ export async function updateNotificationCategories(input: {
   return { data: null };
 }
 
+/** The signup checkbox's later off-ramp: marketing_email_opt_in is captured once at signup (see
+ * lib/actions/auth.ts's ensureProfileRow) but has to stay changeable afterward, same as any other
+ * consent toggle. Its own RPC/timestamp rather than folded into updateNotificationCategories,
+ * since it's a distinct channel (email, not push) with no delivery pipeline built yet. */
+export async function updateMarketingEmailOptIn(optIn: boolean): Promise<ActionResult<null>> {
+  const supabase = await createClient();
+  const result = await runRpc<unknown>(await supabase.rpc('update_marketing_email_opt_in', { p_opt_in: optIn }));
+  if (result.error) return { error: result.error };
+  revalidatePath('/profile/notifications');
+  return { data: null };
+}
+
 export async function updateGroupNotificationPrefs(
   groupId: string,
   input: { notifyGroup: boolean; notifyMarkets: boolean; notifyResults: boolean; notifyAdmin: boolean }

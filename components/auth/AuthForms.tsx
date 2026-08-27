@@ -36,6 +36,7 @@ export function SignInForm({ next }: { next?: string }) {
 export function SignUpForm({ next }: { next?: string }) {
   const [state, formAction, isPending] = useActionState(signUp, null);
   const [agreed, setAgreed] = useState(false);
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [email, setEmail] = useState('');
   if (state?.success) {
     return <ConfirmEmailForm email={email} next={next} />;
@@ -113,6 +114,31 @@ export function SignUpForm({ next }: { next?: string }) {
             Privacy policy
           </a>
           , including not posting abusive content.
+        </span>
+      </label>
+
+      {/* Optional and separate from the terms checkbox above: agreeing to the terms is required to
+          create an account, hearing from us by email is not, and folding the two into one checkbox
+          would make agreeing to the terms read as agreeing to marketing too. Unchecked by default,
+          an explicit opt-in rather than an opt-out. */}
+      <label className="mt-3 flex items-start gap-3 rounded-2xl border border-espresso-100 bg-paper-white px-4 py-3.5">
+        <input
+          type="checkbox"
+          name="marketingOptIn"
+          checked={marketingOptIn}
+          onChange={(e) => setMarketingOptIn(e.target.checked)}
+          className="peer sr-only"
+        />
+        <span
+          aria-hidden
+          className={`mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-espresso-900 peer-focus-visible:ring-2 peer-focus-visible:ring-honey-400 ${
+            marketingOptIn ? 'border-honey-500 bg-honey-500' : 'border-espresso-200 bg-paper-white'
+          }`}
+        >
+          {marketingOptIn && <CheckIcon className="h-3.5 w-3.5" />}
+        </span>
+        <span className="text-[13px]/[19px] text-espresso-400">
+          Email me about new features and other Barbets news. You can turn this off any time in your profile.
         </span>
       </label>
 

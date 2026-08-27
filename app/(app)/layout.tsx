@@ -4,7 +4,9 @@ import { BottomNavSpacer } from '@/components/layout/BottomNavSpacer';
 import { PullToRefresh } from '@/components/layout/PullToRefresh';
 import { PageTransition } from '@/components/layout/PageTransition';
 import { PushReminderModal } from '@/components/pwa/PushReminderModal';
+import { PolicyReapprovalGate } from '@/components/legal/PolicyReapprovalGate';
 import { getGroupTaskCounts } from '@/lib/tasks';
+import { CURRENT_POLICY_VERSION } from '@/lib/legal';
 
 export default async function AppLayout({ children, modal }: { children: React.ReactNode; modal: React.ReactNode }) {
   const supabase = await createClient();
@@ -17,6 +19,12 @@ export default async function AppLayout({ children, modal }: { children: React.R
   // (touch_last_active only writes if the existing stamp is missing or >15 minutes old), so this
   // is safe to call unconditionally on every authenticated page load.
   await supabase.rpc('touch_last_active');
+
+  // See lib/legal.ts and components/legal/PolicyReapprovalGate.tsx: a version mismatch means the
+  // Terms/Privacy policy changed since this user last agreed, and every page below is blocked
+  // until they explicitly re-accept.
+  const { data: policyRow } = await supabase.from('users').select('accepted_policy_version').eq('id', user.id).single();
+  const needsPolicyReapproval = policyRow?.accepted_policy_version !== CURRENT_POLICY_VERSION;
 
   const { data: groupRows } = await supabase
     .from('groups')
@@ -105,6 +113,7 @@ export default async function AppLayout({ children, modal }: { children: React.R
           being `sticky` with its own background. Safe on an iOS notch/Dynamic Island too — it's
           driven by the same env(safe-area-inset-top) value either way, just persistent now. */}
       <div aria-hidden="true" className="fixed inset-x-0 top-0 z-30 h-[env(safe-area-inset-top)] bg-paper" />
+      {needsPolicyReapproval && <PolicyReapprovalGate />}
       <PushReminderModal />
       <PullToRefresh>
         <PageTransition>

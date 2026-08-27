@@ -25,7 +25,9 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
     if (!error) {
-      if (type === 'signup' && data.user) await ensureProfileRow(supabase, data.user.id);
+      if (type === 'signup' && data.user) {
+        await ensureProfileRow(supabase, data.user.id, data.user.user_metadata?.marketing_opt_in === true);
+      }
       redirect(safeNext);
     }
   }
