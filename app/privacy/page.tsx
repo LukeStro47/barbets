@@ -12,7 +12,7 @@ import { CONTACT_EMAIL } from '@/lib/appOrigin';
 const sections = [
   {
     title: 'What we collect',
-    body: 'Your email and password (for signing in), a nickname per group you join, and your betting/group activity within Barbets: bets placed, markets created, group memberships, and the resulting token balances. All of it is functional data needed to run the app, not collected for advertising.',
+    body: "Your email and password (for signing in), a nickname per group you join, and your betting/group activity within Barbets: bets placed, markets created, group memberships, and the resulting token balances. All of it is functional data needed to run the app, not collected for advertising. If you opt in at signup, we'll also use your email to send you occasional Barbets news. You can turn that off any time from your profile.",
   },
   {
     title: 'Push notifications',
@@ -40,7 +40,7 @@ const sections = [
   },
   {
     title: 'Changes to this policy',
-    body: "If this policy changes in a way that matters, we'll update this page. Continued use of Barbets after a change means you accept the update.",
+    body: "If this policy changes in a way that matters, we'll update this page, and ask you to explicitly agree to the update the next time you open the app before you can keep using it.",
   },
 ];
 

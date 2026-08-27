@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { updateGroupNotificationPrefs, updateNotificationCategories } from '@/lib/actions/profile';
+import { updateGroupNotificationPrefs, updateMarketingEmailOptIn, updateNotificationCategories } from '@/lib/actions/profile';
 import { usePushSubscription } from '@/components/pwa/usePushSubscription';
 import { Switch } from '@/components/ui/Switch';
 import { GroupAvatar } from '@/components/ui/GroupAvatar';
@@ -163,14 +163,17 @@ export function NotificationPreferences({
   groups,
   notifyNudges: initialNudges,
   notifyPromos: initialPromos,
+  marketingEmailOptIn: initialMarketingEmailOptIn,
 }: {
   groups: GroupNotificationPrefs[];
   notifyNudges: boolean;
   notifyPromos: boolean;
+  marketingEmailOptIn: boolean;
 }) {
   const [groupPrefs, setGroupPrefs] = useState(groups);
   const [notifyNudges, setNotifyNudges] = useState(initialNudges);
   const [notifyPromos, setNotifyPromos] = useState(initialPromos);
+  const [marketingEmailOptIn, setMarketingEmailOptIn] = useState(initialMarketingEmailOptIn);
   const [expandedGroupId, setExpandedGroupId] = useState<string | null>(groups[0]?.groupId ?? null);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -203,6 +206,19 @@ export function NotificationPreferences({
       if (result.error) {
         setNotifyNudges(previous.nudges);
         setNotifyPromos(previous.promos);
+        setError(result.error);
+      }
+    });
+  }
+
+  function saveMarketingEmailOptIn(next: boolean) {
+    const previous = marketingEmailOptIn;
+    setMarketingEmailOptIn(next);
+    setError(null);
+    startTransition(async () => {
+      const result = await updateMarketingEmailOptIn(next);
+      if (result.error) {
+        setMarketingEmailOptIn(previous);
         setError(result.error);
       }
     });
@@ -255,6 +271,16 @@ export function NotificationPreferences({
               </span>
             </span>
             <Switch checked={notifyPromos} onChange={() => saveCategories(notifyNudges, !notifyPromos)} />
+          </div>
+          <div className="flex items-start gap-3 border-t border-espresso-100 py-3.5">
+            <span className="min-w-0 flex-1">
+              <span className="block text-[13.5px] font-extrabold text-espresso-800">By email</span>
+              <span className="mt-0.5 block text-[11.5px] leading-[1.45] text-espresso-400">
+                The same kind of news from Barbets, sent to your email instead of a push. Off unless you opted in when
+                you signed up.
+              </span>
+            </span>
+            <Switch checked={marketingEmailOptIn} onChange={() => saveMarketingEmailOptIn(!marketingEmailOptIn)} />
           </div>
         </div>
       </div>

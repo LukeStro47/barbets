@@ -38,7 +38,7 @@ const sections = [
   },
   {
     title: 'Changes to these terms',
-    body: "If these terms change in a way that matters, we'll update this page. Continued use of Barbets after a change means you accept the update.",
+    body: "If these terms change in a way that matters, we'll update this page, and ask you to explicitly agree to the update the next time you open the app before you can keep using it.",
   },
 ];
 
