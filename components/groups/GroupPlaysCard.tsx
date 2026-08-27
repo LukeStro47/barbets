@@ -15,16 +15,12 @@ export function seasonLabel(season: ActiveSeasonSummary): string {
   return season.name ? `Season ${season.number}, ${season.name}` : `Season ${season.number}`;
 }
 
-/** The short "Season 2" form, for the middle of a sentence. */
-function seasonShortLabel(season: ActiveSeasonSummary): string {
-  return `Season ${season.number}`;
-}
-
 /**
- * The eight rows that say how a group plays, identical in structure for the owner and for a member
- * and differing only in person: an owner reads about what members can do, a member reads about what
- * *they* can do. Two copies of the same list would drift the moment one of them was edited, so the
- * person is a parameter rather than a second component.
+ * The eight rows that say how a group plays, identical for the owner and for a member — the
+ * copy used to switch person ("members can..." vs "you can...") depending on who was looking,
+ * which doubled the sentences to maintain for no real gain in clarity. Kept terse and universal
+ * now; `isOwner` still branches the couple of rows where the actual meaning differs by role
+ * (who ends a manual season, whose name appears as the setter elsewhere on the settings page).
  *
  * Nothing here is a control. Editing lives at /groups/[groupId]/settings/edit, which shows the same
  * list with the right-hand side swapped for inputs.
@@ -45,8 +41,6 @@ export function GroupPlaysCard({
       allocation and time zone rather than a wall of permanently-fixed rows. */
   isPublic?: boolean;
 }) {
-  const you = !isOwner;
-
   // Betting: for a seasons-enabled group the season's own switch is the real gate, and
   // settings.betting_enabled stops mattering entirely once the first season starts.
   let bettingValue: string;
@@ -54,24 +48,20 @@ export function GroupPlaysCard({
   if (settings.seasons_enabled) {
     if (!season) {
       bettingValue = 'Between seasons';
-      bettingConsequence = 'Nothing can be started or bet on until the next season begins.';
+      bettingConsequence = 'No one can start a market until the next season begins';
     } else if (season.bettingOpen) {
       bettingValue = 'Open';
-      bettingConsequence = `${seasonShortLabel(season)} is live, so ${you ? 'you' : 'anyone'} can start a market.`;
+      bettingConsequence = 'Anyone can start a market';
     } else {
       bettingValue = 'Not open yet';
-      bettingConsequence = isOwner
-        ? `${seasonShortLabel(season)} has started, but betting is still paused. Open it from the group page.`
-        : `${seasonShortLabel(season)} has started, but the owner hasn't opened betting yet.`;
+      bettingConsequence = 'No one can start a market yet';
     }
   } else if (settings.betting_enabled) {
     bettingValue = 'Open';
-    bettingConsequence = `${you ? 'You' : 'Anyone'} can start a market.`;
+    bettingConsequence = 'Anyone can start a market';
   } else {
     bettingValue = 'Not open yet';
-    bettingConsequence = isOwner
-      ? "Nobody can start a market until you turn betting on. That switch only goes one way."
-      : 'Nobody can start a market until the owner turns betting on.';
+    bettingConsequence = 'No one can start a market';
   }
 
   const seasonsValue = settings.seasons_enabled
@@ -86,15 +76,7 @@ export function GroupPlaysCard({
 
   return (
     <SettingsCard>
-      <SettingRow
-        label="Token allocation"
-        consequence={
-          isOwner
-            ? 'What each member starts with. Never touches a current balance.'
-            : 'What you started with. Everyone got the same.'
-        }
-        value={formatTokens(settings.seed_amount)}
-      />
+      <SettingRow label="Token allocation" consequence="What each new member starts with" value={formatTokens(settings.seed_amount)} />
       {!isPublic && (
         <SettingRow
           label="Betting"
@@ -105,13 +87,7 @@ export function GroupPlaysCard({
       {!isPublic && (
         <SettingRow
           label="Endorsement"
-          consequence={
-            settings.require_endorsement
-              ? isOwner
-                ? 'A second member has to endorse a market before betting opens.'
-                : 'Someone else has to endorse your market before betting opens.'
-              : "Markets open for betting the moment they're created."
-          }
+          consequence={settings.require_endorsement ? 'Markets need a second to open' : 'Markets open when created'}
           value={settings.require_endorsement ? 'Required' : 'Not needed'}
         />
       )}
@@ -120,8 +96,8 @@ export function GroupPlaysCard({
           label="Hedging"
           consequence={
             settings.allow_hedged_bets
-              ? `${you ? 'You' : 'Members'} can back more than one side of the same market.`
-              : `${you ? 'You hold' : 'Members hold'} one side per market. Adding to that same side is still fine.`
+              ? 'Members can bet on more than one side of a market'
+              : 'Members can only bet on one side of a market'
           }
           value={settings.allow_hedged_bets ? 'Allowed' : 'One side only'}
         />
@@ -131,10 +107,8 @@ export function GroupPlaysCard({
           label="When nobody calls it"
           consequence={
             settings.distribute_payout
-              ? `The market's creator takes ${settings.creator_payout_pct}%, and the rest tops up the group's other open markets.`
-              : you
-                ? 'You get your stake back.'
-                : 'Every stake goes back to whoever placed it.'
+              ? `The market's creator takes ${settings.creator_payout_pct}% and the rest goes to open markets`
+              : 'Bets get refunded'
           }
           value={settings.distribute_payout ? 'Split' : 'Refunded'}
         />
@@ -142,28 +116,20 @@ export function GroupPlaysCard({
       {!isPublic && (
         <SettingRow
           label="Challenge window"
-          consequence={
-            isOwner
-              ? 'How long a called result can be disputed, and how long a vote runs.'
-              : 'How long you have to dispute a called result.'
-          }
+          consequence="How long a resolution can be challenged for, and how long the vote runs"
           value={`${settings.resolution_window_hours} ${settings.resolution_window_hours === 1 ? 'hour' : 'hours'}`}
         />
       )}
       {!isPublic && (
         <SettingRow
           label="Seasons"
-          consequence={
-            settings.seasons_enabled
-              ? 'Standings archive to Awards, then everyone is reseeded.'
-              : 'The board never resets. One running total, forever.'
-          }
+          consequence={settings.seasons_enabled ? 'Standings archive, then everyone is reseeded' : 'The board never resets'}
           value={seasonsValue}
         />
       )}
       <SettingRow
         label="Time zone"
-        consequence="Shown beside every betting-closes time."
+        consequence="Shown next to every closing time"
         value={friendlyTimezoneName(settings.timezone).replace(/ time$/, '')}
       />
     </SettingsCard>

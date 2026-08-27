@@ -30,19 +30,9 @@ export default async function EditGroupSettingsPage({ params }: { params: Promis
   const { data: settings } = await supabase.from('group_settings').select('*').eq('group_id', groupId).single();
   notFoundIfEmpty(settings);
 
-  const { data: activeSeasonRow } = (settings as GroupSettings).seasons_enabled
-    ? await supabase.from('seasons').select('id, number, name').eq('group_id', groupId).eq('status', 'active').maybeSingle()
-    : { data: null };
-
   return (
     <main className="mx-auto max-w-lg px-5 pb-7 pt-[30px]">
-      <EditSettingsForm
-        groupId={groupId}
-        groupName={group!.name}
-        settings={settings as GroupSettings}
-        isPublic={group!.is_public}
-        activeSeason={activeSeasonRow ?? null}
-      />
+      <EditSettingsForm groupId={groupId} groupName={group!.name} settings={settings as GroupSettings} isPublic={group!.is_public} />
     </main>
   );
 }

@@ -183,6 +183,7 @@ export default async function LeaderboardPage({
           <Mention nickname={leader.nickname} className="mt-0.5 block truncate text-[19px] font-extrabold tracking-[-0.015em] text-paper-white" />
           <span className="mt-0.5 block text-xs text-paper-white/55">{formatTokens(leader.balance)} tokens</span>
         </span>
+        <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-paper-white/40" />
       </Link>
       <div className="relative mt-[15px] flex gap-3 border-t border-white/10 pt-3.5">
         <span className="flex-1">
@@ -253,6 +254,7 @@ export default async function LeaderboardPage({
                 <span className="shrink-0 font-display text-[15px] font-extrabold tabular-nums text-espresso-900">
                   {formatTokens(m.balance)}
                 </span>
+                <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-espresso-300" />
               </Link>
             </div>
           );

@@ -102,6 +102,63 @@ describe('get_head_to_head_markets', () => {
     }
   });
 
+  test('shows the season that just ended, not the empty upcoming one, once intermission starts', async () => {
+    // Regression test for the bug fixed in 20260830200000: _finalize_season() inserts the next,
+    // higher-numbered 'intermission' season row the instant the active one archives, so "most
+    // recent season by number" resolves to that brand-new empty season during intermission. This
+    // reproduces exactly that sequence and checks the shared market from the season that just
+    // ended still shows up.
+    const seasonUsers = await createTestUsers('h2hseason', ['owner', 'sponsor', 'a', 'b']);
+    try {
+      const seasonGroup = await setupGroup(seasonUsers.owner, [seasonUsers.sponsor, seasonUsers.a, seasonUsers.b], {
+        seedAmount: 1000,
+        seasonsEnabled: true,
+      });
+
+      const market = await createMarket(seasonUsers.owner, seasonGroup.id, { closesInMs: 60000 });
+      await seasonUsers.sponsor.client.rpc('sponsor_market', { p_market_id: market.id });
+      await fastForwardCloseTime(market.id, 60000);
+      await seasonUsers.a.client.rpc('place_bet', { p_market_id: market.id, p_side: 'yes', p_amount: 100 });
+      await seasonUsers.b.client.rpc('place_bet', { p_market_id: market.id, p_side: 'no', p_amount: 50 });
+
+      await seasonUsers.sponsor.client.rpc('propose_resolution', {
+        p_market_id: market.id,
+        p_outcome: 'yes',
+        p_justification: null,
+        p_actual_value: null,
+      });
+      await backdate('resolution_proposals', 'market_id', market.id, 'proposed_at', 9);
+      await adminClient.rpc('finalize_market', { p_market_id: market.id });
+
+      // Nothing left in flight, so this archives the season and opens the next (intermission)
+      // one in the same call — see _end_season().
+      const { error: endErr } = await seasonUsers.owner.client.rpc('end_season', { p_group_id: seasonGroup.id });
+      expect(endErr).toBeNull();
+
+      const { data: intermissionSeason } = await adminClient
+        .from('seasons')
+        .select('id')
+        .eq('group_id', seasonGroup.id)
+        .eq('status', 'intermission')
+        .single();
+      expect(intermissionSeason).toBeTruthy();
+
+      const aId = await membershipId(seasonGroup.id, seasonUsers.a.id);
+      const bId = await membershipId(seasonGroup.id, seasonUsers.b.id);
+      const { data, error } = await seasonUsers.owner.client.rpc('get_head_to_head_markets', {
+        p_membership_id_a: aId,
+        p_membership_id_b: bId,
+      });
+      expect(error).toBeNull();
+      const rows = data as HeadToHeadMarket[];
+      expect(rows).toHaveLength(1);
+      expect(rows[0].a_choice).toBe('yes');
+      expect(rows[0].b_choice).toBe('no');
+    } finally {
+      await cleanupTestUsers(seasonUsers);
+    }
+  });
+
   test('a removed member cannot be compared', async () => {
     const removable = await createTestUsers('h2hrm', ['toremove']);
     try {

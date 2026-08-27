@@ -97,10 +97,13 @@ export function CompareMemberPicker({
                   <button
                     key={m.id}
                     type="button"
-                    className="flex w-full items-center rounded-xl px-3 py-2.5 text-left hover:bg-espresso-50"
+                    className="flex w-full min-w-0 items-center rounded-xl px-3 py-2.5 text-left hover:bg-espresso-50"
                     onClick={() => pick(m)}
                   >
-                    <Mention nickname={m.id === meMembershipId ? 'me' : m.nickname} className="font-semibold text-espresso-900" />
+                    <Mention
+                      nickname={m.id === meMembershipId ? 'me' : m.nickname}
+                      className="block min-w-0 flex-1 truncate font-semibold text-espresso-900"
+                    />
                   </button>
                 ))}
               </div>

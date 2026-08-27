@@ -75,14 +75,11 @@ export function EditSettingsForm({
   groupName,
   settings,
   isPublic,
-  activeSeason,
 }: {
   groupId: string;
   groupName: string;
   settings: GroupSettings;
   isPublic: boolean;
-  /** The group's current active season, so its name can be edited from here instead of the group hub. Null for a seasons-off group, or while between seasons (there's no active season to rename yet — see SeasonSetupEditSheet for naming the one about to start). */
-  activeSeason: { id: string; number: number; name: string | null } | null;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -423,19 +420,6 @@ export function EditSettingsForm({
                     )}
                   </>
                 )}
-              </div>
-            )}
-
-            {activeSeason && (
-              <div className={rowClasses}>
-                <span className={rowLabelClasses}>Season name</span>
-                <p className={`mb-2 mt-0.5 ${rowHelpClasses}`}>What this season is called on the group page and in Awards.</p>
-                <SeasonNameEditor
-                  groupId={groupId}
-                  seasonId={activeSeason.id}
-                  currentName={activeSeason.name}
-                  seasonNumber={activeSeason.number}
-                />
               </div>
             )}
 

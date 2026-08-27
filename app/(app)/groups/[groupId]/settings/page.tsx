@@ -3,10 +3,12 @@ import { createClient, requireUser } from '@/lib/supabase/server';
 import { notFoundIfEmpty } from '@/lib/errors';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SettingsCard, SettingRow, SectionLabel } from '@/components/ui/SettingsList';
-import { InviteCodeActions, RemoveMemberButton, OwnerOnlySection } from '@/components/groups/SettingsActions';
+import { InviteCodeActions, OwnerOnlySection } from '@/components/groups/SettingsActions';
 import { MemberSearchBan } from '@/components/groups/MemberSearchBan';
+import { MemberRosterList } from '@/components/groups/MemberRosterList';
 import { GroupPlaysCard, seasonLabel, type ActiveSeasonSummary } from '@/components/groups/GroupPlaysCard';
 import { GroupIdentitySheet } from '@/components/groups/GroupIdentitySheet';
+import { SeasonNameEditor } from '@/components/groups/SeasonNameEditor';
 import { NicknameEditor } from '@/components/groups/NicknameEditor';
 import { LeaveGroupButton } from '@/components/groups/LeaveGroupButton';
 import { GroupDeletionBanner } from '@/components/groups/GroupDeletionBanner';
@@ -49,16 +51,12 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
   const isModerator = myMembership?.role === 'moderator';
   const canBan = isOwner || (isPublic && isModerator);
   const canEditSettings = isOwner || (isPublic && isModerator);
-  const metaLine = [
-    // Member count used to open this line and, alongside a named season, regularly overflowed it
-    // — it's still shown by its own "Members · N" section heading further down, so dropping it
-    // here loses nothing.
-    season ? seasonLabel(season) : null,
-    // A light mention rather than a header pill — the settings heading itself takes that spot now.
-    isOwner ? 'Owner' : isModerator ? 'Moderator' : null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  // A light mention rather than a header pill — the settings heading itself takes that spot now.
+  const roleLabel = isOwner ? 'Owner' : isModerator ? 'Moderator' : null;
+  // Member count used to open this line and, alongside a named season, regularly overflowed it
+  // — it's still shown by its own "Members · N" section heading further down, so dropping it
+  // here loses nothing.
+  const metaLine = [season ? seasonLabel(season) : null, roleLabel].filter(Boolean).join(' · ');
 
   return (
     <main className="mx-auto flex max-w-lg flex-col gap-[26px] px-5 pb-7 pt-[30px]">
@@ -79,7 +77,25 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
         />
         <div className="min-w-0 flex-1">
           <p className="truncate font-display text-[17px] font-extrabold tracking-[-0.01em] text-espresso-950">{group!.name}</p>
-          <p className="mt-px truncate text-[12.5px] text-espresso-400">{metaLine}</p>
+          {/* Owner with an active season gets the same inline pencil-edit affordance the group
+              name/logo row does, right here at the top of the page, rather than the name only
+              being renameable two taps deep inside "Edit how this group plays" or as a side
+              effect of ending the season. */}
+          {isOwner && season && activeSeasonRow ? (
+            <div className="mt-px flex min-w-0 items-center gap-1 text-[12.5px] text-espresso-400">
+              <SeasonNameEditor
+                groupId={groupId}
+                seasonId={activeSeasonRow.id}
+                currentName={season.name}
+                seasonNumber={season.number}
+                className="min-w-0"
+                nameClassName="block min-w-0 truncate text-[12.5px] text-espresso-400"
+              />
+              {roleLabel && <span className="shrink-0">· {roleLabel}</span>}
+            </div>
+          ) : (
+            <p className="mt-px truncate text-[12.5px] text-espresso-400">{metaLine}</p>
+          )}
         </div>
         {isOwner && <GroupIdentitySheet groupId={groupId} groupName={group!.name} avatarKey={group!.avatar_key} />}
       </div>
@@ -112,29 +128,18 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
                     {group!.invite_code}
                   </span>
                 </div>
-                <p className="mt-[3px] text-xs leading-[1.45] text-espresso-400">
-                  Rotates automatically whenever you remove a member.
-                </p>
                 <InviteCodeActions groupId={groupId} inviteCode={group!.invite_code} canRegenerate />
               </div>
               {groupSettings && (
                 <>
                   <SettingRow
                     label="Accepting new members"
-                    consequence={
-                      groupSettings.accepting_members
-                        ? 'Anyone holding the code can join.'
-                        : 'The code stays live, but nobody new can join with it.'
-                    }
+                    consequence={groupSettings.accepting_members ? 'Anyone can join with the code' : 'No one can join with the code'}
                     value={groupSettings.accepting_members ? 'Yes' : 'Paused'}
                   />
                   <SettingRow
                     label="Join message"
-                    consequence={
-                      groupSettings.join_message
-                        ? 'Shown to a new member the moment they finish joining.'
-                        : 'Nothing shows when someone new joins.'
-                    }
+                    consequence={groupSettings.join_message ? 'Shown when someone joins' : 'Nothing shown when someone joins'}
                     value={groupSettings.join_message ? 'Set' : 'None'}
                   />
                 </>
@@ -150,11 +155,6 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
                   {group!.invite_code}
                 </span>
               </div>
-              <p className="mt-[3px] text-xs leading-[1.45] text-espresso-400">
-                {groupSettings && !groupSettings.accepting_members
-                  ? "This group isn't accepting new members right now."
-                  : 'Share this with anyone the group wants in.'}
-              </p>
               <InviteCodeActions groupId={groupId} inviteCode={group!.invite_code} canRegenerate={false} />
             </div>
           </SettingsCard>
@@ -206,20 +206,17 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
           />
         ) : (
           <SettingsCard>
-            {roster.map((m) => (
-              <div key={m.user_id} className="flex items-center justify-between gap-3 px-4 py-3">
-                <span className="min-w-0 truncate text-sm text-espresso-800">
-                  <Mention nickname={m.nickname ?? ''} className="font-semibold" />
-                  {m.user_id === group!.owner_id && <span className="ml-1.5 text-[11.5px] font-bold text-honey-700">owner</span>}
-                  {m.status === 'dormant' && <span className="ml-1.5 text-[11.5px] text-espresso-400">dormant</span>}
-                </span>
-                {isOwner && m.user_id !== group!.owner_id ? (
-                  <RemoveMemberButton groupId={groupId} userId={m.user_id} nickname={m.nickname ?? ''} />
-                ) : m.user_id === user?.id ? (
-                  <span className="shrink-0 text-[12.5px] text-espresso-300">you</span>
-                ) : null}
-              </div>
-            ))}
+            <MemberRosterList
+              groupId={groupId}
+              canRemove={isOwner}
+              members={roster.map((m) => ({
+                userId: m.user_id,
+                nickname: m.nickname ?? '',
+                isOwner: m.user_id === group!.owner_id,
+                isDormant: m.status === 'dormant',
+                isYou: m.user_id === user?.id,
+              }))}
+            />
           </SettingsCard>
         )}
       </section>
