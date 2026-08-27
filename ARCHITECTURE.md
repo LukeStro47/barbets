@@ -154,7 +154,7 @@ lib/
   betaGate.ts          — the beta access gate's on/off flag, code, and cookie name
   mobileGate.ts        — MobileAppGate's exemption-path list and mobile-browser UA check. See
                          "Domains and the mybarbets.com split" under Deployment
-  appStores.ts         — GOOGLE_PLAY_URL / getAppleAppStoreUrl(), shared by MobileAppGate and the
+  appStores.ts         — GOOGLE_PLAY_URL / APPLE_APP_STORE_URL, shared by MobileAppGate and the
                          printed-QR redirect (app/go/[batch]/route.ts)
   legal.ts             — CURRENT_POLICY_VERSION, the one thing that has to change to trigger a
                          reapproval prompt for the Terms/Privacy policy. See "Policy reapproval"

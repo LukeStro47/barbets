@@ -7,9 +7,6 @@
 // (a print run's batch id vs. a fixed "mobile_gate" tag) — this only owns the base destination.
 export const GOOGLE_PLAY_URL = 'https://play.google.com/store/apps/details?id=com.mybarbets.app';
 
-/** Set once Apple's own review cleared (live as of 2026-08-27). Server-only (not NEXT_PUBLIC_):
- * every caller that needs it renders on the server and passes the resolved string down, so the
- * env var itself never has to be exposed to the client bundle. */
-export function getAppleAppStoreUrl(): string | undefined {
-  return process.env.APPLE_APP_STORE_URL;
-}
+// Both listings are live now, so there is no pending/fallback state left to gate behind an env
+// var. Matches lib/stores.ts in the barbets-www project.
+export const APPLE_APP_STORE_URL = 'https://apps.apple.com/us/app/barbets-bet-with-friends/id6793625147';
