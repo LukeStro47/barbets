@@ -4,10 +4,13 @@ import { type NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { ensureProfileRow } from '@/lib/actions/auth';
 
-/** The target of the link in both the Reset Password and Confirm signup email templates
-    (customized in the Supabase dashboard to point here with token_hash/type/next instead of the
-    default {{ .ConfirmationURL }} — see ARCHITECTURE.md: this app's Supabase project's flows use
-    verifyOtp, not the PKCE code-exchange pattern). verifyOtp establishes a real session either
+/** The target of the link in the Reset Password email template (customized in the Supabase
+    dashboard to point here with token_hash/type/next instead of the default {{ .ConfirmationURL }}
+    — see ARCHITECTURE.md: this app's Supabase project's flows use verifyOtp, not the PKCE
+    code-exchange pattern). The Confirm signup template no longer carries a link at all (code
+    only, entered via ConfirmEmailForm/confirmSignup()), but this route still handles
+    type=signup too — belt-and-braces for anyone who still has an old confirmation email sitting
+    unread in their inbox from before that change. verifyOtp establishes a real session either
     way, but only a signup needs a profile row created (a recovery's user already has one, and
     ensureProfileRow is an idempotent no-op for them). Without this route, the default
     {{ .ConfirmationURL }} verifies against Supabase's own /auth/v1/verify endpoint and redirects
@@ -18,7 +21,7 @@ export async function GET(request: NextRequest) {
   const tokenHash = searchParams.get('token_hash');
   const type = searchParams.get('type') as EmailOtpType | null;
   const next = searchParams.get('next');
-  const defaultNext = type === 'recovery' ? '/reset-password' : '/groups';
+  const defaultNext = type === 'recovery' ? '/reset-password' : '/demo';
   const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : defaultNext;
 
   if (tokenHash && type) {
