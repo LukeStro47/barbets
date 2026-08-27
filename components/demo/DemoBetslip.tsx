@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { cn } from '@/lib/cn';
 import { formatTokens } from '@/lib/formatNumber';
-import type { DemoSide } from '@/lib/demoScenario';
+import { resolveDemoBet, type DemoSide } from '@/lib/demoScenario';
 
 const CHIP_AMOUNTS = [25, 50, 100];
 
@@ -35,7 +35,7 @@ export function DemoBetslip({
   const [confirmed, setConfirmed] = useState<{ side: DemoSide; amount: number } | null>(null);
 
   const amountNum = amount === '' ? 0 : Number(amount);
-  const balanceAfter = Math.max(0, balance - amountNum);
+  const previewPayout = amountNum > 0 ? resolveDemoBet(side, amountNum).payout : 0;
 
   function submit() {
     onClose();
@@ -142,8 +142,8 @@ export function DemoBetslip({
                   </span>
                 </div>
                 <div className="flex items-baseline justify-between">
-                  <span className="text-sm text-white/55">Balance after</span>
-                  <span className="text-sm font-extrabold text-paper-white">{formatTokens(balanceAfter)} tokens</span>
+                  <span className="text-sm text-white/55">If {side.toUpperCase()} happens</span>
+                  <span className="text-sm font-extrabold text-paper-white">{formatTokens(previewPayout)} back at these odds</span>
                 </div>
               </div>
 

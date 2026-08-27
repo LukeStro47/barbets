@@ -5,7 +5,6 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/Button';
 import { InviteCodeBoxes } from '@/components/groups/InviteCodeBoxes';
-import { OnboardingCarousel } from '@/components/groups/OnboardingCarousel';
 import { StartGroupButton } from '@/components/groups/StartGroupButton';
 import { ChevronRightIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/cn';
@@ -101,8 +100,17 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
 
       {!hasGroups ? (
         <div className="space-y-3">
-          <OnboardingCarousel />
-          <EmptyState title="No groups yet" subtitle="Start one, or join with a friend's invite code below." />
+          <EmptyState
+            title="No groups yet"
+            subtitle="Start one, or join with a friend's invite code below."
+            action={
+              <Link href="/demo" className="block">
+                <Button size="lg" variant="accent" className="w-full">
+                  Try a live demo
+                </Button>
+              </Link>
+            }
+          />
         </div>
       ) : (
         <>
