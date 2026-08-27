@@ -18,7 +18,6 @@ import { SeasonMarketsArchiveCard } from '@/components/groups/SeasonMarketsArchi
 import { SeasonNumbersCard } from '@/components/groups/SeasonNumbersCard';
 import { SeasonHighlightsCard, type SnapshotHighlight } from '@/components/groups/SeasonHighlightsCard';
 import { MemberTitleCard } from '@/components/groups/MemberTitleCard';
-import { SeasonNameEditor } from '@/components/groups/SeasonNameEditor';
 import { WhatsNextCard } from '@/components/groups/WhatsNextCard';
 import { WindingDownCard } from '@/components/groups/WindingDownCard';
 import { Mention } from '@/components/ui/Mention';
@@ -292,9 +291,12 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
   // winding-down notice replaced by WindingDownCard.
   // ---------------------------------------------------------------------
   const { tasks } = await getGroupTasks(supabase, groupId, user.id);
+  // Scoped to the current season once seasons are on, so a market settled before the season
+  // changed doesn't linger in the Settled tab after the fact — it's still reachable, just from
+  // the intermission recap's season archive instead (see SeasonMarketsArchiveCard/`/seasons`).
   const [{ buckets, pendingTokens }, settledPage] = await Promise.all([
     getActiveMarkets(supabase, groupId, user.id),
-    getSettledMarkets(supabase, groupId, user.id),
+    getSettledMarkets(supabase, groupId, user.id, null, season?.id),
   ]);
 
   let windingDown: React.ReactNode = null;
@@ -333,17 +335,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
         <GroupHeader groupId={groupId} group={group!} isOwner={isOwner} />
         {season && season.status === 'active' && (
           <div className="flex items-center gap-2 text-[13px] font-medium text-espresso-400">
-            {isOwner ? (
-              <SeasonNameEditor
-                groupId={groupId}
-                seasonId={season.id}
-                currentName={season.name}
-                seasonNumber={season.number}
-                nameClassName="text-[13px] font-medium text-espresso-400"
-              />
-            ) : (
-              <span>{season.name ?? `Season ${season.number}`}</span>
-            )}
+            <span>{season.name ?? `Season ${season.number}`}</span>
             {season.ends_at && (
               <>
                 <span className="h-1 w-1 shrink-0 rounded-full bg-espresso-300" />
@@ -413,6 +405,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
           challenged={buckets.challenged}
           revealed={settledPage.markets}
           revealedNextCursor={settledPage.nextCursor}
+          seasonId={season?.id}
         />
       </div>
     </main>

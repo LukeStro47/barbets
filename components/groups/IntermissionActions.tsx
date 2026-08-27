@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { optInSeason, optOutSeason, cancelSeasonOptout, startSeason, openSeasonBetting } from '@/lib/actions/seasons';
+import { optInSeason, optOutSeason, cancelSeasonOptout, openSeasonBetting } from '@/lib/actions/seasons';
 import { Button } from '@/components/ui/Button';
 
 /**
@@ -97,35 +97,6 @@ export function RosterControl({
         className="w-full"
       >
         You're in, not playing this one?
-      </Button>
-    </div>
-  );
-}
-
-export function ContinueButton({ groupId, playingCount }: { groupId: string; playingCount: number }) {
-  const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-
-  return (
-    <div>
-      {error && <p className="mb-2 text-sm text-danger-700">{error}</p>}
-      <Button
-        size="lg"
-        disabled={isPending}
-        onClick={() =>
-          startTransition(async () => {
-            const result = await startSeason(groupId);
-            if (result.error) {
-              setError(result.error);
-            } else {
-              router.push(`/groups/${groupId}`);
-            }
-          })
-        }
-        className="w-full"
-      >
-        Continue ({playingCount} playing)
       </Button>
     </div>
   );

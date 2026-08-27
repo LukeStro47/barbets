@@ -8,6 +8,7 @@ import { Mention } from '@/components/ui/Mention';
 import { SeasonNameEditor } from '@/components/groups/SeasonNameEditor';
 import { RemoveMemberButton, TransferOwnershipSheet } from '@/components/groups/SettingsActions';
 import { updateGroupSettings, type GroupSettings } from '@/lib/actions/groups';
+import { startSeason } from '@/lib/actions/seasons';
 import { formatTokenInputValue } from '@/lib/formatNumber';
 import { TOKEN_ALLOCATION_MAX } from '@/lib/limits';
 import { SEASON_LENGTH_SHORT_LABEL, type SeasonLength } from '@/lib/seasonLength';
@@ -30,11 +31,11 @@ function toLocalDatetimeInputValue(date: Date): string {
 }
 
 /**
- * Owner-only sheet opened from SeasonSetupCard's "Edit" pill — name, length, reseed amount, and
- * the roster (boot + transfer ownership), all without leaving the group hub. `update_group_settings`
- * is a full-object RPC, not a patch, so `save()` below submits every field from `settings`
- * unchanged except the two this sheet actually edits — same pattern EditSettingsForm uses on
- * /settings/edit.
+ * Owner-only sheet opened by SeasonSetupCard's Continue button — name, length, reseed amount, and
+ * the roster (boot + transfer ownership), all without leaving the group hub, ending in the same
+ * action that actually starts the season. `update_group_settings` is a full-object RPC, not a
+ * patch, so `continueToSeason()` below submits every field from `settings` unchanged except the
+ * two this sheet actually edits — same pattern EditSettingsForm uses on /settings/edit.
  */
 export function SeasonSetupEditSheet({
   groupId,
@@ -43,6 +44,7 @@ export function SeasonSetupEditSheet({
   seasonNumber,
   settings,
   members,
+  playingCount,
   onClose,
 }: {
   groupId: string;
@@ -51,6 +53,7 @@ export function SeasonSetupEditSheet({
   seasonNumber: number;
   settings: GroupSettings;
   members: RosterMember[];
+  playingCount: number;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -60,7 +63,6 @@ export function SeasonSetupEditSheet({
     toLocalDatetimeInputValue(settings.season_custom_ends_at ? new Date(settings.season_custom_ends_at) : new Date(Date.now() + 24 * 60 * 60_000))
   );
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [transferOpen, setTransferOpen] = useState(false);
 
@@ -69,30 +71,37 @@ export function SeasonSetupEditSheet({
     seasonLength !== (settings.season_length ?? 'manual') ||
     (seasonLength === 'custom' && new Date(seasonCustomEndsAt).toISOString() !== settings.season_custom_ends_at);
 
-  function save() {
+  function continueToSeason() {
     setError(null);
     startTransition(async () => {
-      const result = await updateGroupSettings(groupId, {
-        seedAmount: Number(seedAmount.replace(/,/g, '')) || settings.seed_amount,
-        seasonsEnabled: settings.seasons_enabled,
-        seasonLength,
-        seasonCustomEndsAt: seasonLength === 'custom' ? new Date(seasonCustomEndsAt).toISOString() : null,
-        timezone: settings.timezone,
-        bettingEnabled: settings.betting_enabled,
-        acceptingMembers: settings.accepting_members,
-        distributePayout: settings.distribute_payout,
-        creatorPayoutPct: settings.creator_payout_pct,
-        allowHedgedBets: settings.allow_hedged_bets,
-        resolutionWindowHours: settings.resolution_window_hours,
-        requireEndorsement: settings.require_endorsement,
-        joinMessage: settings.join_message,
-        awardsEnabled: settings.awards_enabled,
-      });
+      if (dirty) {
+        const result = await updateGroupSettings(groupId, {
+          seedAmount: Number(seedAmount.replace(/,/g, '')) || settings.seed_amount,
+          seasonsEnabled: settings.seasons_enabled,
+          seasonLength,
+          seasonCustomEndsAt: seasonLength === 'custom' ? new Date(seasonCustomEndsAt).toISOString() : null,
+          timezone: settings.timezone,
+          bettingEnabled: settings.betting_enabled,
+          acceptingMembers: settings.accepting_members,
+          distributePayout: settings.distribute_payout,
+          creatorPayoutPct: settings.creator_payout_pct,
+          allowHedgedBets: settings.allow_hedged_bets,
+          resolutionWindowHours: settings.resolution_window_hours,
+          requireEndorsement: settings.require_endorsement,
+          joinMessage: settings.join_message,
+          awardsEnabled: settings.awards_enabled,
+        });
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+      }
+
+      const result = await startSeason(groupId);
       if (result.error) {
         setError(result.error);
       } else {
-        setSaved(true);
-        router.refresh();
+        router.push(`/groups/${groupId}`);
       }
     });
   }
@@ -155,13 +164,14 @@ export function SeasonSetupEditSheet({
 
         {error && <p className="mt-3 text-sm text-danger-700">{error}</p>}
         <div className="mt-3 flex gap-2">
-          <Button type="button" variant="outline" size="sm" className="flex-1" onClick={onClose}>
-            {saved ? 'Done' : 'Cancel'}
+          <Button type="button" variant="outline" size="sm" className="flex-1" disabled={isPending} onClick={onClose}>
+            Not yet
           </Button>
-          <Button type="button" size="sm" className="flex-1" disabled={isPending || !dirty} onClick={save}>
-            {isPending ? 'Saving…' : saved ? 'Saved ✓' : 'Save'}
+          <Button type="button" size="sm" className="flex-1" disabled={isPending} onClick={continueToSeason}>
+            {isPending ? 'Starting…' : `Continue (${playingCount} playing)`}
           </Button>
         </div>
+        <p className="mt-2 text-center text-[11.5px] text-espresso-400">Betting stays paused until you open it.</p>
 
         <div className="mt-5 border-t border-espresso-100 pt-4">
           <p className="text-xs font-bold text-espresso-500">Roster</p>

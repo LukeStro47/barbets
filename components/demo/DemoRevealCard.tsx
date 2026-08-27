@@ -12,13 +12,11 @@ export function DemoRevealCard({
   question,
   side,
   outcome,
-  payoutLabel,
   barsRevealed,
 }: {
   question: string;
   side: DemoSide;
   outcome: DemoOutcome;
-  payoutLabel: string;
   barsRevealed: boolean;
 }) {
   const headline = side.toUpperCase();
@@ -37,15 +35,14 @@ export function DemoRevealCard({
           <span className="text-xs font-extrabold tracking-[0.08em] text-honey-300 uppercase">Barbets</span>
         </div>
 
-        <p className="mb-1.5 text-[11px] font-bold tracking-[0.1em] text-honey-400 uppercase">Demo &middot; Resolved</p>
-        <p className="mb-1.5 text-[15px] font-extrabold text-honey-300">You won {payoutLabel} tokens!</p>
+        <p className="mb-1.5 text-[11px] font-bold tracking-[0.1em] text-honey-400 uppercase">Demo &middot; Settled</p>
         <p className="mb-4 max-w-[88%] text-[22px] leading-[1.2] font-extrabold tracking-[-0.01em]">{question}</p>
 
         <div className="flex items-center gap-3.5">
           <div className="flex h-[68px] w-[68px] shrink-0 -rotate-6 items-center justify-center rounded-full border-[3px] border-espresso-950/20 bg-honey-500 text-center text-lg leading-[1.1] font-extrabold uppercase text-espresso-950 shadow-[0_8px_18px_-6px_rgba(232,163,61,0.55)]">
             {headline}
           </div>
-          <p className="text-[13px] leading-[1.45] text-paper-white/70">You bet on {headline} and it happened.</p>
+          <p className="text-[13px] leading-[1.45] text-paper-white/70">The vote upheld the call.</p>
         </div>
       </div>
 

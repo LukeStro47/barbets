@@ -25,6 +25,7 @@ export function GroupMarketSections({
   challenged,
   revealed,
   revealedNextCursor,
+  seasonId,
 }: {
   groupId: string;
   pendingSponsor: MarketCardData[];
@@ -34,6 +35,8 @@ export function GroupMarketSections({
   /** The first page only. Settled markets accumulate for the life of a group, so the rest arrive through "Load more". */
   revealed: MarketCardData[];
   revealedNextCursor: SettledCursor | null;
+  /** Scopes "Load more" to the same season the first page was fetched with — omitted for a seasons-off group, which pages the all-time feed. */
+  seasonId?: string;
 }) {
   const openEmpty = open.length === 0;
   const pendingEmpty = pendingSponsor.length === 0 && awaitingResolution.length === 0 && challenged.length === 0;
@@ -70,7 +73,7 @@ export function GroupMarketSections({
     if (!cursor || loadingMore) return;
     setLoadingMore(true);
     setLoadError(null);
-    const result = await loadMoreSettledMarkets(groupId, cursor);
+    const result = await loadMoreSettledMarkets(groupId, cursor, seasonId);
     setLoadingMore(false);
     if (result.error) {
       setLoadError(result.error);
@@ -80,30 +83,40 @@ export function GroupMarketSections({
     setCursor(result.data!.nextCursor);
   }
 
+  // Nothing anywhere: showing three tabs that all say "nothing here" (and a "View settled"
+  // button that leads to yet another empty tab) is just navigation with no destination. Collapse
+  // straight to the Open tab's plain empty state instead, with no tab bar and no dead-end button.
+  const allEmpty = openEmpty && pendingEmpty && settled.length === 0;
+  const effectiveFilter: Filter = allEmpty ? 'open' : filter;
+
   return (
     <div className="flex flex-col gap-[18px]">
-      <div className="flex gap-0.5 rounded-2xl bg-espresso-50 p-1">
-        {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setFilter(tab.key)}
-            className={cn(
-              'flex-1 rounded-xl py-[7px] text-center text-[13px] transition-[background-color,box-shadow,color] duration-200',
-              filter === tab.key
-                ? 'bg-paper-white font-semibold text-espresso-950 shadow-[0_1px_3px_rgba(44,31,23,0.12)]'
-                : 'font-medium text-espresso-400'
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {!allEmpty && (
+        <div className="flex gap-0.5 rounded-2xl bg-espresso-50 p-1">
+          {TABS.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setFilter(tab.key)}
+              className={cn(
+                'flex-1 rounded-xl py-[7px] text-center text-[13px] transition-[background-color,box-shadow,color] duration-200',
+                filter === tab.key
+                  ? 'bg-paper-white font-semibold text-espresso-950 shadow-[0_1px_3px_rgba(44,31,23,0.12)]'
+                  : 'font-medium text-espresso-400'
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {filter === 'open' && (
+      {effectiveFilter === 'open' && (
         <Section label="Betting open">
           {openEmpty ? (
-            nothingActive ? (
+            allEmpty ? (
+              <EmptyState icon="🎲" title="Nothing open right now" subtitle="Tap the + below to start one." />
+            ) : nothingActive ? (
               <EmptyState
                 icon="🎲"
                 title="Nothing open right now"
@@ -132,7 +145,7 @@ export function GroupMarketSections({
         </Section>
       )}
 
-      {filter === 'pending' && (
+      {effectiveFilter === 'pending' && (
         <>
           {pendingSponsor.length > 0 && (
             <Section label={STATUS_LABEL.pending_sponsor}>
@@ -167,7 +180,7 @@ export function GroupMarketSections({
         </>
       )}
 
-      {filter === 'settled' && (
+      {effectiveFilter === 'settled' && (
         <Section label="Settled">
           {settled.length === 0 ? (
             <EmptyState icon="🏁" title="No settled markets yet" subtitle="Once a market resolves, it'll show up here." />

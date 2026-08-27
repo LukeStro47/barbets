@@ -50,7 +50,9 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
   const canBan = isOwner || (isPublic && isModerator);
   const canEditSettings = isOwner || (isPublic && isModerator);
   const metaLine = [
-    `${memberCount} member${memberCount === 1 ? '' : 's'}`,
+    // Member count used to open this line and, alongside a named season, regularly overflowed it
+    // — it's still shown by its own "Members · N" section heading further down, so dropping it
+    // here loses nothing.
     season ? seasonLabel(season) : null,
     // A light mention rather than a header pill — the settings heading itself takes that spot now.
     isOwner ? 'Owner' : isModerator ? 'Moderator' : null,

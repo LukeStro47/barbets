@@ -14,6 +14,7 @@ export type DemoSide = 'yes' | 'no';
 /** Fake pool already in the market before the visitor bets — reads as "12 bets placed". */
 const SEED_POOL: Record<DemoSide, number> = { yes: 340, no: 260 };
 export const SEED_BET_COUNT = 12;
+export const SEED_POOL_TOTAL = SEED_POOL.yes + SEED_POOL.no;
 
 /** A couple of fake bettors on each side, used to populate "who called it" once the visitor's side wins. */
 const SEED_BETTORS: Record<DemoSide, { nickname: string; amount: number }[]> = {

@@ -296,6 +296,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
                 avatarPresetKey={avatarRow?.avatar_preset_key ?? null}
                 className="h-11 w-11 border-2 border-white/20 text-sm"
                 fallbackClassName="bg-white/10 text-honey-300"
+                enlargeOnTap
               />
             )}
             <div className="min-w-0">

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { PlusIcon } from '@/components/ui/icons';
+import { PlusIcon, ChevronRightIcon } from '@/components/ui/icons';
 import { MARKET_TYPE_LABEL, MARKET_TYPE_DESCRIPTION, MARKET_TYPE_ICON, type MarketType } from '@/lib/marketType';
 import { getActiveNavTab, getRouteGroupId, shouldHideBottomNav, type NavTab } from '@/lib/navRoute';
 import { formatTokenInputValue } from '@/lib/formatNumber';
@@ -322,7 +322,7 @@ export function BottomNav({
               className="mt-2 flex w-full items-center justify-between gap-2.5 border-0 border-t border-espresso-50 bg-transparent px-[11px] pt-[11px] pb-[3px] text-left"
             >
               <span className="text-[13px] font-extrabold text-honey-700">All groups</span>
-              <span className="text-sm text-honey-600">›</span>
+              <ChevronRightIcon className="h-3.5 w-2 shrink-0 text-honey-600" />
             </button>
           </div>
         </>

@@ -4,11 +4,12 @@
     clamp) is the polite stop, the function's check is the real one. Lengths count the trimmed
     string. */
 
-/** Matches the season name cap, and what the group rename input allowed before the server enforced anything. */
+/** What the group rename input allowed before the server enforced anything. */
 export const GROUP_NAME_MAX_LENGTH = 60;
 
-/** Same 60 as a group name. Blank is still allowed, and clears back to the "Season N" fallback. */
-export const SEASON_NAME_MAX_LENGTH = 60;
+/** Short enough to sit next to "Season N" on one settings header line without wrapping.
+    Blank is still allowed, and clears back to the "Season N" fallback. */
+export const SEASON_NAME_MAX_LENGTH = 15;
 
 /** Deliberately generous: a title is a question, and the specifics of what counts as a win belong in
     the (uncapped) resolution criteria. Long enough that nobody writing a normal title meets it. */
