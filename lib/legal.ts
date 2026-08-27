@@ -9,5 +9,10 @@
  *
  * One shared version for both documents, not one each, since the signup checkbox and this gate
  * both already treat "Terms of use and Privacy policy" as a single agreement rather than two.
+ *
+ * '2026-08-27' was already spent as the bootstrap value backfilled onto every existing account
+ * when this mechanism first shipped (see the migration and ARCHITECTURE.md's "Policy reapproval"),
+ * on a day with no actual content change. The full rewrite of both documents that landed the same
+ * calendar day is a real content change and needs its own distinct value to trigger the gate.
  */
-export const CURRENT_POLICY_VERSION = '2026-08-27';
+export const CURRENT_POLICY_VERSION = '2026-08-27-v2';

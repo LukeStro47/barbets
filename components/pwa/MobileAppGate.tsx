@@ -6,7 +6,6 @@ import { Capacitor } from '@capacitor/core';
 import { StackedLogo } from '@/components/ui/StackedLogo';
 import { Button } from '@/components/ui/Button';
 import { isMobileGateExempt, isMobileBrowserUA, isIOSUA } from '@/lib/mobileGate';
-import { SITE_ORIGIN } from '@/lib/appOrigin';
 
 /**
  * A full-screen block over every page except the handful in lib/mobileGate.ts's exemption list,
@@ -39,7 +38,7 @@ export function MobileAppGate({
   enabled,
 }: {
   androidStoreUrl: string;
-  iosStoreUrl?: string;
+  iosStoreUrl: string;
   /** `isProductionDeploy()`, computed server-side in app/layout.tsx and handed down rather than
    * checked here — see that function for why it can't be read from client code directly. Off in
    * local dev and Vercel preview deploys, so testing or reviewing a mobile layout doesn't mean
@@ -65,7 +64,7 @@ export function MobileAppGate({
 
   if (!blocked || isMobileGateExempt(pathname)) return null;
 
-  const storeUrl = isIOS ? (iosStoreUrl ?? `${SITE_ORIGIN}/download`) : androidStoreUrl;
+  const storeUrl = isIOS ? iosStoreUrl : androidStoreUrl;
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-7 bg-paper px-6 py-11 text-center">
