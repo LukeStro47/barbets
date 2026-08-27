@@ -310,8 +310,11 @@ export async function getSettledMarkets(
   groupId: string,
   userId: string,
   cursor: SettledCursor | null = null,
-  /** Scopes the feed to one season's markets (the /seasons archive route). Omitted everywhere
-   * else, which keeps today's all-time behavior for the normal in-season Settled tab. */
+  /** Scopes the feed to one season's markets. The group hub passes its current season here too
+   * (once seasons are on), so a market settled under an earlier season doesn't linger in the
+   * Settled tab after the season changes — it's still reachable from the intermission recap's
+   * season archive / `/seasons` instead. Omitted only for a seasons-off group, which has no
+   * season to scope to and keeps the plain all-time feed. */
   seasonId?: string
 ): Promise<SettledPage> {
   if (cursor && (!TIMESTAMP_RE.test(cursor.resolvedAt) || !UUID_RE.test(cursor.id))) return EMPTY_PAGE;

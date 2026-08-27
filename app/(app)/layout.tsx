@@ -4,7 +4,6 @@ import { BottomNavSpacer } from '@/components/layout/BottomNavSpacer';
 import { PullToRefresh } from '@/components/layout/PullToRefresh';
 import { PageTransition } from '@/components/layout/PageTransition';
 import { PushReminderModal } from '@/components/pwa/PushReminderModal';
-import { InstallBanner } from '@/components/pwa/InstallBanner';
 import { getGroupTaskCounts } from '@/lib/tasks';
 
 export default async function AppLayout({ children, modal }: { children: React.ReactNode; modal: React.ReactNode }) {
@@ -112,7 +111,6 @@ export default async function AppLayout({ children, modal }: { children: React.R
           driven by the same env(safe-area-inset-top) value either way, just persistent now. */}
       <div aria-hidden="true" className="fixed inset-x-0 top-0 z-30 h-[env(safe-area-inset-top)] bg-paper" />
       <PushReminderModal />
-      <InstallBanner />
       <PullToRefresh>
         <PageTransition>
           <BottomNavSpacer>{children}</BottomNavSpacer>

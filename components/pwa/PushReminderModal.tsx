@@ -14,10 +14,10 @@ const REPROMPT_DAYS = 7;
  * subscription — covers both "never turned it on" and the on-device-but-server-lost-the-row
  * case usePushSubscription self-heals on mount. Gated on useInstallPrompt's `platform ===
  * 'installed'`, not just push-API support: Chrome (desktop or Android) will happily grant Web
- * Push permission from an ordinary browser tab with nothing installed, but asking before
- * install stacks this modal's full-viewport overlay directly on top of InstallBanner (on the
- * group page, right after joining) and visually hides it — asking gets deferred until the user
- * has actually installed, at which point InstallBanner's job is done anyway. iOS is already
+ * Push permission from an ordinary browser tab with nothing installed, but a subscription made
+ * there is tied to that tab's origin the same way an installed PWA's is, with none of the
+ * reliability of an actual home-screen install — asking gets deferred until the user has
+ * committed to installing rather than caught mid-signup in an ordinary tab. iOS is already
  * naturally covered by this same gate, since Safari never grants Notification permission to a
  * non-installed tab in the first place (usePushSubscription's 'ios-needs-install' platform).
  * Shows immediately after joining/creating a group (JUST_JOINED_GROUP_KEY, set by

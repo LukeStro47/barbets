@@ -6,6 +6,7 @@ import { voidMarket, voidMarketAsCreator } from '@/lib/actions/resolution';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { ConsequenceRow } from '@/components/ui/ConsequenceRow';
+import { AlertTriangleIcon } from '@/components/ui/icons';
 import type { ActionResult } from '@/lib/errors';
 
 interface Props {
@@ -132,6 +133,17 @@ function VoidAction({
             </ConsequenceRow>
           </div>
         </div>
+
+        {/* Distinct from the first screen on purpose — a same-toned "click it again" button here
+            is what made the second, actually-final click feel like more of the same rather than
+            the real thing. A red banner plus a solid (not outlined) button is a bigger visual
+            jump than any label change alone could be. */}
+        {confirming && (
+          <div className="flex items-center gap-2 rounded-[10px] bg-danger-50 px-3 py-2.5 text-[12.5px] font-bold text-danger-800">
+            <AlertTriangleIcon className="h-4 w-4 shrink-0" />
+            This is the final step, there's no undo after this.
+          </div>
+        )}
       </div>
 
       <div className="flex gap-2 border-t border-espresso-50 px-[18px] py-[14px]">
@@ -139,8 +151,13 @@ function VoidAction({
           {confirming ? 'Back' : 'Close'}
         </Button>
         {!confirming ? (
-          <Button type="button" variant="danger" className="flex-1" onClick={() => setConfirming(true)}>
-            Void this market
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1 border-danger-200 text-danger-700 hover:bg-danger-50"
+            onClick={() => setConfirming(true)}
+          >
+            Continue
           </Button>
         ) : (
           <Button
@@ -150,7 +167,7 @@ function VoidAction({
             disabled={isPending}
             onClick={() => run(() => (asCreatorFallback ? voidMarketAsCreator(groupId, marketId) : voidMarket(groupId, marketId)))}
           >
-            Yes, void it
+            {isPending ? 'Voiding…' : 'Yes, void it for good'}
           </Button>
         )}
       </div>

@@ -30,6 +30,7 @@ export function MemberProfileCard({ data }: { data: MemberProfileData }) {
               avatarPresetKey={avatarPresetKey}
               className="h-14 w-14 text-lg"
               fallbackClassName="bg-espresso-50 text-honey-700"
+              enlargeOnTap
             />
           )}
           <div className="min-w-0 flex-1">

@@ -22,7 +22,7 @@ export function SeasonMarketsArchiveCard({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <h2 className="ml-1 text-xs font-bold tracking-[0.08em] text-espresso-400 uppercase">The season&apos;s markets</h2>
+      <h2 className="ml-1 text-xs font-bold tracking-[0.08em] text-espresso-400 uppercase">View markets</h2>
       <div className="overflow-hidden rounded-[22px] border border-espresso-100 bg-paper-white">
         <Link
           href={`/groups/${groupId}/seasons?season=${seasonNumber}`}

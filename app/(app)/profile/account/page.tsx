@@ -5,7 +5,6 @@ import { ChangeEmailForm, ChangePasswordForm } from '@/components/profile/Accoun
 import { DeleteAccountButton } from '@/components/profile/DeleteAccountButton';
 import { AvatarPicker } from '@/components/profile/AvatarPicker';
 import { UserAvatar } from '@/components/ui/UserAvatar';
-import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { ChevronRightIcon } from '@/components/ui/icons';
 
 /** /profile/account — everything destructive or rarely touched, one tap deeper than the
@@ -66,8 +65,9 @@ export default async function AccountPage() {
           two entry points would have made "back" from that page ambiguous, and the device-level
           push toggle already lives there as its "All notifications" master. The results-digest
           placeholder that shared this card is gone too: an always-disabled switch for a feature
-          that doesn't exist costs a line of attention on every visit to advertise itself once. */}
-      <InstallPrompt />
+          that doesn't exist costs a line of attention on every visit to advertise itself once.
+          Browser "add to home screen" instructions used to sit here too (InstallPrompt) — removed
+          along with InstallBanner, see the design-decision note in "PWA & push". */}
 
       <Card>
         <h2 className="mb-3 font-display font-bold text-danger-700">Danger zone</h2>

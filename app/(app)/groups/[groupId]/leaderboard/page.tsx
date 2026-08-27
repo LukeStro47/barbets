@@ -12,7 +12,10 @@ import { formatTokens, formatOrdinal, numberWord } from '@/lib/formatNumber';
 import { TITLE_ORDER, type GroupTitleRow } from '@/lib/titles';
 import { cn } from '@/lib/cn';
 
-function medal(rank: number): string {
+/** No medals (or a "winner") while nobody's actually bet yet — every balance still tied at the
+ * seed amount makes rank 0 an artifact of query order, not a result. */
+function medal(rank: number, noBetsPlaced: boolean): string {
+  if (noBetsPlaced) return `${rank + 1}.`;
   return rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : `${rank + 1}.`;
 }
 
@@ -95,8 +98,14 @@ export default async function LeaderboardPage({
         );
   const avatarByUser = new Map((avatarRows ?? []).map((r) => [r.id, r]));
 
-  const { data: titleRows } = await supabase.from('group_titles').select('title_key, user_id, stat_value').eq('group_id', groupId);
+  const [{ data: titleRows }, { count: totalBetCount }] = await Promise.all([
+    supabase.from('group_titles').select('title_key, user_id, stat_value').eq('group_id', groupId),
+    supabase.from('bets').select('id, markets!inner(group_id)', { count: 'exact', head: true }).eq('markets.group_id', groupId),
+  ]);
   const yourTitleCount = ((titleRows ?? []) as GroupTitleRow[]).filter((r) => r.user_id && r.user_id === user?.id).length;
+  // Every member is still tied at the seed amount, so "leader" is just whoever the query happened
+  // to sort first — the hero and the standings list both soften their language for it below.
+  const noBetsPlaced = (totalBetCount ?? 0) === 0;
 
   // ---- The hero: who's in front, and where you are relative to them. Both figures already exist
   // in `members`; the only extra read is the season this is all happening in.
@@ -163,7 +172,7 @@ export default async function LeaderboardPage({
         )}
         <span className="min-w-0 flex-1">
           <span className="block text-[10px] font-extrabold tracking-[0.1em] text-honey-300 uppercase">
-            {isIntermission ? 'Took the season' : 'Out in front'}
+            {noBetsPlaced ? "Nobody's bet yet" : isIntermission ? 'Took the season' : 'Out in front'}
           </span>
           <Mention nickname={leader.nickname} className="mt-0.5 block truncate text-[19px] font-extrabold tracking-[-0.015em] text-paper-white" />
           <span className="mt-0.5 block text-xs text-paper-white/55">{formatTokens(leader.balance)} tokens</span>
@@ -171,9 +180,11 @@ export default async function LeaderboardPage({
       </Link>
       <div className="relative mt-[15px] flex gap-3 border-t border-white/10 pt-3.5">
         <span className="flex-1">
-          <span className="block text-xl font-extrabold tabular-nums text-paper-white">{you ? formatOrdinal(yourRank) : '—'}</span>
+          <span className="block text-xl font-extrabold tabular-nums text-paper-white">
+            {noBetsPlaced ? '—' : you ? formatOrdinal(yourRank) : '—'}
+          </span>
           <span className="mt-px block text-[10px] font-extrabold tracking-[0.07em] text-paper-white/45 uppercase">
-            {you ? `you, of ${members.length}` : `${members.length} playing`}
+            {noBetsPlaced ? 'not ranked yet' : you ? `you, of ${members.length}` : `${members.length} playing`}
           </span>
         </span>
         <span className="flex-1">
@@ -183,9 +194,9 @@ export default async function LeaderboardPage({
           </span>
         </span>
         <span className="flex-1">
-          <span className="block text-xl font-extrabold tabular-nums text-paper-white">{formatTokens(gapValue)}</span>
+          <span className="block text-xl font-extrabold tabular-nums text-paper-white">{noBetsPlaced ? '—' : formatTokens(gapValue)}</span>
           <span className="mt-px block text-[10px] font-extrabold tracking-[0.07em] text-paper-white/45 uppercase">
-            {youLead ? 'clear of 2nd' : isIntermission ? 'off the win' : 'behind the leader'}
+            {noBetsPlaced ? 'no bets yet' : youLead ? 'clear of 2nd' : isIntermission ? 'off the win' : 'behind the leader'}
           </span>
         </span>
       </div>
@@ -211,7 +222,7 @@ export default async function LeaderboardPage({
                 style={{ width: `${pct}%` }}
               />
               <Link href={`/groups/${groupId}/members/${m.id}`} className="absolute inset-0 flex items-center gap-2.5 px-3">
-                <span className="w-5 shrink-0 text-center text-xs font-extrabold text-espresso-500">{medal(i)}</span>
+                <span className="w-5 shrink-0 text-center text-xs font-extrabold text-espresso-500">{medal(i, noBetsPlaced)}</span>
                 {!group?.is_public && (
                   <UserAvatar
                     userId={m.user_id}
@@ -242,9 +253,11 @@ export default async function LeaderboardPage({
         });
       })()}
       <p className="pt-1 text-[11.5px] text-espresso-400">
-        {isIntermission
-          ? 'Frozen when the season ended. The next season starts everyone level.'
-          : "Bar length is share of the group's tokens. Your row is outlined."}
+        {noBetsPlaced
+          ? "Nobody's placed a bet yet, so this order doesn't mean anything. It'll shuffle once betting starts."
+          : isIntermission
+            ? 'Frozen when the season ended. The next season starts everyone level.'
+            : "Bar length is share of the group's tokens. Your row is outlined."}
       </p>
     </Card>
   );
