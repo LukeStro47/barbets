@@ -10,7 +10,7 @@ import { GROUP_AVATARS } from '@/lib/avatars';
 import { SEASON_LENGTH_SHORT_LABEL, SEASON_LENGTH_HINTS, type SeasonLength } from '@/lib/seasonLength';
 import { COMMON_TIMEZONES, friendlyTimezoneName } from '@/lib/timezone';
 import { formatTokens, formatTokenInputValue } from '@/lib/formatNumber';
-import { GROUP_NAME_MAX_LENGTH, SEASON_NAME_MAX_LENGTH, TOKEN_ALLOCATION_MAX } from '@/lib/limits';
+import { GROUP_NAME_MAX_LENGTH, SEASON_NAME_MAX_LENGTH, TOKEN_ALLOCATION_MAX, PRIZE_MAX_LENGTH, PUNISHMENT_MAX_LENGTH } from '@/lib/limits';
 import { JUST_JOINED_GROUP_KEY } from '@/components/pwa/PushReminderModal';
 import { cn } from '@/lib/cn';
 
@@ -177,6 +177,8 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
   const [distributePayout, setDistributePayout] = useState(false);
   const [creatorPayoutPct, setCreatorPayoutPct] = useState(25);
   const [resolutionWindowHours, setResolutionWindowHours] = useState(2);
+  const [prizeText, setPrizeText] = useState('');
+  const [punishmentText, setPunishmentText] = useState('');
 
   const creatorPctValid = Number.isFinite(creatorPayoutPct) && creatorPayoutPct >= 0 && creatorPayoutPct <= 100;
 
@@ -229,6 +231,8 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
           resolutionWindowHours,
           requireEndorsement,
           awardsEnabled: true,
+          prizeText: prizeText.trim() || null,
+          punishmentText: punishmentText.trim() || null,
         }),
         setGroupAvatar(groupId, avatarKey),
         seasonsEnabled && seasonName.trim() ? nameActiveSeason(groupId, seasonName.trim()) : Promise.resolve(),
@@ -390,6 +394,33 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
             How long the group has to dispute a proposed outcome, and to vote on one that is disputed.
           </p>
         </div>
+
+        <SectionCard title="Stakes" hint="Optional. Shown to everyone in the group.">
+          <div className="mt-3 flex flex-col gap-3">
+            <label className="block">
+              <span className="block text-[11px] font-bold text-espresso-500">Prize</span>
+              <textarea
+                value={prizeText}
+                onChange={(e) => setPrizeText(e.target.value)}
+                maxLength={PRIZE_MAX_LENGTH}
+                rows={2}
+                placeholder="Winner picks the next group outing."
+                className="mt-1 block w-full rounded-xl border border-espresso-200 bg-paper-white px-3 py-2.5 text-sm font-bold text-espresso-950 focus:border-honey-500 focus:outline-none"
+              />
+            </label>
+            <label className="block">
+              <span className="block text-[11px] font-bold text-espresso-500">Punishment</span>
+              <textarea
+                value={punishmentText}
+                onChange={(e) => setPunishmentText(e.target.value)}
+                maxLength={PUNISHMENT_MAX_LENGTH}
+                rows={2}
+                placeholder="Loser buys the first round next time."
+                className="mt-1 block w-full rounded-xl border border-espresso-200 bg-paper-white px-3 py-2.5 text-sm font-bold text-espresso-950 focus:border-honey-500 focus:outline-none"
+              />
+            </label>
+          </div>
+        </SectionCard>
 
         <div className="mt-auto pt-6">
           <button type="button" disabled={!creatorPctValid} onClick={() => setView('wizard')} className={footerButtonClasses}>

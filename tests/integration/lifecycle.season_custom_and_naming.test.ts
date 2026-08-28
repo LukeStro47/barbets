@@ -117,18 +117,18 @@ describe('season naming', () => {
     const { error: nonOwnerErr } = await users.other.client.rpc('rename_season', { p_season_id: seasonId, p_name: 'Sneaky Rename' });
     expect(nonOwnerErr?.message).toMatch(/forbidden/);
 
-    const { error } = await users.owner.client.rpc('rename_season', { p_season_id: seasonId, p_name: 'Friday Game Night' });
+    const { error } = await users.owner.client.rpc('rename_season', { p_season_id: seasonId, p_name: 'Game Night' });
     expect(error).toBeNull();
 
     const { data: named } = await adminClient.from('seasons').select('name').eq('id', seasonId).single();
-    expect(named!.name).toBe('Friday Game Night');
+    expect(named!.name).toBe('Game Night');
   });
 
-  test('a name over 60 characters is rejected', async () => {
-    const { error } = await users.owner.client.rpc('rename_season', { p_season_id: seasonId, p_name: 'x'.repeat(61) });
-    expect(error?.message).toMatch(/60 characters or fewer/);
+  test('a name over 15 characters is rejected', async () => {
+    const { error } = await users.owner.client.rpc('rename_season', { p_season_id: seasonId, p_name: 'x'.repeat(16) });
+    expect(error?.message).toMatch(/15 characters or fewer/);
 
-    const { error: atCap } = await users.owner.client.rpc('rename_season', { p_season_id: seasonId, p_name: 'x'.repeat(60) });
+    const { error: atCap } = await users.owner.client.rpc('rename_season', { p_season_id: seasonId, p_name: 'x'.repeat(15) });
     expect(atCap).toBeNull();
   });
 

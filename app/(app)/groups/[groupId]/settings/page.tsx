@@ -9,7 +9,6 @@ import { MemberRosterList } from '@/components/groups/MemberRosterList';
 import { GroupPlaysCard, seasonLabel, type ActiveSeasonSummary } from '@/components/groups/GroupPlaysCard';
 import { StakesCard } from '@/components/groups/StakesCard';
 import { GroupIdentitySheet } from '@/components/groups/GroupIdentitySheet';
-import { SeasonNameEditor } from '@/components/groups/SeasonNameEditor';
 import { NicknameEditor } from '@/components/groups/NicknameEditor';
 import { LeaveGroupButton } from '@/components/groups/LeaveGroupButton';
 import { GroupDeletionBanner } from '@/components/groups/GroupDeletionBanner';
@@ -78,27 +77,19 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
         />
         <div className="min-w-0 flex-1">
           <p className="truncate font-display text-[17px] font-extrabold tracking-[-0.01em] text-espresso-950">{group!.name}</p>
-          {/* Owner with an active season gets the same inline pencil-edit affordance the group
-              name/logo row does, right here at the top of the page, rather than the name only
-              being renameable two taps deep inside "Edit how this group plays" or as a side
-              effect of ending the season. */}
-          {isOwner && season && activeSeasonRow ? (
-            <div className="mt-px flex min-w-0 items-center gap-1 text-[12.5px] text-espresso-400">
-              <SeasonNameEditor
-                groupId={groupId}
-                seasonId={activeSeasonRow.id}
-                currentName={season.name}
-                seasonNumber={season.number}
-                className="min-w-0"
-                nameClassName="block min-w-0 truncate text-[12.5px] text-espresso-400"
-              />
-              {roleLabel && <span className="shrink-0">· {roleLabel}</span>}
-            </div>
-          ) : (
-            <p className="mt-px truncate text-[12.5px] text-espresso-400">{metaLine}</p>
-          )}
+          <p className="mt-px truncate text-[12.5px] text-espresso-400">{metaLine}</p>
         </div>
-        {isOwner && <GroupIdentitySheet groupId={groupId} groupName={group!.name} avatarKey={group!.avatar_key} />}
+        {/* Season name moved into this sheet rather than staying an inline pencil-edit next to the
+            group name — it's the same "what is this thing called" decision as the group's own
+            name and logo, edited just as rarely. */}
+        {isOwner && (
+          <GroupIdentitySheet
+            groupId={groupId}
+            groupName={group!.name}
+            avatarKey={group!.avatar_key}
+            activeSeason={season && activeSeasonRow ? { id: activeSeasonRow.id, name: season.name, number: season.number } : null}
+          />
+        )}
       </div>
 
       <Link

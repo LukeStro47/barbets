@@ -14,7 +14,6 @@ import { SeasonRecapHero, type FinalBalanceRow } from '@/components/groups/Seaso
 import { SeasonSetupCard } from '@/components/groups/SeasonSetupCard';
 import type { RosterMember } from '@/components/groups/SeasonSetupEditSheet';
 import { FinalTableCard } from '@/components/groups/FinalTableCard';
-import { StakesCard } from '@/components/groups/StakesCard';
 import { SeasonMarketsArchiveCard } from '@/components/groups/SeasonMarketsArchiveCard';
 import { SeasonNumbersCard } from '@/components/groups/SeasonNumbersCard';
 import { SeasonHighlightsCard, type SnapshotHighlight } from '@/components/groups/SeasonHighlightsCard';
@@ -74,11 +73,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
 
   const [{ data: membership }, { data: settings }] = await Promise.all([
     supabase.from('memberships').select('balance, nickname').eq('group_id', groupId).eq('user_id', user.id).single(),
-    supabase
-      .from('group_settings')
-      .select('seasons_enabled, season_length, betting_enabled, seed_amount, prize_text, punishment_text')
-      .eq('group_id', groupId)
-      .single(),
+    supabase.from('group_settings').select('seasons_enabled, season_length, betting_enabled, seed_amount').eq('group_id', groupId).single(),
   ]);
 
   const { data: season } = settings?.seasons_enabled
@@ -398,8 +393,6 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
             <InvitePill inviteCode={group!.invite_code} />
           </div>
         </div>
-
-        <StakesCard prizeText={settings?.prize_text ?? null} punishmentText={settings?.punishment_text ?? null} />
 
         <WaitingOnYouCard groupId={groupId} tasks={tasks} />
 

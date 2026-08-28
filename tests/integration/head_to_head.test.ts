@@ -113,6 +113,7 @@ describe('get_head_to_head_markets', () => {
       const seasonGroup = await setupGroup(seasonUsers.owner, [seasonUsers.sponsor, seasonUsers.a, seasonUsers.b], {
         seedAmount: 1000,
         seasonsEnabled: true,
+        seasonLength: 'manual',
       });
 
       const market = await createMarket(seasonUsers.owner, seasonGroup.id, { closesInMs: 60000 });
