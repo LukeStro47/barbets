@@ -46,6 +46,14 @@ export const viewport: Viewport = {
   // viewport-fit=cover, the env(safe-area-inset-*) values BetslipBar and friends already lean on
   // just read as 0 there, and content sits under the status bar / home indicator.
   viewportFit: 'cover',
+  width: 'device-width',
+  initialScale: 1,
+  // This app has plenty of inputs styled under the 16px iOS treats as "safe" (compact settings
+  // fields, inline editors), and WKWebView zooms the page in to legible size the moment one of
+  // those takes focus, the same as Mobile Safari. maximumScale/userScalable below is what actually
+  // suppresses that, at the viewport level, rather than auditing every input's font size app-wide.
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
