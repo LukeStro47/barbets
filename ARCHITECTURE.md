@@ -128,6 +128,12 @@ lib/
   limits.ts            — the group-name / season-name / market-title length caps and the token
                          allocation bounds, all enforced by the inputs and the Postgres
                          functions both (see below)
+  flags.ts             — hand-flipped booleans for temporarily hiding a shipped feature without
+                         touching every call site (currently SHARE_BUTTONS_ENABLED, off — hides
+                         RevealTicket's and ShareRecordCard's share buttons, not the underlying
+                         lib/shareImage.ts capture/share plumbing). Flip the value back on to
+                         restore; not env-driven, since this is a manual toggle a developer sets,
+                         not a per-environment or per-user difference
   memberProfile.ts     — getMemberProfileData(): the member-record query (get_member_stats()
                          plus the group/rank/badges/avatar lookups around it, and the viewer's
                          own meMembershipId for labelling their row "@me" in the compare picker),
@@ -188,10 +194,22 @@ components/
   auth/        — AuthScreen (the shell every pre-group form screen shares: back + coin header,
                  headline, subhead), AuthTabs (owns the whole sign in / sign up screen, not just
                  the form), AuthForms (SignInForm, SignUpForm, and the ConfirmEmailForm that
-                 replaces SignUpForm once the account exists - a 6-digit code entered inline via
-                 ConfirmCodeBoxes, verified via confirmSignup/resendSignupCode in
-                 lib/actions/auth.ts; the confirmation email's link still works too, as a
-                 fallback), ConfirmCodeBoxes (box-per-digit entry, the same shape as the invite
+                 replaces either once the account needs confirming - a 6-digit code entered inline
+                 via ConfirmCodeBoxes, verified via confirmSignup/resendSignupCode in
+                 lib/actions/auth.ts; the confirmation email is code-only now, no link).
+                 SignInForm reaches the same ConfirmEmailForm too, not just SignUpForm:
+                 signIn() returns `needsConfirmation` when signInWithPassword fails with GoTrue's
+                 `email_not_confirmed` code (a right password against a never-confirmed account -
+                 a wrong password fails as `invalid_credentials` regardless of confirmation state,
+                 so this can't be used to probe whether an email is confirmed without already
+                 knowing its password), and ConfirmEmailForm's `fromSignIn` prop swaps its lead-in
+                 copy since there's no fresh code waiting in their inbox yet the way there is right
+                 after signing up - it points at the existing Resend button rather than the action
+                 pre-emptively sending one itself, since the Turnstile token that request already
+                 spent on signInWithPassword is single-use and can't cover a second
+                 `supabase.auth` call (see TurnstileField.tsx's `resetKey` comment); Resend mints
+                 its own token on click via `DeferredTurnstileButton`, the same as it always has.
+                 ConfirmCodeBoxes (box-per-digit entry, the same shape as the invite
                  code's InviteCodeBoxes in components/groups/), ForgotPasswordForm,
                  ResetPasswordForm, TurnstileField (see "Signup abuse protection" below)
   markets/     — MarketCard, MarketActions, MarketForms (the 3-step create wizard), OddsBar, ReactionBar, ...
@@ -826,6 +844,7 @@ Both pipelines share `_create_system_market()` / `_resolve_system_market()` and 
 - VAPID private key lives only as a Supabase Edge Function secret, never in Next.js env or the client bundle. Same posture for the FCM service account key (`FCM_SERVICE_ACCOUNT_JSON_B64`, Capacitor/native push) — a Supabase secret only, never shipped client-side.
 - **A service worker registration outlives the site that created it, and a 404 does not clean it up.** This matters because `mybarbets.com` served this app (and therefore registered this `sw.js`, cache `barbets-shell-v7`) before becoming the marketing site. Per the spec's Update algorithm a non-ok script response rejects the update job and only removes the registration when nothing is installed — the proposal to make 404/410 unregister was closed wontfix (w3c/ServiceWorker#204). Serving nothing at `/sw.js` would therefore leave the old worker controlling that origin indefinitely, still firing app push notifications whose relative `data.url` values 404 there. So `barbets-www` serves a deliberate *farewell* worker at that path instead: it wipes all caches, has **no `fetch` handler at all** (a registration without one cannot intercept navigations, so it provably cannot shadow the marketing pages), discards any push payload and shows one `tag`-collapsed "Barbets has moved" notification, and unregisters itself plus its push subscription on a date baked into the file. That last part also cleans up the stale rows for free: the dead endpoint starts returning 404/410, and `send-push` already deletes on those. Nothing on the marketing site ever calls `navigator.serviceWorker.register()`, so no new visitor gets a worker.
 - Inside the Capacitor shell, `usePushSubscription.ts` branches on `Capacitor.isNativePlatform()` to a completely different registration path (`@capacitor-firebase/messaging`'s `requestPermissions()`/`getToken()` instead of the Web Push API) rather than trying to make one code path cover both — the two have almost nothing in common (permission model, subscription object shape, how you detect an existing subscription on mount). Both still funnel into the same `push_subscriptions` table and the same `setNotificationsEnabled()` toggle, so the "All notifications" switch doesn't need to know which path is live.
+- **Zoom is disabled at the viewport, not by auditing every input's font size.** `app/layout.tsx`'s `viewport` export sets `maximumScale: 1, userScalable: false` (and `public/offline.html`'s own `<meta viewport>` matches it). The native iOS shell is a WKWebView, which zooms the page the same way Mobile Safari does the moment focus lands on a text input styled under 16px — and this app has plenty of those (compact settings fields, inline nickname/season-name editors), by deliberate design choice for those surfaces. Rather than bumping every one of those inputs to 16px+ (which would fight the intended visual sizing across a lot of components), the viewport itself refuses to scale at all, which is also just correct for something that's meant to feel like a native app screen rather than a document you'd pinch-zoom to read. This reaches existing installs on the next load since the native shell loads the real deployed origin (`capacitor.config.ts`'s `server.url`), not a bundled copy — a web deploy is enough, no store release needed.
 
 ## Testing
 

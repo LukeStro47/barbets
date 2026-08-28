@@ -11,12 +11,24 @@ import { CONFIRM_CODE_LENGTH, ConfirmCodeBoxes } from '@/components/auth/Confirm
 
 export function SignInForm({ next }: { next?: string }) {
   const [state, formAction, isPending] = useActionState(signIn, null);
+  const [email, setEmail] = useState('');
+  if (state?.needsConfirmation) {
+    return <ConfirmEmailForm email={email} next={next} fromSignIn />;
+  }
   return (
     <form action={formAction} className="mt-9">
       {state?.error && <p className="mb-4 text-sm text-danger-700">{state.error}</p>}
       {next && <input type="hidden" name="next" value={next} />}
       <div className="flex flex-col gap-3.5">
-        <Field label="Email" name="email" type="email" autoComplete="email" required />
+        <Field
+          label="Email"
+          name="email"
+          type="email"
+          autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
         <Field label="Password" name="password" type="password" autoComplete="current-password" required />
       </div>
       <TurnstileField resetKey={state} />
@@ -162,7 +174,18 @@ export function SignUpForm({ next }: { next?: string }) {
  *  has to leave the app to find and tap anything. The code is entered box-per-digit, the same
  *  shape as an invite code (InviteCodeBoxes) rather than a plain text field, so it reads the
  *  same way anything else you "type a code in" does. */
-function ConfirmEmailForm({ email, next }: { email: string; next?: string }) {
+function ConfirmEmailForm({
+  email,
+  next,
+  fromSignIn,
+}: {
+  email: string;
+  next?: string;
+  /** Reached by signing in on an account that was never confirmed, rather than by just having
+   *  created one - same screen, different lead-in, since there's no fresh code waiting in their
+   *  inbox yet. */
+  fromSignIn?: boolean;
+}) {
   const [state, formAction, isPending] = useActionState(confirmSignup, null);
   const [resendState, resendAction, isResending] = useActionState(resendSignupCode, null);
   const [code, setCode] = useState('');
@@ -171,7 +194,9 @@ function ConfirmEmailForm({ email, next }: { email: string; next?: string }) {
   return (
     <div className="mt-9">
       <p className="text-sm text-honey-700">
-        Account created. We sent a code to {email}, enter it below to confirm.
+        {fromSignIn
+          ? `This account was never confirmed. Tap resend below and we'll send a fresh code to ${email}.`
+          : `Account created. We sent a code to ${email}, enter it below to confirm.`}
       </p>
       <form action={formAction} className="mt-6">
         {state?.error && <p className="mb-4 text-sm text-danger-700">{state.error}</p>}

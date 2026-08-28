@@ -9,6 +9,10 @@ import { CURRENT_POLICY_VERSION } from '@/lib/legal';
 export interface AuthActionState {
   error?: string;
   success?: boolean;
+  /** signIn() only: the password was right but the account was never confirmed after signing up.
+   *  SignInForm swaps to the same ConfirmEmailForm signing up shows, rather than dead-ending on an
+   *  error with no way forward. */
+  needsConfirmation?: boolean;
 }
 
 /** Only ever redirect to a relative in-app path — never follow an absolute/external URL from form input. */
@@ -144,7 +148,16 @@ export async function signIn(_prevState: AuthActionState | null, formData: FormD
   const next = safeNext(formData.get('next'), '/groups');
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken } });
-  if (error) return { error: error.message };
+  if (error) {
+    // GoTrue checks credentials before confirmation status, so a wrong password surfaces as
+    // invalid_credentials regardless - only a correct password on an unconfirmed account gets
+    // here. Don't resend a code from inside this action: the Turnstile token this request just
+    // spent on signInWithPassword is single-use (see TurnstileField.tsx) and can't cover a second
+    // supabase.auth call, so the resend has to happen from ConfirmEmailForm's own button, which
+    // mints its own fresh token on click.
+    if (error.code === 'email_not_confirmed') return { needsConfirmation: true };
+    return { error: error.message };
+  }
   await ensureProfileRow(supabase, data.user.id);
   redirect(next);
 }

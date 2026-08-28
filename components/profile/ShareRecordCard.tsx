@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/Button';
 import { ShareIcon, DownloadIcon } from '@/components/ui/icons';
 import { useShareableImage } from '@/lib/shareImage';
+import { SHARE_BUTTONS_ENABLED } from '@/lib/flags';
 
 /** Wraps the dark record card so it can be captured and shared as a PNG, same "screenshot-able
  * ticket" convention RevealTicket established. All of the capture/share mechanics live in
@@ -28,16 +29,20 @@ export function ShareRecordCard({ groupName, handle, children }: { groupName: st
   return (
     <div>
       <div ref={ref}>{children}</div>
-      <Button
-        onClick={share}
-        disabled={status === 'capturing' || status === 'working'}
-        variant="accent"
-        className="mt-3 inline-flex w-full items-center justify-center gap-2"
-      >
-        {canShare ? <ShareIcon className="h-4 w-4" /> : <DownloadIcon className="h-4 w-4" />}
-        {label}
-      </Button>
-      {status === 'failed' && reason && <p className="mt-1.5 text-center text-[11.5px] text-espresso-400">{reason}</p>}
+      {SHARE_BUTTONS_ENABLED && (
+        <>
+          <Button
+            onClick={share}
+            disabled={status === 'capturing' || status === 'working'}
+            variant="accent"
+            className="mt-3 inline-flex w-full items-center justify-center gap-2"
+          >
+            {canShare ? <ShareIcon className="h-4 w-4" /> : <DownloadIcon className="h-4 w-4" />}
+            {label}
+          </Button>
+          {status === 'failed' && reason && <p className="mt-1.5 text-center text-[11.5px] text-espresso-400">{reason}</p>}
+        </>
+      )}
     </div>
   );
 }
