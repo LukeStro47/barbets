@@ -128,6 +128,12 @@ lib/
   limits.ts            — the group-name / season-name / market-title length caps and the token
                          allocation bounds, all enforced by the inputs and the Postgres
                          functions both (see below)
+  flags.ts             — hand-flipped booleans for temporarily hiding a shipped feature without
+                         touching every call site (currently SHARE_BUTTONS_ENABLED, off — hides
+                         RevealTicket's and ShareRecordCard's share buttons, not the underlying
+                         lib/shareImage.ts capture/share plumbing). Flip the value back on to
+                         restore; not env-driven, since this is a manual toggle a developer sets,
+                         not a per-environment or per-user difference
   memberProfile.ts     — getMemberProfileData(): the member-record query (get_member_stats()
                          plus the group/rank/badges/avatar lookups around it, and the viewer's
                          own meMembershipId for labelling their row "@me" in the compare picker),

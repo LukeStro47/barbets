@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { useShareableImage } from '@/lib/shareImage';
+import { SHARE_BUTTONS_ENABLED } from '@/lib/flags';
 import { formatTokens, formatPercent } from '@/lib/formatNumber';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { ReactionBar } from '@/components/markets/ReactionBar';
@@ -343,26 +344,28 @@ export function RevealTicket({
       </div>
 
       <div className="mt-3.5 flex flex-wrap gap-2">
-        <Button
-          onClick={handleShare}
-          disabled={shareStatus === 'capturing' || shareStatus === 'working'}
-          variant="accent"
-          className="inline-flex flex-1 items-center justify-center gap-2"
-        >
-          {canShare ? <ShareIcon className="h-4 w-4" /> : <DownloadIcon className="h-4 w-4" />}
-          {shareStatus === 'capturing'
-            ? 'Preparing…'
-            : shareStatus === 'working'
-              ? 'Opening…'
-              : shareStatus === 'failed'
-                ? 'Try again'
-                : canShare
-                  ? 'Share'
-                  : 'Save image'}
-        </Button>
+        {SHARE_BUTTONS_ENABLED && (
+          <Button
+            onClick={handleShare}
+            disabled={shareStatus === 'capturing' || shareStatus === 'working'}
+            variant="accent"
+            className="inline-flex flex-1 items-center justify-center gap-2"
+          >
+            {canShare ? <ShareIcon className="h-4 w-4" /> : <DownloadIcon className="h-4 w-4" />}
+            {shareStatus === 'capturing'
+              ? 'Preparing…'
+              : shareStatus === 'working'
+                ? 'Opening…'
+                : shareStatus === 'failed'
+                  ? 'Try again'
+                  : canShare
+                    ? 'Share'
+                    : 'Save image'}
+          </Button>
+        )}
         {hasProof && <ResolutionProofButton marketId={marketId} variant="action" />}
       </div>
-      {shareStatus === 'failed' && shareReason && (
+      {SHARE_BUTTONS_ENABLED && shareStatus === 'failed' && shareReason && (
         <p className="mt-1.5 text-center text-[11.5px] text-espresso-400">{shareReason}</p>
       )}
     </div>
