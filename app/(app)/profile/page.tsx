@@ -13,7 +13,6 @@ import {
   LockIcon,
   SignOutIcon,
 } from '@/components/ui/icons';
-import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { OptionLabel } from '@/components/markets/OptionLabel';
@@ -149,9 +148,6 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
       <main className="mx-auto max-w-lg space-y-6 px-5 py-8">
         <PageHeader title="Profile" />
         <EmptyState icon="👥" title="You're not in any groups yet" subtitle="Your record shows up here once you join or start one." />
-        <Link href="/groups">
-          <Button className="w-full">Go to your groups</Button>
-        </Link>
         {accountLinks}
       </main>
     );
