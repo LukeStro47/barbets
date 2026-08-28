@@ -188,10 +188,22 @@ components/
   auth/        — AuthScreen (the shell every pre-group form screen shares: back + coin header,
                  headline, subhead), AuthTabs (owns the whole sign in / sign up screen, not just
                  the form), AuthForms (SignInForm, SignUpForm, and the ConfirmEmailForm that
-                 replaces SignUpForm once the account exists - a 6-digit code entered inline via
-                 ConfirmCodeBoxes, verified via confirmSignup/resendSignupCode in
+                 replaces either once the account needs confirming - a 6-digit code entered inline
+                 via ConfirmCodeBoxes, verified via confirmSignup/resendSignupCode in
                  lib/actions/auth.ts; the confirmation email's link still works too, as a
-                 fallback), ConfirmCodeBoxes (box-per-digit entry, the same shape as the invite
+                 fallback). SignInForm reaches the same ConfirmEmailForm too, not just SignUpForm:
+                 signIn() returns `needsConfirmation` when signInWithPassword fails with GoTrue's
+                 `email_not_confirmed` code (a right password against a never-confirmed account -
+                 a wrong password fails as `invalid_credentials` regardless of confirmation state,
+                 so this can't be used to probe whether an email is confirmed without already
+                 knowing its password), and ConfirmEmailForm's `fromSignIn` prop swaps its lead-in
+                 copy since there's no fresh code waiting in their inbox yet the way there is right
+                 after signing up - it points at the existing Resend button rather than the action
+                 pre-emptively sending one itself, since the Turnstile token that request already
+                 spent on signInWithPassword is single-use and can't cover a second
+                 `supabase.auth` call (see TurnstileField.tsx's `resetKey` comment); Resend mints
+                 its own token on click via `DeferredTurnstileButton`, the same as it always has.
+                 ConfirmCodeBoxes (box-per-digit entry, the same shape as the invite
                  code's InviteCodeBoxes in components/groups/), ForgotPasswordForm,
                  ResetPasswordForm, TurnstileField (see "Signup abuse protection" below)
   markets/     — MarketCard, MarketActions, MarketForms (the 3-step create wizard), OddsBar, ReactionBar, ...
