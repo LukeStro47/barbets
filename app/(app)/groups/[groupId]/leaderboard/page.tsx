@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Mention } from '@/components/ui/Mention';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { LeaderboardLenses } from '@/components/groups/LeaderboardLenses';
+import { SeasonStakesBand } from '@/components/groups/SeasonStakesBand';
 import { AwardGlyph } from '@/components/groups/AwardGlyph';
 import { ChevronRightIcon } from '@/components/ui/icons';
 import { formatTokens, formatOrdinal, numberWord } from '@/lib/formatNumber';
@@ -40,12 +41,16 @@ export default async function LeaderboardPage({
 
   const user = await requireUser(supabase);
 
-  const { data: settings } = await supabase.from('group_settings').select('seasons_enabled, awards_enabled').eq('group_id', groupId).single();
-  const { data: group } = await supabase.from('groups').select('is_public').eq('id', groupId).single();
+  const { data: settings } = await supabase
+    .from('group_settings')
+    .select('seasons_enabled, awards_enabled, prize_text, punishment_text')
+    .eq('group_id', groupId)
+    .single();
+  const { data: group } = await supabase.from('groups').select('is_public, owner_id').eq('id', groupId).single();
 
   const { data: activeMembers } = await supabase
     .from('memberships')
-    .select('id, user_id, balance, status, nickname')
+    .select('id, user_id, balance, status, nickname, role')
     .eq('group_id', groupId)
     .in('status', ['active', 'dormant']);
 
@@ -82,6 +87,10 @@ export default async function LeaderboardPage({
     members = [...members, ...leftMembers.filter((m) => activeLeftUserIds.has(m.user_id))];
   }
   members.sort((a, b) => b.balance - a.balance);
+
+  const isOwner = group?.owner_id === user?.id;
+  const myMembershipRole = members.find((m) => m.user_id === user?.id)?.role;
+  const canEditStakes = isOwner || (!!group?.is_public && myMembershipRole === 'moderator');
 
   // One batched lookup for every member's avatar rather than a query inside the row loop below
   // (see lib/groupFeed.ts's "no query inside a per-market loop" rule, same idea applied here).
@@ -426,11 +435,29 @@ export default async function LeaderboardPage({
         <LeaderboardLenses
           initialLens={lensParam === 'alltime' ? 'alltime' : 'current'}
           currentLabel={isIntermission ? `${endedSeason?.name ?? `Season ${endedSeason?.number ?? ''}`} final` : 'Current standings'}
-          current={standingsSection}
+          current={
+            <div className="space-y-3.5">
+              <SeasonStakesBand
+                groupId={groupId}
+                prizeText={settings?.prize_text ?? null}
+                punishmentText={settings?.punishment_text ?? null}
+                canEdit={canEditStakes}
+              />
+              {standingsSection}
+            </div>
+          }
           allTime={allTimeSection}
         />
       ) : (
-        standingsSection
+        <>
+          <SeasonStakesBand
+            groupId={groupId}
+            prizeText={settings?.prize_text ?? null}
+            punishmentText={settings?.punishment_text ?? null}
+            canEdit={canEditStakes}
+          />
+          {standingsSection}
+        </>
       )}
 
       {settings?.awards_enabled && (

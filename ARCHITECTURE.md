@@ -214,8 +214,12 @@ components/
                  TransferOwnershipSheet — both also reused directly by SeasonSetupEditSheet
                  below, not just from OwnerOnlySection — OwnerOnlySection and its three sheets),
                  GroupPlaysCard (the eight read-view setting rows),
-                 StakesCard (group_settings.prize_text/punishment_text, plain text, shown
-                 unconditionally on the settings page and as a hub banner when either is set),
+                 StakesCard (group_settings.prize_text/punishment_text, plain text, the read-only
+                 display on the settings page), SeasonStakesBand (the same two columns as a
+                 two-column band on Leaderboard, between the lens toggle and the standings card —
+                 the screen that already ranks first and last, so the stakes have somewhere to
+                 attach to; owner/moderator taps it through to the edit form, including a
+                 dedicated "add a prize and a punishment" empty state a member never sees),
                  GroupIdentitySheet (group name + logo, and the active season's name when there
                  is one, in one modal),
                  IntermissionActions (RosterControl, OpenSeasonBettingButton — the season-
