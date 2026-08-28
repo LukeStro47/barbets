@@ -31,6 +31,12 @@ import { isMobileGateExempt, isMobileBrowserUA, isIOSUA } from '@/lib/mobileGate
  * working thing this can offer is the store listing. Revisit once that native config plus a store
  * release ships — see the "Domains and the mybarbets.com split" section for the shape that kind of
  * rollout takes.
+ *
+ * Both store buttons render, always, rather than just the detected platform's. `isIOSUA()` still
+ * decides which one leads (accent, on top) and which trails (outline, below) — worth keeping
+ * since the detection is usually right and a matching first button is a shorter path for most
+ * visitors — but showing only one meant a false negative (or someone on a device this component
+ * doesn't recognize) had no way to reach the store they actually needed.
  */
 export function MobileAppGate({
   androidStoreUrl,
@@ -64,7 +70,13 @@ export function MobileAppGate({
 
   if (!blocked || isMobileGateExempt(pathname)) return null;
 
-  const storeUrl = isIOS ? iosStoreUrl : androidStoreUrl;
+  const stores = [
+    { url: iosStoreUrl, label: 'Get it on the App Store' },
+    { url: androidStoreUrl, label: 'Get it on Google Play' },
+  ];
+  // Detected platform's store leads; the other trails as a fallback for a wrong guess or a
+  // device isIOSUA()/isMobileBrowserUA() doesn't recognize.
+  const [primary, secondary] = isIOS ? stores : [stores[1], stores[0]];
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-7 bg-paper px-6 py-11 text-center">
@@ -75,11 +87,18 @@ export function MobileAppGate({
           Barbets runs in the app now, not the mobile browser. Get it free, it only takes a minute.
         </p>
       </div>
-      <a href={storeUrl} className="w-full max-w-[300px]">
-        <Button variant="accent" size="xl" className="w-full">
-          {isIOS ? 'Get it on the App Store' : 'Get it on Google Play'}
-        </Button>
-      </a>
+      <div className="flex w-full max-w-[300px] flex-col gap-2.5">
+        <a href={primary.url}>
+          <Button variant="accent" size="xl" className="w-full">
+            {primary.label}
+          </Button>
+        </a>
+        <a href={secondary.url}>
+          <Button variant="outline" size="xl" className="w-full">
+            {secondary.label}
+          </Button>
+        </a>
+      </div>
       <p className="text-[13px] text-espresso-400">Already have it? Open Barbets from your home screen instead.</p>
     </div>
   );

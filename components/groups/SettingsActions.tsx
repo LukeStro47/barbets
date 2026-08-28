@@ -16,8 +16,8 @@ import { COMMON_TIMEZONES, friendlyTimezoneName } from '@/lib/timezone';
 import { Mention } from '@/components/ui/Mention';
 import { formatTokens, formatTokenInputValue } from '@/lib/formatNumber';
 import { TOKEN_ALLOCATION_MAX, JOIN_MESSAGE_MAX_LENGTH } from '@/lib/limits';
-import { inviteUrl } from '@/lib/appOrigin';
 import { useKeyboardState } from '@/lib/useKeyboardInset';
+import { cn } from '@/lib/cn';
 import type { GroupSettings } from '@/lib/actions/groups';
 
 const inputClasses =
@@ -454,7 +454,15 @@ export function EditSettingsForm({
       </div>
 
       <div
-        className="fixed inset-x-0 bottom-[var(--bottomnav-height)] z-20 border-t border-espresso-100 bg-paper-white/95 px-5 pb-5 pt-3 backdrop-blur-sm"
+        className={cn(
+          'fixed inset-x-0 z-20 border-t border-espresso-100 bg-paper-white/95 px-5 pb-5 pt-3 backdrop-blur-sm',
+          // BottomNav hides itself while the keyboard is open, freeing up the space this bar
+          // otherwise reserves above it — staying pinned to --bottomnav-height here left a gap
+          // between this bar and the keyboard exactly that tall. Drop to the true screen edge for
+          // as long as the field holds focus, same as BetslipBar's own expanded (keyboard-facing)
+          // sheet does, rather than the idle bar it stacks above.
+          keyboardOpen ? 'bottom-0' : 'bottom-[var(--bottomnav-height)]'
+        )}
         style={{
           paddingBottom: keyboardOpen && keyboardInset > 0 ? `calc(1.25rem + ${keyboardInset}px)` : undefined,
         }}
@@ -499,7 +507,7 @@ export function EditSettingsForm({
   );
 }
 
-/** The two pills under the invite code. Regenerating kills every link already sent, so it asks first. */
+/** The two pills under the invite code. Regenerating kills every copy already sent, so it asks first. */
 export function InviteCodeActions({ groupId, inviteCode, canRegenerate }: { groupId: string; inviteCode: string; canRegenerate: boolean }) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
@@ -518,15 +526,16 @@ export function InviteCodeActions({ groupId, inviteCode, canRegenerate }: { grou
           type="button"
           className={pillClasses}
           onClick={async () => {
-            // A fixed origin, not window.location.origin: this link gets pasted into a group chat,
-            // and it should always name the app's canonical hostname rather than whichever one the
-            // sharer happened to be on (see lib/appOrigin.ts).
-            await navigator.clipboard.writeText(inviteUrl(inviteCode));
+            // Just the code, not a /join/[code] link: MobileAppGate blocks that route for a
+            // phone browser without the app already installed, so a link mostly just lands a
+            // friend on the "get the app" wall. The code is what actually works — typed into
+            // "Got an invite code?" once they have the app.
+            await navigator.clipboard.writeText(inviteCode);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
           }}
         >
-          {copied ? 'Copied' : 'Copy link'}
+          {copied ? 'Copied' : 'Copy code'}
         </button>
         {canRegenerate && (
           <button type="button" className={pillClasses} disabled={isPending} onClick={() => setConfirming(true)}>
@@ -539,7 +548,7 @@ export function InviteCodeActions({ groupId, inviteCode, canRegenerate }: { grou
         <Modal onClose={() => setConfirming(false)}>
           <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">Regenerate the invite code?</p>
           <p className="text-sm leading-[1.5] text-espresso-600">
-            Every link and code you&apos;ve already shared stops working. Anyone already in the group stays in.
+            The code you&apos;ve already shared stops working. Anyone already in the group stays in.
           </p>
           <div className="flex gap-2 pt-1">
             <Button type="button" variant="outline" className="flex-1" onClick={() => setConfirming(false)}>

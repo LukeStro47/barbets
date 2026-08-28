@@ -4,10 +4,13 @@ import { Card } from '@/components/ui/Card';
 import { BackButton } from '@/components/ui/BackButton';
 import { CONTACT_EMAIL } from '@/lib/appOrigin';
 
-// This page is a mirror of the canonical policy at mybarbets.com/privacy, which is the URL given
-// to App Store Connect and Google Play. It exists in the app as well because the signup flow's
-// terms checkbox and the profile small-print tiles link here, and inside the Capacitor WebView an
-// external link punts the user out to the system browser mid-signup. Change both together.
+// This is the one copy of the privacy policy, not a mirror of a separate marketing-site copy —
+// mybarbets.com links here rather than hosting its own text, so there is exactly one place to
+// change when the policy changes. That only works because this route is exempt from
+// MobileAppGate (see lib/mobileGate.ts's EXEMPT_PATHS): a policy has to render for whoever
+// follows a link to it — App Store Connect, Google Play, the marketing site — regardless of
+// whether they're on a phone browser the app would otherwise gate. The signup flow's terms
+// checkbox and the profile small-print tiles also link here directly.
 //
 // Full legal text, not a paraphrase, since 2026-08-27. A content change here has to be paired
 // with a lib/legal.ts CURRENT_POLICY_VERSION bump so signed-in users are asked to re-agree.
@@ -31,6 +34,7 @@ const policySections: Section[] = [
     blocks: [
       { lead: 'Push notification tokens.', p: 'If you turn on notifications, we store a device token (a web push subscription for the browser/PWA, or a Firebase Cloud Messaging token for the native app) so we can deliver them. Dead tokens are removed automatically.' },
       { lead: 'IP addresses for rate limiting.', p: 'To stop people from guessing group invite codes, we count failed attempts, per account when you are signed in, and by IP address for the one check available before sign-in. These counters exist solely for abuse prevention.' },
+      { lead: 'Bot-detection signals on sign-up and sign-in.', p: 'Our sign-up, sign-in, password-reset, and resend-code forms use Cloudflare Turnstile, a challenge-free bot-detection widget, to block automated account creation. Turnstile evaluates signals about your device and connection to produce a pass/fail result; we only see that result, not the underlying signals Cloudflare uses to compute it. This runs before you have an account and applies to anyone who visits those forms, not just people who complete sign-up.' },
       { lead: 'Error and diagnostic data.', p: 'If something in the app breaks, an error report (the error message, stack trace, and the route or action it happened on) is posted to a private channel we operate so we can fix it. These reports are technical in nature and are not used for profiling.' },
       { lead: 'Product usage and lifecycle events.', p: 'To understand how Barbets is used and to keep it running well, we record certain lifecycle events tied to your account, for example, signing up, joining or creating a group, starting or ending a season, creating a market, and placing a bet. We use these, together with existing records like your groups, markets, and bets, to calculate internal metrics such as how many people are actively using the Service and how well we retain them over time. This data lives in our own database and is visible only to Barbets staff through an internal admin dashboard, it is never sent to, or processed by, any third-party analytics or advertising company.' },
       { lead: 'Install attribution from printed QR codes and NFC tags.', p: 'If you install the Android app by scanning one of our printed QR codes or an NFC tag, the Play Store passes the app a campaign tag identifying the print batch or tag location (for example, "card" or a specific campus). We also log the platform (Android, iOS, or other) and a coarse, non-precise location (country and region, inferred from IP address) for each scan, so we can tell which physical print batch or location led to installs. This happens before you have an account, is not linked to you personally, and involves no third-party analytics service.' },
@@ -58,6 +62,7 @@ const usageSections: Section[] = [
           'keep the Service secure: authenticate you, rate-limit invite-code guessing, and prevent abuse',
           'fix problems, using error reports and diagnostics',
           'understand and improve the Service using internal usage and growth metrics (for example, active users and retention)',
+          'occasionally send you, or your group, a service-related broadcast message (for example, an important update)',
           'respond when you contact us or send feedback; and',
           'understand, at a print-batch level, whether our printed QR materials and NFC tags work.',
         ],
@@ -71,7 +76,8 @@ const usageSections: Section[] = [
     blocks: [
       { p: 'Barbets is a social game, so your activity is visible to the other members of your groups by design:' },
       { p: 'Members of a group can see your nickname in that group, your profile picture, your token balance, your bets, and your place on the leaderboard and in group records. Your email address is never shown to other users.' },
-      { lead: 'Hidden markets.', p: 'A market can be about a group member (its "subject"). The subject cannot see the market exists until it resolves or is voided; every other eligible member of the group can. Once it resolves, it becomes visible to the subject like any other market, including who bet what.' },
+      { lead: 'Public groups are different.', p: "Some groups (for example, campus groups) are public and can be joined by anyone from a directory, without an invite, so this visibility isn't limited to people you or your friends chose to invite. As a partial mitigation, profile pictures are never shown in public groups, to anyone; your nickname, bets, and leaderboard position are still visible there the same way they are in a private group." },
+      { lead: 'Hidden markets.', p: "A market can be about a group member (its \"subject\"), and this doesn't apply in public groups, which don't support markets about a specific person. If you're the subject, you're notified that the market exists and can see a limited summary of it, its status, type, closing time, bet count, and, for yes/no and over/under markets, the odds split, but not its title, description, or who else is involved, until it resolves or is voided. Once it resolves, the full market becomes visible to the subject like any other market, including who bet what." },
       { p: 'Profile pictures are served from a public storage location so the app can display them quickly wherever your nickname appears. In practice this means an uploaded profile photo is accessible to anyone who has its direct URL, so do not upload a photo you would not want visible outside your group.' },
       { p: 'Resolution proof photos are private and only viewable, through the app, by members allowed to see the market they belong to.' },
       { lead: 'Share images.', p: 'The app can generate shareable images (for example, a market reveal ticket or your record card). These are created on your device and shared only when you choose to share them; once you share one outside the app, it is outside our control.' },
@@ -89,6 +95,7 @@ const usageSections: Section[] = [
           'Google (Firebase Cloud Messaging), delivers push notifications to the native mobile app.',
           "Your browser's push service (operated by e.g. Google, Apple, or Mozilla), delivers web push notifications to your browser or installed PWA.",
           'Slack, receives our internal error reports and feedback-form submissions in a private channel we control.',
+          'Cloudflare, provides the Turnstile bot-detection check on our sign-up and sign-in forms, described above.',
         ],
       },
       { p: 'None of these providers may use your data for anything beyond providing their service to us.' },
@@ -99,6 +106,7 @@ const usageSections: Section[] = [
     title: 'Data retention',
     blocks: [
       { p: 'We keep your information for as long as your account exists, because it is the live state of your groups and games. Some internal data is shorter-lived, for example, processed notification events are purged after 30 days.' },
+      { p: "Inactive groups and their data may also be deleted automatically. If a group goes inactive for an extended period, it and its markets may be deleted by an automated process rather than by a member's choice; the group's owner is notified before this happens." },
       { p: 'When you delete your account, your account and personal data are deleted, and your historical game activity is disassociated from you (for example, a market you created simply stops showing a creator). Data held by our processors is deleted according to their standard schedules, and residual copies in backups roll off as backups expire.' },
     ],
   },
@@ -172,7 +180,7 @@ export default async function PrivacyPage() {
 
       <div>
         <h1 className="font-display text-2xl font-bold tracking-tight text-espresso-900">Privacy policy</h1>
-        <p className="mt-1 text-espresso-500">Last updated: August 27, 2026</p>
+        <p className="mt-1 text-espresso-500">Last updated: August 28, 2026</p>
         <p className="mt-3 text-espresso-600">
           This Privacy Policy explains what information My Barbets LLC, doing business as Barbets ("Barbets," "we,"
           "us," or "our") collects when you use the Barbets application and websites, app.mybarbets.com,

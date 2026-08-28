@@ -12,12 +12,26 @@ const MOBILE_UA_RE = /android|iphone|ipad|ipod/i;
  * purpose, and stacking a screen that needs the app store on top of one that means there wasn't
  * any connectivity helps nobody.
  *
+ * `/privacy` and `/terms` are exempt for the same "has to work wherever it's tapped" reason, not
+ * because anyone types them into a phone browser on purpose: mybarbets.com's marketing site links
+ * to these two pages instead of hosting its own copy of the text (see app/privacy/page.tsx and
+ * app/terms/page.tsx), and App Store Connect/Google Play/Apple's own review both link to a privacy
+ * policy URL directly. A legal document has to actually render for whoever follows that link, gate
+ * or no gate — blocking it behind "get the app" would mean the one copy of the policy that exists
+ * is unreadable from the exact places required to link to it.
+ *
  * Everything else — including `/`, `/login`, `/join/[code]`, and every signed-in page — is gated.
  * That is a deliberate, hard product decision: there is no "continue in browser anyway" escape
  * hatch here, unlike a normal confirmation modal. Reconsider this list, not the gate itself, if a
  * route needs to keep working outside the app.
  */
-const EXEMPT_PATHS = [/^\/forgot-password\/?$/, /^\/reset-password\/?$/, /^\/offline\/?$/];
+const EXEMPT_PATHS = [
+  /^\/forgot-password\/?$/,
+  /^\/reset-password\/?$/,
+  /^\/offline\/?$/,
+  /^\/privacy\/?$/,
+  /^\/terms\/?$/,
+];
 
 export function isMobileGateExempt(pathname: string): boolean {
   return EXEMPT_PATHS.some((re) => re.test(pathname));
