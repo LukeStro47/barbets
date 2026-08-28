@@ -3,18 +3,21 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { renameGroup, setGroupAvatar } from '@/lib/actions/groups';
+import { renameSeason } from '@/lib/actions/seasons';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { GROUP_AVATARS } from '@/lib/avatars';
-import { GROUP_NAME_MAX_LENGTH } from '@/lib/limits';
+import { GROUP_NAME_MAX_LENGTH, SEASON_NAME_MAX_LENGTH } from '@/lib/limits';
 import { initials } from '@/lib/initials';
 import { cn } from '@/lib/cn';
 
 /**
- * The identity row's "Edit" control: the group's name and its logo in one sheet, replacing the two
- * always-open cards that used to sit at the top of the settings page. They're the same decision
- * ("what is this group called and what does it look like"), and neither is edited often enough to
- * earn permanent screen space above the settings that actually govern play.
+ * The identity row's "Edit" control: the group's name, its logo, and (when there's an active
+ * season) that season's name, in one sheet — replacing the two always-open cards that used to sit
+ * at the top of the settings page, plus the inline pencil-edit the season name used to get right
+ * next to the group name. All three are the same kind of decision ("what is this thing called and
+ * what does it look like"), none of them edited often enough to earn permanent screen space above
+ * the settings that actually govern play.
  *
  * Unlike the old avatar grid, picking a logo here doesn't save on tap — the sheet has one Save, so
  * a tap you didn't mean is undone by Cancel rather than by tapping back to the previous tile.
@@ -23,25 +26,32 @@ export function GroupIdentitySheet({
   groupId,
   groupName,
   avatarKey,
+  activeSeason,
 }: {
   groupId: string;
   groupName: string;
   avatarKey: string | null;
+  /** The group's currently active season, or null/omitted when seasons are off or between
+      seasons — the season-name field only renders when there's a season to name. */
+  activeSeason?: { id: string; name: string | null; number: number } | null;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(groupName);
   const [selected, setSelected] = useState<string | null>(avatarKey);
+  const [seasonName, setSeasonName] = useState(activeSeason?.name ?? '');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const trimmed = name.trim();
-  const dirty = trimmed !== groupName || selected !== avatarKey;
+  const seasonNameTrimmed = seasonName.trim();
+  const dirty = trimmed !== groupName || selected !== avatarKey || (!!activeSeason && seasonNameTrimmed !== (activeSeason.name ?? ''));
 
   function close() {
     setOpen(false);
     setName(groupName);
     setSelected(avatarKey);
+    setSeasonName(activeSeason?.name ?? '');
     setError(null);
   }
 
@@ -59,6 +69,13 @@ export function GroupIdentitySheet({
         const avatared = await setGroupAvatar(groupId, selected);
         if (avatared.error) {
           setError(avatared.error);
+          return;
+        }
+      }
+      if (activeSeason && seasonNameTrimmed !== (activeSeason.name ?? '')) {
+        const renamedSeason = await renameSeason(groupId, activeSeason.id, seasonNameTrimmed);
+        if (renamedSeason.error) {
+          setError(renamedSeason.error);
           return;
         }
       }
@@ -81,7 +98,7 @@ export function GroupIdentitySheet({
 
       {open && (
         <Modal onClose={close}>
-          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">Group name and logo</p>
+          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">Group details</p>
           {error && <p className="text-sm text-danger-700">{error}</p>}
 
           <div className="space-y-1.5">
@@ -96,6 +113,22 @@ export function GroupIdentitySheet({
               className="w-full rounded-[10px] border border-espresso-200 bg-paper-white px-3.5 py-2.5 text-[15px] font-semibold text-espresso-950 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200"
             />
           </div>
+
+          {activeSeason && (
+            <div className="space-y-1.5">
+              <label className="block text-sm font-semibold text-espresso-800" htmlFor="group-identity-season-name">
+                Season name
+              </label>
+              <input
+                id="group-identity-season-name"
+                value={seasonName}
+                onChange={(e) => setSeasonName(e.target.value)}
+                maxLength={SEASON_NAME_MAX_LENGTH}
+                placeholder={`Season ${activeSeason.number}`}
+                className="w-full rounded-[10px] border border-espresso-200 bg-paper-white px-3.5 py-2.5 text-[15px] font-semibold text-espresso-950 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200"
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <p className="text-sm font-semibold text-espresso-800">Logo</p>
