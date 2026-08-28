@@ -15,7 +15,7 @@ import { SEASON_LENGTH_HINTS, SEASON_LENGTH_SHORT_LABEL, type SeasonLength } fro
 import { COMMON_TIMEZONES, friendlyTimezoneName } from '@/lib/timezone';
 import { Mention } from '@/components/ui/Mention';
 import { formatTokens, formatTokenInputValue } from '@/lib/formatNumber';
-import { TOKEN_ALLOCATION_MAX, JOIN_MESSAGE_MAX_LENGTH } from '@/lib/limits';
+import { TOKEN_ALLOCATION_MAX, JOIN_MESSAGE_MAX_LENGTH, PRIZE_MAX_LENGTH, PUNISHMENT_MAX_LENGTH } from '@/lib/limits';
 import { useKeyboardState } from '@/lib/useKeyboardInset';
 import { cn } from '@/lib/cn';
 import type { GroupSettings } from '@/lib/actions/groups';
@@ -102,6 +102,8 @@ export function EditSettingsForm({
   const [requireEndorsement, setRequireEndorsement] = useState(settings.require_endorsement);
   const [joinMessage, setJoinMessage] = useState(settings.join_message ?? '');
   const [awardsEnabled, setAwardsEnabled] = useState(settings.awards_enabled);
+  const [prizeText, setPrizeText] = useState(settings.prize_text ?? '');
+  const [punishmentText, setPunishmentText] = useState(settings.punishment_text ?? '');
   // The join-message textarea's keyboard pushes this bar up just enough to reveal the field
   // itself, leaving it flush against the keyboard with no breathing room — pad past it, same
   // fix BetslipBar's amount field uses.
@@ -135,6 +137,8 @@ export function EditSettingsForm({
         requireEndorsement: isPublic ? false : requireEndorsement,
         joinMessage: isPublic ? null : joinMessage,
         awardsEnabled: isPublic ? false : awardsEnabled,
+        prizeText: isPublic ? null : prizeText,
+        punishmentText: isPublic ? null : punishmentText,
       });
       if (result.error) {
         setError(result.error);
@@ -231,6 +235,56 @@ export function EditSettingsForm({
             )}
           </SettingsCard>
         </section>
+
+        {/* What's actually on the line, not owner-configurable for a public group same as the join
+            message below — fixed rules there, not house stakes between strangers. */}
+        {!isPublic && (
+          <section>
+            <SectionLabel>Stakes</SectionLabel>
+            <SettingsCard>
+              <div className={rowClasses}>
+                <label className={rowLabelClasses} htmlFor="prize-text">
+                  Prize
+                </label>
+                <p className={`mb-2 mt-0.5 ${rowHelpClasses}`}>
+                  What whoever finishes on top gets. Shown to everyone in the group. Leave it blank for none.
+                </p>
+                <textarea
+                  id="prize-text"
+                  value={prizeText}
+                  onChange={(e) => setPrizeText(e.target.value)}
+                  maxLength={PRIZE_MAX_LENGTH}
+                  rows={2}
+                  placeholder="Winner picks the next group outing."
+                  className={inputClasses}
+                />
+                <span className="mt-1 block text-right text-[11px] text-espresso-400">
+                  {prizeText.length} / {PRIZE_MAX_LENGTH}
+                </span>
+              </div>
+              <div className={rowClasses}>
+                <label className={rowLabelClasses} htmlFor="punishment-text">
+                  Punishment
+                </label>
+                <p className={`mb-2 mt-0.5 ${rowHelpClasses}`}>
+                  What whoever finishes last owes. Shown to everyone in the group. Leave it blank for none.
+                </p>
+                <textarea
+                  id="punishment-text"
+                  value={punishmentText}
+                  onChange={(e) => setPunishmentText(e.target.value)}
+                  maxLength={PUNISHMENT_MAX_LENGTH}
+                  rows={2}
+                  placeholder="Loser buys the first round next time."
+                  className={inputClasses}
+                />
+                <span className="mt-1 block text-right text-[11px] text-espresso-400">
+                  {punishmentText.length} / {PUNISHMENT_MAX_LENGTH}
+                </span>
+              </div>
+            </SettingsCard>
+          </section>
+        )}
 
         {/* Public groups have no market-creation preferences left to set — endorsement, hedging,
             accepting members, the join message, and betting are all fixed (see the "Public groups"

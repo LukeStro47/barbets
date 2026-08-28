@@ -7,6 +7,7 @@ import { InviteCodeActions, OwnerOnlySection } from '@/components/groups/Setting
 import { MemberSearchBan } from '@/components/groups/MemberSearchBan';
 import { MemberRosterList } from '@/components/groups/MemberRosterList';
 import { GroupPlaysCard, seasonLabel, type ActiveSeasonSummary } from '@/components/groups/GroupPlaysCard';
+import { StakesCard } from '@/components/groups/StakesCard';
 import { GroupIdentitySheet } from '@/components/groups/GroupIdentitySheet';
 import { SeasonNameEditor } from '@/components/groups/SeasonNameEditor';
 import { NicknameEditor } from '@/components/groups/NicknameEditor';
@@ -188,6 +189,13 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
               Edit how this group plays
             </Link>
           )}
+        </section>
+      )}
+
+      {!isPublic && groupSettings && (groupSettings.prize_text || groupSettings.punishment_text) && (
+        <section>
+          <SectionLabel>Stakes</SectionLabel>
+          <StakesCard prizeText={groupSettings.prize_text} punishmentText={groupSettings.punishment_text} />
         </section>
       )}
 

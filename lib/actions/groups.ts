@@ -141,6 +141,10 @@ export interface GroupSettings {
   /** Default true. Always false for a public group (see lib/actions/discover.ts) — no built-in
       titles, no custom awards. Freely reversible for a private group, same as allow_hedged_bets. */
   awards_enabled: boolean;
+  /** What the champion gets. Null when the owner hasn't set one. Always null for a public group. */
+  prize_text: string | null;
+  /** What the loser owes. Null when the owner hasn't set one. Always null for a public group. */
+  punishment_text: string | null;
 }
 
 export async function updateGroupSettings(
@@ -160,6 +164,8 @@ export async function updateGroupSettings(
     requireEndorsement: boolean;
     joinMessage?: string | null;
     awardsEnabled: boolean;
+    prizeText?: string | null;
+    punishmentText?: string | null;
   }
 ): Promise<ActionResult<GroupSettings>> {
   const supabase = await createClient();
@@ -180,6 +186,8 @@ export async function updateGroupSettings(
       p_require_endorsement: input.requireEndorsement,
       p_join_message: input.joinMessage ?? null,
       p_awards_enabled: input.awardsEnabled,
+      p_prize_text: input.prizeText ?? null,
+      p_punishment_text: input.punishmentText ?? null,
     })
   );
   if (result.error) return result;
