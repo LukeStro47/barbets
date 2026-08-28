@@ -24,6 +24,9 @@ export function SeasonRecapHero({
   viewerNet,
   viewerAccuracy,
   viewerTitlesHeld,
+  loser,
+  prizeText,
+  punishmentText,
 }: {
   viewer: 'owner' | 'member';
   seasonName: string;
@@ -35,6 +38,11 @@ export function SeasonRecapHero({
   viewerNet?: number;
   viewerAccuracy?: number | null;
   viewerTitlesHeld?: number;
+  /** Whoever finished last, from season_results.snapshot.loser. */
+  loser?: FinalBalanceRow | null;
+  /** From season_results.snapshot, frozen at the moment this season closed. */
+  prizeText?: string | null;
+  punishmentText?: string | null;
 }) {
   const champion = finalBalances[0];
   const runnerUp = finalBalances[1];
@@ -100,6 +108,23 @@ export function SeasonRecapHero({
           <span className="absolute top-1/2 -left-2.5 h-5 w-5 -translate-y-1/2 rounded-full bg-paper" />
           <span className="absolute top-1/2 -right-2.5 h-5 w-5 -translate-y-1/2 rounded-full bg-paper" />
         </div>
+
+        {/* Same copy for both views, kept terse and universal like the rest of this hero — a
+            member reads exactly what the owner reads. */}
+        {(prizeText || punishmentText) && (
+          <div className="mt-[18px] flex flex-col gap-1.5 rounded-2xl bg-white/[0.06] px-3.5 py-3">
+            {prizeText && champion && (
+              <p className="text-[12.5px] leading-[1.45] text-paper-white/80">
+                🏆 <span className="font-bold text-paper-white">{champion.nickname}</span> gets: {prizeText}
+              </p>
+            )}
+            {punishmentText && loser && (
+              <p className="text-[12.5px] leading-[1.45] text-paper-white/80">
+                💀 <span className="font-bold text-paper-white">{loser.nickname}</span> owes: {punishmentText}
+              </p>
+            )}
+          </div>
+        )}
 
         {viewer === 'owner' ? (
           <div className="mt-[18px] flex gap-3">

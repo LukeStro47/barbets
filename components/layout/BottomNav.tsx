@@ -144,6 +144,23 @@ export function BottomNav({
     return () => window.removeEventListener(NEW_GROUP_EVENT, onNewGroup);
   }, []);
 
+  // The demo walkthrough's post-tour "Create a Group" CTA lives on /demo, outside this layout, so
+  // it can't dispatch NEW_GROUP_EVENT the way StartGroupButton does — nothing would be mounted to
+  // hear it yet. It instead lands here with ?startGroup=1 and this opens the same drawer once, on
+  // mount, then strips the flag so a refresh or a back-nav doesn't reopen it. Read straight off
+  // `window.location` rather than `useSearchParams()` so this client component doesn't force a
+  // Suspense boundary onto every page the nav renders in.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('startGroup') !== '1') return;
+    setSwitcherOpen(false);
+    setCreateOpen(true);
+    params.delete('startGroup');
+    const newSearch = params.toString();
+    router.replace(`${window.location.pathname}${newSearch ? `?${newSearch}` : ''}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Reset any open sheet the moment the route actually changes, so navigating away (e.g. picking
   // a group) doesn't leave a sheet re-appearing stale on the next visible page.
   const prevPathnameRef = useRef(pathname);
@@ -195,7 +212,13 @@ export function BottomNav({
 
   function goToTab(tab: NavTab) {
     if (tab === 'home') {
-      openSwitcher();
+      // With no groups yet, the switcher sheet would just show its "No groups yet." card over
+      // the same all-groups hub its own "All groups" row links to — skip straight there.
+      if (groups.length === 0) {
+        router.push('/groups?all=1');
+      } else {
+        openSwitcher();
+      }
     } else if (tab === 'you') {
       // Carries the group you're currently in along to Profile, so it opens already scoped to
       // it instead of falling back to whichever group Profile defaults to on its own.

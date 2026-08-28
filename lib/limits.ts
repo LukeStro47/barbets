@@ -45,3 +45,9 @@ export const AWARD_LABEL_MAX_LENGTH = 30;
 /** Bounds the added recompute cost every 3rd resolved market now carries, one query per custom
     award per group. */
 export const CUSTOM_AWARD_MAX_PER_GROUP = 5;
+
+/** What the owner writes for whoever finishes on top / dead last. Shown inline on the group hub
+    and settings, and named on the season recap, so kept short enough to read at a glance rather
+    than sized like the join message's one-screen modal. */
+export const PRIZE_MAX_LENGTH = 120;
+export const PUNISHMENT_MAX_LENGTH = 120;

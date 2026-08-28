@@ -15,9 +15,9 @@ import { SEASON_LENGTH_HINTS, SEASON_LENGTH_SHORT_LABEL, type SeasonLength } fro
 import { COMMON_TIMEZONES, friendlyTimezoneName } from '@/lib/timezone';
 import { Mention } from '@/components/ui/Mention';
 import { formatTokens, formatTokenInputValue } from '@/lib/formatNumber';
-import { TOKEN_ALLOCATION_MAX, JOIN_MESSAGE_MAX_LENGTH } from '@/lib/limits';
-import { inviteUrl } from '@/lib/appOrigin';
+import { TOKEN_ALLOCATION_MAX, JOIN_MESSAGE_MAX_LENGTH, PRIZE_MAX_LENGTH, PUNISHMENT_MAX_LENGTH } from '@/lib/limits';
 import { useKeyboardState } from '@/lib/useKeyboardInset';
+import { cn } from '@/lib/cn';
 import type { GroupSettings } from '@/lib/actions/groups';
 
 const inputClasses =
@@ -102,6 +102,8 @@ export function EditSettingsForm({
   const [requireEndorsement, setRequireEndorsement] = useState(settings.require_endorsement);
   const [joinMessage, setJoinMessage] = useState(settings.join_message ?? '');
   const [awardsEnabled, setAwardsEnabled] = useState(settings.awards_enabled);
+  const [prizeText, setPrizeText] = useState(settings.prize_text ?? '');
+  const [punishmentText, setPunishmentText] = useState(settings.punishment_text ?? '');
   // The join-message textarea's keyboard pushes this bar up just enough to reveal the field
   // itself, leaving it flush against the keyboard with no breathing room — pad past it, same
   // fix BetslipBar's amount field uses.
@@ -135,6 +137,8 @@ export function EditSettingsForm({
         requireEndorsement: isPublic ? false : requireEndorsement,
         joinMessage: isPublic ? null : joinMessage,
         awardsEnabled: isPublic ? false : awardsEnabled,
+        prizeText: isPublic ? null : prizeText,
+        punishmentText: isPublic ? null : punishmentText,
       });
       if (result.error) {
         setError(result.error);
@@ -231,6 +235,56 @@ export function EditSettingsForm({
             )}
           </SettingsCard>
         </section>
+
+        {/* What's actually on the line, not owner-configurable for a public group same as the join
+            message below — fixed rules there, not house stakes between strangers. */}
+        {!isPublic && (
+          <section>
+            <SectionLabel>Stakes</SectionLabel>
+            <SettingsCard>
+              <div className={rowClasses}>
+                <label className={rowLabelClasses} htmlFor="prize-text">
+                  Prize
+                </label>
+                <p className={`mb-2 mt-0.5 ${rowHelpClasses}`}>
+                  What whoever finishes on top gets. Shown to everyone in the group. Leave it blank for none.
+                </p>
+                <textarea
+                  id="prize-text"
+                  value={prizeText}
+                  onChange={(e) => setPrizeText(e.target.value)}
+                  maxLength={PRIZE_MAX_LENGTH}
+                  rows={2}
+                  placeholder="Winner picks the next group outing."
+                  className={inputClasses}
+                />
+                <span className="mt-1 block text-right text-[11px] text-espresso-400">
+                  {prizeText.length} / {PRIZE_MAX_LENGTH}
+                </span>
+              </div>
+              <div className={rowClasses}>
+                <label className={rowLabelClasses} htmlFor="punishment-text">
+                  Punishment
+                </label>
+                <p className={`mb-2 mt-0.5 ${rowHelpClasses}`}>
+                  What whoever finishes last owes. Shown to everyone in the group. Leave it blank for none.
+                </p>
+                <textarea
+                  id="punishment-text"
+                  value={punishmentText}
+                  onChange={(e) => setPunishmentText(e.target.value)}
+                  maxLength={PUNISHMENT_MAX_LENGTH}
+                  rows={2}
+                  placeholder="Loser buys the first round next time."
+                  className={inputClasses}
+                />
+                <span className="mt-1 block text-right text-[11px] text-espresso-400">
+                  {punishmentText.length} / {PUNISHMENT_MAX_LENGTH}
+                </span>
+              </div>
+            </SettingsCard>
+          </section>
+        )}
 
         {/* Public groups have no market-creation preferences left to set — endorsement, hedging,
             accepting members, the join message, and betting are all fixed (see the "Public groups"
@@ -454,7 +508,15 @@ export function EditSettingsForm({
       </div>
 
       <div
-        className="fixed inset-x-0 bottom-[var(--bottomnav-height)] z-20 border-t border-espresso-100 bg-paper-white/95 px-5 pb-5 pt-3 backdrop-blur-sm"
+        className={cn(
+          'fixed inset-x-0 z-20 border-t border-espresso-100 bg-paper-white/95 px-5 pb-5 pt-3 backdrop-blur-sm',
+          // BottomNav hides itself while the keyboard is open, freeing up the space this bar
+          // otherwise reserves above it — staying pinned to --bottomnav-height here left a gap
+          // between this bar and the keyboard exactly that tall. Drop to the true screen edge for
+          // as long as the field holds focus, same as BetslipBar's own expanded (keyboard-facing)
+          // sheet does, rather than the idle bar it stacks above.
+          keyboardOpen ? 'bottom-0' : 'bottom-[var(--bottomnav-height)]'
+        )}
         style={{
           paddingBottom: keyboardOpen && keyboardInset > 0 ? `calc(1.25rem + ${keyboardInset}px)` : undefined,
         }}
@@ -499,7 +561,7 @@ export function EditSettingsForm({
   );
 }
 
-/** The two pills under the invite code. Regenerating kills every link already sent, so it asks first. */
+/** The two pills under the invite code. Regenerating kills every copy already sent, so it asks first. */
 export function InviteCodeActions({ groupId, inviteCode, canRegenerate }: { groupId: string; inviteCode: string; canRegenerate: boolean }) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
@@ -518,15 +580,16 @@ export function InviteCodeActions({ groupId, inviteCode, canRegenerate }: { grou
           type="button"
           className={pillClasses}
           onClick={async () => {
-            // A fixed origin, not window.location.origin: this link gets pasted into a group chat,
-            // and it should always name the app's canonical hostname rather than whichever one the
-            // sharer happened to be on (see lib/appOrigin.ts).
-            await navigator.clipboard.writeText(inviteUrl(inviteCode));
+            // Just the code, not a /join/[code] link: MobileAppGate blocks that route for a
+            // phone browser without the app already installed, so a link mostly just lands a
+            // friend on the "get the app" wall. The code is what actually works — typed into
+            // "Got an invite code?" once they have the app.
+            await navigator.clipboard.writeText(inviteCode);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
           }}
         >
-          {copied ? 'Copied' : 'Copy link'}
+          {copied ? 'Copied' : 'Copy code'}
         </button>
         {canRegenerate && (
           <button type="button" className={pillClasses} disabled={isPending} onClick={() => setConfirming(true)}>
@@ -539,7 +602,7 @@ export function InviteCodeActions({ groupId, inviteCode, canRegenerate }: { grou
         <Modal onClose={() => setConfirming(false)}>
           <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">Regenerate the invite code?</p>
           <p className="text-sm leading-[1.5] text-espresso-600">
-            Every link and code you&apos;ve already shared stops working. Anyone already in the group stays in.
+            The code you&apos;ve already shared stops working. Anyone already in the group stays in.
           </p>
           <div className="flex gap-2 pt-1">
             <Button type="button" variant="outline" className="flex-1" onClick={() => setConfirming(false)}>

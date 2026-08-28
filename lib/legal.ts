@@ -15,4 +15,4 @@
  * on a day with no actual content change. The full rewrite of both documents that landed the same
  * calendar day is a real content change and needs its own distinct value to trigger the gate.
  */
-export const CURRENT_POLICY_VERSION = '2026-08-27-v2';
+export const CURRENT_POLICY_VERSION = '2026-08-28';

@@ -1,12 +1,10 @@
 /**
- * The canonical public origin for the app, for building links that are meant to leave it (invite
- * links someone pastes into a group chat).
+ * The canonical public origin for the app, for building links that are meant to leave it.
  *
  * Deliberately a constant rather than `window.location.origin`. This app answers on more than one
  * hostname: app.mybarbets.com, the barbets.vercel.app deployment alias, and inside the Capacitor
  * WebView whatever `server.url` in capacitor.config.ts currently points at. Deriving the origin
- * from the browser means a shared link says whichever hostname the sharer happened to be on, so
- * every invite an Android user sent was a barbets.vercel.app link.
+ * from the browser means a shared link says whichever hostname the sharer happened to be on.
  *
  * This is only for outbound/shareable URLs. Anything that navigates within the app should stay a
  * relative path, so it keeps working on every hostname (and in the WebView).
@@ -22,8 +20,3 @@ export const SITE_ORIGIN = 'https://mybarbets.com';
  * will notice an address that belongs to some other company.
  */
 export const CONTACT_EMAIL = 'info@mybarbets.com';
-
-/** Where invite links point. Kept next to APP_ORIGIN so both call sites agree on the shape. */
-export function inviteUrl(inviteCode: string): string {
-  return `${APP_ORIGIN}/join/${inviteCode}`;
-}

@@ -4,8 +4,9 @@ import { Card } from '@/components/ui/Card';
 import { BackButton } from '@/components/ui/BackButton';
 import { CONTACT_EMAIL } from '@/lib/appOrigin';
 
-// Mirror of the canonical terms at mybarbets.com/terms. See app/privacy/page.tsx for why both
-// copies exist, and change them together.
+// The one copy of the terms, not a mirror of a separate marketing-site copy. See
+// app/privacy/page.tsx for why: mybarbets.com links here instead of hosting its own text, which
+// is only possible because this route is exempt from MobileAppGate (lib/mobileGate.ts).
 //
 // Full legal text, not a paraphrase, since 2026-08-27. A content change here has to be paired
 // with a lib/legal.ts CURRENT_POLICY_VERSION bump so signed-in users are asked to re-agree.
@@ -18,6 +19,7 @@ const sections: Section[] = [
     title: '1. What Barbets is (and is not)',
     blocks: [
       { p: 'Barbets is a play-money prediction market for private friend groups. Members of a group create questions ("markets"), place bets using virtual tokens, and settle up through a group vote once the outcome is known.' },
+      { p: "Some markets are different: in Barbets' Sports and Weather public groups, markets are created and resolved automatically from public sports and weather data instead of by a group vote. Everything else in these Terms about betting, tokens, and resolution applies to those markets the same way." },
       { p: 'Barbets is not gambling and is not a financial product. Specifically:' },
       {
         ul: [
@@ -52,10 +54,11 @@ const sections: Section[] = [
     ],
   },
   {
-    title: '4. Groups, invites, and group owners',
+    title: '4. Groups, invites, group owners, and moderators',
     blocks: [
-      { p: 'Barbets is organized around private groups that are joined by invite code.' },
+      { p: 'Most groups on Barbets are private and joined by invite code. Barbets also runs certain public groups (for example, campus groups, and the Sports and Weather groups described in Section 1) that anyone can join from a directory, without an invite code.' },
       { p: "Group owners run their groups. A group's owner can configure its settings, remove any member at any time for any reason, void markets, and rotate the group's invite code so a removed member cannot rejoin. If someone in your group is behaving badly, the group owner is the fastest line of moderation." },
+      { p: "Public groups may also have one or more moderators, assigned by Barbets. A moderator has the same day-to-day authority as an owner over that group: they can create and void markets, remove members, and message the group. Moderators do not have an owner's ability to delete the group or change who owns it." },
       { p: "Invite codes are for people the group intends to invite. Do not attempt to guess, brute-force, or systematically test invite codes, and do not post a private group's invite code publicly without the owner's consent. The Service rate-limits invite-code attempts, and attempting to evade those limits violates these Terms." },
       { p: "Leaving or being removed from a group is handled by the Service's standard rules (for example, your open bets may be refunded or affected markets voided). Group history, such as resolved markets you participated in, may remain visible to the group as part of its record." },
     ],
@@ -63,8 +66,9 @@ const sections: Section[] = [
   {
     title: '5. Hidden markets: a market can be about you',
     blocks: [
-      { p: 'A defining feature of Barbets is that a market can be about a group member (the market’s "subject"), and the subject cannot see that the market exists, in their feed, counts, or notifications, until it resolves or is voided, at which point it becomes visible to them like any other market.' },
-      { p: 'By joining a group, you acknowledge and accept that other members of that group may create markets about you that are hidden from you until they resolve. You agree not to attempt to circumvent this or any other privacy or visibility mechanism of the Service, including by technical means, by using another member’s account, or by probing the Service’s interfaces.' },
+      { p: 'A defining feature of Barbets is that a market can be about a group member (the market\'s "subject"). This does not apply to public groups, which do not support markets about a specific person.' },
+      { p: "If you're a subject, you are notified that a market about you exists, and you can see a limited summary of it, its status, type, closing time, how many bets have been placed, and, for yes/no and over/under markets, the current odds split. You cannot see its title, description, who created it, or who else is involved, and for multiple-choice markets you cannot see any of the option text, since that could reveal what's actually being asked. The full market becomes visible to you, like any other market, once it resolves or is voided." },
+      { p: 'By joining a group, you acknowledge and accept that other members of that group may create markets about you that stay partially hidden from you in this way until they resolve. You agree not to attempt to circumvent this or any other privacy or visibility mechanism of the Service, including by technical means, by using another member’s account, or by probing the Service’s interfaces.' },
       { p: 'Markets about people must still comply with the content rules in Section 6. Being the subject of a market is never an excuse for content that harasses or demeans you. If you are not comfortable with hidden markets, do not join a group, and you can leave any group at any time.' },
     ],
   },
@@ -223,7 +227,7 @@ export default async function TermsPage() {
 
       <div>
         <h1 className="font-display text-2xl font-bold tracking-tight text-espresso-900">Terms of use</h1>
-        <p className="mt-1 text-espresso-500">Last updated: August 27, 2026</p>
+        <p className="mt-1 text-espresso-500">Last updated: August 28, 2026</p>
         <p className="mt-3 text-espresso-600">
           These Terms of Service ("Terms") are an agreement between you and My Barbets LLC, doing business as Barbets
           ("Barbets," "we," "us," or "our") governing your use of the Barbets application and websites, including

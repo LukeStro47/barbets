@@ -451,7 +451,11 @@ export function DemoWalkthrough({ isLoggedIn }: { isLoggedIn: boolean }) {
             </>
           ) : (
             <div className="animate-demo-fade-up-btn flex flex-col gap-2.5">
-              <Link href={isLoggedIn ? '/groups/new' : '/login?mode=signup'} className="block">
+              {/* Straight to /groups/new used to skip the shared name+allocation drawer every
+                  other "create a group" entry point opens first (see StartGroupButton). Routing
+                  through the groups hub with this flag lets BottomNav (mounted there, not here)
+                  open that same drawer, so the wizard only ever answers what the drawer didn't. */}
+              <Link href={isLoggedIn ? '/groups?all=1&startGroup=1' : '/login?mode=signup'} className="block">
                 <Button size="lg" variant="accent" className="w-full transition-transform active:scale-[0.97]">
                   Create a Group
                 </Button>
