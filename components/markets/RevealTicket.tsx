@@ -363,7 +363,8 @@ export function RevealTicket({
                     : 'Save image'}
           </Button>
         )}
-        {hasProof && <ResolutionProofButton marketId={marketId} variant="action" />}
+        {/* Full-width whenever it's the only button in this row -- i.e. whenever Share is hidden. */}
+        {hasProof && <ResolutionProofButton marketId={marketId} variant="action" className={!SHARE_BUTTONS_ENABLED ? 'flex-1' : undefined} />}
       </div>
       {SHARE_BUTTONS_ENABLED && shareStatus === 'failed' && shareReason && (
         <p className="mt-1.5 text-center text-[11.5px] text-espresso-400">{shareReason}</p>
