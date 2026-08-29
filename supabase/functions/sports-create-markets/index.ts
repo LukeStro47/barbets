@@ -1,9 +1,18 @@
 // Polls The Odds API's free /events endpoint (fixture data only, no odds -- doesn't touch the
 // per-market-region quota the way /odds does, since Barbets runs its own betting pool and has no
 // use for anyone else's lines) for MLB/NBA/NFL games starting soon, and creates one moneyline
-// "Will the {home} beat the {away}?" market per game in the seeded "Sports" group. Whichever
-// league is actually in season is whichever one this naturally produces markets for -- no
-// per-league on/off switch, just try all three every run.
+// "{home} vs. {away}" market per game in the seeded "Sports" group -- the description spells out
+// what YES/NO mean, since the title alone (unlike the old "Will the {home} beat the {away}?"
+// phrasing) no longer does. Whichever league is actually in season is whichever one this naturally
+// produces markets for -- no per-league on/off switch, just try all three every run.
+//
+// Candidates are taken round-robin across leagues (one game per league per pass), not by draining
+// SPORTS[0]'s whole eligible list before ever looking at SPORTS[1]. With OPEN_MARKET_CAP this low,
+// exhaust-then-move-on meant whichever league happened to list first (baseball_mlb) and had 3+
+// games in the lookahead window claimed every slot every run, regardless of whether NBA/NFL also
+// had games that day -- not a seasonality effect, just first-in-the-array always winning. Found
+// 2026-08-29 during MLB's regular season overlapping NFL preseason, where NFL never got a single
+// market despite having games in the window.
 //
 // Unlike weather-resolve-markets, sports-resolve-markets doesn't need to parse the city back out
 // of the title: it reconstructs the exact same title from the same home/away pair the scores
@@ -21,14 +30,14 @@ const SPORTS = ['baseball_mlb', 'basketball_nba', 'americanfootball_nfl'];
 // hours" market, not a standing board of every game this week.
 const LOOKAHEAD_MS = 12 * 3600_000;
 
-// Safety margin on the near side of the window too: this run's own JS Date.now() check happens
-// before a couple of network round trips to Postgres (the existing-market lookup, then the create
-// call itself), and _create_system_market() runs the identical "must be in the future" check again
-// once it gets there. A game starting only a second or two out could pass the check here and still
-// lose that race against the DB's own now(), producing a permanently stuck "closes_at must be in
-// the future" sweep_failures row -- the next run never retries it, since by then the game is
-// clearly in the past and gets filtered out before ever reaching create_market again.
-const CREATE_MIN_LEAD_MS = 2 * 60_000;
+// How much runway a game needs before its own commence_time to be worth creating a market for --
+// not just the race-condition safety margin against _create_system_market()'s own "must be in the
+// future" check (which only needs a couple of minutes), but a real betting window. This used to be
+// that couple-of-minutes margin alone, which meant a run polling later in a game's build-up (the
+// function runs twice a day) would happily create a market for a game starting in 5-10 minutes --
+// technically "in the future," but nobody had a real chance to place a bet before it closed.
+// Found from watching the pipeline run against real data, 2026-08-29.
+const CREATE_MIN_LEAD_MS = 30 * 60_000;
 
 // No more than this many Sports system markets open at once -- a run that would otherwise create
 // more just stops early, first game found first; whatever gets skipped catches up on a later run
@@ -43,7 +52,7 @@ interface OddsApiEvent {
 }
 
 function marketTitle(homeTeam: string, awayTeam: string): string {
-  return `Will the ${homeTeam} beat the ${awayTeam}?`;
+  return `${homeTeam} vs. ${awayTeam}`;
 }
 
 async function stableId(input: string): Promise<string> {
@@ -92,9 +101,13 @@ Deno.serve(async () => {
   let failed = 0;
   const createdMarketIds: string[] = [];
 
+  // One eligible-events queue per league, each already time-sorted by the API's own /events
+  // response order (soonest first) -- fetched up front for every league regardless of openSlots,
+  // since /events doesn't spend Odds API usage credits (see the header comment) and this run needs
+  // to see all three leagues' candidates before it can interleave between them.
+  const queues: OddsApiEvent[][] = [];
+  const cutoff = Date.now() + LOOKAHEAD_MS;
   for (const sport of SPORTS) {
-    if (openSlots <= 0) break;
-
     let events: OddsApiEvent[];
     try {
       const res = await fetch(`https://api.the-odds-api.com/v4/sports/${sport}/events?apiKey=${ODDS_API_KEY}`);
@@ -103,19 +116,32 @@ Deno.serve(async () => {
     } catch (err) {
       failed++;
       await recordFailure(`${sport}-events-${new Date().toISOString().slice(0, 10)}`, err);
+      queues.push([]);
       continue;
     }
 
-    const cutoff = Date.now() + LOOKAHEAD_MS;
-    for (const event of events) {
-      if (openSlots <= 0) break;
+    queues.push(
+      events.filter((event) => {
+        const commenceMs = new Date(event.commence_time).getTime();
+        // The free /events endpoint keeps returning a game for a while after it has actually
+        // started (live, or even final), not just upcoming ones -- skip those too, the same way
+        // weather-create-markets skips a market whose noon-local close has already passed, or
+        // _create_system_market rejects it with "closes_at must be in the future" every run.
+        return commenceMs <= cutoff && commenceMs > Date.now() + CREATE_MIN_LEAD_MS;
+      })
+    );
+  }
 
-      const commenceMs = new Date(event.commence_time).getTime();
-      // The free /events endpoint keeps returning a game for a while after it has actually
-      // started (live, or even final), not just upcoming ones -- skip those too, the same way
-      // weather-create-markets skips a market whose noon-local close has already passed, or
-      // _create_system_market rejects it with "closes_at must be in the future" every run.
-      if (commenceMs > cutoff || commenceMs <= Date.now() + CREATE_MIN_LEAD_MS) continue;
+  // Round-robin across leagues, one game per league per pass, so a league with many games in the
+  // window (baseball_mlb, in season) can't claim every open slot before a league with only a
+  // couple (americanfootball_nfl preseason, say) ever gets a turn.
+  outer: while (openSlots > 0) {
+    let madeProgress = false;
+    for (const queue of queues) {
+      if (openSlots <= 0) break outer;
+      const event = queue.shift();
+      if (!event) continue;
+      madeProgress = true;
 
       try {
         const title = marketTitle(event.home_team, event.away_team);
@@ -132,7 +158,7 @@ Deno.serve(async () => {
         const { data, error } = await admin.rpc('_create_system_market', {
           p_group_id: group.id,
           p_title: title,
-          p_description: `Auto-generated from The Odds API. Resolves once the game is final; a tie voids the market.`,
+          p_description: `Auto-generated from The Odds API. YES means the ${event.home_team} win, NO means the ${event.away_team} win. Resolves once the game is final; a tie voids the market.`,
           p_market_type: 'yes_no',
           p_closes_at: event.commence_time,
         });
@@ -145,6 +171,7 @@ Deno.serve(async () => {
         await recordFailure(`event-${event.id}`, err);
       }
     }
+    if (!madeProgress) break;
   }
 
   // One push per run, not one per market -- a run that finds several games at once (common with

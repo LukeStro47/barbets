@@ -5,6 +5,7 @@ import { getResolutionProofUrl } from '@/lib/actions/resolution';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { CameraIcon, ImageIcon } from '@/components/ui/icons';
+import { cn } from '@/lib/cn';
 
 /**
  * Fetches the signed photo URL lazily on click rather than eagerly on
@@ -12,7 +13,17 @@ import { CameraIcon, ImageIcon } from '@/components/ui/icons';
  * on every load, and most proposals have no photo at all; there's no reason
  * to mint (or even check for) a signed URL until someone actually asks.
  */
-export function ResolutionProofButton({ marketId, variant }: { marketId: string; variant: 'action' | 'icon' | 'chip' }) {
+export function ResolutionProofButton({
+  marketId,
+  variant,
+  className,
+}: {
+  marketId: string;
+  variant: 'action' | 'icon' | 'chip';
+  /** 'action' variant only -- merged onto the Button so a lone caller (e.g. RevealTicket when
+   * SHARE_BUTTONS_ENABLED is off) can stretch it full-width instead of leaving it content-sized. */
+  className?: string;
+}) {
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -36,7 +47,12 @@ export function ResolutionProofButton({ marketId, variant }: { marketId: string;
   return (
     <>
       {variant === 'action' ? (
-        <Button onClick={open} disabled={loading} variant="outline" className="inline-flex items-center justify-center gap-2">
+        <Button
+          onClick={open}
+          disabled={loading}
+          variant="outline"
+          className={cn('inline-flex items-center justify-center gap-2', className)}
+        >
           <CameraIcon className="h-4 w-4" />
           {loading ? 'Loading…' : 'Proof'}
         </Button>

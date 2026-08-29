@@ -7,7 +7,7 @@ import { GroupDeletionBanner } from '@/components/groups/GroupDeletionBanner';
 import { GroupMarketSections } from '@/components/groups/GroupMarketSections';
 import { SaveBalanceSnapshot } from '@/components/groups/SaveBalanceSnapshot';
 import { PendingBonusPoolNote } from '@/components/groups/PendingBonusPoolNote';
-import { OpenSeasonBettingButton } from '@/components/groups/IntermissionActions';
+import { OpenSeasonBettingButton, OpenBettingButton } from '@/components/groups/IntermissionActions';
 import { WaitingOnYouCard } from '@/components/groups/WaitingOnYouCard';
 import { InvitePill } from '@/components/groups/InvitePill';
 import { SeasonRecapHero, type FinalBalanceRow } from '@/components/groups/SeasonRecapHero';
@@ -403,6 +403,8 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
         {season && season.status === 'active' && !season.betting_open && isOwner && (
           <OpenSeasonBettingButton groupId={groupId} seasonId={season.id} />
         )}
+
+        {!settings?.seasons_enabled && !settings?.betting_enabled && isOwner && <OpenBettingButton groupId={groupId} />}
 
         <GroupMarketSections
           groupId={groupId}

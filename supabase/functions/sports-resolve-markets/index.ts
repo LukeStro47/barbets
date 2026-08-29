@@ -1,7 +1,11 @@
 // Polls The Odds API's /scores endpoint for completed games and resolves the matching market
 // (found by reconstructing the exact title sports-create-markets would have generated for the
 // same home/away pair and commence_time -- an exact lookup, not a regex parse, since this
-// function already has the same team names the create side used).
+// function already has the same team names the create side used). marketTitle() here must always
+// match sports-create-markets/index.ts's own copy exactly, including across a deploy that changes
+// the format -- any market already open under the old title at the moment of that deploy won't be
+// found by the new lookup and falls back to a moderator's ordinary hand-resolve, same as a game
+// that ages out of the DAYS_FROM lookback window.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -25,7 +29,7 @@ interface OddsApiScore {
 }
 
 function marketTitle(homeTeam: string, awayTeam: string): string {
-  return `Will the ${homeTeam} beat the ${awayTeam}?`;
+  return `${homeTeam} vs. ${awayTeam}`;
 }
 
 async function stableId(input: string): Promise<string> {

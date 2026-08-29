@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { optInSeason, optOutSeason, cancelSeasonOptout, openSeasonBetting } from '@/lib/actions/seasons';
+import { openBetting } from '@/lib/actions/groups';
 import { Button } from '@/components/ui/Button';
 
 /**
@@ -131,6 +132,41 @@ export function OpenSeasonBettingButton({ groupId, seasonId }: { groupId: string
         }
       >
         {isPending ? 'Opening…' : 'Open betting for this season'}
+      </Button>
+    </div>
+  );
+}
+
+/** The non-seasonal equivalent of OpenSeasonBettingButton — a brand-new group without seasons
+ * starts with betting_enabled off, and turning it on used to be reachable only from the "How this
+ * group plays" settings form. Same reasoning as the season version: this is the one action
+ * standing between the owner and a working group, so it sits on the hub itself rather than
+ * staying a setting most owners never open. Gone the moment betting is on, same as the season
+ * button disappearing once betting_open flips. */
+export function OpenBettingButton({ groupId }: { groupId: string }) {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  return (
+    <div className="rounded-2xl border-[1.5px] border-honey-500 bg-honey-50 px-4 py-3.5">
+      <p className="text-sm font-extrabold text-espresso-900">Betting isn't open yet</p>
+      <p className="mt-0.5 text-[12.5px] leading-[1.4] text-espresso-500">Nobody can start a market until you open it.</p>
+      {error && <p className="mt-2 text-xs text-danger-700">{error}</p>}
+      <Button
+        variant="accent"
+        size="lg"
+        className="mt-3 w-full"
+        disabled={isPending}
+        onClick={() =>
+          startTransition(async () => {
+            const result = await openBetting(groupId);
+            if (result.error) setError(result.error);
+            else router.refresh();
+          })
+        }
+      >
+        {isPending ? 'Opening…' : 'Open betting'}
       </Button>
     </div>
   );

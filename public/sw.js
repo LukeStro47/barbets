@@ -11,6 +11,43 @@
 const CACHE_NAME = 'barbets-shell-v7';
 const SHELL_URLS = ['/', '/offline', '/icon-192.png', '/icon-512.png', '/barbets-coin.png', '/badge-mono.png'];
 
+// A guaranteed last resort for a failed navigation when even the precached `/offline` page isn't
+// available (the precache is Promise.allSettled - one failed asset can't block install, but that
+// means it's also possible for /offline itself to be the one that failed, e.g. a device that first
+// installed this worker during the very network trouble this page exists to explain). Without this,
+// that combination fell through to Response.error(), an opaque network-error response with no page
+// behind it at all - the browser logs "resulted in a network error response" and the user sees a
+// dead tab instead of any explanation. Inline and self-contained on purpose, same reasoning
+// offline.html gives: it can't depend on anything else having successfully cached. Kept in sync
+// with app/offline/page.tsx's copy split (offline vs. "this is on us") where it reasonably can be.
+function fallbackOfflineResponse() {
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Barbets</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: #faf6ef; color: #705441; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; padding: 40px 20px calc(env(safe-area-inset-bottom) + 40px); padding-top: calc(env(safe-area-inset-top) + 40px); }
+  h1 { font-size: 30px; line-height: 34px; font-weight: 800; letter-spacing: -0.03em; color: #2c1f17; margin: 0; }
+  p { max-width: 310px; font-size: 16px; line-height: 24px; margin: 12px 0 0; }
+  button { margin-top: 28px; width: 100%; max-width: 330px; padding: 16px 24px; border: 1px solid #cbb6a2; border-radius: 999px; background: transparent; color: #2c1f17; font-size: 17px; font-weight: 700; font-family: inherit; cursor: pointer; }
+</style></head>
+<body>
+<h1 id="headline">You're offline.</h1>
+<p id="body">Odds and balances move too fast to show you a guess. Reconnect and we'll pick up where you left off.</p>
+<button id="retry">Try again</button>
+<script>
+  function retry() { window.location.reload(); }
+  document.getElementById('retry').addEventListener('click', retry);
+  window.addEventListener('online', retry);
+  if (navigator.onLine) {
+    document.getElementById('headline').textContent = "We're having trouble.";
+    document.getElementById('body').textContent = 'Your connection looks fine, so this is on us. Hang tight and try again in a minute.';
+  }
+</script>
+</body></html>`;
+  return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
@@ -63,7 +100,7 @@ self.addEventListener('fetch', (event) => {
       .catch(() =>
         caches.match(event.request).then((cached) => {
           if (cached) return cached;
-          if (event.request.mode === 'navigate') return caches.match('/offline').then((offline) => offline || Response.error());
+          if (event.request.mode === 'navigate') return caches.match('/offline').then((offline) => offline || fallbackOfflineResponse());
           return Response.error();
         })
       )

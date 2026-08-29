@@ -74,8 +74,8 @@
   </head>
   <body>
     <img src="/barbets-coin.png" alt="" />
-    <h1>You're offline.</h1>
-    <p>
+    <h1 id="headline">You're offline.</h1>
+    <p id="body">
       Odds and balances move too fast to show you a guess. Reconnect and we'll pick up where you left off.
     </p>
     <button id="retry">Try again</button>
@@ -88,6 +88,15 @@
       }
       document.getElementById('retry').addEventListener('click', retry);
       window.addEventListener('online', retry);
+
+      // This page also loads when the device has a real connection but the request still failed
+      // (the server itself down or unreachable, not the device) - see app/offline/page.tsx's
+      // OfflineHeadline for the same split, and the ARCHITECTURE.md note on why "you're offline"
+      // reads as wrong and unhelpful in that case.
+      if (navigator.onLine) {
+        document.getElementById('headline').textContent = "We're having trouble.";
+        document.getElementById('body').textContent = 'Your connection looks fine, so this is on us. Hang tight and try again in a minute.';
+      }
     </script>
   </body>
 </html>

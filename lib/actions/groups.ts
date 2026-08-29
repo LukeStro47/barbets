@@ -196,6 +196,17 @@ export async function updateGroupSettings(
   return result;
 }
 
+/** Owner-only, one-way, non-seasonal groups only — see open_betting()'s migration comment for why
+    this exists alongside updateGroupSettings' own p_betting_enabled field. */
+export async function openBetting(groupId: string): Promise<ActionResult<GroupSettings>> {
+  const supabase = await createClient();
+  const result = await runRpc<GroupSettings>(await supabase.rpc('open_betting', { p_group_id: groupId }));
+  if (result.error) return result;
+  revalidatePath(`/groups/${groupId}`);
+  revalidatePath(`/groups/${groupId}/settings`);
+  return result;
+}
+
 /** Read-only: the owner's welcome message for new joiners, or null. Called by JoinFlow right after
     a successful join, not part of join_group()'s own return value (see the migration's comment). */
 export async function getGroupJoinMessage(groupId: string): Promise<ActionResult<string | null>> {
