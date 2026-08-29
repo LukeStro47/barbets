@@ -5,6 +5,7 @@ import { RegisterServiceWorker } from '@/components/pwa/RegisterServiceWorker';
 import { NativePushNavigation } from '@/components/pwa/NativePushNavigation';
 import { NativeBackButton } from '@/components/pwa/NativeBackButton';
 import { BootSplash } from '@/components/pwa/BootSplash';
+import { ChunkErrorRecovery } from '@/components/pwa/ChunkErrorRecovery';
 import { MovedBanner } from '@/components/pwa/MovedBanner';
 import { MobileAppGate } from '@/components/pwa/MobileAppGate';
 import { APP_ORIGIN } from '@/lib/appOrigin';
@@ -60,6 +61,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={bricolage.variable}>
       <body className="font-sans antialiased">
+        {/* Mounted first and unconditionally so it's listening before anything else has a chance
+            to throw a stale-chunk error - see the component. */}
+        <ChunkErrorRecovery />
         {/* Above {children} so it sits at the very top of every screen, signed in or not. Renders
             nothing unless the page was served from mybarbets.com — see the component. */}
         <MovedBanner />
