@@ -1,10 +1,15 @@
 // Polls The Odds API's free /events endpoint (fixture data only, no odds -- doesn't touch the
 // per-market-region quota the way /odds does, since Barbets runs its own betting pool and has no
 // use for anyone else's lines) for MLB/NBA/NFL games starting soon, and creates one moneyline
-// "{home} vs. {away}" market per game in the seeded "Sports" group -- the description spells out
-// what YES/NO mean, since the title alone (unlike the old "Will the {home} beat the {away}?"
-// phrasing) no longer does. Whichever league is actually in season is whichever one this naturally
-// produces markets for -- no per-league on/off switch, just try all three every run.
+// "{home} vs. {away}" market per game in the seeded "Sports" group, as a multiple_choice market
+// with the two team names as its options -- not yes_no. The title used to be a question ("Will the
+// {home} beat the {away}?"), which made a yes_no market's bare Yes/No buttons self-explanatory; the
+// neutral "vs." title doesn't carry that same meaning, and yes_no's UI has no explainer card to
+// compensate (MarketExplainer treats a yes_no market's title as the whole explanation, by design).
+// Two named options sidesteps the problem instead of patching it: each team's own name is the
+// button label, so there's nothing left to explain. Whichever league is actually in season is
+// whichever one this naturally produces markets for -- no per-league on/off switch, just try all
+// three every run.
 //
 // Candidates are taken round-robin across leagues (one game per league per pass), not by draining
 // SPORTS[0]'s whole eligible list before ever looking at SPORTS[1]. With OPEN_MARKET_CAP this low,
@@ -39,9 +44,14 @@ const LOOKAHEAD_MS = 12 * 3600_000;
 // Found from watching the pipeline run against real data, 2026-08-29.
 const CREATE_MIN_LEAD_MS = 30 * 60_000;
 
-// No more than this many Sports system markets open at once -- a run that would otherwise create
-// more just stops early, first game found first; whatever gets skipped catches up on a later run
-// once something closes.
+// No more than this many Sports system markets active (open, or closed and still awaiting
+// resolution) at once -- a run that would otherwise create more just stops early, first game found
+// first; whatever gets skipped catches up on a later run once something resolves. Counting only
+// `status = 'open'` here used to undercount: a game past its own commence_time moves to 'closed'
+// well before sports-resolve-markets (now every 6 hours, see that function) actually resolves it,
+// so a run in that gap saw open slots that weren't real and happily created more on top of a
+// backlog of already-closed, not-yet-resolved games -- which is what "more than 3 markets" looked
+// like from the group feed, even though never more than 3 were literally `open` at once.
 const OPEN_MARKET_CAP = 3;
 
 interface OddsApiEvent {
@@ -94,7 +104,7 @@ Deno.serve(async () => {
     .select('id', { count: 'exact', head: true })
     .eq('group_id', group.id)
     .eq('is_system_market', true)
-    .eq('status', 'open');
+    .in('status', ['open', 'closed']);
   let openSlots = OPEN_MARKET_CAP - (openCount ?? 0);
 
   let created = 0;
@@ -158,9 +168,10 @@ Deno.serve(async () => {
         const { data, error } = await admin.rpc('_create_system_market', {
           p_group_id: group.id,
           p_title: title,
-          p_description: `Auto-generated from The Odds API. YES means the ${event.home_team} win, NO means the ${event.away_team} win. Resolves once the game is final; a tie voids the market.`,
-          p_market_type: 'yes_no',
+          p_description: `Auto-generated from The Odds API. Resolves once the game is final; a tie voids the market.`,
+          p_market_type: 'multiple_choice',
           p_closes_at: event.commence_time,
+          p_options: [event.home_team, event.away_team],
         });
         if (error) throw new Error(`create_market: ${error.message}`);
         created++;

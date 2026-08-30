@@ -533,13 +533,87 @@ describe('_create_system_market / _resolve_system_market: the actor-less pipelin
     expect(error?.message).toMatch(/invalid_operation/);
   });
 
-  test('rejects multiple_choice', async () => {
+  test('multiple_choice without options is rejected the same way create_market rejects it', async () => {
     const { error } = await adminClient.rpc('_create_system_market', {
       p_group_id: group.id,
       p_title: 'Should fail',
       p_description: 'test',
       p_market_type: 'multiple_choice',
       p_closes_at: new Date(Date.now() + 600_000).toISOString(),
+    });
+    expect(error?.message).toMatch(/invalid_operation/);
+  });
+
+  test('multiple_choice full cycle: create with two options, bet, resolve by option_id', async () => {
+    // This is the shape sports-create-markets/sports-resolve-markets actually use: one option per
+    // team instead of yes_no, since a "{home} vs. {away}" title (no longer phrased as a question)
+    // has no yes_no explainer card to fall back on -- see ARCHITECTURE.md's Phase 2 section.
+    const { data: marketData, error: createErr } = await adminClient.rpc('_create_system_market', {
+      p_group_id: group.id,
+      p_title: 'Winners vs. Losers',
+      p_description: 'test',
+      p_market_type: 'multiple_choice',
+      p_closes_at: new Date(Date.now() + 600_000).toISOString(),
+      p_options: ['Winners', 'Losers'],
+    });
+    expect(createErr).toBeNull();
+    const market = Array.isArray(marketData) ? marketData[0] : marketData;
+    expect(market.status).toBe('open');
+
+    const { data: options } = await adminClient.from('market_options').select('id, label').eq('market_id', market.id);
+    const winningOption = options!.find((o) => o.label === 'Winners')!;
+    const losingOption = options!.find((o) => o.label === 'Losers')!;
+
+    const { error: betWinErr } = await users.winner.client.rpc('place_bet', {
+      p_market_id: market.id,
+      p_side: null,
+      p_amount: 100,
+      p_option_id: winningOption.id,
+    });
+    expect(betWinErr).toBeNull();
+    const { error: betLoseErr } = await users.loser.client.rpc('place_bet', {
+      p_market_id: market.id,
+      p_side: null,
+      p_amount: 100,
+      p_option_id: losingOption.id,
+    });
+    expect(betLoseErr).toBeNull();
+
+    const { data: resolvedData, error: resolveErr } = await adminClient.rpc('_resolve_system_market', {
+      p_market_id: market.id,
+      p_option_id: winningOption.id,
+    });
+    expect(resolveErr).toBeNull();
+    const resolved = Array.isArray(resolvedData) ? resolvedData[0] : resolvedData;
+    expect(resolved.status).toBe('resolved');
+    expect(resolved.outcome_option_id).toBe(winningOption.id);
+
+    const { data: winnerMembership } = await adminClient
+      .from('memberships')
+      .select('balance')
+      .eq('group_id', group.id)
+      .eq('user_id', users.winner.id)
+      .single();
+    // Seeded 1000, bet 100 on the previous test too (1100), wins this 200 pool outright.
+    expect(winnerMembership!.balance).toBe(1200);
+  });
+
+  test('_resolve_system_market rejects passing both an option and an outcome', async () => {
+    const { data: marketData } = await adminClient.rpc('_create_system_market', {
+      p_group_id: group.id,
+      p_title: 'Option XOR outcome',
+      p_description: 'test',
+      p_market_type: 'multiple_choice',
+      p_closes_at: new Date(Date.now() + 600_000).toISOString(),
+      p_options: ['A', 'B'],
+    });
+    const market = Array.isArray(marketData) ? marketData[0] : marketData;
+    const { data: options } = await adminClient.from('market_options').select('id').eq('market_id', market.id).limit(1);
+
+    const { error } = await adminClient.rpc('_resolve_system_market', {
+      p_market_id: market.id,
+      p_outcome: 'void',
+      p_option_id: options![0].id,
     });
     expect(error?.message).toMatch(/invalid_operation/);
   });
