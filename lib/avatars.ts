@@ -27,10 +27,29 @@ export const GROUP_AVATARS = [
 
 export type GroupAvatarKey = (typeof GROUP_AVATARS)[number]['key'];
 
+/** One-off group logos: real PNGs under public/avatars/, resolved the same way as GROUP_AVATARS,
+ * but deliberately a separate list so they never show up in a picker. Each belongs to a single
+ * group (a fan-community crest, not a general-purpose icon) and is set directly on that group's
+ * `avatar_key` rather than through the owner-facing logo grid in GroupIdentitySheet, which only
+ * ever maps over GROUP_AVATARS. Not consulted by userAvatarSrc()/presetAvatarSrc() either, so it
+ * can't end up as anyone's profile-picture preset. */
+const EXCLUSIVE_GROUP_AVATARS = [{ key: 'rutgers', label: 'Rutgers' }] as const;
+
 /** The asset path for a stored avatar key, or null when there's no avatar set or the key isn't one
  * this build ships. Returning null rather than a broken `<img>` is what lets a retired avatar
- * degrade to the group's initials tile instead of a missing image. */
+ * degrade to the group's initials tile instead of a missing image. Resolves both the pickable set
+ * and the exclusive one, since this is what actually renders a group's chip (GroupAvatar) wherever
+ * it's shown, including for a group whose logo was set outside the picker. */
 export function groupAvatarSrc(avatarKey: string | null | undefined): string | null {
+  if (!avatarKey) return null;
+  const match = GROUP_AVATARS.find((a) => a.key === avatarKey) ?? EXCLUSIVE_GROUP_AVATARS.find((a) => a.key === avatarKey);
+  return match ? `/avatars/${match.key}.png` : null;
+}
+
+/** Same as groupAvatarSrc(), but only ever resolves the pickable set — the one userAvatarSrc()
+ * uses for a profile-picture preset, so an exclusive group logo can never render as anyone's
+ * avatar even via a hand-crafted `avatar_preset_key`. */
+export function presetAvatarSrc(avatarKey: string | null | undefined): string | null {
   if (!avatarKey) return null;
   const match = GROUP_AVATARS.find((a) => a.key === avatarKey);
   return match ? `/avatars/${match.key}.png` : null;
