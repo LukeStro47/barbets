@@ -6,6 +6,11 @@
 // the format -- any market already open under the old title at the moment of that deploy won't be
 // found by the new lookup and falls back to a moderator's ordinary hand-resolve, same as a game
 // that ages out of the DAYS_FROM lookback window.
+//
+// Sports markets are multiple_choice (one option per team), not yes_no -- resolving means finding
+// the winning team's own market_options row and passing its id as p_option_id, not picking 'yes'
+// or 'no'. The option's label is always the exact team name sports-create-markets used to create
+// it (same string _create_system_market stored verbatim), so this is a plain lookup, not a parse.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -89,7 +94,7 @@ Deno.serve(async () => {
 
         const { data: market } = await admin
           .from('markets')
-          .select('id, status')
+          .select('id, status, market_options(id, label)')
           .eq('group_id', group.id)
           .eq('title', title)
           .eq('closes_at', game.commence_time)
@@ -102,8 +107,15 @@ Deno.serve(async () => {
           throw new Error(`missing or unparseable score for "${title}"`);
         }
 
-        const outcome = homeScore === awayScore ? 'void' : homeScore > awayScore ? 'yes' : 'no';
-        const { error } = await admin.rpc('_resolve_system_market', { p_market_id: market.id, p_outcome: outcome });
+        let error: { message: string } | null;
+        if (homeScore === awayScore) {
+          ({ error } = await admin.rpc('_resolve_system_market', { p_market_id: market.id, p_outcome: 'void' }));
+        } else {
+          const winningTeam = homeScore > awayScore ? game.home_team : game.away_team;
+          const winningOption = market.market_options?.find((o: { id: string; label: string }) => o.label === winningTeam);
+          if (!winningOption) throw new Error(`no market_options row for winning team "${winningTeam}" on "${title}"`);
+          ({ error } = await admin.rpc('_resolve_system_market', { p_market_id: market.id, p_option_id: winningOption.id }));
+        }
         if (error) {
           // Nothing stops a moderator from hand-resolving a system market through the ordinary
           // UI (is_system_market doesn't gate propose_resolution), and status is checked here

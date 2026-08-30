@@ -1,14 +1,23 @@
 // Afternoon/evening job: resolves every weather-create-markets market whose closes_at has
-// passed, against the nearest station's latest observation. Re-derives which city (and which
-// kind of market) from the title text weather-create-markets generates -- see that function's
-// header comment for why there's no separate metadata table.
+// passed, against the nearest station's observations for that local calendar day. Re-derives
+// which city (and which kind of market) from the title text weather-create-markets generates --
+// see that function's header comment for why there's no separate metadata table.
 //
-// Simplifications worth knowing about: "did it rain" is read off the latest observation's
-// textDescription (contains "Rain"/"Shower"/"Drizzle") rather than an accumulated precipitation
-// total, since ASOS stations don't reliably report precipitation amounts; "hit X°F" compares the
-// latest observation against the line rather than tracking the day's actual max, since that would
-// need polling observations all day rather than once at resolve time. Both are fine for a v1 and
-// worth revisiting if the market ever needs to be more exact than "close enough to bet on."
+// Both markets close at noon local but ask about the whole day ("will it rain today," "will it
+// hit X°F today"), and this function's first run after that close can land as early as 12:00-12:30
+// local. A "yes"/"over" is safe to resolve the moment it's true (rain, or a temperature at or past
+// the line, can't become un-true later in the day), but a "no"/"under" resolved off a single early
+// reading is a real bug, not a simplification: the day's actual high usually lands mid-afternoon,
+// well after noon, and "hasn't rained/hasn't hit the line yet" said at 12:30 says nothing about the
+// rest of the day. This function used to do exactly that (single latest-observation read, resolved
+// the instant closes_at passed), which is how a Chicago "will it hit 84°F" market resolved before
+// 2pm off a reading that was never going to be the day's peak. The fix: pull every observation
+// since local midnight (not just the latest) and take the day's max-so-far / any-rain-so-far
+// across all of them, and only ever finalize the negative case (no rain / under the line) once
+// EVENING_CUTOFF_HOUR_LOCAL has passed -- by which point the day's real high and any rain chance
+// are both effectively decided. Before that cutoff, an undecided negative just skips this run and
+// tries again on the next one (every 30 minutes), the same "not yet, not a failure" shape the
+// "someone already resolved it" race below already uses.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -22,6 +31,11 @@ const CITIES = [
   { name: 'Chicago', lat: 41.8781, lon: -87.6298 },
   { name: 'Los Angeles', lat: 34.0522, lon: -118.2437 },
 ];
+
+// A negative result ("no rain", "under the line") only finalizes once local time is at or past
+// this hour -- well past the typical daily high (~3-5pm) and past the point an afternoon/evening
+// shower would still meaningfully be "today's weather." A positive result never waits on this.
+const EVENING_CUTOFF_HOUR_LOCAL = 20;
 
 async function nwsFetch(url: string): Promise<any> {
   const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT, Accept: 'application/geo+json' } });
@@ -44,16 +58,91 @@ async function recordFailure(marketId: string, err: unknown) {
   if (error) console.error(`recordFailure itself failed for ${marketId}:`, error.message);
 }
 
-async function latestObservation(city: { lat: number; lon: number }): Promise<{ tempF: number | null; textDescription: string }> {
+/** The local calendar-day parts (and hour) `date` falls on in `timeZone` -- used both to find
+    local midnight for a given day and to check how far into that day "now" already is. */
+function localParts(date: Date, timeZone: string): { year: number; month: number; day: number; hour: number } {
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+  });
+  const parts = Object.fromEntries(fmt.formatToParts(date).map((p) => [p.type, p.value]));
+  return {
+    year: Number(parts.year),
+    month: Number(parts.month),
+    day: Number(parts.day),
+    hour: parts.hour === '24' ? 0 : Number(parts.hour),
+  };
+}
+
+/** The UTC instant for local midnight on the same calendar day `refDate` falls on in `timeZone` --
+    DST-correct via the same guess-then-correct trick weather-create-markets' own
+    localHourTodayToUtcIso() uses, generalized to hour 0 on a caller-supplied day (that market's own
+    closing day) rather than always "today." */
+function localMidnightUtcIso(refDate: Date, timeZone: string): string {
+  const dateFmt = new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' });
+  const dateParts = Object.fromEntries(dateFmt.formatToParts(refDate).map((p) => [p.type, p.value]));
+  const guess = new Date(Date.UTC(Number(dateParts.year), Number(dateParts.month) - 1, Number(dateParts.day), 0, 0, 0));
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+  const parts = Object.fromEntries(fmt.formatToParts(guess).map((p) => [p.type, p.value]));
+  const hourPart = parts.hour === '24' ? 0 : Number(parts.hour);
+  const readAsUtc = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), hourPart, Number(parts.minute), Number(parts.second));
+  const offsetMs = readAsUtc - guess.getTime();
+  return new Date(guess.getTime() - offsetMs).toISOString();
+}
+
+/** True once local time has rolled past EVENING_CUTOFF_HOUR_LOCAL on the market's own closing
+    day, or into a later calendar day entirely (a run that lagged well behind closes_at) -- either
+    way, the day this market asked about is over and a negative result is safe to finalize. */
+function dayIsLikelyOver(closesAt: string, timeZone: string): boolean {
+  const now = localParts(new Date(), timeZone);
+  const closes = localParts(new Date(closesAt), timeZone);
+  if (now.year !== closes.year || now.month !== closes.month || now.day !== closes.day) return true;
+  return now.hour >= EVENING_CUTOFF_HOUR_LOCAL;
+}
+
+/** Every observation from local midnight (on the market's own closing day) through now, collapsed
+    to the two facts either market type needs: the day's highest temperature reading so far, and
+    whether rain/showers/drizzle showed up in any reading so far. Deliberately not just the latest
+    observation -- see this file's header comment for why that was the bug. */
+async function todaysObservations(
+  city: { lat: number; lon: number },
+  closesAt: string
+): Promise<{ maxTempF: number | null; rainedSoFar: boolean; timeZone: string }> {
   const point = await nwsFetch(`https://api.weather.gov/points/${city.lat},${city.lon}`);
   const stations = await nwsFetch(point.properties.observationStations);
   const stationId = stations.features[0].properties.stationIdentifier;
-  const obs = await nwsFetch(`https://api.weather.gov/stations/${stationId}/observations/latest`);
-  const tempC = obs.properties.temperature.value;
-  return {
-    tempF: tempC === null ? null : Math.round((tempC * 9) / 5 + 32),
-    textDescription: obs.properties.textDescription ?? '',
-  };
+  const timeZone: string = point.properties.timeZone;
+
+  const start = localMidnightUtcIso(new Date(closesAt), timeZone);
+  const obsList = await nwsFetch(`https://api.weather.gov/stations/${stationId}/observations?start=${encodeURIComponent(start)}`);
+  const features: any[] = obsList.features ?? [];
+  if (features.length === 0) throw new Error(`no observations returned for station ${stationId} since ${start}`);
+
+  let maxTempF: number | null = null;
+  let rainedSoFar = false;
+  for (const feature of features) {
+    const tempC = feature.properties?.temperature?.value;
+    if (tempC !== null && tempC !== undefined) {
+      const tempF = Math.round((tempC * 9) / 5 + 32);
+      if (maxTempF === null || tempF > maxTempF) maxTempF = tempF;
+    }
+    if (/rain|shower|drizzle/i.test(feature.properties?.textDescription ?? '')) rainedSoFar = true;
+  }
+
+  return { maxTempF, rainedSoFar, timeZone };
 }
 
 Deno.serve(async () => {
@@ -73,7 +162,7 @@ Deno.serve(async () => {
 
   const { data: markets, error: marketsErr } = await admin
     .from('markets')
-    .select('id, title, market_type, line')
+    .select('id, title, market_type, line, closes_at')
     .eq('group_id', group.id)
     .in('status', ['open', 'closed'])
     .lte('closes_at', new Date().toISOString());
@@ -93,36 +182,56 @@ Deno.serve(async () => {
       const city = CITIES.find((c) => c.name === cityName);
       if (!city) throw new Error(`could not identify city from title "${market.title}"`);
 
-      const obs = await latestObservation(city);
+      const { maxTempF, rainedSoFar, timeZone } = await todaysObservations(city, market.closes_at);
 
       if (rainMatch) {
-        const rained = /rain|shower|drizzle/i.test(obs.textDescription);
-        const { error } = await admin.rpc('_resolve_system_market', {
-          p_market_id: market.id,
-          p_outcome: rained ? 'yes' : 'no',
-        });
-        if (error) {
-          // Nothing stops a moderator from hand-resolving a system market through the ordinary
-          // UI (is_system_market doesn't gate propose_resolution) -- if they beat this run to it
-          // (or an overlapping run did), the market has already moved past open/closed and this
-          // raises "not awaiting a resolution proposal." That's someone/something else already
-          // having handled it, not a real failure, and not this run's resolve to count either.
-          if (error.message.includes('not awaiting a resolution proposal')) continue;
-          throw new Error(`resolve rain market: ${error.message}`);
+        if (rainedSoFar) {
+          const { error } = await admin.rpc('_resolve_system_market', { p_market_id: market.id, p_outcome: 'yes' });
+          if (error) {
+            // Nothing stops a moderator from hand-resolving a system market through the ordinary
+            // UI (is_system_market doesn't gate propose_resolution) -- if they beat this run to it
+            // (or an overlapping run did), the market has already moved past open/closed and this
+            // raises "not awaiting a resolution proposal." That's someone/something else already
+            // having handled it, not a real failure, and not this run's resolve to count either.
+            if (error.message.includes('not awaiting a resolution proposal')) continue;
+            throw new Error(`resolve rain market: ${error.message}`);
+          }
+          resolved++;
+        } else if (dayIsLikelyOver(market.closes_at, timeZone)) {
+          const { error } = await admin.rpc('_resolve_system_market', { p_market_id: market.id, p_outcome: 'no' });
+          if (error) {
+            if (error.message.includes('not awaiting a resolution proposal')) continue;
+            throw new Error(`resolve rain market: ${error.message}`);
+          }
+          resolved++;
         }
-        resolved++;
+        // else: no rain yet, and the day isn't over -- too early to call it, try again next run.
       } else if (tempMatch) {
-        if (obs.tempF === null) throw new Error('station has no current temperature reading');
-        const { error } = await admin.rpc('_resolve_system_market', {
-          p_market_id: market.id,
-          p_outcome: obs.tempF >= market.line ? 'over' : 'under',
-          p_actual_value: obs.tempF,
-        });
-        if (error) {
-          if (error.message.includes('not awaiting a resolution proposal')) continue;
-          throw new Error(`resolve temp market: ${error.message}`);
+        if (maxTempF !== null && maxTempF >= market.line) {
+          const { error } = await admin.rpc('_resolve_system_market', {
+            p_market_id: market.id,
+            p_outcome: 'over',
+            p_actual_value: maxTempF,
+          });
+          if (error) {
+            if (error.message.includes('not awaiting a resolution proposal')) continue;
+            throw new Error(`resolve temp market: ${error.message}`);
+          }
+          resolved++;
+        } else if (dayIsLikelyOver(market.closes_at, timeZone)) {
+          if (maxTempF === null) throw new Error('station has no temperature reading for today');
+          const { error } = await admin.rpc('_resolve_system_market', {
+            p_market_id: market.id,
+            p_outcome: 'under',
+            p_actual_value: maxTempF,
+          });
+          if (error) {
+            if (error.message.includes('not awaiting a resolution proposal')) continue;
+            throw new Error(`resolve temp market: ${error.message}`);
+          }
+          resolved++;
         }
-        resolved++;
+        // else: hasn't hit the line yet, and the day isn't over -- too early to call it.
       } else {
         throw new Error(`title matched neither rain nor temp pattern: "${market.title}"`);
       }

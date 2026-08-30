@@ -39,9 +39,12 @@ const WEATHER_MARKET_CLOSE_HOUR_LOCAL = 12;
 // a new day rather than re-attempting the same one).
 const MIN_LEAD_MS = 2 * 60_000;
 
-// No more than this many Weather system markets open at once -- a run that would otherwise create
-// more just stops early, first city/type first; whatever gets skipped catches up on a later run
-// once something closes.
+// No more than this many Weather system markets active (open, or closed and still awaiting
+// resolution) at once -- a run that would otherwise create more just stops early, first city/type
+// first; whatever gets skipped catches up on a later run once something resolves. Counting only
+// `status = 'open'` here used to undercount: a market past its own noon-local close moves to
+// 'closed' before weather-resolve-markets gets to it, so a run in that gap saw open slots that
+// weren't real. See sports-create-markets' identical comment on OPEN_MARKET_CAP for the same bug.
 const OPEN_MARKET_CAP = 3;
 
 interface ForecastPeriod {
@@ -126,7 +129,7 @@ Deno.serve(async () => {
     .select('id', { count: 'exact', head: true })
     .eq('group_id', group.id)
     .eq('is_system_market', true)
-    .eq('status', 'open');
+    .in('status', ['open', 'closed']);
   let openSlots = OPEN_MARKET_CAP - (openCount ?? 0);
 
   let created = 0;
