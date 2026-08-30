@@ -111,10 +111,17 @@ lib/
                          "BB-" prefix still exists in the wild
   avatars.ts           — the built-in icon set (keys + labels) and its public/ asset paths;
                          used both as a group's logo (groups.avatar_key) and as a user's
-                         profile-picture preset (users.avatar_preset_key)
+                         profile-picture preset (users.avatar_preset_key). Also holds
+                         EXCLUSIVE_GROUP_AVATARS, a separate, unexported list of one-off group
+                         logos (currently just 'rutgers') that groupAvatarSrc() renders but no
+                         picker ever offers — set directly on a group's avatar_key rather than
+                         through GroupIdentitySheet/CreateGroupForm, which only map over
+                         GROUP_AVATARS. presetAvatarSrc() resolves GROUP_AVATARS only, so an
+                         exclusive logo can never become a profile-picture preset
   userAvatars.ts       — userAvatarSrc(): the rendered src for a user's profile picture — a
-                         chosen preset (via avatars.ts) if set, else the public Storage URL for
-                         an uploaded photo, else null. Mirrors avatars.ts's groupAvatarSrc() shape
+                         chosen preset (via avatars.ts's presetAvatarSrc()) if set, else the
+                         public Storage URL for an uploaded photo, else null. Mirrors avatars.ts's
+                         groupAvatarSrc() shape
   customAwards.ts      — the 18-option custom-award shape menu (CUSTOM_AWARD_SHAPES: metric +
                          direction + description + format()), findShape(), and the
                          CustomGroupTitle/CustomGroupTitleHolder row types.
