@@ -1,27 +1,30 @@
+import Link from 'next/link';
 import { requireUser } from '@/lib/supabase/server';
 import { createClient } from '@/lib/supabase/server';
-import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { DiscoverGroupCard } from '@/components/groups/DiscoverGroupCard';
 import { RequestGroupForm } from '@/components/groups/RequestGroupForm';
+import { CaretLeftIcon } from '@/components/ui/icons';
 import { listPublicGroups } from '@/lib/actions/discover';
-
-const CATEGORY_LABEL: Record<'generic' | 'campus', string> = {
-  generic: 'Open to anyone',
-  campus: 'Campus groups',
-};
+import { isHomeSurfacePublicGroup, publicGroupSettlesCopy } from '@/lib/publicGroups';
+import { numberWordCapitalized } from '@/lib/formatNumber';
 
 /**
  * The browse-and-instant-join directory — a handful of always-on groups anyone can join right
  * away, no invite code or friend required. Fixes the "new user has nothing to try" problem: this
- * is the one group listing in the app that isn't gated by membership (see list_public_groups()).
+ * is the one group listing in this app that isn't gated by membership (see list_public_groups()).
+ *
+ * Scoped to the sports/weather pipeline groups only (see isHomeSurfacePublicGroup()) — a
+ * 'campus' public group, if one ever exists, isn't browsable here; the request form below is the
+ * only path for a school-specific ask.
  */
-export default async function DiscoverGroupsPage() {
+export default async function DiscoverGroupsPage({ searchParams }: { searchParams: Promise<{ all?: string }> }) {
+  const { all } = await searchParams;
   const supabase = await createClient();
   const user = await requireUser(supabase);
 
   const result = await listPublicGroups();
-  const groups = result.data ?? [];
+  const groups = (result.data ?? []).filter(isHomeSurfacePublicGroup);
 
   // Which of these the viewer is already an active/dormant member of, so the card can read
   // "Joined" instead of offering to join again. A 'left' member still sees "Join" (rejoining is
@@ -34,46 +37,52 @@ export default async function DiscoverGroupsPage() {
       : { data: [] };
   const joinedGroupIds = new Set((myMemberships ?? []).map((m) => m.group_id));
 
-  const byCategory = new Map<'generic' | 'campus', typeof groups>();
-  for (const g of groups) {
-    byCategory.set(g.category, [...(byCategory.get(g.category) ?? []), g]);
-  }
-
   return (
-    <main className="mx-auto max-w-lg space-y-5 px-5 py-8">
-      <PageHeader title="Browse groups" subtitle={<span className="text-[12.5px] text-espresso-400">Join instantly, no invite needed</span>} />
+    <main className="mx-auto max-w-lg px-5">
+      <div className="flex items-center gap-2.5 pt-[22px]">
+        <Link
+          href={all ? '/groups?all=1' : '/groups'}
+          aria-label="Back"
+          className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-paper-dim text-espresso-800"
+        >
+          <CaretLeftIcon className="h-[13px] w-[7px]" />
+        </Link>
+      </div>
 
-      <p className="rounded-2xl bg-paper-dim px-3.5 py-3 text-[12.5px] text-espresso-500">
-        These are here to help you get a feel for how Barbets works, before you run your own group with friends.
-      </p>
+      <div className="flex flex-col gap-[18px] py-[14px] pb-8">
+        <div>
+          <h1 className="font-display text-[26px] font-extrabold tracking-[-0.02em] text-espresso-950">Public groups</h1>
+          <p className="mt-[3px] text-[13px] text-espresso-500">
+            {groups.length === 0
+              ? 'Nothing open right now.'
+              : `${numberWordCapitalized(groups.length)} ${groups.length === 1 ? 'table' : 'tables'} open to anyone. Join instantly, no invite needed.`}
+          </p>
+        </div>
 
-      {groups.length === 0 ? (
-        <EmptyState icon="🔍" title="Nothing open right now" subtitle="Check back soon, or request a campus group below." />
-      ) : (
-        (['campus', 'generic'] as const).map((category) => {
-          const rows = byCategory.get(category);
-          if (!rows || rows.length === 0) return null;
-          return (
-            <div key={category} className="space-y-2">
-              <p className="ml-1 text-[10.5px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">{CATEGORY_LABEL[category]}</p>
-              <div className="flex flex-col gap-2.5">
-                {rows.map((g) => (
-                  <DiscoverGroupCard
-                    key={g.id}
-                    groupId={g.id}
-                    name={g.name}
-                    avatarKey={g.avatar_key}
-                    memberCount={g.member_count}
-                    joined={joinedGroupIds.has(g.id)}
-                  />
-                ))}
-              </div>
-            </div>
-          );
-        })
-      )}
+        {groups.length === 0 ? (
+          <EmptyState icon="🔍" title="Nothing open right now" subtitle="Check back soon, or request a group below." />
+        ) : (
+          <div className="flex flex-col gap-[18px]">
+            {groups.map((g) => (
+              <DiscoverGroupCard
+                key={g.id}
+                variant="expanded"
+                groupId={g.id}
+                name={g.name}
+                avatarKey={g.avatar_key}
+                memberCount={g.member_count}
+                openMarketCount={g.open_market_count}
+                featuredMarketTitle={g.featured_market_title}
+                featuredMarketBetCount={g.featured_market_bet_count}
+                settlesCopy={publicGroupSettlesCopy(g.name)}
+                joined={joinedGroupIds.has(g.id)}
+              />
+            ))}
+          </div>
+        )}
 
-      <RequestGroupForm />
+        <RequestGroupForm />
+      </div>
     </main>
   );
 }

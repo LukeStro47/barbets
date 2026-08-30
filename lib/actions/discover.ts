@@ -11,6 +11,15 @@ export interface PublicGroup {
   avatar_key: string | null;
   category: 'generic' | 'campus';
   member_count: number;
+  open_market_count: number;
+  /** The one open market worth surfacing on a directory card — soonest-closing first (see the
+      function's own migration). Null when the group has nothing open right now. */
+  featured_market_id: string | null;
+  featured_market_title: string | null;
+  /** A volume signal only — never a price. This app never reveals odds on a market that's still
+      open (see ARCHITECTURE.md's "sealed odds" decision), and a directory card isn't an
+      exception; a bet count carries none of that information the way a percentage would. */
+  featured_market_bet_count: number;
 }
 
 /** The browse directory — a deliberately open read, gated server-side by is_public rather than
