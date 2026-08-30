@@ -36,9 +36,9 @@ export function RequestGroupForm() {
   }
 
   return (
-    <div className="space-y-2.5 rounded-[18px] border border-espresso-100 bg-paper-white p-4">
+    <div className="space-y-2.5 rounded-[20px] bg-paper-dim p-4">
       <div>
-        <p className="text-[13px] font-extrabold text-espresso-800">Want to see another school or topic?</p>
+        <p className="text-[13.5px] font-extrabold text-espresso-800">Want to see another school or topic?</p>
         <p className="mt-0.5 text-[11.5px] text-espresso-400">Tell us what it is, and we&apos;ll consider it</p>
       </div>
       {error && <p className="text-sm text-danger-700">{error}</p>}
@@ -58,7 +58,7 @@ export function RequestGroupForm() {
         />
         I&apos;d like to be considered as a moderator
       </label>
-      <Button type="button" disabled={isPending || !name.trim()} onClick={submit} className="w-full">
+      <Button type="button" variant="outline" disabled={isPending || !name.trim()} onClick={submit} className="w-full">
         {isPending ? 'Sending…' : 'Request this group'}
       </Button>
     </div>

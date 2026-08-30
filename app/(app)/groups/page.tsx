@@ -6,11 +6,15 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/Button';
 import { InviteCodeBoxes } from '@/components/groups/InviteCodeBoxes';
 import { StartGroupButton } from '@/components/groups/StartGroupButton';
+import { DiscoverGroupCard } from '@/components/groups/DiscoverGroupCard';
+import { PublicGroupsShelfRow } from '@/components/groups/PublicGroupsShelfRow';
 import { ChevronRightIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/cn';
-import { formatSignedTokens, formatOrdinal, numberWord, numberWordCapitalized } from '@/lib/formatNumber';
+import { formatSignedTokens, formatOrdinal, numberWordCapitalized } from '@/lib/formatNumber';
 import { GroupAvatar } from '@/components/ui/GroupAvatar';
 import { getGroupTaskCounts } from '@/lib/tasks';
+import { listPublicGroups } from '@/lib/actions/discover';
+import { isHomeSurfacePublicGroup } from '@/lib/publicGroups';
 
 export default async function GroupsHubPage({ searchParams }: { searchParams: Promise<{ all?: string }> }) {
   const { all } = await searchParams;
@@ -75,6 +79,14 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
 
   const hasGroups = (groups ?? []).length > 0;
 
+  // The "Open to anyone" section (2A, zero-group user) / collapsed shelf row (2B, everyone
+  // else) — both scoped to the sports/weather pipeline groups only, never 'campus'. See
+  // isHomeSurfacePublicGroup() for why.
+  const publicGroupsResult = await listPublicGroups();
+  const homeSurfacePublicGroups = (publicGroupsResult.data ?? []).filter(isHomeSurfacePublicGroup);
+  const hasPublicGroups = homeSurfacePublicGroups.length > 0;
+  const totalPublicOpenMarkets = homeSurfacePublicGroups.reduce((sum, g) => sum + g.open_market_count, 0);
+
   // A group between seasons isn't a table you can sit down at right now, so it's counted (and
   // listed) separately from the ones that are actually running.
   const activeGroups = sortedGroups.filter((g: any) => !intermissionGroupIds.has(g.id));
@@ -86,7 +98,7 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
     // Dropped entirely at zero rather than rendered as "none want something from you" — an
     // all-clear stated out loud reads as a reminder that there could have been something.
     groupsWantingYou > 0 &&
-      `${numberWord(groupsWantingYou)} want${groupsWantingYou === 1 ? 's' : ''} something from you`,
+      `${numberWordCapitalized(groupsWantingYou)} want${groupsWantingYou === 1 ? 's' : ''} something from you`,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -99,19 +111,47 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
       />
 
       {!hasGroups ? (
-        <div className="space-y-3">
-          <EmptyState
-            title="No groups yet"
-            subtitle="Start one, or join with a friend's invite code below."
-            action={
-              <Link href="/demo" className="block">
-                <Button size="lg" variant="accent" className="w-full">
-                  Try a live demo
-                </Button>
-              </Link>
-            }
-          />
-        </div>
+        hasPublicGroups ? (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-baseline justify-between gap-3 px-1">
+              <p className="text-[10.5px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">Open to anyone</p>
+              <span className="text-[11px] font-bold text-honey-700">No code needed</span>
+            </div>
+            <div className="flex flex-col gap-2.5">
+              {homeSurfacePublicGroups.slice(0, 2).map((g) => (
+                <DiscoverGroupCard
+                  key={g.id}
+                  variant="compact"
+                  groupId={g.id}
+                  name={g.name}
+                  avatarKey={g.avatar_key}
+                  memberCount={g.member_count}
+                  openMarketCount={g.open_market_count}
+                  featuredMarketTitle={g.featured_market_title}
+                  featuredMarketBetCount={g.featured_market_bet_count}
+                />
+              ))}
+            </div>
+            <Link href="/groups/discover" className="flex items-center justify-center gap-1.5 py-1 pt-0.5 text-center text-[12.5px] font-bold">
+              See all public groups
+              <ChevronRightIcon className="h-[11px] w-[6px]" />
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <EmptyState
+              title="No groups yet"
+              subtitle="Start one, or join with a friend's invite code below."
+              action={
+                <Link href="/demo" className="block">
+                  <Button size="lg" variant="accent" className="w-full">
+                    Try a live demo
+                  </Button>
+                </Link>
+              }
+            />
+          </div>
+        )
       ) : (
         <>
           {activeGroups.length > 0 && (
@@ -183,6 +223,13 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
             </div>
           )}
 
+          {hasPublicGroups && (
+            <PublicGroupsShelfRow
+              groups={homeSurfacePublicGroups.map((g) => ({ name: g.name, avatarKey: g.avatar_key }))}
+              totalOpenMarkets={totalPublicOpenMarkets}
+            />
+          )}
+
           {intermissionGroups.length > 0 && (
             <div className="flex flex-col gap-2">
               <p className="ml-1 text-[10.5px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">Between seasons</p>
@@ -219,12 +266,6 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
           <InviteCodeBoxes />
         </div>
       </div>
-
-      <Link href="/groups/discover" className="block">
-        <Button size="lg" variant="outline" className="w-full">
-          Browse public groups
-        </Button>
-      </Link>
     </main>
   );
 }
