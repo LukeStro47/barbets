@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { useShareableImage } from '@/lib/shareImage';
 import { SHARE_BUTTONS_ENABLED } from '@/lib/flags';
+import { logShareClick } from '@/lib/actions/shareClicks';
 import { formatTokens, formatPercent } from '@/lib/formatNumber';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { ReactionBar } from '@/components/markets/ReactionBar';
@@ -146,6 +147,14 @@ export function RevealTicket({
     text: `See how "${question}" resolved.`,
     ready: captureGateOpen,
   });
+
+  // Logged on click intent, not on successful completion — Web Share API's promise
+  // resolves on a completed share and rejects on cancel, but "clicked" is what the
+  // frequency-of-use tracking this feeds actually wants to know.
+  const handleShareClick = () => {
+    void logShareClick('reveal_ticket', groupId);
+    handleShare();
+  };
 
   const formattedDate = new Date(resolvedAtIso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   // While tearing, the odds bars start at 0% and fill in ~0.75s after the tear begins, same
@@ -346,7 +355,7 @@ export function RevealTicket({
       <div className="mt-3.5 flex flex-wrap gap-2">
         {SHARE_BUTTONS_ENABLED && (
           <Button
-            onClick={handleShare}
+            onClick={handleShareClick}
             disabled={shareStatus === 'capturing' || shareStatus === 'working'}
             variant="accent"
             className="inline-flex flex-1 items-center justify-center gap-2"
