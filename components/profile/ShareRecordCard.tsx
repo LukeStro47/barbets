@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { ShareIcon, DownloadIcon } from '@/components/ui/icons';
 import { useShareableImage } from '@/lib/shareImage';
 import { SHARE_BUTTONS_ENABLED } from '@/lib/flags';
+import { logShareClick } from '@/lib/actions/shareClicks';
 
 /** Wraps the dark record card so it can be captured and shared as a PNG, same "screenshot-able
  * ticket" convention RevealTicket established. All of the capture/share mechanics live in
@@ -14,6 +15,11 @@ export function ShareRecordCard({ groupName, handle, children }: { groupName: st
     title: `${groupName} record`,
     text: `My record at ${groupName} (@${handle}).`,
   });
+
+  const handleShareClick = () => {
+    void logShareClick('profile_record');
+    share();
+  };
 
   const label =
     status === 'capturing'
@@ -32,7 +38,7 @@ export function ShareRecordCard({ groupName, handle, children }: { groupName: st
       {SHARE_BUTTONS_ENABLED && (
         <>
           <Button
-            onClick={share}
+            onClick={handleShareClick}
             disabled={status === 'capturing' || status === 'working'}
             variant="accent"
             className="mt-3 inline-flex w-full items-center justify-center gap-2"
