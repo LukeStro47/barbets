@@ -10,15 +10,11 @@ export async function savePushSubscription(subscription: { endpoint: string; key
   } = await supabase.auth.getUser();
   if (!user) return { error: 'Not signed in.' };
 
-  const { error } = await supabase.from('push_subscriptions').upsert(
-    {
-      user_id: user.id,
-      endpoint: subscription.endpoint,
-      p256dh: subscription.keys.p256dh,
-      auth_key: subscription.keys.auth,
-    },
-    { onConflict: 'user_id,endpoint' }
-  );
+  const { error } = await supabase.rpc('save_push_subscription', {
+    p_endpoint: subscription.endpoint,
+    p_p256dh: subscription.keys.p256dh,
+    p_auth_key: subscription.keys.auth,
+  });
   if (error) return { error: error.message };
   return { data: null };
 }
@@ -44,9 +40,7 @@ export async function saveNativePushSubscription(fcmToken: string, platform: 'an
   } = await supabase.auth.getUser();
   if (!user) return { error: 'Not signed in.' };
 
-  const { error } = await supabase
-    .from('push_subscriptions')
-    .upsert({ user_id: user.id, platform, fcm_token: fcmToken }, { onConflict: 'user_id,fcm_token' });
+  const { error } = await supabase.rpc('save_native_push_subscription', { p_fcm_token: fcmToken, p_platform: platform });
   if (error) return { error: error.message };
   return { data: null };
 }
