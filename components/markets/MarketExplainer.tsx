@@ -22,13 +22,25 @@ import type { MarketOption } from '@/lib/actions/markets';
  * side under their thumb that they never chose. The two `SideButton`s in the bar still open primed,
  * because tapping one of those *is* saying which side.
  */
+/** Keeps a long line value (a full date, a long custom unit) on one line by shrinking the
+ * digits down to fit the ticket instead of clipping to an ellipsis — the line is the one fact
+ * this card exists to show, so it can't be the part that gets cut off. */
+function lineSizeClass(lineLabel: string): string {
+  if (lineLabel.length <= 8) return 'text-[34px]';
+  if (lineLabel.length <= 12) return 'text-[26px]';
+  if (lineLabel.length <= 16) return 'text-[21px]';
+  return 'text-[17px]';
+}
+
 export function LineTicket({ lineLabel }: { lineLabel: string }) {
   const betslip = useBetslip();
 
   return (
     <TicketCard label="The line" meta="Over / Under" bodyClassName="px-[18px] py-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="min-w-0 truncate font-display text-[34px] leading-none font-extrabold tracking-[-0.02em] text-espresso-950 tabular-nums">
+        <p
+          className={`min-w-0 truncate font-display ${lineSizeClass(lineLabel)} leading-none font-extrabold tracking-[-0.02em] text-espresso-950 tabular-nums`}
+        >
           {lineLabel}
         </p>
         <button

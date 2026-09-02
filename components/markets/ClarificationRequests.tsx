@@ -108,12 +108,16 @@ export function ClarificationRequests({
         Flag anything unclear about how this resolves. Your question is visible to the group, and the creator gets
         notified. Updating the criteria clears every open question at once.
       </p>
+      {/* No autoFocus: on the WebViews this app targets, focusing a field the instant the modal
+          mounts pops the on-screen keyboard immediately, which resizes the layout viewport and
+          drags every bottom-pinned fixed element (BetslipBar included) up with it. Letting the
+          keyboard open only once the person actually taps in keeps that bar in its normal spot
+          while the modal is up. */}
       <textarea
         value={question}
         onChange={(e) => setQuestion(e.target.value)}
         placeholder="What's unclear about the criteria?"
         rows={3}
-        autoFocus
         className={inputClasses}
       />
       {error && <p className="text-sm text-danger-700">{error}</p>}

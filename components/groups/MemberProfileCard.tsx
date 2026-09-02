@@ -34,9 +34,8 @@ export function MemberProfileCard({ data }: { data: MemberProfileData }) {
           )}
           <div className="min-w-0 flex-1">
             <Mention nickname={stats.nickname} className="block truncate font-display text-lg font-extrabold text-espresso-950" />
-            <p className="mt-0.5 truncate text-xs text-espresso-400">
-              {groupName} · here since {sinceLabel}
-            </p>
+            <p className="mt-0.5 truncate text-xs text-espresso-400">{groupName}</p>
+            <p className="mt-0.5 truncate text-xs text-espresso-400">Here since {sinceLabel}</p>
           </div>
         </div>
 

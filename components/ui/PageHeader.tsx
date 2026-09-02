@@ -38,7 +38,7 @@ export function PageHeader({
           leaderboard's season/day), and top-aligning small text against a 26px display size
           leaves it floating above the word it belongs to. */}
       <div className="flex items-baseline justify-between gap-4">
-        <h1 className="min-w-0 font-display text-[26px] font-extrabold tracking-[-0.02em] text-espresso-950">{title}</h1>
+        <h1 className="min-w-0 font-display text-[26px] leading-[1.15] font-extrabold tracking-[-0.02em] text-espresso-950">{title}</h1>
         {action}
       </div>
       {subtitle && <p className="text-espresso-500">{subtitle}</p>}

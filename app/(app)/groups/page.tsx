@@ -183,12 +183,14 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
                     <GroupAvatar
                       name={g.name}
                       avatarKey={g.avatar_key}
-                      className="h-11 w-11 text-[13px]"
+                      className="h-12 w-12 text-[14px]"
                       fallbackClassName={needsYou > 0 ? 'bg-espresso-900 text-honey-300' : 'bg-espresso-50 text-espresso-500'}
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="flex min-w-0 items-center gap-1.5">
-                        <p className="truncate font-display text-[15.5px] font-extrabold tracking-[-0.01em] text-espresso-950">{g.name}</p>
+                      <span className="flex min-w-0 items-start gap-1.5">
+                        <p className="line-clamp-2 font-display text-[15.5px] leading-[1.15] font-extrabold tracking-[-0.01em] text-espresso-950">
+                          {g.name}
+                        </p>
                         {g.is_public && (
                           <span className="shrink-0 rounded-full bg-honey-100 px-1.5 py-[1px] text-[9.5px] font-extrabold tracking-[0.04em] text-honey-700 uppercase">
                             Public

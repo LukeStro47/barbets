@@ -305,10 +305,10 @@ export function BetslipBar({
             </p>
           )}
 
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className={cn('mt-3 flex gap-2', isMultipleChoice ? 'flex-col' : 'flex-wrap')}>
             {isMultipleChoice
               ? (options ?? []).map((o) => (
-                  <PickChip key={o.id} selected={betOptionId === o.id} onClick={() => setBetOptionId(o.id)}>
+                  <PickChip key={o.id} selected={betOptionId === o.id} fullWidth onClick={() => setBetOptionId(o.id)}>
                     <OptionLabel label={o.label} />
                   </PickChip>
                 ))
@@ -428,13 +428,27 @@ function SideButton({ label, onClick }: { label: string; onClick: () => void }) 
   );
 }
 
-function PickChip({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: React.ReactNode }) {
+function PickChip({
+  selected,
+  onClick,
+  children,
+  fullWidth = false,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  /** Multiple-choice options stack one per row instead of wrapping as inline chips — a wrapped
+   * chip sized to its own text left a ragged gap on one side of the row, so each option spans
+   * the full row width whether it's short or long. */
+  fullWidth?: boolean;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
         'rounded-full border-[1.5px] px-4 py-[9px] text-sm font-extrabold',
+        fullWidth ? 'w-full text-left' : 'text-center',
         selected ? 'border-honey-500 bg-honey-500 text-espresso-950' : 'border-white/22 bg-white/6 text-paper-white'
       )}
     >
@@ -480,6 +494,16 @@ function QuickAmount({
  * Dismissing goes to the group's market list rather than back to this market — the bet is done,
  * and the next thing anyone wants is the next market.
  */
+/** Mirrors the stake figure's size at short lengths, but a picked option can be a whole option
+ * label rather than a number — shrinks it in steps so the full text still fits without an
+ * ellipsis swallowing part of what was actually backed. */
+function onLabelSizeClass(label: string): string {
+  if (label.length <= 10) return 'text-[38px]';
+  if (label.length <= 16) return 'text-[28px]';
+  if (label.length <= 24) return 'text-[22px]';
+  return 'text-[17px]';
+}
+
 function BetConfirmedOverlay({
   amount,
   label,
@@ -536,7 +560,7 @@ function BetConfirmedOverlay({
             </div>
             <div className="min-w-0 flex-1 text-right">
               <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase">On</p>
-              <p className="mt-1 truncate font-display text-[38px] leading-none font-extrabold tracking-[-0.02em] text-honey-700">
+              <p className={`mt-1 font-display ${onLabelSizeClass(label)} leading-[1.1] font-extrabold tracking-[-0.02em] text-honey-700 text-pretty`}>
                 <OptionLabel label={label.toUpperCase()} />
               </p>
             </div>
