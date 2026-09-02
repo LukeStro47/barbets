@@ -320,7 +320,7 @@ function MarketRow({ market, isLast }: { market: MarketCardData; isLast: boolean
       {market.reactionGlyphs && market.reactionGlyphs.length > 0 && <ReactionFacepile glyphs={market.reactionGlyphs} />}
       {showBetPill ? (
         singleBet ? (
-          <span className="max-w-[128px] shrink-0 truncate rounded-full bg-honey-100 px-3 py-[5px] text-xs font-bold text-honey-800">
+          <span className="max-w-[96px] shrink-0 truncate rounded-full bg-honey-100 px-3 py-[5px] text-xs font-bold text-honey-800">
             {formatTokens(singleBet.amount)} {singleBet.label}
           </span>
         ) : (

@@ -100,7 +100,7 @@ export function InviteCodeBoxes({ tone = 'dark' }: { tone?: keyof typeof TONE })
           disabled={!ready}
           className={`flex-1 rounded-full py-2.5 text-center text-sm font-extrabold ${toneClasses.submit}`}
         >
-          Join group
+          Join Group
         </button>
       </div>
     </div>

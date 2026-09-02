@@ -149,9 +149,12 @@ export default async function LeaderboardPage({
   // members is sorted by live balance, which during intermission is exactly the frozen final
   // standing — nothing touches it again until start_season reseeds everyone — so the "final
   // table" here needs no separate season_results read of its own.
-  const leader = members[0];
   const you = members.find((m: any) => m.user_id === user?.id);
   const yourRank = members.findIndex((m: any) => m.user_id === user?.id) + 1;
+  // Everyone's still tied at the seed amount, so members[0] is just whoever the query happened to
+  // sort first (in practice, often the newest joiner) — showing the viewer their own profile in
+  // that slot reads as "you" instead of an arbitrary stranger before there's any real standing to show.
+  const leader = noBetsPlaced ? (you ?? members[0]) : members[0];
 
   const seasonLine = heroSeason
     ? `${heroSeason.name ?? `Season ${heroSeason.number}`} · Day ${Math.max(
