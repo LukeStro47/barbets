@@ -594,8 +594,8 @@ describe('_create_system_market / _resolve_system_market: the actor-less pipelin
       .eq('group_id', group.id)
       .eq('user_id', users.winner.id)
       .single();
-    // Seeded 1000, bet 100 on the previous test too (1100), wins this 200 pool outright.
-    expect(winnerMembership!.balance).toBe(1200);
+    // Seeded 1000, bet 100, wins this 200 pool outright.
+    expect(winnerMembership!.balance).toBe(1100);
   });
 
   test('_resolve_system_market rejects passing both an option and an outcome', async () => {
@@ -668,8 +668,10 @@ describe('_create_system_market / _resolve_system_market: the actor-less pipelin
       .eq('group_id', group.id)
       .eq('user_id', users.winner.id)
       .single();
-    // Seeded 1000, bet 100, wins the whole 200 pool.
-    expect(winnerMembership!.balance).toBe(1100);
+    // Balance already at 1100 from the earlier multiple_choice full-cycle test in this describe
+    // block (same winner, same group, no reset between tests) -- bet 100 (1000), wins this 200
+    // pool outright (1200).
+    expect(winnerMembership!.balance).toBe(1200);
 
     const { data: proposal } = await adminClient
       .from('resolution_proposals')
