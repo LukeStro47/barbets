@@ -45,8 +45,8 @@ function GroupHeader({ groupId, group, isOwner }: { groupId: string; group: { na
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="flex min-w-0 items-center gap-2.5">
-        {group.avatar_key && <GroupAvatar name={group.name} avatarKey={group.avatar_key} className="h-9 w-9" />}
-        <h1 className="min-w-0 font-display text-[29px] font-bold tracking-[-0.02em] text-espresso-950">{group.name}</h1>
+        {group.avatar_key && <GroupAvatar name={group.name} avatarKey={group.avatar_key} className="h-12 w-12" />}
+        <h1 className="min-w-0 font-display text-[24px] leading-tight font-bold tracking-[-0.02em] text-espresso-950">{group.name}</h1>
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <Link href={`/groups/${groupId}/settings`} className={iconLinkClass} aria-label={isOwner ? 'Settings' : 'Group info'}>
