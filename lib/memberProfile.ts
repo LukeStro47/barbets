@@ -152,6 +152,7 @@ export async function getMemberProfileData(groupId: string, membershipId: string
     avatarUpdatedAt: group?.is_public ? null : (avatarRow?.avatar_updated_at ?? null),
     avatarPresetKey: group?.is_public ? null : (avatarRow?.avatar_preset_key ?? null),
     isPublicGroup: !!group?.is_public,
-    hidesPipelineStats: !!group?.is_public && (group?.name === 'Sports' || group?.name === 'Weather'),
+    hidesPipelineStats:
+      !!group?.is_public && (group?.name === 'NFL' || group?.name === 'CFB' || group?.name === 'Weather'),
   };
 }

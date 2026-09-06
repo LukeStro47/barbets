@@ -11,8 +11,8 @@ const PIPELINE_LABEL: Record<PipelineSetting['pipeline'], string> = {
 };
 
 const PIPELINE_SCHEDULE: Record<PipelineSetting['pipeline'], string> = {
-  sports: 'Creates markets every 12h, resolves every 30min',
-  weather: 'Creates markets daily at noon, resolves every 30min',
+  sports: 'Picks candidates Monday, publishes Tuesday, resolves every 6h',
+  weather: 'Creates one market daily at noon, resolves every 30min',
 };
 
 const PIPELINE_API: Record<PipelineSetting['pipeline'], string> = {
@@ -20,15 +20,26 @@ const PIPELINE_API: Record<PipelineSetting['pipeline'], string> = {
   weather: 'api.weather.gov',
 };
 
-const JOB_LABEL: Record<PipelineHealth['job'], string> = { create: 'Create', resolve: 'Resolve' };
+const JOB_LABEL: Record<PipelineHealth['job'], string> = {
+  create: 'Create',
+  resolve: 'Resolve',
+  weekly_prepare: 'Weekly prepare',
+  weekly_publish: 'Weekly publish',
+};
 
 // How long a job can go without a logged run before its silence itself counts as a problem, not
 // just its failures — a cron entry that got disabled or an Edge Function that stopped deploying
-// leaves sweep_failures empty (nothing ran to fail), which would otherwise read as healthy. Set to
-// roughly 3x each job's own schedule interval, generous enough that one missed tick doesn't flap
-// the badge.
-const STALE_AFTER_MINUTES: Record<PipelineSetting['pipeline'], Record<PipelineHealth['job'], number>> = {
-  sports: { create: 12 * 60 * 2, resolve: 90 },
+// leaves sweep_failures empty (nothing ran to fail), which would otherwise read as healthy. Partial
+// rather than a full Record: list_pipeline_health() only ever returns sports' actual 3 jobs and
+// weather's actual 2 (see 20260906102000's sweeps VALUES list), so there's no real threshold to
+// name for a (pipeline, job) pair that can't occur — pipelineStatus() below falls back to Infinity
+// for one, which just means "never flag this as stale" rather than requiring a made-up number.
+// Sports' two weekly jobs need a days-scaled threshold, not an hours-scaled one like every other
+// job here — a job that only ever runs once a week is expected to go quiet for days between runs;
+// roughly 1.5x its own 7-day interval gives room for "prepare ran Monday, publish hasn't run yet,
+// it's only Tuesday morning" without flapping, while still catching a genuinely missed week.
+const STALE_AFTER_MINUTES: Partial<Record<PipelineSetting['pipeline'], Partial<Record<PipelineHealth['job'], number>>>> = {
+  sports: { resolve: 90, weekly_prepare: 10 * 24 * 60, weekly_publish: 10 * 24 * 60 },
   weather: { create: 24 * 60 * 2, resolve: 90 },
 };
 
@@ -51,7 +62,7 @@ function pipelineStatus(pipeline: PipelineSetting['pipeline'], enabled: boolean,
   if (!enabled) return 'off';
   if (jobs.length === 0) return 'unknown';
   if (jobs.some((j) => j.open_failure_count > 0)) return 'failing';
-  if (jobs.some((j) => !j.last_run_at || minutesAgo(j.last_run_at) > STALE_AFTER_MINUTES[pipeline][j.job])) return 'stale';
+  if (jobs.some((j) => !j.last_run_at || minutesAgo(j.last_run_at) > (STALE_AFTER_MINUTES[pipeline]?.[j.job] ?? Infinity))) return 'stale';
   return 'healthy';
 }
 
@@ -149,8 +160,8 @@ export function AdminPipelineTogglesForm({ settings, health }: { settings: Pipel
           <p className="text-sm leading-[1.55] text-espresso-600">
             {confirming.next
               ? `This starts real calls to ${PIPELINE_API[confirming.pipeline]} and creates real markets in the public ${
-                  confirming.pipeline === 'sports' ? 'Sports' : 'Weather'
-                } group on schedule (${PIPELINE_SCHEDULE[confirming.pipeline].toLowerCase()}).`
+                  confirming.pipeline === 'sports' ? 'NFL and CFB' : 'Weather'
+                } group${confirming.pipeline === 'sports' ? 's' : ''} on schedule (${PIPELINE_SCHEDULE[confirming.pipeline].toLowerCase()}).`
               : 'Scheduled runs stop immediately, nothing new is created or resolved. Anything already open in this pipeline just sits unresolved until you turn it back on or resolve it by hand.'}
           </p>
           <div className="flex gap-2 pt-1">
