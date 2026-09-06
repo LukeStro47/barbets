@@ -832,21 +832,23 @@ describe('pipeline_settings: the auto-generated-market kill switch', () => {
   });
 });
 
-describe('Sports/Weather hand-created markets: mods and the owner can, ordinary members cannot', () => {
+describe('NFL/CFB/Weather hand-created markets: mods and the owner can, ordinary members cannot', () => {
   let users: Record<string, TestUser>;
-  let sportsGroup: PublicGroupRow;
+  let nflGroup: PublicGroupRow;
 
   beforeAll(async () => {
     users = await createTestUsers('pgpipeblock', ['admin', 'mod', 'member']);
     await makeAdmin(users.admin);
-    // Matched by name only (20260828130000/20260830180000) — a test group named exactly 'Sports'
-    // exercises the same gate as the real seeded group without touching it. There's no unique
-    // constraint on groups.name, so this can't collide with the real one.
-    sportsGroup = await createPublicGroup(users.admin, 'generic', 'Sports');
-    await users.mod.client.rpc('join_public_group', { p_group_id: sportsGroup.id, p_nickname: 'pgpipemod' });
-    await users.member.client.rpc('join_public_group', { p_group_id: sportsGroup.id, p_nickname: 'pgpipemember' });
+    // A test group named exactly 'NFL' exercises the ordinary mod-or-owner gate the same way the
+    // real seeded group would, without touching it — there's no unique constraint on groups.name,
+    // so this can't collide with the real one. There's no name-based carve-out to test here
+    // (20260830180000 removed the one that used to exist): NFL/CFB/Weather use the exact same
+    // create_market() gate as any other public group, this just picks a realistic name.
+    nflGroup = await createPublicGroup(users.admin, 'generic', 'NFL');
+    await users.mod.client.rpc('join_public_group', { p_group_id: nflGroup.id, p_nickname: 'pgpipemod' });
+    await users.member.client.rpc('join_public_group', { p_group_id: nflGroup.id, p_nickname: 'pgpipemember' });
     await users.admin.client.rpc('assign_group_moderator', {
-      p_group_id: sportsGroup.id,
+      p_group_id: nflGroup.id,
       p_target_user_id: users.mod.id,
       p_is_moderator: true,
     });
@@ -858,7 +860,7 @@ describe('Sports/Weather hand-created markets: mods and the owner can, ordinary 
 
   test('the owner can hand-create a market, in addition to whatever the pipeline creates', async () => {
     const { error } = await users.admin.client.rpc('create_market', {
-      p_group_id: sportsGroup.id,
+      p_group_id: nflGroup.id,
       p_title: 'Should succeed (owner)',
       p_description: 'test',
       p_market_type: 'yes_no',
@@ -869,7 +871,7 @@ describe('Sports/Weather hand-created markets: mods and the owner can, ordinary 
 
   test('an assigned moderator can hand-create a market too', async () => {
     const { error } = await users.mod.client.rpc('create_market', {
-      p_group_id: sportsGroup.id,
+      p_group_id: nflGroup.id,
       p_title: 'Should succeed (mod)',
       p_description: 'test',
       p_market_type: 'yes_no',
@@ -880,7 +882,7 @@ describe('Sports/Weather hand-created markets: mods and the owner can, ordinary 
 
   test('an ordinary member still cannot hand-create a market', async () => {
     const { error } = await users.member.client.rpc('create_market', {
-      p_group_id: sportsGroup.id,
+      p_group_id: nflGroup.id,
       p_title: 'Should fail',
       p_description: 'test',
       p_market_type: 'yes_no',
@@ -889,7 +891,7 @@ describe('Sports/Weather hand-created markets: mods and the owner can, ordinary 
     expect(error?.message).toMatch(/forbidden/);
   });
 
-  test('an otherwise-identical public group not named Sports/Weather is unaffected', async () => {
+  test('an otherwise-identical public group not named NFL/CFB/Weather behaves the same way', async () => {
     const ordinaryGroup = await createPublicGroup(users.admin);
     const { error } = await users.admin.client.rpc('create_market', {
       p_group_id: ordinaryGroup.id,
@@ -1098,14 +1100,16 @@ describe('system_markets_opened: one push per pipeline run, not one per market',
 describe('Weather skips the market_closed push (resolves within minutes of its own close)', () => {
   let users: Record<string, TestUser>;
   let weatherGroup: PublicGroupRow;
-  let sportsGroup: PublicGroupRow;
+  let nflGroup: PublicGroupRow;
 
   beforeAll(async () => {
     users = await createTestUsers('pgwxclose', ['admin']);
     await makeAdmin(users.admin);
-    // Matched by name (20260828130000) -- test groups, not the real seeded ones.
+    // expire_stale()'s skip is matched by name ('Weather' specifically, see 20260828130000) --
+    // test groups, not the real seeded ones. The second group just needs to be named anything
+    // other than 'Weather' to prove the skip doesn't apply universally; 'NFL' is realistic.
     weatherGroup = await createPublicGroup(users.admin, 'generic', 'Weather');
-    sportsGroup = await createPublicGroup(users.admin, 'generic', 'Sports');
+    nflGroup = await createPublicGroup(users.admin, 'generic', 'NFL');
   });
 
   afterAll(async () => {
@@ -1138,9 +1142,9 @@ describe('Weather skips the market_closed push (resolves within minutes of its o
     expect(closedEvents ?? []).toHaveLength(0);
   });
 
-  test('a Sports system market still gets the market_closed push (real live-game gap)', async () => {
+  test('a non-Weather system market still gets the market_closed push (real live-game gap)', async () => {
     const { data, error } = await adminClient.rpc('_create_system_market', {
-      p_group_id: sportsGroup.id,
+      p_group_id: nflGroup.id,
       p_title: `Will the Testers beat the Others? ${Date.now()}`,
       p_description: 'test',
       p_market_type: 'yes_no',

@@ -1,7 +1,9 @@
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
+import { ChevronRightIcon } from '@/components/ui/icons';
 import { AdminBroadcastForm } from '@/components/admin/AdminBroadcastForm';
 import { CreatePublicGroupForm, ManageModeratorsPanel } from '@/components/admin/AdminPublicGroupsForm';
 import { AdminPipelineTogglesForm } from '@/components/admin/AdminPipelineTogglesForm';
@@ -129,6 +131,16 @@ export default async function AdminPage() {
         </div>
         <AdminPipelineTogglesForm settings={pipelineSettings ?? []} health={pipelineHealth ?? []} />
       </Card>
+
+      <Link href="/admin/game-of-the-week" className="block">
+        <Card className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="font-semibold text-espresso-800">Game of the Week</h2>
+            <p className="text-sm text-espresso-500">Pick this week&apos;s NFL and CFB matchup, or see past weeks.</p>
+          </div>
+          <ChevronRightIcon className="h-4 w-2.5 shrink-0 text-espresso-300" />
+        </Card>
+      </Link>
 
       <Card className="space-y-3">
         <div>

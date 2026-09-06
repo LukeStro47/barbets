@@ -113,7 +113,7 @@ export async function setPipelineEnabled(pipeline: 'sports' | 'weather', enabled
 
 export interface PipelineHealth {
   pipeline: 'sports' | 'weather';
-  job: 'create' | 'resolve';
+  job: 'create' | 'resolve' | 'weekly_prepare' | 'weekly_publish';
   last_run_at: string | null;
   last_run_succeeded: number | null;
   last_run_failed: number | null;
@@ -122,9 +122,10 @@ export interface PipelineHealth {
   last_failure_message: string | null;
 }
 
-/** Admin-only: last-run counts and open sweep_failures for each of the 4 pipeline jobs (sports
-    create/resolve, weather create/resolve). Not routed through runRpc() — table-returning, same
-    note as listGroupModeratorCandidates(). See 20260828110000_pipeline_health.sql. */
+/** Admin-only: last-run counts and open sweep_failures for each of the 5 pipeline jobs (sports
+    weekly_prepare/weekly_publish/resolve, weather create/resolve). Not routed through runRpc() —
+    table-returning, same note as listGroupModeratorCandidates(). See
+    20260906102000_pipeline_health_weekly_jobs.sql. */
 export async function listPipelineHealth(): Promise<ActionResult<PipelineHealth[]>> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc('list_pipeline_health');
@@ -151,4 +152,50 @@ export async function listQrScanTotals(): Promise<ActionResult<QrScanTotal[]>> {
   const { data, error } = await supabase.rpc('list_qr_scan_totals');
   if (error) return { error: friendlyMessage(toActionError(error)) };
   return { data: (data ?? []) as QrScanTotal[] };
+}
+
+export interface GameOfWeekCandidate {
+  event_id: string;
+  home: string;
+  away: string;
+  commence_time: string;
+}
+
+export interface GameOfWeekPick {
+  id: string;
+  league: 'nfl' | 'cfb';
+  week_key: string;
+  group_id: string;
+  candidates: GameOfWeekCandidate[];
+  chosen_event_id: string | null;
+  chosen_by: string | null;
+  status: 'awaiting_pick' | 'picked' | 'published' | 'skipped';
+  market_id: string | null;
+  created_at: string;
+  picked_at: string | null;
+  published_at: string | null;
+}
+
+/** Admin-only: every game_of_week_picks row, current week first, for the /admin/game-of-the-week
+    picker page — its still-open weeks to act on, and its past weeks' history. Not routed through
+    runRpc() — table-returning, same note as listGroupModeratorCandidates(). See
+    20260906101000_game_of_week_picks.sql. */
+export async function listGameOfWeekPicks(): Promise<ActionResult<GameOfWeekPick[]>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('list_game_of_week_picks');
+  if (error) return { error: friendlyMessage(toActionError(error)) };
+  return { data: (data ?? []) as GameOfWeekPick[] };
+}
+
+/** Admin-only: records this week's chosen game for one league. Doesn't create the market itself —
+    sports-weekly-publish does that Tuesday morning regardless of when during the week the pick was
+    made, so re-picking (the console's "Change pick") is safe any time before that Tuesday run. */
+export async function pickGameOfWeek(pickId: string, eventId: string): Promise<ActionResult<GameOfWeekPick>> {
+  const supabase = await createClient();
+  const result = await runRpc<GameOfWeekPick>(
+    await supabase.rpc('pick_game_of_week', { p_pick_id: pickId, p_event_id: eventId })
+  );
+  if (result.error) return result;
+  revalidatePath('/admin/game-of-the-week');
+  return result;
 }

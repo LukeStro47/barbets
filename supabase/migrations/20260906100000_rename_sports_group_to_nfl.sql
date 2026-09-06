@@ -1,0 +1,13 @@
+-- Sports/Weather's Phase 2 rewrite: the old single "Sports" group (continuously-polling MLB/NBA/
+-- NFL moneylines) splits into two admin-curated weekly "Game of the Week" groups, NFL and CFB.
+-- Renaming the existing group rather than retiring it and seeding a fresh one keeps its members,
+-- balances, and market history intact -- there's no reason a member who joined for football
+-- markets should lose their seat or their standing over a pipeline rewrite. CFB is a genuinely new
+-- group, created live from the admin console's existing "New public group" form (create_public_
+-- group() needs a live auth.uid(), which a migration has none of -- same reason the original
+-- Sports/Weather seed migration couldn't call it either), not seeded here.
+--
+-- A plain UPDATE rather than a guarded do-block: if no group is named exactly 'Sports' in this
+-- environment (staging, a fresh fork, or an environment where the original seed migration itself
+-- skipped for lack of the configured owner account), this is a harmless no-op.
+update groups set name = 'NFL' where name = 'Sports' and is_public = true;

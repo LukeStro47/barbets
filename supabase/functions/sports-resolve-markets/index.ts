@@ -1,15 +1,16 @@
-// Polls The Odds API's /scores endpoint for completed games and resolves the matching market
-// (found by reconstructing the exact title sports-create-markets would have generated for the
-// same home/away pair and commence_time -- an exact lookup, not a regex parse, since this
-// function already has the same team names the create side used). marketTitle() here must always
-// match sports-create-markets/index.ts's own copy exactly, including across a deploy that changes
-// the format -- any market already open under the old title at the moment of that deploy won't be
-// found by the new lookup and falls back to a moderator's ordinary hand-resolve, same as a game
-// that ages out of the DAYS_FROM lookback window.
+// Resolves the week's NFL and CFB Game of the Week markets once The Odds API reports the game
+// final. Trimmed down from its old shape (which polled MLB/NBA/NFL against one shared "Sports"
+// group) to match the new weekly-pick pipeline: two groups, one league each, at most one open
+// market per group at a time -- see sports-weekly-prepare/sports-weekly-publish for how that
+// market gets created in the first place.
+//
+// marketTitle() here must always match sports-weekly-publish's own copy exactly: lookup is an
+// exact title match (reconstructed from the same home/away pair this endpoint returns), not a
+// regex parse, since this function already has the same team names the create side used.
 //
 // Sports markets are multiple_choice (one option per team), not yes_no -- resolving means finding
 // the winning team's own market_options row and passing its id as p_option_id, not picking 'yes'
-// or 'no'. The option's label is always the exact team name sports-create-markets used to create
+// or 'no'. The option's label is always the exact team name sports-weekly-publish used to create
 // it (same string _create_system_market stored verbatim), so this is a plain lookup, not a parse.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -18,10 +19,16 @@ const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ODDS_API_KEY = Deno.env.get('ODDS_API_KEY')!;
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-const SPORTS = ['baseball_mlb', 'basketball_nba', 'americanfootball_nfl'];
+const LEAGUES: { oddsApiSport: string; groupName: string }[] = [
+  { oddsApiSport: 'americanfootball_nfl', groupName: 'NFL' },
+  { oddsApiSport: 'americanfootball_ncaaf', groupName: 'CFB' },
+];
 
 // How far back completed games are still worth checking -- generous enough that a run missed
-// during an outage still catches up once the pipeline is back.
+// during an outage still catches up once the pipeline is back. Unchanged from the old pipeline:
+// with only one market per league per week now, the API-credit pressure that originally forced
+// resolve down to every 6 hours (see that migration) is far lower, but the lookback window itself
+// was never about credits.
 const DAYS_FROM = 2;
 
 interface OddsApiScore {
@@ -60,29 +67,25 @@ Deno.serve(async () => {
   const { data: setting } = await admin.from('pipeline_settings').select('enabled').eq('pipeline', 'sports').single();
   if (!setting?.enabled) return new Response('sports pipeline disabled', { status: 200 });
 
-  const { data: group, error: groupErr } = await admin
-    .from('groups')
-    .select('id')
-    .eq('name', 'Sports')
-    .eq('is_public', true)
-    .maybeSingle();
-  if (groupErr || !group) {
-    console.error('Sports group not found:', groupErr?.message);
-    return new Response('Sports group not found', { status: 500 });
-  }
-
   let resolved = 0;
   let failed = 0;
 
-  for (const sport of SPORTS) {
+  for (const { oddsApiSport, groupName } of LEAGUES) {
+    const { data: group, error: groupErr } = await admin.from('groups').select('id').eq('name', groupName).eq('is_public', true).maybeSingle();
+    if (groupErr || !group) {
+      failed++;
+      await recordFailure(`${groupName}-group-lookup`, new Error(groupErr?.message ?? `${groupName} group not found`));
+      continue;
+    }
+
     let games: OddsApiScore[];
     try {
-      const res = await fetch(`https://api.the-odds-api.com/v4/sports/${sport}/scores?apiKey=${ODDS_API_KEY}&daysFrom=${DAYS_FROM}`);
-      if (!res.ok) throw new Error(`Odds API scores request failed (${res.status}) for ${sport}`);
+      const res = await fetch(`https://api.the-odds-api.com/v4/sports/${oddsApiSport}/scores?apiKey=${ODDS_API_KEY}&daysFrom=${DAYS_FROM}`);
+      if (!res.ok) throw new Error(`Odds API scores request failed (${res.status}) for ${oddsApiSport}`);
       games = await res.json();
     } catch (err) {
       failed++;
-      await recordFailure(`${sport}-scores-${new Date().toISOString().slice(0, 10)}`, err);
+      await recordFailure(`${oddsApiSport}-scores-${new Date().toISOString().slice(0, 10)}`, err);
       continue;
     }
 

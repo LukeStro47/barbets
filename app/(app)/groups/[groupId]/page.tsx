@@ -29,6 +29,7 @@ import { getGroupTasks } from '@/lib/tasks';
 import { TITLE_ORDER, TITLE_META, type GroupTitleRow } from '@/lib/titles';
 import { diffTitleSnapshots, type TitleSnapshotEntry } from '@/lib/seasonTitleDiff';
 import type { GroupSettings } from '@/lib/actions/groups';
+import { publicGroupWaitingCopy } from '@/lib/publicGroups';
 
 // 44px, a real tap target rather than a decorative chip — it's the only control in this header
 // now that "My bets" has gone, and it's the way into everything about the group.
@@ -63,7 +64,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
 
   const { data: group } = await supabase
     .from('groups')
-    .select('id, name, avatar_key, invite_code, owner_id, deletion_scheduled_at, pending_bonus_pool')
+    .select('id, name, avatar_key, invite_code, owner_id, deletion_scheduled_at, pending_bonus_pool, is_public')
     .eq('id', groupId)
     .single();
   notFoundIfEmpty(group);
@@ -415,6 +416,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
           revealed={settledPage.markets}
           revealedNextCursor={settledPage.nextCursor}
           seasonId={season?.id}
+          pipelineEmptyState={group!.is_public ? (publicGroupWaitingCopy(group!.name) ?? undefined) : undefined}
         />
       </div>
     </main>

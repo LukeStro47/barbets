@@ -1,13 +1,15 @@
-// Morning job: creates a "will it rain" and a "will it hit X°F" market per city in CITIES,
-// both closing at noon local, in the seeded "Weather" public group. Free, keyless, U.S. federal
-// public-domain data (api.weather.gov). Checked in against
-// pipeline_settings before doing anything, same as weather-resolve-markets and both sports
-// functions -- see the admin console's pipeline toggle.
+// Morning job: creates exactly one weather market a day (down from up to six -- a rain market and
+// a temperature market across three cities, every morning), rotating through a fixed 6-slot cycle
+// of (city, market type) so it's rarely the same thing two days running while staying fully
+// deterministic (no extra state table, no randomness to make idempotent). Closes at noon local, in
+// the seeded "Weather" public group. Free, keyless, U.S. federal public-domain data
+// (api.weather.gov). Checked in against pipeline_settings before doing anything, same as
+// weather-resolve-markets and the sports pipeline -- see the admin console's pipeline toggle.
 //
-// No shared metadata table linking a market back to its city/station: weather-resolve-markets
-// re-derives the city from the market's title (title format is fixed and only ever produced by
-// this function) and looks it up in its own copy of CITIES. Same "no shared folder, each
-// function is self-contained" convention send-push already established for this project.
+// No shared metadata table linking a market back to its city: weather-resolve-markets re-derives
+// the city from the market's title (title format is fixed and only ever produced by this
+// function) and looks it up in its own copy of CITIES. Same "no shared folder, each function is
+// self-contained" convention send-push already established for this project.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -22,29 +24,42 @@ const CITIES = [
   { name: 'Los Angeles', lat: 34.0522, lon: -118.2437 },
 ];
 
-// Both markets close at noon local, not at the forecast period's own endTime (commonly 18:00+
-// local) or some other afternoon/evening cutoff tried previously. Anything later leaves the
-// market open well past the point where anyone can just look outside (for rain) or check a
-// weather app (for the day's high, typically reached mid-afternoon) and bet with near-certainty.
-// Noon is a deliberately simple, fixed cutoff, not a per-city climatological one -- both markets
-// still resolve later in the day against the real outcome (weather-resolve-markets), so this only
-// shortens the betting window, not the coverage.
+type MarketKind = 'rain' | 'temp';
+
+// The fixed daily rotation: 3 cities x 2 kinds = 6 slots, one per day, so every combination comes
+// back around every 6 days without ever repeating the day before. Indexed by days-since-epoch
+// (UTC) rather than any stored "last used" pointer -- a rerun on the same UTC day always lands on
+// the same slot for free (see the dedup check below, which still guards the actual insert), and
+// there's nothing to get out of sync across restarts or redeploys.
+const ROTATION: { cityIndex: number; kind: MarketKind }[] = [
+  { cityIndex: 0, kind: 'rain' },
+  { cityIndex: 0, kind: 'temp' },
+  { cityIndex: 1, kind: 'rain' },
+  { cityIndex: 1, kind: 'temp' },
+  { cityIndex: 2, kind: 'rain' },
+  { cityIndex: 2, kind: 'temp' },
+];
+
+// Closes at noon local, not at the forecast period's own endTime (commonly 18:00+ local) or some
+// other afternoon/evening cutoff tried previously. Anything later leaves the market open well past
+// the point where anyone can just look outside (for rain) or check a weather app (for the day's
+// high, typically reached mid-afternoon) and bet with near-certainty. Noon is a deliberately
+// simple, fixed cutoff, not a per-city climatological one -- the market still resolves later in
+// the day against the real outcome (weather-resolve-markets), so this only shortens the betting
+// window, not the coverage.
 const WEATHER_MARKET_CLOSE_HOUR_LOCAL = 12;
 
 // Safety margin between "closes_at is in the future" (checked here) and the same check
 // _create_system_market() runs in Postgres moments later, after a couple of network round trips --
 // without it, a closes_at only a second or two out could pass this check and still lose the race
 // against the DB's own now(), producing a permanently stuck "closes_at must be in the future"
-// sweep_failures row (the run that created it never retries, since a later run recomputes noon for
-// a new day rather than re-attempting the same one).
+// sweep_failures row.
 const MIN_LEAD_MS = 2 * 60_000;
 
-// No more than this many Weather system markets active (open, or closed and still awaiting
-// resolution) at once -- a run that would otherwise create more just stops early, first city/type
-// first; whatever gets skipped catches up on a later run once something resolves. Counting only
-// `status = 'open'` here used to undercount: a market past its own noon-local close moves to
-// 'closed' before weather-resolve-markets gets to it, so a run in that gap saw open slots that
-// weren't real. See sports-create-markets' identical comment on OPEN_MARKET_CAP for the same bug.
+// A safety valve, not a real allocation problem now that only one market is created a day: if
+// several days' worth pile up unresolved (an outage, a stuck resolve), this just stops creating
+// more on top rather than growing the backlog further -- counts open-or-closed the same way every
+// other pipeline's cap does (see ARCHITECTURE.md's note on why closed has to count too).
 const OPEN_MARKET_CAP = 3;
 
 interface ForecastPeriod {
@@ -124,49 +139,40 @@ Deno.serve(async () => {
     return new Response('Weather group not found', { status: 500 });
   }
 
-  const { count: openCount } = await admin
-    .from('markets')
-    .select('id', { count: 'exact', head: true })
-    .eq('group_id', group.id)
-    .eq('is_system_market', true)
-    .in('status', ['open', 'closed']);
-  let openSlots = OPEN_MARKET_CAP - (openCount ?? 0);
+  const daysSinceEpoch = Math.floor(Date.now() / 86_400_000);
+  const slot = ROTATION[daysSinceEpoch % ROTATION.length];
+  const city = CITIES[slot.cityIndex];
 
   let created = 0;
   let failed = 0;
   const createdMarketIds: string[] = [];
 
-  for (const city of CITIES) {
-    try {
+  try {
+    const { count: openCount } = await admin
+      .from('markets')
+      .select('id', { count: 'exact', head: true })
+      .eq('group_id', group.id)
+      .eq('is_system_market', true)
+      .in('status', ['open', 'closed']);
+
+    if ((openCount ?? 0) < OPEN_MARKET_CAP) {
       const point = await nwsFetch(`https://api.weather.gov/points/${city.lat},${city.lon}`);
       const forecast = await nwsFetch(point.properties.forecast);
       const period: ForecastPeriod = forecast.properties.periods[0];
       const timeZone: string = point.properties.timeZone;
 
       const closesAt = localHourTodayToUtcIso(timeZone, WEATHER_MARKET_CLOSE_HOUR_LOCAL);
-
-      const rainTitle = `Will it rain in ${city.name} today?`;
-      const tempTitle = `Will ${city.name} hit ${period.temperature}°F today?`;
+      const marketType = slot.kind === 'rain' ? 'yes_no' : 'over_under';
 
       // Checked at the SQL level, not by comparing closesAt (a JS-computed ISO string) against a
       // previously-read closes_at (Postgres's own textual serialization of the same timestamptz,
       // a different string format that would never match a JS one) -- see ARCHITECTURE.md's note
-      // on why that used to silently never dedupe. market_type alone tells rain and temp markets
-      // apart at a given closes_at, so this also doesn't depend on the temp market's title, which
-      // embeds the live forecast temperature and can change between runs on the same day.
-      const { data: existingRain } = await admin
+      // on why that used to silently never dedupe.
+      const { data: existing } = await admin
         .from('markets')
         .select('id')
         .eq('group_id', group.id)
-        .eq('market_type', 'yes_no')
-        .eq('closes_at', closesAt)
-        .maybeSingle();
-
-      const { data: existingTemp } = await admin
-        .from('markets')
-        .select('id')
-        .eq('group_id', group.id)
-        .eq('market_type', 'over_under')
+        .eq('market_type', marketType)
         .eq('closes_at', closesAt)
         .maybeSingle();
 
@@ -176,44 +182,38 @@ Deno.serve(async () => {
       // create_market's own "closes_at must be in the future" check.
       const stillWorthCreating = new Date(closesAt).getTime() > Date.now() + MIN_LEAD_MS;
 
-      if (stillWorthCreating && !existingRain && openSlots > 0) {
-        const { data, error } = await admin.rpc('_create_system_market', {
-          p_group_id: group.id,
-          p_title: rainTitle,
-          p_description: `Auto-generated from the National Weather Service forecast for ${city.name}: "${period.shortForecast}." Closes at noon local, before most of the day's actual weather is knowable.`,
-          p_market_type: 'yes_no',
-          p_closes_at: closesAt,
-        });
-        if (error) throw new Error(`rain market: ${error.message}`);
+      if (stillWorthCreating && !existing) {
+        const { data, error } =
+          slot.kind === 'rain'
+            ? await admin.rpc('_create_system_market', {
+                p_group_id: group.id,
+                p_title: `Will it rain in ${city.name} today?`,
+                p_description: `Auto-generated from the National Weather Service forecast for ${city.name}: "${period.shortForecast}." Closes at noon local, before most of the day's actual weather is knowable.`,
+                p_market_type: 'yes_no',
+                p_closes_at: closesAt,
+              })
+            : await admin.rpc('_create_system_market', {
+                p_group_id: group.id,
+                p_title: `Will ${city.name} hit ${period.temperature}°F today?`,
+                p_description: `Auto-generated from the National Weather Service forecast for ${city.name}, which called for a high of ${period.temperature}°F. Closes at noon local, well before the day's high is typically reached.`,
+                p_market_type: 'over_under',
+                p_closes_at: closesAt,
+                p_line: period.temperature,
+                p_unit: '°F',
+              });
+        if (error) throw new Error(`${slot.kind} market: ${error.message}`);
         created++;
-        openSlots--;
         if (data?.id) createdMarketIds.push(data.id);
       }
-
-      if (stillWorthCreating && !existingTemp && openSlots > 0) {
-        const { data, error } = await admin.rpc('_create_system_market', {
-          p_group_id: group.id,
-          p_title: tempTitle,
-          p_description: `Auto-generated from the National Weather Service forecast for ${city.name}, which called for a high of ${period.temperature}°F. Closes at noon local, well before the day's high is typically reached.`,
-          p_market_type: 'over_under',
-          p_closes_at: closesAt,
-          p_line: period.temperature,
-          p_unit: '°F',
-        });
-        if (error) throw new Error(`temp market: ${error.message}`);
-        created++;
-        openSlots--;
-        if (data?.id) createdMarketIds.push(data.id);
-      }
-    } catch (err) {
-      failed++;
-      await recordFailure(`${city.name}-${new Date().toISOString().slice(0, 10)}`, err);
     }
+  } catch (err) {
+    failed++;
+    await recordFailure(`${city.name}-${slot.kind}-${new Date().toISOString().slice(0, 10)}`, err);
   }
 
-  // One push per run, not one per city/market -- weather can create up to six markets in a single
-  // morning run (rain + temp across three cities), which should read as "new markets, come take a
-  // look" rather than six near-identical pushes. See _notify_system_markets_created().
+  // One push per run -- today's single market always resolves to the named market_opened push
+  // via _notify_system_markets_created's own n=1 branch, but calling the same shared function
+  // every other pipeline uses keeps that decision in one place.
   if (createdMarketIds.length > 0) {
     await admin.rpc('_notify_system_markets_created', { p_group_id: group.id, p_market_ids: createdMarketIds });
   }
