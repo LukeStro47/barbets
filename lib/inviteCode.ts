@@ -10,13 +10,17 @@
  * perfectly valid when it was sent. This is the one place that knows the old format exists. */
 export const INVITE_CODE_LENGTH = 4;
 
-/** Uppercases, drops a legacy "BB-"/"BB" prefix, and strips anything that isn't A-Z0-9 (spaces,
- * dashes, and the stray punctuation a pasted code picks up). Returns at most
- * INVITE_CODE_LENGTH characters, so it's safe to feed straight into a lookup. */
+/** Uppercases, drops a legacy "BB-" (or human-typed "BB ") prefix, and strips anything that
+ * isn't A-Z0-9 (spaces, dashes, and the stray punctuation a pasted code picks up). Returns at
+ * most INVITE_CODE_LENGTH characters, so it's safe to feed straight into a lookup.
+ *
+ * The separator after "BB" is required: the legacy format always had one, and the live alphabet
+ * includes the letter B, so treating a bare leading "BB" as the retired prefix would corrupt a
+ * real modern code like "BBQ7" into an unmatchable fragment. */
 export function normalizeInviteCode(raw: string): string {
   return raw
     .toUpperCase()
-    .replace(/^BB[-\s]?/, '')
+    .replace(/^BB[-\s]/, '')
     .replace(/[^A-Z0-9]/g, '')
     .slice(0, INVITE_CODE_LENGTH);
 }
