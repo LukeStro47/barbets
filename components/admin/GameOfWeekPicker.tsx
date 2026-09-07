@@ -197,6 +197,18 @@ export function GameOfWeekPicker({ picks }: { picks: GameOfWeekPick[] }) {
     else history.push(p);
   }
 
+  if (current.size === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-espresso-200 px-6 py-10 text-center">
+        <div className="text-3xl">🏈</div>
+        <p className="mt-2 font-semibold text-espresso-700">Nothing to pick yet</p>
+        <p className="mt-1 text-sm text-espresso-400">
+          Check back Monday morning, once this week&apos;s candidates are in.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {LEAGUES.map((league) => (

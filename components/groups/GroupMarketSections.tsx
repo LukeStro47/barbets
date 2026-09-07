@@ -26,7 +26,6 @@ export function GroupMarketSections({
   revealed,
   revealedNextCursor,
   seasonId,
-  pipelineEmptyState,
 }: {
   groupId: string;
   pendingSponsor: MarketCardData[];
@@ -38,12 +37,6 @@ export function GroupMarketSections({
   revealedNextCursor: SettledCursor | null;
   /** Scopes "Load more" to the same season the first page was fetched with — omitted for a seasons-off group, which pages the all-time feed. */
   seasonId?: string;
-  /** Overrides the "Nothing open right now" empty state for a pipeline-owned public group (NFL/
-   *  CFB/Weather) — see publicGroupWaitingCopy() in lib/publicGroups.ts. Undefined for an
-   *  ordinary group, which keeps the default "tap the + below to start one" copy — that copy is
-   *  wrong here since nobody hand-creates a market in these groups, and there's a real next-drop
-   *  time worth naming instead of a generic empty state. */
-  pipelineEmptyState?: { icon: string; title: string; subtitle: string };
 }) {
   const openEmpty = open.length === 0;
   const pendingEmpty = pendingSponsor.length === 0 && awaitingResolution.length === 0 && challenged.length === 0;
@@ -122,20 +115,12 @@ export function GroupMarketSections({
         <Section label="Betting open">
           {openEmpty ? (
             allEmpty ? (
-              <EmptyState
-                icon={pipelineEmptyState?.icon ?? '🎲'}
-                title={pipelineEmptyState?.title ?? 'Nothing open right now'}
-                subtitle={pipelineEmptyState?.subtitle ?? 'Tap the + below to start one.'}
-              />
+              <EmptyState icon="🎲" title="Nothing open right now" subtitle="Tap the + below to start one." />
             ) : nothingActive ? (
               <EmptyState
-                icon={pipelineEmptyState?.icon ?? '🎲'}
-                title={pipelineEmptyState?.title ?? 'Nothing open right now'}
-                subtitle={
-                  pipelineEmptyState
-                    ? `${pipelineEmptyState.subtitle} See what's already settled instead.`
-                    : "Tap the + below to start one, or see what's already settled instead."
-                }
+                icon="🎲"
+                title="Nothing open right now"
+                subtitle="Tap the + below to start one, or see what's already settled instead."
                 action={
                   <Button variant="outline" size="sm" onClick={() => setFilter('settled')}>
                     View settled
