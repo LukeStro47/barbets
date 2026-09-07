@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { createClient, requireUser } from '@/lib/supabase/server';
 import { notFoundIfEmpty } from '@/lib/errors';
-import { getActiveMarkets, getSettledMarkets } from '@/lib/groupFeed';
+import { getActiveMarkets, getSettledMarkets, type SettledCursor } from '@/lib/groupFeed';
 import { GroupDeletionBanner } from '@/components/groups/GroupDeletionBanner';
 import { GroupMarketSections } from '@/components/groups/GroupMarketSections';
 import { SaveBalanceSnapshot } from '@/components/groups/SaveBalanceSnapshot';
@@ -29,7 +29,7 @@ import { getGroupTasks } from '@/lib/tasks';
 import { TITLE_ORDER, TITLE_META, type GroupTitleRow } from '@/lib/titles';
 import { diffTitleSnapshots, type TitleSnapshotEntry } from '@/lib/seasonTitleDiff';
 import type { GroupSettings } from '@/lib/actions/groups';
-import { publicGroupWaitingCopy } from '@/lib/publicGroups';
+import { PipelineGroupFeed, type PipelineKind } from '@/components/groups/PipelineGroupFeed';
 
 // 44px, a real tap target rather than a decorative chip — it's the only control in this header
 // now that "My bets" has gone, and it's the way into everything about the group.
@@ -306,6 +306,26 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
     getSettledMarkets(supabase, groupId, user.id, null, season?.id),
   ]);
 
+  // NFL/CFB/Weather get a dedicated single-featured-market feed (PipelineGroupFeed) instead of
+  // the ordinary Open/Pending/Settled tabs — see that component's own doc comment. "Featured" is
+  // always the most recent system market regardless of status: an open or closed-awaiting-result
+  // one if there is one, else the newest settled market, so the group never falls back to an
+  // empty "come back later" placeholder the moment its one market resolves.
+  const PIPELINE_GROUP_KIND: Record<string, PipelineKind> = { NFL: 'sports', CFB: 'sports', Weather: 'weather' };
+  const pipelineKind = group!.is_public ? PIPELINE_GROUP_KIND[group!.name] : undefined;
+  let pipelineFeatured: (typeof settledPage.markets)[number] | null = null;
+  let pipelineHistory: typeof settledPage.markets = [];
+  if (pipelineKind) {
+    const active = buckets.open[0] ?? buckets.awaiting_resolution[0] ?? null;
+    if (active) {
+      pipelineFeatured = active;
+      pipelineHistory = settledPage.markets;
+    } else {
+      pipelineFeatured = settledPage.markets[0] ?? null;
+      pipelineHistory = settledPage.markets.slice(1);
+    }
+  }
+
   let windingDown: React.ReactNode = null;
   if (season?.status === 'winding_down') {
     const { data: standings } = await supabase
@@ -407,17 +427,26 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
 
         {!settings?.seasons_enabled && !settings?.betting_enabled && isOwner && <OpenBettingButton groupId={groupId} />}
 
-        <GroupMarketSections
-          groupId={groupId}
-          pendingSponsor={buckets.pending_sponsor}
-          open={buckets.open}
-          awaitingResolution={buckets.awaiting_resolution}
-          challenged={buckets.challenged}
-          revealed={settledPage.markets}
-          revealedNextCursor={settledPage.nextCursor}
-          seasonId={season?.id}
-          pipelineEmptyState={group!.is_public ? (publicGroupWaitingCopy(group!.name) ?? undefined) : undefined}
-        />
+        {pipelineKind ? (
+          <PipelineGroupFeed
+            groupId={groupId}
+            kind={pipelineKind}
+            featured={pipelineFeatured}
+            history={pipelineHistory}
+            historyNextCursor={settledPage.nextCursor}
+          />
+        ) : (
+          <GroupMarketSections
+            groupId={groupId}
+            pendingSponsor={buckets.pending_sponsor}
+            open={buckets.open}
+            awaitingResolution={buckets.awaiting_resolution}
+            challenged={buckets.challenged}
+            revealed={settledPage.markets}
+            revealedNextCursor={settledPage.nextCursor}
+            seasonId={season?.id}
+          />
+        )}
       </div>
     </main>
   );
