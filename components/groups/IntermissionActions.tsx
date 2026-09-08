@@ -97,7 +97,7 @@ export function RosterControl({
         }
         className="w-full"
       >
-        You're in, not playing this one?
+        Opt-Out
       </Button>
     </div>
   );

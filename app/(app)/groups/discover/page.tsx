@@ -39,13 +39,13 @@ export default async function DiscoverGroupsPage({ searchParams }: { searchParam
 
   return (
     <main className="mx-auto max-w-lg px-5">
-      <div className="flex items-center gap-2.5 pt-[22px]">
+      <div className="flex items-center pt-[22px]">
         <Link
           href={all ? '/groups?all=1' : '/groups'}
-          aria-label="Back"
-          className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-paper-dim text-espresso-800"
+          className="-ml-1 inline-flex items-center gap-0.5 text-[12.5px] font-bold text-espresso-400 hover:text-espresso-600"
         >
-          <CaretLeftIcon className="h-[13px] w-[7px]" />
+          <CaretLeftIcon className="h-4 w-4 text-espresso-300" />
+          Back
         </Link>
       </div>
 

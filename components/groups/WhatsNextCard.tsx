@@ -71,7 +71,7 @@ export function WhatsNextCard({
       <div className="flex items-center gap-3 border-t border-espresso-50 pt-3.5">
         <span className="min-w-0 flex-1">
           <span className="block text-[13.5px] leading-[1.3] font-bold text-espresso-950">
-            {isIn ? "You're in for the next season" : "You're sitting this one out"}
+            {isIn ? "You're opted-in to the next season by default" : "You're sitting this one out"}
           </span>
           <span className="block text-[11.5px] leading-[1.35] text-espresso-400">
             {playingCount} in{sittingOutNicknames.length > 0 && `, ${sittingOutNicknames.map((n) => `@${n}`).join(', ')} sitting out`}

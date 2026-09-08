@@ -17,7 +17,6 @@ export interface FinalBalanceRow {
 export function SeasonRecapHero({
   viewer,
   seasonName,
-  dateRange,
   marketsSettled,
   finalBalances,
   viewerUserId,
@@ -30,7 +29,6 @@ export function SeasonRecapHero({
 }: {
   viewer: 'owner' | 'member';
   seasonName: string;
-  dateRange: string;
   marketsSettled: number;
   finalBalances: FinalBalanceRow[];
   viewerUserId: string;
@@ -58,7 +56,7 @@ export function SeasonRecapHero({
         <p className="text-[10.5px] font-bold tracking-[0.14em] text-honey-400 uppercase">Season complete</p>
         <p className="mt-1.5 font-display text-[27px] leading-[1.1] font-extrabold tracking-[-0.02em] text-paper-white">{seasonName}</p>
         <p className="mt-1.5 text-[12.5px] text-paper-white/50">
-          {dateRange} · {marketsSettled} market{marketsSettled === 1 ? '' : 's'}, all settled
+          {marketsSettled} market{marketsSettled === 1 ? '' : 's'}
         </p>
 
         {viewer === 'owner' ? (
@@ -91,8 +89,7 @@ export function SeasonRecapHero({
                   `of ${finalBalances.length}`
                 ) : (
                   <>
-                    of {finalBalances.length} · {formatTokens((champion?.balance ?? 0) - (you?.balance ?? 0))} behind{' '}
-                    {champion && <Mention nickname={champion.nickname} />}
+                    of {finalBalances.length} · behind {champion && <Mention nickname={champion.nickname} />}
                   </>
                 )}
               </span>
