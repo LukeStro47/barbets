@@ -49,13 +49,13 @@ export function SeasonStakesBand({
     <>
       {prizeText && (
         <div className={`w-full flex-1 rounded-[16px] border border-honey-300 bg-honey-50 px-3.5 py-3 ${hoverClasses}`}>
-          <p className="text-[10px] font-extrabold tracking-[0.09em] text-honey-800 uppercase">First place wins</p>
+          <p className="text-[10px] font-extrabold tracking-[0.09em] text-honey-800 uppercase">First place</p>
           <p className="mt-1 text-[12.5px] leading-[1.35] font-semibold text-espresso-950">{prizeText}</p>
         </div>
       )}
       {punishmentText && (
         <div className={`w-full flex-1 rounded-[16px] border border-espresso-100 bg-paper-white px-3.5 py-3 ${hoverClasses}`}>
-          <p className="text-[10px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">Last place owes</p>
+          <p className="text-[10px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">Last place</p>
           <p className="mt-1 text-[12.5px] leading-[1.35] font-semibold text-espresso-800">{punishmentText}</p>
         </div>
       )}

@@ -8,7 +8,6 @@ import { GroupAvatar } from '@/components/ui/GroupAvatar';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { JUST_JOINED_GROUP_KEY } from '@/components/pwa/PushReminderModal';
-import { numberWord } from '@/lib/formatNumber';
 import { cn } from '@/lib/cn';
 
 const NICKNAME_MAX_LENGTH = 20;
@@ -105,7 +104,7 @@ export function DiscoverGroupCard({
               <p className="mt-[3px] flex items-center gap-1.5 text-xs text-espresso-500">
                 <span>{openCopy}</span>
                 <span className="text-espresso-200">·</span>
-                <span>{numberWord(memberCount)} playing</span>
+                <span>{memberCount} playing</span>
               </p>
             </span>
             {joinButton}
@@ -132,14 +131,16 @@ export function DiscoverGroupCard({
                   </span>
                 </span>
                 <p className="mt-1 text-[12.5px] text-espresso-500">
-                  {numberWord(memberCount)} playing{settlesCopy ? ` · ${settlesCopy}` : ''}
+                  {memberCount} playing{settlesCopy ? ` · ${settlesCopy}` : ''}
                 </p>
               </span>
             </div>
 
-            <p className="mt-4 text-[10.5px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">
-              {openMarketCount} {openMarketCount === 1 ? 'market' : 'markets'} open
-            </p>
+            {openMarketCount > 0 && (
+              <p className="mt-4 text-[10.5px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">
+                {openMarketCount} {openMarketCount === 1 ? 'market' : 'markets'} open
+              </p>
+            )}
             {featuredMarketTitle && (
               <div className="mt-[9px] flex items-center gap-[10px] rounded-[13px] bg-paper-dim px-[13px] py-[11px]">
                 <p className="min-w-0 flex-1 text-[13.5px] font-bold text-espresso-800">{featuredMarketTitle}</p>

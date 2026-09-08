@@ -16,7 +16,7 @@ export function isHomeSurfacePublicGroup(g: PublicGroup): boolean {
     groups section) rather than a schema field, since these three specific groups are the only
     ones this copy is written for. */
 export function publicGroupSettlesCopy(name: string): string {
-  if (name === 'NFL' || name === 'CFB') return 'settles after the game';
+  if (name === 'NFL' || name === 'CFB') return 'settles weekly';
   if (name === 'Weather') return 'settles daily';
   return 'settles once resolved';
 }

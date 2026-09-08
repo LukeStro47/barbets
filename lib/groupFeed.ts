@@ -201,10 +201,16 @@ export async function getActiveMarkets(supabase: Supabase, groupId: string, user
     }
 
     if (m.status === 'open') {
-      const myBets = myOpenBetsByMarket.get(m.id)?.map((b) => ({
-        label: b.side ? b.side.toUpperCase() : (optionLabelById.get(b.option_id!) ?? '?'),
-        amount: b.amount,
-      }));
+      // Grouped by label, not one entry per bet row: two separate bets on the same side/option
+      // are the same position, not a hedge, so they combine into one chip rather than showing up
+      // as two — a hedge (different labels) still gets one chip each.
+      const betsForMarket = myOpenBetsByMarket.get(m.id);
+      const amountByLabel = new Map<string, number>();
+      for (const b of betsForMarket ?? []) {
+        const label = b.side ? b.side.toUpperCase() : (optionLabelById.get(b.option_id!) ?? '?');
+        amountByLabel.set(label, (amountByLabel.get(label) ?? 0) + b.amount);
+      }
+      const myBets = betsForMarket ? Array.from(amountByLabel, ([label, amount]) => ({ label, amount })) : undefined;
       buckets.open.push({
         ...base,
         openBetCount: openCountByMarket.get(m.id) ?? 0,

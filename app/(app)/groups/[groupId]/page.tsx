@@ -36,12 +36,6 @@ import { PipelineGroupFeed, type PipelineKind } from '@/components/groups/Pipeli
 const iconLinkClass =
   'flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-espresso-50 text-espresso-500 transition-colors hover:bg-espresso-100 hover:text-espresso-700 active:scale-[0.92]';
 
-/** "Nov 3 – Feb 2" — used only by the season-over recap hero's date range. */
-function formatSeasonDate(iso: string): string {
-  const d = new Date(iso);
-  return `${d.toLocaleDateString('en-US', { month: 'short' })} ${d.getDate()}`;
-}
-
 function GroupHeader({ groupId, group, isOwner }: { groupId: string; group: { name: string; avatar_key: string | null }; isOwner: boolean }) {
   return (
     <div className="flex items-center justify-between gap-3">
@@ -153,9 +147,6 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
 
     const finalBalances = snapshot.final_balances ?? [];
     const seasonName = endedSeason.name ?? `Season ${endedSeason.number}`;
-    const dateRange = endedSeason.ended_at
-      ? `${formatSeasonDate(endedSeason.started_at)} – ${formatSeasonDate(endedSeason.ended_at)}`
-      : formatSeasonDate(endedSeason.started_at);
 
     const myTitles = ((titleRows ?? []) as GroupTitleRow[]).filter((r) => r.user_id === user.id);
     const myFirstTitle = TITLE_ORDER.map((k) => myTitles.find((r) => r.title_key === k)).find((r): r is GroupTitleRow => !!r);
@@ -214,7 +205,6 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
           <SeasonRecapHero
             viewer={isOwner ? 'owner' : 'member'}
             seasonName={seasonName}
-            dateRange={dateRange}
             marketsSettled={snapshot.markets_settled ?? 0}
             finalBalances={finalBalances}
             viewerUserId={user.id}

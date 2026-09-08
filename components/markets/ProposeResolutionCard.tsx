@@ -367,7 +367,7 @@ export function ProposeResolutionCard({
                   Back
                 </Button>
                 <Button type="button" className="flex-1 truncate" disabled={isPending} onClick={submit}>
-                  Confirm {chosenLabel}
+                  Confirm
                 </Button>
               </div>
             </>
