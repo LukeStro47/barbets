@@ -9,6 +9,7 @@ import { GroupAvatar } from '@/components/ui/GroupAvatar';
 import { Modal } from '@/components/ui/Modal';
 import { JUST_JOINED_GROUP_KEY } from '@/components/pwa/PushReminderModal';
 import { CaretLeftIcon } from '@/components/ui/icons';
+import type { JoinSource } from '@/lib/inviteLink';
 
 const NICKNAME_MAX_LENGTH = 20;
 
@@ -36,11 +37,14 @@ const BLOCKED_COPY: Record<'removed' | 'not_accepting', { title: string; body: s
  */
 export function JoinFlow({
   inviteCode,
+  joinSource = null,
   groupName,
   groupAvatarKey = null,
   blockedReason = null,
 }: {
   inviteCode: string;
+  /** Recorded on the group_join lifecycle row so admin can compare QR vs typed vs link. */
+  joinSource?: JoinSource | null;
   groupName: string;
   groupAvatarKey?: string | null;
   blockedReason?: 'removed' | 'not_accepting' | null;
@@ -146,7 +150,7 @@ export function JoinFlow({
         disabled={isPending || nickname.trim() === ''}
         onClick={() =>
           startTransition(async () => {
-            const result = await joinGroup(inviteCode, nickname.trim());
+            const result = await joinGroup(inviteCode, nickname.trim(), joinSource);
             if (result.error) {
               setError(result.error);
               return;

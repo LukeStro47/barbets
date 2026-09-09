@@ -19,6 +19,24 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- Android App Links for invite links only. A scanned group QR code encodes
+                 https://app.mybarbets.com/join/<code>?src=qr, and with autoVerify the OS opens
+                 this app for it directly instead of the browser, once Google has verified
+                 public/.well-known/assetlinks.json on that host against the signing
+                 certificate (the Play App Signing key's SHA-256, not the upload key). The
+                 web layer then routes it (components/pwa/NativeDeepLink.tsx).
+
+                 pathPrefix is deliberately /join and nothing wider: the same host also serves
+                 the emailed password-reset and confirm-signup links, which have to open in a
+                 browser (a one-time-token link has no "hand off to the app" equivalent, see
+                 lib/mobileGate.ts), so claiming the whole host would break those. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="app.mybarbets.com" android:pathPrefix="/join" />
+            </intent-filter>
         </activity>
 
         <provider

@@ -5,9 +5,20 @@ import { friendlyMessage, toActionError } from '@/lib/errors';
 import { JoinFlow } from '@/components/groups/JoinFlow';
 import { InvalidInviteModal } from '@/components/groups/InvalidInviteModal';
 import { normalizeInviteCode } from '@/lib/inviteCode';
+import { inviteJoinPath, parseJoinSource } from '@/lib/inviteLink';
 
-export default async function JoinPage({ params }: { params: Promise<{ code: string }> }) {
+export default async function JoinPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ code: string }>;
+  searchParams: Promise<{ src?: string | string[] }>;
+}) {
   const { code: rawCode } = await params;
+  // How this invite arrived (`?src=qr` from a scanned QR code, `code` from the four boxes,
+  // nothing for a bare link), kept through the sign-in bounce below and handed to join_group
+  // as its lifecycle source. Unknown values become null here, never an error.
+  const joinSource = parseJoinSource((await searchParams).src);
   // Codes printed on cards, or shared before the prefix was dropped, still read "BB-XXXX" — those
   // links have to keep working, so the URL is normalized once here and only the clean code is
   // used from this point on (lookup, the sign-in bounce-back, and JoinFlow's own join call).
@@ -18,9 +29,8 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
     data: { user },
   } = await supabase.auth.getUser();
 
-  const nextParam = `/join/${encodeURIComponent(code)}`;
   if (!user) {
-    redirect(`/login?next=${nextParam}`);
+    redirect(`/login?next=${encodeURIComponent(inviteJoinPath(code, joinSource))}`);
   }
 
   const { data: group, error } = (await supabase.rpc('get_group_by_invite_code', { p_invite_code: code }).maybeSingle()) as {
@@ -62,7 +72,13 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
   // its own gutters and safe-area inset.
   return (
     <main className="flex min-h-dvh flex-col bg-paper">
-      <JoinFlow inviteCode={code} groupName={group.name} groupAvatarKey={group.avatar_key} blockedReason={blockedReason} />
+      <JoinFlow
+        inviteCode={code}
+        joinSource={joinSource}
+        groupName={group.name}
+        groupAvatarKey={group.avatar_key}
+        blockedReason={blockedReason}
+      />
     </main>
   );
 }

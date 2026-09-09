@@ -4,6 +4,8 @@ import './globals.css';
 import { RegisterServiceWorker } from '@/components/pwa/RegisterServiceWorker';
 import { NativePushNavigation } from '@/components/pwa/NativePushNavigation';
 import { NativeBackButton } from '@/components/pwa/NativeBackButton';
+import { NativeDeepLink } from '@/components/pwa/NativeDeepLink';
+import { DeferredInviteLink } from '@/components/pwa/DeferredInviteLink';
 import { BootSplash } from '@/components/pwa/BootSplash';
 import { ChunkErrorRecovery } from '@/components/pwa/ChunkErrorRecovery';
 import { MovedBanner } from '@/components/pwa/MovedBanner';
@@ -74,6 +76,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
         <RegisterServiceWorker />
         <NativePushNavigation />
+        {/* Both native-only, both render nothing: an App Link / Universal Link open, and the
+            install-referrer / pasteboard pickup for an invite QR scanned before install. In the
+            root layout rather than (app)'s because /join lives outside it. */}
+        <NativeDeepLink />
+        <DeferredInviteLink />
         <NativeBackButton />
         <BootSplash />
       </body>
