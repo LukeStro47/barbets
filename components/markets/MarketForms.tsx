@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createMarket } from '@/lib/actions/markets';
 import { OptionLabel } from '@/components/markets/OptionLabel';
+import { SaveAsTemplateModal } from '@/components/markets/SaveAsTemplateModal';
 import { Mention } from '@/components/ui/Mention';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -275,6 +276,11 @@ export function CreateMarketForm({
   requireEndorsement,
   initialMarketType,
   isPublic = false,
+  initialTitle,
+  initialDescription,
+  initialOptions,
+  initialSubjectIds,
+  initialUnit,
 }: {
   groupId: string;
   groupName: string;
@@ -291,6 +297,15 @@ export function CreateMarketForm({
    * @mention-an-option hint are dropped from the form entirely rather than offering something
    * that would just come back as an error. */
   isPublic?: boolean;
+  /** Prefill from a template (see app/(app)/groups/[groupId]/markets/new/page.tsx's `templateId`/
+   * `memberId` search params and lib/marketTemplatePlaceholder.ts's `applyTemplate()`). Purely
+   * initial values fed into the same state this form already had — nothing downstream (step
+   * validation, the review ticket, submission) knows or cares that it started from a template. */
+  initialTitle?: string;
+  initialDescription?: string;
+  initialOptions?: string[];
+  initialSubjectIds?: string[];
+  initialUnit?: string | null;
 }) {
   const router = useRouter();
   const marketType: MarketType = initialMarketType ?? 'yes_no';
@@ -299,17 +314,22 @@ export function CreateMarketForm({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [title, setTitle] = useState(initialTitle ?? '');
+  const [description, setDescription] = useState(initialDescription ?? '');
   const [line, setLine] = useState('');
-  const [unit, setUnit] = useState('');
+  const [unit, setUnit] = useState(initialUnit ?? '');
   const [lineFormat, setLineFormat] = useState<LineFormat>('number');
   const [unitPickerOpen, setUnitPickerOpen] = useState(false);
   const [customUnit, setCustomUnit] = useState(false);
   const [showCurrencyAlternates, setShowCurrencyAlternates] = useState(false);
   const currencyPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [subjects, setSubjects] = useState<MemberOption[]>([]);
-  const [options, setOptions] = useState<OptionDraft[]>(() => [newOption(), newOption()]);
+  const [subjects, setSubjects] = useState<MemberOption[]>(() =>
+    members.filter((m) => initialSubjectIds?.includes(m.userId))
+  );
+  const [options, setOptions] = useState<OptionDraft[]>(() =>
+    initialOptions && initialOptions.length > 0 ? initialOptions.map((label) => newOption(label)) : [newOption(), newOption()]
+  );
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
   const [minCloseTime] = useState(() => toLocalDatetimeInputValue(new Date(Date.now() + 60_000)));
   const [closesAt, setClosesAt] = useState(() => toLocalDatetimeInputValue(new Date(Date.now() + 60 * 60_000)));
 
@@ -753,11 +773,30 @@ export function CreateMarketForm({
         requireEndorsement={requireEndorsement}
       />
 
-      <div className="mt-auto pt-6">
+      <div className="mt-auto flex flex-col gap-2.5 pt-6">
         <button type="button" disabled={isPending} onClick={submitMarket} className={footerButtonClasses}>
           {isPending ? 'Creating…' : 'Create market'}
         </button>
+        <Button type="button" variant="outline" className="w-full" onClick={() => setSaveTemplateOpen(true)}>
+          Save as template
+        </Button>
       </div>
+
+      {/* Independent of "Create market" — saving a template doesn't create this market, and
+          creating this market doesn't require saving a template. Either, both, or neither. */}
+      {saveTemplateOpen && (
+        <SaveAsTemplateModal
+          groupId={groupId}
+          groupName={groupName}
+          draftTitle={title}
+          description={description}
+          marketType={marketType}
+          options={options.map((o) => o.label.trim())}
+          subjects={subjects}
+          unit={isOverUnder ? displayUnit : null}
+          onClose={() => setSaveTemplateOpen(false)}
+        />
+      )}
     </div>
   );
 }

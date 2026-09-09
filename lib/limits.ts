@@ -51,3 +51,8 @@ export const CUSTOM_AWARD_MAX_PER_GROUP = 5;
     than sized like the join message's one-screen modal. */
 export const PRIZE_MAX_LENGTH = 120;
 export const PUNISHMENT_MAX_LENGTH = 120;
+
+/** Bounds how many personal/group-shared templates can pile up from repeated saving, same
+    reasoning as CUSTOM_AWARD_MAX_PER_GROUP bounding custom awards. Checked per scope, so a
+    user's private list and a given group's shared list are each capped independently. */
+export const MARKET_TEMPLATE_MAX_PER_SCOPE = 30;
