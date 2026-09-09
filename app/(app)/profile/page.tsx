@@ -18,6 +18,8 @@ import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { GroupSwitcher } from '@/components/profile/GroupSwitcher';
 import { ShareRecordCard } from '@/components/profile/ShareRecordCard';
+import { LoginRewardCard } from '@/components/profile/LoginRewardCard';
+import type { LoginRewardStatus } from '@/lib/actions/loginReward';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { SwipeRail } from '@/components/ui/SwipeRail';
 import { formatTokens, formatOrdinal } from '@/lib/formatNumber';
@@ -95,6 +97,11 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
 
   const { data: avatarRow } = await supabase.from('users').select('avatar_updated_at, avatar_preset_key').eq('id', user.id).single();
   const myNickname = memberships?.[0]?.nickname ?? user.email?.split('@')[0] ?? '?';
+
+  // The 7-day login reward: the streak as it stands and what a claim would credit per group.
+  // Stamped by <RecordAppOpen /> in the app shell, which refreshes this page the day it moves.
+  const { data: loginRewardRaw } = await supabase.rpc('get_login_reward_status');
+  const loginReward = (loginRewardRaw ?? { current_streak: 0, last_open_day: null, groups: [] }) as LoginRewardStatus;
 
   const accountLinks = (
     <div className="space-y-3.5">
@@ -280,6 +287,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
     <main className="mx-auto max-w-lg space-y-4 px-5 py-8">
       <GroupSwitcher groups={switcherGroups} currentGroupId={groupId} />
 
+      <LoginRewardCard streak={loginReward.current_streak} groups={loginReward.groups} />
+
       <ShareRecordCard groupName={groupName} handle={selected.nickname}>
         <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 p-5 text-paper-white">
           <div className="pointer-events-none absolute inset-0 opacity-50 [background:radial-gradient(circle_at_88%_0%,rgba(232,163,61,0.3),rgba(232,163,61,0)_60%)]" />
@@ -330,7 +339,10 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
             ) : (
               <p className="mt-1 text-[13.5px] leading-[1.35] text-paper-white/50">Nothing settled yet.</p>
             )}
-            <p className="mt-1.5 text-[11px] text-paper-white/40">{tenureLine}</p>
+            <p className="mt-1.5 text-[11px] text-paper-white/40">
+              {tenureLine}
+              {loginReward.current_streak > 0 && ` · ${loginReward.current_streak}-day login streak`}
+            </p>
           </div>
         </div>
       </ShareRecordCard>

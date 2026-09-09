@@ -16,6 +16,7 @@ import { COMMON_TIMEZONES, friendlyTimezoneName } from '@/lib/timezone';
 import { Mention } from '@/components/ui/Mention';
 import { formatTokens, formatTokenInputValue } from '@/lib/formatNumber';
 import { TOKEN_ALLOCATION_MAX, JOIN_MESSAGE_MAX_LENGTH, PRIZE_MAX_LENGTH, PUNISHMENT_MAX_LENGTH } from '@/lib/limits';
+import { LOGIN_REWARD_DEFAULT_PCT, LOGIN_REWARD_MAX, defaultLoginReward } from '@/lib/loginReward';
 import { useKeyboardState } from '@/lib/useKeyboardInset';
 import { cn } from '@/lib/cn';
 import type { GroupSettings } from '@/lib/actions/groups';
@@ -104,6 +105,11 @@ export function EditSettingsForm({
   const [awardsEnabled, setAwardsEnabled] = useState(settings.awards_enabled);
   const [prizeText, setPrizeText] = useState(settings.prize_text ?? '');
   const [punishmentText, setPunishmentText] = useState(settings.punishment_text ?? '');
+  // Blank means "use the default" (null server-side), which is a different thing from 0 (off), so
+  // this is a string rather than a number: an emptied box has to survive as empty.
+  const [loginRewardAmount, setLoginRewardAmount] = useState(() =>
+    settings.login_reward_amount == null ? '' : formatTokenInputValue(String(settings.login_reward_amount))
+  );
   // The join-message textarea's keyboard pushes this bar up just enough to reveal the field
   // itself, leaving it flush against the keyboard with no breathing room — pad past it, same
   // fix BetslipBar's amount field uses.
@@ -111,6 +117,9 @@ export function EditSettingsForm({
 
   const creatorPctValid = Number.isFinite(creatorPayoutPct) && creatorPayoutPct >= 0 && creatorPayoutPct <= 100;
   const openMarketsPct = creatorPctValid ? 100 - creatorPayoutPct : '—';
+  const seedAmountNumber = Number(seedAmount.replace(/,/g, '')) || 0;
+  const loginRewardDefault = defaultLoginReward(seedAmountNumber);
+  const loginRewardNumber = loginRewardAmount === '' ? null : Number(loginRewardAmount.replace(/,/g, ''));
 
   function back() {
     router.push(`/groups/${groupId}/settings`);
@@ -139,6 +148,7 @@ export function EditSettingsForm({
         awardsEnabled: isPublic ? false : awardsEnabled,
         prizeText: isPublic ? null : prizeText,
         punishmentText: isPublic ? null : punishmentText,
+        loginRewardAmount: isPublic ? null : loginRewardNumber,
       });
       if (result.error) {
         setError(result.error);
@@ -188,6 +198,29 @@ export function EditSettingsForm({
                 className={inputClasses}
               />
             </div>
+
+            {/* Public groups run on the fixed default here like everything else they can't set
+                (update_group_settings coerces it back to null regardless), so no control. */}
+            {!isPublic && (
+              <div className={rowClasses}>
+                <label className={rowLabelClasses} htmlFor="login-reward-amount">
+                  7-day login reward
+                </label>
+                <p className={`mb-2 mt-0.5 ${rowHelpClasses}`}>
+                  What a member gets here for opening the app seven days in a row. Leave it blank for {LOGIN_REWARD_DEFAULT_PCT}% of the
+                  token allocation ({formatTokens(loginRewardDefault)} right now), or set it to 0 to turn it off in this group.
+                </p>
+                <input
+                  id="login-reward-amount"
+                  type="text"
+                  inputMode="numeric"
+                  value={loginRewardAmount}
+                  onChange={(e) => setLoginRewardAmount(formatTokenInputValue(e.target.value, LOGIN_REWARD_MAX))}
+                  placeholder={`${formatTokens(loginRewardDefault)} (default)`}
+                  className={inputClasses}
+                />
+              </div>
+            )}
 
             {!isPublic && (
               <div>

@@ -97,6 +97,11 @@ export function SeasonSetupEditSheet({
           requireEndorsement: settings.require_endorsement,
           joinMessage: settings.join_message,
           awardsEnabled: settings.awards_enabled,
+          // update_group_settings replaces the whole row, so every field this sheet doesn't edit
+          // has to be re-sent as stored or it silently resets to its default on Save.
+          prizeText: settings.prize_text,
+          punishmentText: settings.punishment_text,
+          loginRewardAmount: settings.login_reward_amount,
         });
         if (result.error) {
           setError(result.error);

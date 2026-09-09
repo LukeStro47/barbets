@@ -33,12 +33,17 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
   const isOwner = group!.owner_id === user?.id;
   const isPublic = group!.is_public;
 
-  const [{ data: settings }, { data: members }, { data: myMembership }, { data: activeSeasonRow }] = await Promise.all([
+  const [{ data: settings }, { data: members }, { data: myMembership }, { data: activeSeasonRow }, { data: streakRows }] = await Promise.all([
     supabase.from('group_settings').select('*').eq('group_id', groupId).single(),
     supabase.from('memberships').select('user_id, status, nickname, role').eq('group_id', groupId).in('status', ['active', 'dormant']),
     supabase.from('memberships').select('nickname, role').eq('group_id', groupId).eq('user_id', user.id).single(),
     supabase.from('seasons').select('id, number, name, betting_open').eq('group_id', groupId).eq('status', 'active').single(),
+    // Everyone's 7-day login streak, for the roster rows below (see get_group_login_streaks).
+    supabase.rpc('get_group_login_streaks', { p_group_id: groupId }),
   ]);
+  const streakByUser = new Map<string, number>(
+    ((streakRows ?? []) as { user_id: string; current_streak: number }[]).map((r) => [r.user_id, r.current_streak])
+  );
 
   const groupSettings = settings as GroupSettings | null;
   const season: ActiveSeasonSummary | null = activeSeasonRow
@@ -214,6 +219,7 @@ export default async function GroupSettingsPage({ params }: { params: Promise<{ 
                 isOwner: m.user_id === group!.owner_id,
                 isDormant: m.status === 'dormant',
                 isYou: m.user_id === user?.id,
+                streak: streakByUser.get(m.user_id) ?? 0,
               }))}
             />
           </SettingsCard>
