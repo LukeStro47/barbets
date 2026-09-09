@@ -92,7 +92,8 @@ $$;
 
 revoke execute on function _login_reward_amount(int, int) from public;
 revoke execute on function _login_reward_amount(int, int) from anon;
-grant execute on function _login_reward_amount(int, int) to authenticated;
+-- No grant to authenticated: only ever called from inside the SECURITY DEFINER functions below,
+-- which run as the owner, so exposing the helper through PostgREST would only add surface.
 grant execute on function _login_reward_amount(int, int) to service_role;
 
 -- 5b. The streak state machine, keyed by an explicit user id and an explicit local day, with

@@ -38,7 +38,14 @@ export function RecordAppOpen() {
       }
       if (lastReported === today) return;
 
-      const result = await recordAppOpen(today);
+      let result: Awaited<ReturnType<typeof recordAppOpen>>;
+      try {
+        result = await recordAppOpen(today);
+      } catch {
+        // A failed Server Action fetch (offline, or a stale deploy) is not worth surfacing;
+        // the next open, or the next visibility change, tries again.
+        return;
+      }
       if (cancelled || result.error || !result.data) return;
       try {
         localStorage.setItem(APP_OPEN_DAY_STORAGE_KEY, today);
