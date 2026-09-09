@@ -153,6 +153,8 @@ async function sendFcm(fcmToken: string, content: Content): Promise<{ ok: boolea
 interface NotificationEvent {
   id: string;
   event_type: string;
+  /** Null for exactly one type, login_reward_ready (user-scoped, no group) -- its buildContent
+   *  arm returns before any group lookup. Every other type is group-bound by a CHECK constraint. */
   group_id: string;
   market_id: string | null;
   season_id: string | null;
@@ -399,6 +401,16 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
       title: event.custom_title!,
       body: event.custom_body!,
       url: `/groups/${event.group_id}`,
+    };
+  }
+
+  // The 7-day login reward, the one event about the app rather than a group: no group_id to
+  // title it with, and it deep-links to /profile, where the claim card lives.
+  if (event.event_type === 'login_reward_ready') {
+    return {
+      title: 'Barbets',
+      body: 'Seven days straight, claim your chips.',
+      url: '/profile',
     };
   }
 

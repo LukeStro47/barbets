@@ -10,6 +10,10 @@ export interface RosterEntry {
   isOwner: boolean;
   isDormant: boolean;
   isYou: boolean;
+  /** Consecutive local days this member has opened the app (the 7-day login reward streak).
+      Shown to fellow members on purpose: it's a count of app opens, nothing money- or
+      market-shaped, and seeing a friend on day 5 is the social point of a streak. */
+  streak?: number;
 }
 
 const DEFAULT_VISIBLE = 4;
@@ -37,6 +41,7 @@ export function MemberRosterList({ groupId, members, canRemove }: { groupId: str
             <Mention nickname={m.nickname} className="font-semibold" />
             {m.isOwner && <span className="ml-1.5 text-[11.5px] font-bold text-honey-700">owner</span>}
             {m.isDormant && <span className="ml-1.5 text-[11.5px] text-espresso-400">dormant</span>}
+            {(m.streak ?? 0) > 0 && <span className="ml-1.5 text-[11.5px] text-espresso-400">{m.streak}-day streak</span>}
           </span>
           {canRemove && !m.isOwner ? (
             <RemoveMemberButton groupId={groupId} userId={m.userId} nickname={m.nickname} />

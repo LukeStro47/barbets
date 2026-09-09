@@ -145,6 +145,10 @@ export interface GroupSettings {
   prize_text: string | null;
   /** What the loser owes. Null when the owner hasn't set one. Always null for a public group. */
   punishment_text: string | null;
+  /** The 7-day login reward, per group. Null = the default (5% of seed_amount, floored, computed at
+      claim time so it follows the allocation); 0 = off; anything else = the owner's explicit figure.
+      Always null (i.e. the default) for a public group. See lib/loginReward.ts. */
+  login_reward_amount: number | null;
 }
 
 export async function updateGroupSettings(
@@ -166,6 +170,8 @@ export async function updateGroupSettings(
     awardsEnabled: boolean;
     prizeText?: string | null;
     punishmentText?: string | null;
+    /** Omit or pass null for the 5% default; 0 turns the reward off for this group. */
+    loginRewardAmount?: number | null;
   }
 ): Promise<ActionResult<GroupSettings>> {
   const supabase = await createClient();
@@ -188,6 +194,7 @@ export async function updateGroupSettings(
       p_awards_enabled: input.awardsEnabled,
       p_prize_text: input.prizeText ?? null,
       p_punishment_text: input.punishmentText ?? null,
+      p_login_reward_amount: input.loginRewardAmount ?? null,
     })
   );
   if (result.error) return result;

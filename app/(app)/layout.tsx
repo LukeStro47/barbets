@@ -5,6 +5,7 @@ import { PullToRefresh } from '@/components/layout/PullToRefresh';
 import { PageTransition } from '@/components/layout/PageTransition';
 import { PushReminderModal } from '@/components/pwa/PushReminderModal';
 import { PolicyReapprovalGate } from '@/components/legal/PolicyReapprovalGate';
+import { RecordAppOpen } from '@/components/layout/RecordAppOpen';
 import { getGroupTaskCounts } from '@/lib/tasks';
 import { CURRENT_POLICY_VERSION } from '@/lib/legal';
 
@@ -17,7 +18,9 @@ export default async function AppLayout({ children, modal }: { children: React.R
 
   // Stamps users.last_active_at for the admin site's WAU/MAU dashboards. Debounced server-side
   // (touch_last_active only writes if the existing stamp is missing or >15 minutes old), so this
-  // is safe to call unconditionally on every authenticated page load.
+  // is safe to call unconditionally on every authenticated page load. The 7-day login reward's
+  // streak is stamped separately by <RecordAppOpen /> below, a client component, because it needs
+  // the device's local calendar day and a server render can't know that.
   await supabase.rpc('touch_last_active');
 
   // See lib/legal.ts and components/legal/PolicyReapprovalGate.tsx: a version mismatch means the
@@ -114,6 +117,7 @@ export default async function AppLayout({ children, modal }: { children: React.R
           driven by the same env(safe-area-inset-top) value either way, just persistent now. */}
       <div aria-hidden="true" className="fixed inset-x-0 top-0 z-30 h-[env(safe-area-inset-top)] bg-paper" />
       {needsPolicyReapproval && <PolicyReapprovalGate />}
+      <RecordAppOpen />
       <PushReminderModal />
       <PullToRefresh>
         <PageTransition>
