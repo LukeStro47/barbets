@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 import Link from 'next/link';
+import { isOptionBased, type MarketType } from '@/lib/marketType';
 import { Card } from '@/components/ui/Card';
 import { Badge, TONE_CLASSES } from '@/components/ui/Badge';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
@@ -16,7 +17,7 @@ export interface MarketCardData {
   groupId: string;
   title: string;
   status: MarketStatus;
-  marketType: 'yes_no' | 'over_under' | 'multiple_choice';
+  marketType: MarketType;
   closesAt: string;
   /** pending_sponsor only: the sooner of 24h-since-creation or 5-minutes-before-closes_at — the actual deadline to endorse before it auto-voids. */
   sponsorDeadline?: string;
@@ -27,7 +28,7 @@ export interface MarketCardData {
   line?: number | null;
   /** over_under only, e.g. "$", "min", "pts". */
   unit?: string | null;
-  /** multiple_choice resolved markets: the winning option's label (outcome stays null). */
+  /** Option-based resolved markets: the winning option's label (outcome stays null). */
   outcomeLabel?: string | null;
   /** proposed/disputed only: the resolution that's currently on the table. */
   proposedOutcomeLabel?: string;
@@ -107,7 +108,7 @@ function MyBetsChips({ myBets }: { myBets?: { label: string; amount: number }[] 
 }
 
 export function MarketCard({ market }: { market: MarketCardData }) {
-  const isMultipleChoice = market.marketType === 'multiple_choice';
+  const isMultipleChoice = isOptionBased(market.marketType);
   const [sideA, sideB] = market.marketType === 'yes_no' ? ['yes', 'no'] : ['over', 'under'];
   const oddsA = market.odds?.find((o) => o.side === sideA);
   const oddsB = market.odds?.find((o) => o.side === sideB);
@@ -203,7 +204,7 @@ const STATUS_ROW_ICON: Record<MarketStatus, ComponentType<{ className?: string }
 };
 
 function MarketRowMeta({ market }: { market: MarketCardData }) {
-  const isMultipleChoice = market.marketType === 'multiple_choice';
+  const isMultipleChoice = isOptionBased(market.marketType);
   const [sideA, sideB] = market.marketType === 'yes_no' ? ['yes', 'no'] : ['over', 'under'];
 
   // None of the status-specific branches below apply — a hidden-subject market has no odds,

@@ -3,11 +3,12 @@ import { Badge } from '@/components/ui/Badge';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { SealedTicketCover } from '@/components/markets/SealedTicketCover';
 import { STATUS_LABEL, STATUS_TONE, type MarketStatus } from '@/lib/marketStatus';
+import type { MarketType } from '@/lib/marketType';
 import { formatTokens } from '@/lib/formatNumber';
 
 export interface SubjectMarketPulseData {
   status: MarketStatus;
-  market_type: 'yes_no' | 'over_under' | 'multiple_choice';
+  market_type: MarketType;
   closes_at: string;
   bet_count: number;
   pool_amount: number;

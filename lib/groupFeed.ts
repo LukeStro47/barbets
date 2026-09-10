@@ -1,6 +1,7 @@
 import type { createClient } from '@/lib/supabase/server';
 import type { MarketCardData } from '@/components/markets/MarketCard';
 import { REACTIONS } from '@/lib/reactions';
+import { isOptionBased } from '@/lib/marketType';
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
@@ -144,7 +145,7 @@ export async function getActiveMarkets(supabase: Supabase, groupId: string, user
     ]);
 
   const rows: MarketRow[] = markets ?? [];
-  const multipleChoiceIds = new Set(rows.filter((m) => m.market_type === 'multiple_choice').map((m) => m.id));
+  const optionMarketIds = new Set(rows.filter((m) => isOptionBased(m.market_type)).map((m) => m.id));
   const openIds = rows.filter((m) => m.status === 'open').map((m) => m.id);
   const bettingClosedIds = rows.filter((m) => BETTING_CLOSED_STATUSES.includes(m.status)).map((m) => m.id);
   const proposalMarketIds = rows.filter((m) => m.status === 'proposed' || m.status === 'disputed').map((m) => m.id);
@@ -165,7 +166,7 @@ export async function getActiveMarkets(supabase: Supabase, groupId: string, user
     ),
     Promise.all(
       bettingClosedIds.map(async (id) => {
-        const fn = multipleChoiceIds.has(id) ? 'get_closed_odds_options' : 'get_closed_odds';
+        const fn = optionMarketIds.has(id) ? 'get_closed_odds_options' : 'get_closed_odds';
         const { data } = await supabase.rpc(fn, { p_market_id: id });
         return [id, (data ?? []) as { side?: string; option_id?: string; label?: string; pool_percent: number; bet_count: number }[]] as const;
       })
@@ -229,7 +230,7 @@ export async function getActiveMarkets(supabase: Supabase, groupId: string, user
     const odds = oddsByMarket.get(m.id) ?? [];
     const closedBetCount = odds.reduce((sum, o) => sum + o.bet_count, 0);
 
-    if (m.market_type === 'multiple_choice') {
+    if (isOptionBased(m.market_type)) {
       bucket.push({
         ...base,
         closedBetCount,
@@ -372,7 +373,7 @@ export async function getSettledMarkets(
 
   const markets = page.map((m) => {
     const emojis = emojisByMarket.get(m.id);
-    const isMultipleChoice = m.market_type === 'multiple_choice';
+    const isMultipleChoice = isOptionBased(m.market_type);
     return {
       ...baseCard(m, groupId),
       outcomeLabel: isMultipleChoice && m.outcome_option_id ? (optionLabelById.get(m.outcome_option_id) ?? null) : undefined,
@@ -392,7 +393,7 @@ export async function getSettledMarkets(
  */
 function myNet(m: MarketRow, bets: BetRow[] | undefined): number | undefined {
   if (!bets || bets.length === 0) return undefined;
-  const isMultipleChoice = m.market_type === 'multiple_choice';
+  const isMultipleChoice = isOptionBased(m.market_type);
   const staked = bets.reduce((sum, b) => sum + b.amount, 0);
   const payout = bets.reduce((sum, b) => {
     const isWinner = isMultipleChoice ? b.option_id === m.outcome_option_id : b.side === m.outcome;

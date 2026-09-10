@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { runRpc, type ActionResult } from '@/lib/errors';
+import type { MarketType } from '@/lib/marketType';
 
 export interface PayoutBreakdown {
   creator_cut: number;
@@ -18,7 +19,7 @@ export interface Market {
   season_id: string | null;
   title: string;
   description: string;
-  market_type: 'yes_no' | 'over_under' | 'multiple_choice';
+  market_type: MarketType;
   line: number | null;
   /** over_under only, e.g. "$", "min", "pts". */
   unit: string | null;
@@ -52,13 +53,15 @@ export async function createMarket(input: {
   groupId: string;
   title: string;
   description: string;
-  marketType: 'yes_no' | 'over_under' | 'multiple_choice';
+  marketType: MarketType;
   closesAt: string;
   line?: number | null;
   /** over_under only, e.g. "$", "min", "pts". */
   unit?: string | null;
   subjectUserIds?: string[];
-  /** multiple_choice only — each entry is either plain text, or `@nickname` to attach that member as the option's subject. */
+  /** multiple_choice: each entry is either plain text, or `@nickname` to attach that member as the option's subject.
+   * most_likely_to: every entry is an `@nickname` (the server rejects anything else).
+   * when: omit it, the server generates the four fixed time buckets itself. */
   options?: string[];
 }): Promise<ActionResult<Market>> {
   const supabase = await createClient();

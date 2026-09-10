@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { challengeResolution, castVote, finalizeMarket } from '@/lib/actions/resolution';
+import { isOptionBased } from '@/lib/marketType';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
@@ -58,7 +59,7 @@ interface Props {
   currentUserId: string;
   /** disputed only: display name for the proposal-quote block ("@sam proposed NO"). */
   proposerNickname?: string;
-  /** Populated only for multiple_choice markets, in sort_order. */
+  /** Populated only for option-based markets (multiple_choice, most_likely_to, when), in sort_order. */
   options: MarketOption[] | null;
   /** group_settings.resolution_window_hours — shared by the challenge window (propose -> dispute) and the vote window (dispute -> finalize). */
   resolutionWindowHours: number;
@@ -83,7 +84,7 @@ export function MarketActions({
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const isMultipleChoice = market.market_type === 'multiple_choice';
+  const isMultipleChoice = isOptionBased(market.market_type);
   const [voteChoice, setVoteChoice] = useState<string | null>(myVote?.voted_option_id ?? myVote?.outcome ?? null);
   // Collapsed the moment there's a vote to show, whether that's one already on file (loading
   // the page after having voted) or one just cast this session — expands back out only via
