@@ -31,7 +31,7 @@ export function VouchingTicket({
       <div className="space-y-3.5">
         <div>
           <p className="text-[11.5px] font-extrabold tracking-[0.08em] text-espresso-400 uppercase">How it settles</p>
-          <p className="mt-1 text-[14.5px] leading-[1.45] text-espresso-700 text-pretty">{description}</p>
+          <p className="mt-1 text-[14.5px] leading-[1.45] whitespace-pre-line text-espresso-700 text-pretty">{description}</p>
         </div>
 
         {options && options.length > 0 && (

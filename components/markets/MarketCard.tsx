@@ -5,7 +5,7 @@ import { Badge, TONE_CLASSES } from '@/components/ui/Badge';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { OddsBar, OddsBarMulti } from '@/components/markets/OddsBar';
 import { OptionLabel } from '@/components/markets/OptionLabel';
-import { ChevronRightIcon, FlagIcon, TargetIcon, ClockIcon, AlertTriangleIcon, CheckCircleIcon } from '@/components/ui/icons';
+import { ChevronRightIcon, FlagIcon, TargetIcon, ClockIcon, AlertTriangleIcon, CheckCircleIcon, ChatIcon } from '@/components/ui/icons';
 import { STATUS_LABEL, STATUS_TONE, type MarketStatus } from '@/lib/marketStatus';
 import { formatLine } from '@/lib/units';
 import { formatTokens } from '@/lib/formatNumber';
@@ -48,6 +48,22 @@ export interface MarketCardData {
   myBets?: { label: string; amount: number }[];
   /** True for a market the viewer is a hidden subject of — title is always the literal string "???" (no title/description ever reaches the client for these), and every status-specific rendering below is skipped in favor of a bare bet-count/closes-in line. Sourced from get_subject_market_pulse_for_group, never from visible_markets. */
   mystery?: boolean;
+  /** Live comments by other people newer than the viewer's last look at the thread (every one of them, if they've never opened it). Undefined or 0 renders nothing. */
+  unreadComments?: number;
+}
+
+/** Small chat-bubble pill with the unread count, so a thread that's picked up is discoverable
+    from the feed without a push. Sits in the same badge slot as the attention/reaction badges. */
+function UnreadCommentsBadge({ count }: { count: number }) {
+  return (
+    <span
+      className="flex h-5 shrink-0 items-center gap-0.5 rounded-full bg-honey-100 px-1.5 text-[11px] font-bold text-honey-800"
+      title={`${count} new ${count === 1 ? 'comment' : 'comments'}`}
+    >
+      <ChatIcon className="h-3 w-3" />
+      {count}
+    </span>
+  );
 }
 
 function AttentionBadge() {
@@ -123,6 +139,7 @@ export function MarketCard({ market }: { market: MarketCardData }) {
             <p className="font-display font-bold leading-snug text-espresso-900">{market.title}</p>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
+            {!!market.unreadComments && <UnreadCommentsBadge count={market.unreadComments} />}
             {market.needsAttention && <AttentionBadge />}
             {market.reactionGlyphs && market.reactionGlyphs.length > 0 && <ReactionFacepile glyphs={market.reactionGlyphs} />}
             <Badge tone={STATUS_TONE[market.status]}>{STATUS_LABEL[market.status]}</Badge>
@@ -316,6 +333,7 @@ function MarketRow({ market, isLast }: { market: MarketCardData; isLast: boolean
         </p>
         <MarketRowMeta market={market} />
       </span>
+      {!!market.unreadComments && <UnreadCommentsBadge count={market.unreadComments} />}
       {market.needsAttention && <AttentionBadge />}
       {market.reactionGlyphs && market.reactionGlyphs.length > 0 && <ReactionFacepile glyphs={market.reactionGlyphs} />}
       {showBetPill ? (

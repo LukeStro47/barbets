@@ -153,6 +153,8 @@ async function sendFcm(fcmToken: string, content: Content): Promise<{ ok: boolea
 interface NotificationEvent {
   id: string;
   event_type: string;
+  /** Null for exactly one type, login_reward_ready (user-scoped, no group) -- its buildContent
+   *  arm returns before any group lookup. Every other type is group-bound by a CHECK constraint. */
   group_id: string;
   market_id: string | null;
   season_id: string | null;
@@ -402,6 +404,16 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
     };
   }
 
+  // The 7-day login reward, the one event about the app rather than a group: no group_id to
+  // title it with, and it deep-links to /profile, where the claim card lives.
+  if (event.event_type === 'login_reward_ready') {
+    return {
+      title: 'Barbets',
+      body: 'Seven days straight, claim your chips.',
+      url: '/profile',
+    };
+  }
+
   if (!event.market_id) return null;
   const { market, group } = await marketAndGroup(event.market_id);
   const url = `/groups/${event.group_id}/markets/${event.market_id}`;
@@ -416,6 +428,8 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
       return { title: group.name, body: `A new market just opened about you. No spoilers, but you can watch the action.`, url };
     case 'market_closed':
       return { title: group.name, body: `Betting just closed, odds are live: "${market.title}"`, url };
+    case 'market_comments_heating_up':
+      return { title: group.name, body: `This one's heating up: "${market.title}"`, url };
     // Only ever sent to someone who hasn't bet in this group for a week (that filtering
     // happens in get_event_recipients), so the copy can lean on it.
     case 'market_closing_soon':

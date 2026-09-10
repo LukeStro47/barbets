@@ -4,6 +4,7 @@ import { createClient, requireUser } from '@/lib/supabase/server';
 import { notFoundIfEmpty } from '@/lib/errors';
 import { Badge } from '@/components/ui/Badge';
 import { RevealSummary } from '@/components/markets/RevealSummary';
+import { MarketCommentsSection } from '@/components/markets/MarketCommentsSection';
 import { Mention } from '@/components/ui/Mention';
 import { CaretLeftIcon } from '@/components/ui/icons';
 import { STATUS_LABEL, STATUS_TONE } from '@/lib/marketStatus';
@@ -132,6 +133,7 @@ export default async function RevealPage({ params }: { params: Promise<{ groupId
         myNickname={myNickname}
         isSubjectOfThisMarket={isSubjectOfThisMarket}
       />
+      <MarketCommentsSection groupId={groupId} marketId={marketId} status={marketRow.status} />
       <p className="text-center text-xs text-espresso-400">
         {marketRow.creator_id && (
           <>

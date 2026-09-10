@@ -827,7 +827,7 @@ function ReviewTicket({
       </div>
 
       <ReviewRow label="How it settles">
-        <p className="mt-1 text-sm leading-[1.45] text-espresso-700 text-pretty">{description}</p>
+        <p className="mt-1 text-sm leading-[1.45] whitespace-pre-line text-espresso-700 text-pretty">{description}</p>
       </ReviewRow>
 
       {marketType === 'over_under' && (

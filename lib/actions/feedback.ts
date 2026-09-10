@@ -103,8 +103,26 @@ export async function submitFeedback(
     })
   );
   if (result.error) return result;
-  const feedback = result.data as Feedback;
+  await notifySlack(supabase, result.data as Feedback);
+  return { data: null };
+}
 
+/** Reports a comment on a market's thread. report_market_comment() writes the durable
+    `feedback` row itself (category 'general', the market's group, the comment id/author/body
+    and the reporter's reason all in the message), so from here on it is exactly a feedback
+    submission: the same Slack card, to the same #feedback channel, best-effort. */
+export async function reportMarketComment(commentId: string, reason: string | null): Promise<ActionResult<null>> {
+  const supabase = await createClient();
+  const result = await runRpc<Feedback>(
+    await supabase.rpc('report_market_comment', { p_comment_id: commentId, p_reason: reason })
+  );
+  if (result.error) return result;
+  await notifySlack(supabase, result.data as Feedback);
+  return { data: null };
+}
+
+/** The Slack half of every feedback path, run only after the row is durably saved. */
+async function notifySlack(supabase: Awaited<ReturnType<typeof createClient>>, feedback: Feedback): Promise<void> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -123,7 +141,7 @@ export async function submitFeedback(
       groupId: feedback.group_id,
       groupName: null,
     });
-    return { data: null };
+    return;
   }
 
   let nickname: string | null = null;
@@ -157,5 +175,4 @@ export async function submitFeedback(
     groupId: feedback.group_id,
     groupName,
   });
-  return { data: null };
 }

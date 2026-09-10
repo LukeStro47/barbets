@@ -2,6 +2,7 @@ import { SettingsCard, SettingRow, StatusPill } from '@/components/ui/SettingsLi
 import { formatTokens } from '@/lib/formatNumber';
 import { friendlyTimezoneName } from '@/lib/timezone';
 import { formatSeasonLength, type SeasonLength } from '@/lib/seasonLength';
+import { effectiveLoginReward, LOGIN_REWARD_DEFAULT_PCT } from '@/lib/loginReward';
 import type { GroupSettings } from '@/lib/actions/groups';
 
 export interface ActiveSeasonSummary {
@@ -74,9 +75,22 @@ export function GroupPlaysCard({
         : `Every ${formatSeasonLength((settings.season_length ?? '3m') as SeasonLength)}`
     : 'Off';
 
+  const loginReward = effectiveLoginReward(settings);
+
   return (
     <SettingsCard>
       <SettingRow label="Token allocation" consequence="What each new member starts with" value={formatTokens(settings.seed_amount)} />
+      <SettingRow
+        label="7-day login reward"
+        consequence={
+          loginReward > 0
+            ? settings.login_reward_amount == null
+              ? `${LOGIN_REWARD_DEFAULT_PCT}% of the allocation, for opening the app seven days in a row`
+              : 'For opening the app seven days in a row'
+            : 'No chips for a seven-day streak here'
+        }
+        value={loginReward > 0 ? formatTokens(loginReward) : 'Off'}
+      />
       {!isPublic && (
         <SettingRow
           label="Betting"
