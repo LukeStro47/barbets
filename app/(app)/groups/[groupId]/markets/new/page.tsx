@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation';
 import { createClient, requireUser } from '@/lib/supabase/server';
 import { CreateMarketForm } from '@/components/markets/MarketForms';
+import { applyTemplate } from '@/lib/marketTemplatePlaceholder';
+import type { MarketTemplate } from '@/lib/marketTemplates';
 import type { MarketType } from '@/lib/marketType';
 
 const VALID_TYPES: MarketType[] = ['yes_no', 'over_under', 'multiple_choice'];
@@ -10,10 +12,10 @@ export default async function NewMarketPage({
   searchParams,
 }: {
   params: Promise<{ groupId: string }>;
-  searchParams: Promise<{ type?: string }>;
+  searchParams: Promise<{ type?: string; templateId?: string; memberId?: string }>;
 }) {
   const { groupId } = await params;
-  const { type } = await searchParams;
+  const { type, templateId, memberId } = await searchParams;
   const initialType = VALID_TYPES.includes(type as MarketType) ? (type as MarketType) : undefined;
   const supabase = await createClient();
 
@@ -43,6 +45,25 @@ export default async function NewMarketPage({
     .map((m) => ({ userId: m.user_id, nickname: m.nickname }))
     .sort((a, b) => a.nickname.localeCompare(b.nickname));
 
+  // Reached from the template gallery (see markets/templates/page.tsx and TemplateGallery). A
+  // hidden/nonexistent template reads as zero rows through the same RLS-gated select the gallery
+  // itself uses, so a stale or tampered link 404s exactly like every other hidden-row read in
+  // this app — never a distinguishable error.
+  let template: MarketTemplate | null = null;
+  if (templateId) {
+    const { data } = await supabase.from('market_templates').select('*').eq('id', templateId).maybeSingle();
+    if (!data) notFound();
+    template = data as MarketTemplate;
+    // A group-shared template only makes sense inside the group it was shared with — a private
+    // template still works anywhere. Not a privacy concern (RLS already limited this to templates
+    // the caller can see), just ignored rather than 404ing the whole page over a mismatched link.
+    if (template.scope === 'group' && template.group_id !== groupId) {
+      template = null;
+    }
+  }
+  const chosenMember = memberId ? (memberOptions.find((m) => m.userId === memberId) ?? null) : null;
+  const applied = template ? applyTemplate(template, chosenMember) : null;
+
   return (
     <main className="mx-auto flex min-h-[var(--flow-height)] max-w-lg flex-col px-5 pt-5 pb-8">
       <CreateMarketForm
@@ -52,8 +73,13 @@ export default async function NewMarketPage({
         totalMemberCount={(members ?? []).length}
         timezone={settings?.timezone ?? 'UTC'}
         requireEndorsement={settings?.require_endorsement ?? true}
-        initialMarketType={initialType}
+        initialMarketType={template ? template.market_type : initialType}
         isPublic={group?.is_public ?? false}
+        initialTitle={applied?.title}
+        initialDescription={applied?.description}
+        initialOptions={applied?.options ?? undefined}
+        initialSubjectIds={applied?.subjectIds}
+        initialUnit={applied?.unit}
       />
     </main>
   );
