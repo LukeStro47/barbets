@@ -675,7 +675,15 @@ const reportedThisRun = new Set<string>();
 // Plain-English triage, same idea as lib/errorReporter.ts's. The failure surface here is much
 // narrower (read the queue, build copy, hand off to a push service), so a handful of cases
 // covers it.
-function triage(message: string): { meaning: string; fix: string } {
+//
+// Keyed on the reportToSlack label first, not just the message: a Gateway Timeout on the
+// *claim* call and one on an actual push send look identical in the error text ("timeout"),
+// but mean very different things. Every current call site is a database call (claim the queue,
+// read subscriptions, resolve recipients) - a real per-subscription push failure (web-push,
+// FCM) is swallowed with console.error in sendToSubscription and never reaches this card at
+// all. A generic "a push service didn't respond" explanation was therefore wrong for every case
+// it could actually match, which is what prompted splitting the claim-queue case out on its own.
+function triage(label: string, message: string): { meaning: string; fix: string } {
   const t = message.toLowerCase();
   if (t.includes('does not exist') || t.includes('schema cache')) {
     return {
@@ -690,10 +698,17 @@ function triage(message: string): { meaning: string; fix: string } {
       fix: 'Usually the Firebase service account secret. Re-set it with `npx supabase secrets set FCM_SERVICE_ACCOUNT_JSON_B64=...` (base64, not raw JSON) and redeploy the function.',
     };
   }
+  if (label === 'could not claim from the notification queue') {
+    return {
+      meaning:
+        'The database call that claims this run\'s slice of the queue did not get a response in time, most likely the connection pooler recycling an idle connection rather than anything push-related.',
+      fix: 'Nothing to do if it happens once. Claiming is one atomic statement, so a failed call claims nothing: the events stay in the queue and the next run, a minute later, picks them up. Only worth digging into if it repeats for several minutes straight, since that would mean the queue has stopped draining entirely.',
+    };
+  }
   if (t.includes('fetch failed') || t.includes('timeout') || t.includes('socket')) {
     return {
-      meaning: 'A call out to a push service did not get through. Often a blip.',
-      fix: 'Nothing to do if it happens once. The affected notifications are skipped, not retried, so a burst of these means some people missed a push.',
+      meaning: 'A database call this job made (reading subscriptions, resolving recipients, or similar) did not get a response in time. Often a blip.',
+      fix: 'Nothing to do if it happens once. The events involved are already marked claimed, so the affected notifications are skipped, not retried, a burst of these means some people missed a push.',
     };
   }
   return {
@@ -756,8 +771,8 @@ async function reportToSlack(label: string, err: unknown, context?: Record<strin
               ...Object.entries(context ?? {}).map(([k, v]) => ({ type: 'mrkdwn', text: `*${k}:*\n${v}` })),
             ].slice(0, 10),
           },
-          { type: 'section', text: { type: 'mrkdwn', text: `*What's happening*\n${triage(message).meaning}` } },
-          { type: 'section', text: { type: 'mrkdwn', text: `*What to do*\n${triage(message).fix}` } },
+          { type: 'section', text: { type: 'mrkdwn', text: `*What's happening*\n${triage(label, message).meaning}` } },
+          { type: 'section', text: { type: 'mrkdwn', text: `*What to do*\n${triage(label, message).fix}` } },
           ...(stack ? [{ type: 'section', text: { type: 'mrkdwn', text: `\`\`\`${stack.slice(0, 2600)}\`\`\`` } }] : []),
           {
             type: 'context',
