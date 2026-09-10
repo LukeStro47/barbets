@@ -51,3 +51,8 @@ export const CUSTOM_AWARD_MAX_PER_GROUP = 5;
     than sized like the join message's one-screen modal. */
 export const PRIZE_MAX_LENGTH = 120;
 export const PUNISHMENT_MAX_LENGTH = 120;
+
+/** A comment on a market's thread. Long enough for a real reply with a line break or two,
+    short enough that the thread stays a thread rather than a place to paste an essay. Newlines
+    are kept; the cap counts the trimmed string, same as everything above. */
+export const MARKET_COMMENT_MAX_LENGTH = 500;

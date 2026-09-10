@@ -85,6 +85,15 @@ function ids<T>(values: (T | null | undefined)[]): T[] {
   return [...new Set(values.filter((v): v is T => v != null))];
 }
 
+/** Unread comment count per market for the viewer, for every market on the page at once
+    (get_unread_comment_counts takes the whole id list; markets with nothing unread are absent).
+    One call per feed half, never one per card. */
+async function unreadCommentsByMarket(supabase: Supabase, marketIds: string[]): Promise<Map<string, number>> {
+  if (marketIds.length === 0) return new Map();
+  const { data } = await supabase.rpc('get_unread_comment_counts', { p_market_ids: marketIds });
+  return new Map(((data ?? []) as { market_id: string; unread_count: number }[]).map((r) => [r.market_id, r.unread_count]));
+}
+
 // ---------------------------------------------------------------------------
 // Active markets (everything except resolved/voided)
 // ---------------------------------------------------------------------------
@@ -149,7 +158,7 @@ export async function getActiveMarkets(supabase: Supabase, groupId: string, user
   const bettingClosedIds = rows.filter((m) => BETTING_CLOSED_STATUSES.includes(m.status)).map((m) => m.id);
   const proposalMarketIds = rows.filter((m) => m.status === 'proposed' || m.status === 'disputed').map((m) => m.id);
 
-  const [{ data: proposalRows }, openCountEntries, oddsEntries] = await Promise.all([
+  const [{ data: proposalRows }, openCountEntries, oddsEntries, unreadByMarket] = await Promise.all([
     proposalMarketIds.length > 0
       ? supabase.from('resolution_proposals').select('market_id, proposed_outcome, proposed_option_id').in('market_id', proposalMarketIds)
       : { data: [] as { market_id: string; proposed_outcome: string | null; proposed_option_id: string | null }[] },
@@ -170,6 +179,7 @@ export async function getActiveMarkets(supabase: Supabase, groupId: string, user
         return [id, (data ?? []) as { side?: string; option_id?: string; label?: string; pool_percent: number; bet_count: number }[]] as const;
       })
     ),
+    unreadCommentsByMarket(supabase, rows.map((m) => m.id)),
   ]);
 
   // One lookup for every option label the whole feed needs: the proposed outcome of a
@@ -193,7 +203,7 @@ export async function getActiveMarkets(supabase: Supabase, groupId: string, user
   const buckets: ActiveBuckets = { pending_sponsor: [], open: [], awaiting_resolution: [], challenged: [] };
 
   for (const m of rows) {
-    const base = baseCard(m, groupId);
+    const base = { ...baseCard(m, groupId), unreadComments: unreadByMarket.get(m.id) };
 
     if (m.status === 'pending_sponsor') {
       buckets.pending_sponsor.push({ ...base, sponsorDeadline: sponsorDeadline(m.created_at, m.closes_at) });
@@ -357,13 +367,14 @@ export async function getSettledMarkets(
   const marketIds = page.map((m) => m.id);
   const optionIds = ids(page.map((m) => m.outcome_option_id));
 
-  const [{ data: reactionRows }, { data: myBetRows }, { data: optionRows }] = await Promise.all([
+  const [{ data: reactionRows }, { data: myBetRows }, { data: optionRows }, unreadByMarket] = await Promise.all([
     supabase.from('market_reactions').select('market_id, emoji').in('market_id', marketIds),
     // The viewer's own bets on every market on this page, so each row can show "+N won" /
     // "-N lost" instead of the bare outcome. Same shape as the reveal page's per-bet query,
     // scoped to one user across many markets instead of every user on one market.
     supabase.from('bets').select('market_id, side, option_id, amount, payout').eq('user_id', userId).in('market_id', marketIds),
     optionIds.length > 0 ? supabase.from('market_options').select('id, label').in('id', optionIds) : { data: [] as { id: string; label: string }[] },
+    unreadCommentsByMarket(supabase, marketIds),
   ]);
 
   const emojisByMarket = groupBy((reactionRows ?? []) as { market_id: string; emoji: string }[], (r) => r.market_id);
@@ -378,6 +389,7 @@ export async function getSettledMarkets(
       outcomeLabel: isMultipleChoice && m.outcome_option_id ? (optionLabelById.get(m.outcome_option_id) ?? null) : undefined,
       reactionGlyphs: emojis ? REACTIONS.filter((r) => emojis.some((e) => e.emoji === r.emoji)).map((r) => r.glyph) : undefined,
       myNet: myNet(m, myBetsByMarket.get(m.id)),
+      unreadComments: unreadByMarket.get(m.id),
     };
   });
 

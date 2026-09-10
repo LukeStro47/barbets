@@ -428,6 +428,8 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
       return { title: group.name, body: `A new market just opened about you. No spoilers, but you can watch the action.`, url };
     case 'market_closed':
       return { title: group.name, body: `Betting just closed, odds are live: "${market.title}"`, url };
+    case 'market_comments_heating_up':
+      return { title: group.name, body: `This one's heating up: "${market.title}"`, url };
     // Only ever sent to someone who hasn't bet in this group for a week (that filtering
     // happens in get_event_recipients), so the copy can lean on it.
     case 'market_closing_soon':

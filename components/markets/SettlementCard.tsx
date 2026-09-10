@@ -22,7 +22,7 @@ export function SettlementCard({ moneySplit, description }: { moneySplit?: [Side
       )}
       <div>
         <p className="mb-1 text-[11.5px] font-extrabold tracking-[0.08em] text-espresso-400 uppercase">How this settles</p>
-        <p className="text-[14.5px] leading-[1.45] text-espresso-700">{description}</p>
+        <p className="text-[14.5px] leading-[1.45] whitespace-pre-line text-espresso-700">{description}</p>
       </div>
     </Card>
   );

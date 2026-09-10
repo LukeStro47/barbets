@@ -32,7 +32,7 @@ export function HowItSettlesCard({
     <Card className="relative space-y-3">
       <div className="pr-[34px]">
         <p className="text-[11.5px] font-extrabold tracking-[0.08em] text-espresso-400 uppercase">How it settles</p>
-        <p className="mt-1 text-[14.5px] leading-[1.45] text-espresso-700 text-pretty">{description}</p>
+        <p className="mt-1 text-[14.5px] leading-[1.45] whitespace-pre-line text-espresso-700 text-pretty">{description}</p>
       </div>
 
       <div className="flex flex-wrap gap-1.5">

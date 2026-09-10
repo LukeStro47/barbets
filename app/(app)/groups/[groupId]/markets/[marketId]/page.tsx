@@ -31,6 +31,7 @@ import { LineTicket, OptionsTicket } from '@/components/markets/MarketExplainer'
 import { VouchingTicket } from '@/components/markets/VouchingTicket';
 import { ProposedOutcomeTicket } from '@/components/markets/ProposedOutcomeTicket';
 import { SubjectMarketPulse, type SubjectMarketPulseData } from '@/components/markets/SubjectMarketPulse';
+import { MarketCommentsSection } from '@/components/markets/MarketCommentsSection';
 import { STATUS_LABEL, STATUS_TONE } from '@/lib/marketStatus';
 import { formatTokens } from '@/lib/formatNumber';
 import { formatLine } from '@/lib/units';
@@ -340,6 +341,8 @@ export default async function MarketDetailPage({
           />
         </Card>
 
+        <MarketCommentsSection groupId={groupId} marketId={marketId} status={marketRow.status} />
+
         {isCreator ? (
           <p className="text-xs text-espresso-400">
             Waiting for another member to endorse this market. It expires automatically if nobody does before betting
@@ -439,6 +442,8 @@ export default async function MarketDetailPage({
             </ResolutionTimeline>
           </Card>
 
+          <MarketCommentsSection groupId={groupId} marketId={marketId} status={marketRow.status} />
+
           <BetslipBar
             groupId={groupId}
             groupName={groupName}
@@ -516,6 +521,8 @@ export default async function MarketDetailPage({
             />
           </ResolutionTimeline>
         </Card>
+
+        <MarketCommentsSection groupId={groupId} marketId={marketId} status={marketRow.status} />
       </main>
     );
   }
@@ -610,6 +617,8 @@ export default async function MarketDetailPage({
           </Card>
         </>
       )}
+
+      <MarketCommentsSection groupId={groupId} marketId={marketId} status={marketRow.status} />
     </main>
   );
 }
