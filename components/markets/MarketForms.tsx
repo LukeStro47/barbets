@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createMarket } from '@/lib/actions/markets';
 import { OptionLabel } from '@/components/markets/OptionLabel';
+import { VoiceBetButton } from '@/components/markets/VoiceBetButton';
+import type { SpokenBet } from '@/lib/voiceBet';
 import { Mention } from '@/components/ui/Mention';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -300,13 +302,27 @@ export function CreateMarketForm({
   isPublic?: boolean;
 }) {
   const router = useRouter();
-  const marketType: MarketType = initialMarketType ?? 'yes_no';
+  // State rather than the prop itself only so a spoken bet can re-type the market
+  // (applySpokenBet below); nothing else on the page changes it, and there is still no type picker.
+  const drawerType: MarketType = initialMarketType ?? 'yes_no';
+  const [marketType, setMarketType] = useState<MarketType>(drawerType);
+  // The type the parser switched to, when it differs from the drawer's: shown with a way back.
+  const [voiceType, setVoiceType] = useState<MarketType | null>(null);
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const [title, setTitle] = useState('');
+  const titleRef = useRef<HTMLTextAreaElement>(null);
+  // The textarea grows with typing via its own onInput; a title that arrives by voice bypasses
+  // that, so grow it here for every change instead and let onInput be redundant.
+  useEffect(() => {
+    const el = titleRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [title]);
   const [description, setDescription] = useState('');
   const [line, setLine] = useState('');
   const [unit, setUnit] = useState('');
@@ -425,6 +441,44 @@ export function CreateMarketForm({
     setLineFormat(next);
   }
 
+  /** A spoken bet pre-fills the same fields typing would; every one of them stays editable and the
+   * two remaining steps still stand between here and a real market. Pre-fill only: this never
+   * submits. */
+  function applySpokenBet(bet: SpokenBet) {
+    setError(null);
+    setTitle(bet.title);
+    let next = bet.marketType;
+    // A public group can't have subjects (create_market() rejects them) and a roster needs two
+    // people to choose between, so those cases keep the plain question rather than a type the
+    // server would refuse on the last step.
+    if (next === 'most_likely_to' && (isPublic || maxPicks < 2)) next = 'yes_no';
+    setMarketType(next);
+    setVoiceType(next === drawerType ? null : next);
+    if (next === 'over_under') {
+      setUnitPickerOpen(false);
+      setCustomUnit(false);
+      if (bet.unit === 'time' && bet.line !== undefined) {
+        setLineFormat('time');
+        setUnit('');
+        setLine(`${pad(Math.floor(bet.line / 60))}:${pad(bet.line % 60)}`);
+      } else if (bet.unit === 'date' && bet.line !== undefined) {
+        setLineFormat('date');
+        setUnit('');
+        // The parser stores a UTC-midnight epoch, exactly what parseLineInput() will make of this
+        // "YYYY-MM-DD" again on submit.
+        setLine(new Date(bet.line * 1000).toISOString().slice(0, 10));
+      } else {
+        setLineFormat('number');
+        setLine(bet.line !== undefined ? String(bet.line) : '');
+        setUnit(bet.unit ?? '');
+      }
+    }
+    if (next === 'most_likely_to' && bet.prePickedNicknames?.length) {
+      const wanted = new Set(bet.prePickedNicknames.map((n) => n.toLowerCase()));
+      setPicked(members.filter((m) => wanted.has(m.nickname.toLowerCase())).slice(0, maxPicks));
+    }
+  }
+
   const hasUnit = lineFormat !== 'number' || !!unit.trim();
   const unitButton = (
     <button
@@ -469,6 +523,7 @@ export function CreateMarketForm({
 
         <div className={focusCardClasses}>
           <textarea
+            ref={titleRef}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             maxLength={MARKET_TITLE_MAX_LENGTH}
@@ -494,6 +549,22 @@ export function CreateMarketForm({
             }}
             className="block w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-[19px] leading-[1.3] font-bold text-espresso-950 placeholder:text-espresso-200 focus:outline-none"
           />
+          <VoiceBetButton rosterNicknames={members.map((m) => m.nickname)} onPartial={setTitle} onResult={applySpokenBet} />
+          {voiceType && (
+            <p className="mt-2 text-[11.5px] text-espresso-400">
+              Sounded like {MARKET_TYPE_LABEL[voiceType]}.{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setMarketType(drawerType);
+                  setVoiceType(null);
+                }}
+                className="border-0 bg-transparent p-0 font-extrabold text-honey-700"
+              >
+                Keep it {MARKET_TYPE_LABEL[drawerType]}
+              </button>
+            </p>
+          )}
           {title.length >= MARKET_TITLE_COUNTER_THRESHOLD && (
             <p className={cn('mt-2.5 text-right text-[11px]', title.length >= MARKET_TITLE_MAX_LENGTH ? 'text-danger-700' : 'text-espresso-300')}>
               {title.length} / {MARKET_TITLE_MAX_LENGTH}
