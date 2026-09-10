@@ -418,9 +418,17 @@ function stripTrailingNames(phrase: string, names: string[]): string {
 // ---------------------------------------------------------------------------------------------
 
 const OVER_UNDER_RE = /\bover\s*(?:[/-]|or|slash)?\s*under\b/i;
-const MOST_LIKELY_RE = /\b(?:who(?:'s|s| is| has| was)?\s+)?(?:the\s+)?most\s+likely\s+to\b\s*/i;
+// Spoken lead-ins that carry no meaning ("ok so", "new bet", "I bet that") may precede the real
+// opener; the anchored rules below skip them so "ok so who's most likely to..." still counts.
+const LEAD_IN = /^(?:(?:ok(?:ay)?|so|um|uh|alright|new bet|i bet(?: that)?)[,\s]+)*/i;
+// Anchored: "most likely to" only re-types the market when it opens the sentence (optionally after
+// "who's" / "who is the"). Mid-sentence uses ("will Jake be most likely to fail") stay yes / no.
+const MOST_LIKELY_RE = /^(?:who(?:'s|s| is| has| was)?\s+)?(?:the\s+)?most\s+likely\s+to\b\s*/i;
 const WHEN_START_RE = /^when\b/i;
-const WHEN_ANYWHERE_RE = /\bwhen(?:'s| will| does| do| did| is)\b/i;
+// Mid-sentence "when" only counts after a betting lead-in ("bet on when does...", "so when will..."),
+// never inside an unrelated clause ("will Jake remember when is the party" stays yes / no). Group 1
+// is the "when" itself, which is where the title starts.
+const WHEN_ANYWHERE_RE = /\b(?:bet(?:ting)?(?: on| that)?|on|about|so|ok(?:ay)?)[,\s]+(when(?:'s| will| does| do| did| is)\b)/i;
 
 /**
  * The rule table, top to bottom, first match wins:
@@ -442,10 +450,11 @@ export function parseSpokenBet(transcript: string, rosterNicknames: string[], op
   const overUnder = marker ? readOverUnder(text, marker, now) : null;
   if (overUnder && overUnder.line !== undefined) return overUnder;
 
-  const likely = text.match(MOST_LIKELY_RE);
+  const opener = text.replace(LEAD_IN, '');
+  const likely = opener.match(MOST_LIKELY_RE);
   if (likely) {
-    const rest = text.slice((likely.index ?? 0) + likely[0].length);
-    const names = matchNicknames(text, rosterNicknames);
+    const rest = opener.slice(likely[0].length);
+    const names = matchNicknames(opener, rosterNicknames);
     const phrase = stripTrailingNames(rest, names);
     return {
       marketType: 'most_likely_to',
@@ -454,9 +463,12 @@ export function parseSpokenBet(transcript: string, rosterNicknames: string[], op
     };
   }
 
-  if (WHEN_START_RE.test(text)) return { marketType: 'when', title: tidyTitle(text, { question: true }) };
+  if (WHEN_START_RE.test(opener)) return { marketType: 'when', title: tidyTitle(opener, { question: true }) };
   const whenAt = text.match(WHEN_ANYWHERE_RE);
-  if (whenAt) return { marketType: 'when', title: tidyTitle(text.slice(whenAt.index ?? 0), { question: true }) };
+  if (whenAt) {
+    const start = (whenAt.index ?? 0) + whenAt[0].length - whenAt[1].length;
+    return { marketType: 'when', title: tidyTitle(text.slice(start), { question: true }) };
+  }
 
   if (overUnder) return overUnder;
 

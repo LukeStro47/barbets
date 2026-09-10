@@ -110,6 +110,29 @@ describe('parseSpokenBet: most likely to', () => {
 });
 
 describe('parseSpokenBet: when, yes / no, and the rest', () => {
+  it('a yes / no question that merely contains "when is" stays yes / no', () => {
+    const bet = parseSpokenBet('will Jake remember when is the party', roster, { now });
+    expect(bet.marketType).toBe('yes_no');
+    expect(bet.title).toBe('Will Jake remember when is the party?');
+  });
+
+  it('"bet on when does" mid-sentence is a when market titled from the when', () => {
+    const bet = parseSpokenBet('ok so bet on when does the bar open', roster, { now });
+    expect(bet).toEqual({ marketType: 'when', title: 'When does the bar open?' });
+  });
+
+  it('"most likely to" in the middle of a will-question stays yes / no', () => {
+    const bet = parseSpokenBet('will Jake be most likely to fail', roster, { now });
+    expect(bet.marketType).toBe('yes_no');
+    expect(bet.prePickedNicknames).toBeUndefined();
+  });
+
+  it("a filler lead-in before \"who's most likely to\" still counts", () => {
+    const bet = parseSpokenBet("ok so who's most likely to cry, Sam", roster, { now });
+    expect(bet.marketType).toBe('most_likely_to');
+    expect(bet.title).toBe("Who's most likely to cry?");
+  });
+
   it('"when will" is a when market', () => {
     const bet = parseSpokenBet('when will Jake finally text her back', roster, { now });
     expect(bet).toEqual({ marketType: 'when', title: 'When will Jake finally text her back?' });
