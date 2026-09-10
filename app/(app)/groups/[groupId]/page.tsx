@@ -20,6 +20,7 @@ import { SeasonHighlightsCard, type SnapshotHighlight } from '@/components/group
 import { MemberTitleCard } from '@/components/groups/MemberTitleCard';
 import { WhatsNextCard } from '@/components/groups/WhatsNextCard';
 import { WindingDownCard } from '@/components/groups/WindingDownCard';
+import { SeasonWrapped } from '@/components/groups/SeasonWrapped';
 import { Mention } from '@/components/ui/Mention';
 import { GroupAvatar } from '@/components/ui/GroupAvatar';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
@@ -214,6 +215,25 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
             loser={snapshot.loser}
             prizeText={snapshot.prize_text}
             punishmentText={snapshot.punishment_text}
+          />
+
+          {/* The swipeable end-of-season card set. Opens by itself the first time this device
+              sees the intermission, and stays reachable from this row after that. Same snapshot
+              the hero/table/highlights above and below read, nothing recomputed. */}
+          <SeasonWrapped
+            groupId={groupId}
+            groupName={group!.name}
+            seasonId={endedSeason.id}
+            seasonName={seasonName}
+            marketsSettled={snapshot.markets_settled ?? 0}
+            finalBalances={finalBalances}
+            champion={snapshot.champion}
+            loser={snapshot.loser}
+            biggestWin={snapshot.biggest_single_win}
+            worstCall={snapshot.worst_beat}
+            prizeText={snapshot.prize_text}
+            punishmentText={snapshot.punishment_text}
+            viewerUserId={user.id}
           />
 
           {isOwner && fullSettings ? (

@@ -59,6 +59,10 @@ export interface RevealTicketProps {
    * resolution, a wax-sealed cover tears open over this same ticket instead of it just appearing
    * outright. Every other viewer (and this subject's second+ visit) renders exactly as before. */
   sealedForSubject?: boolean;
+  /** A second control for the action row under the ticket, beside Share: the resolved market's
+   * "called it" story card (CalledItCard) today. Rendered by the caller so the ticket never has to
+   * know what it is. */
+  extraAction?: React.ReactNode;
 }
 
 /** The yes_no/over_under outcome badge is a fixed-size circle — a short word like "YES" or "NO" sits comfortably at the full size, but "UNDER"/"VOIDED" need a smaller size (and tighter tracking) to avoid crowding the edge of the circle. */
@@ -90,6 +94,7 @@ export function RevealTicket({
   myNickname,
   hasProof,
   sealedForSubject,
+  extraAction,
 }: RevealTicketProps) {
   // Plays once: the very first time a subject opens this market after it resolved — but only on
   // tap, not automatically on mount. It used to auto-play, which raced BootSplash's fixed ~3s
@@ -372,6 +377,7 @@ export function RevealTicket({
                     : 'Save image'}
           </Button>
         )}
+        {extraAction}
         {/* Full-width whenever it's the only button in this row -- i.e. whenever Share is hidden. */}
         {hasProof && <ResolutionProofButton marketId={marketId} variant="action" className={!SHARE_BUTTONS_ENABLED ? 'flex-1' : undefined} />}
       </div>

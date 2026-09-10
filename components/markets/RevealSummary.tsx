@@ -1,4 +1,5 @@
 import { RevealTicket, type TicketOddsEntry } from '@/components/markets/RevealTicket';
+import { CalledItCard } from '@/components/markets/CalledItCard';
 import { SettlementLedger } from '@/components/markets/SettlementLedger';
 import type { PayoutBreakdown } from '@/lib/actions/markets';
 import { isOptionBased, type MarketType } from '@/lib/marketType';
@@ -122,9 +123,28 @@ export function RevealSummary({
     .slice(0, 3)
     .map((b) => ({ nickname: b.nickname, amount: b.amount, payout: b.payout ?? 0 }));
 
+  // The story card is only ever offered for a market that actually resolved: a void has no call
+  // to have made. A universal loss still gets one (everyone missed it, which is its own story),
+  // with no winnings quoted. Losers are everyone with no winning bet, so a hedged member who won
+  // on one side lands under "called it" only.
+  const winnerNicknames = new Set(sorted.filter((b) => b.isWinner).map((b) => b.nickname));
+  const calledItAction = voided ? undefined : (
+    <CalledItCard
+      groupId={groupId}
+      groupName={groupName}
+      question={question}
+      outcomeLabel={headline}
+      resolvedAtIso={resolvedAtIso}
+      winners={sorted.filter((b) => b.isWinner).map((b) => ({ nickname: b.nickname, amount: b.amount, payout: b.payout ?? 0 }))}
+      losers={Array.from(new Set(sorted.filter((b) => !winnerNicknames.has(b.nickname)).map((b) => b.nickname)))}
+      viewerNickname={myNickname}
+    />
+  );
+
   return (
     <div className="space-y-6">
       <RevealTicket
+        extraAction={calledItAction}
         groupName={groupName}
         question={question}
         resolvedAtIso={resolvedAtIso}
