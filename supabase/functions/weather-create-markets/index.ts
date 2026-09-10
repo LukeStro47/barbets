@@ -201,9 +201,17 @@ Deno.serve(async () => {
                 p_line: period.temperature,
                 p_unit: '°F',
               });
-        if (error) throw new Error(`${slot.kind} market: ${error.message}`);
-        created++;
-        if (data?.id) createdMarketIds.push(data.id);
+        if (error) {
+          // 23505 (unique_violation) means a concurrent invocation already created today's
+          // market for this slot in the gap between our existence check above and our own
+          // insert -- see markets_system_market_active_group_closes_at_key and
+          // ARCHITECTURE.md's note on the race this closes. Not a real failure, just a race this
+          // request lost.
+          if (error.code !== '23505') throw new Error(`${slot.kind} market: ${error.message}`);
+        } else {
+          created++;
+          if (data?.id) createdMarketIds.push(data.id);
+        }
       }
     }
   } catch (err) {

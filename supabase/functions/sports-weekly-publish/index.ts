@@ -119,7 +119,16 @@ Deno.serve(async () => {
         p_closes_at: chosen.commence_time,
         p_options: [chosen.home, chosen.away],
       });
-      if (createErr) throw new Error(`create_market: ${createErr.message}`);
+      if (createErr) {
+        // 23505 (unique_violation) means a concurrent invocation already published this week's
+        // game for this league in the gap between reading the pick row's status above and
+        // writing 'published' back to it below -- see
+        // markets_system_market_active_group_closes_at_key and ARCHITECTURE.md's note on the
+        // race this closes. Whichever request won already ran the update/notify below, so
+        // there's nothing left for this one to do.
+        if (createErr.code === '23505') continue;
+        throw new Error(`create_market: ${createErr.message}`);
+      }
 
       const { error: updateErr } = await admin
         .from('game_of_week_picks')
