@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { PlusIcon, ChevronRightIcon } from '@/components/ui/icons';
-import { MARKET_TYPE_LABEL, MARKET_TYPE_DESCRIPTION, MARKET_TYPE_ICON, type MarketType } from '@/lib/marketType';
+import { MARKET_TYPES, MARKET_TYPE_LABEL, MARKET_TYPE_DESCRIPTION, MARKET_TYPE_ICON, type MarketType } from '@/lib/marketType';
 import { getActiveNavTab, getRouteGroupId, shouldHideBottomNav, type NavTab } from '@/lib/navRoute';
 import { formatTokenInputValue } from '@/lib/formatNumber';
 import { GROUP_NAME_MAX_LENGTH, TOKEN_ALLOCATION_MAX } from '@/lib/limits';
@@ -36,8 +36,6 @@ const TABS: { key: NavTab; label: string }[] = [
 
 /** Five slots at 20% each; the plus button owns slot index 2. */
 const SLOT: Record<NavTab, number> = { home: 0, markets: 1, board: 3, you: 4 };
-
-const MARKET_TYPES: MarketType[] = ['yes_no', 'over_under', 'multiple_choice'];
 
 function iconButtonClass(active: boolean, basis: 'basis-1/5' | 'basis-1/3') {
   return cn('relative flex h-full flex-none items-center justify-center border-0 bg-transparent p-0', basis, active && 'text-espresso-950');

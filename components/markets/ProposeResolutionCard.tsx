@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { isOptionBased, optionKindLabel } from '@/lib/marketType';
 import { Capacitor } from '@capacitor/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { proposeResolution } from '@/lib/actions/resolution';
@@ -51,7 +52,7 @@ export function ProposeResolutionCard({
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const isMultipleChoice = market.market_type === 'multiple_choice';
+  const isMultipleChoice = isOptionBased(market.market_type);
   const [modalOpen, setModalOpen] = useState(false);
   const [step, setStep] = useState<'choose' | 'review'>('choose');
   const [proposeOutcome, setProposeOutcome] = useState<string | null>(null);
@@ -139,7 +140,7 @@ export function ProposeResolutionCard({
   const choiceLabels = [...outcomeChoices, { value: 'void', label: 'VOID' }];
 
   const kindLabel = isMultipleChoice
-    ? `One of ${(options ?? []).length} options`
+    ? optionKindLabel(market.market_type, (options ?? []).length)
     : market.market_type === 'over_under'
       ? `Over / Under · line ${lineLabel}`
       : 'Yes / No';

@@ -1,6 +1,8 @@
 import { RevealTicket, type TicketOddsEntry } from '@/components/markets/RevealTicket';
+import { CalledItCard } from '@/components/markets/CalledItCard';
 import { SettlementLedger } from '@/components/markets/SettlementLedger';
 import type { PayoutBreakdown } from '@/lib/actions/markets';
+import { isOptionBased, type MarketType } from '@/lib/marketType';
 import type { ReactionEmoji } from '@/lib/actions/reactions';
 import { formatLine } from '@/lib/units';
 
@@ -47,7 +49,7 @@ export function RevealSummary({
   /** Precomputed by the caller: 'VOIDED', a bet_side in caps, or the winning option's label. */
   headline: string;
   actualValue: number | null;
-  marketType: 'yes_no' | 'over_under' | 'multiple_choice';
+  marketType: MarketType;
   /** over_under only. */
   line?: number | null;
   /** over_under only, e.g. "$", "min", "pts". */
@@ -55,7 +57,7 @@ export function RevealSummary({
   bets: RevealBet[];
   /** yes_no/over_under only. */
   odds?: { side: string; percent: number }[];
-  /** multiple_choice only. isWinner precomputed by the caller against outcome_option_id. */
+  /** Option-based markets only. isWinner precomputed by the caller against outcome_option_id. */
   optionOdds?: { id: string; label: string; percent: number; isWinner: boolean }[];
   /** Only set when nobody predicted the outcome and the group has distribute_payout on. */
   payoutBreakdown?: PayoutBreakdown | null;
@@ -98,7 +100,7 @@ export function RevealSummary({
   const refundish = voided || universalLoss;
 
   const ticketOdds: TicketOddsEntry[] =
-    marketType === 'multiple_choice'
+    isOptionBased(marketType)
       ? [...(optionOdds ?? [])].sort((a, b) => b.percent - a.percent).map((o) => ({ label: o.label, percent: o.percent, isWinner: o.isWinner }))
       : oddsA && oddsB
         ? [
@@ -109,7 +111,7 @@ export function RevealSummary({
 
   const winnerPercent = refundish
     ? null
-    : marketType === 'multiple_choice'
+    : isOptionBased(marketType)
       ? (optionOdds?.find((o) => o.isWinner)?.percent ?? null)
       : (odds?.find((o) => o.side === headline.toLowerCase())?.percent ?? null);
 
@@ -121,15 +123,34 @@ export function RevealSummary({
     .slice(0, 3)
     .map((b) => ({ nickname: b.nickname, amount: b.amount, payout: b.payout ?? 0 }));
 
+  // The story card is only ever offered for a market that actually resolved: a void has no call
+  // to have made. A universal loss still gets one (everyone missed it, which is its own story),
+  // with no winnings quoted. Losers are everyone with no winning bet, so a hedged member who won
+  // on one side lands under "called it" only.
+  const winnerNicknames = new Set(sorted.filter((b) => b.isWinner).map((b) => b.nickname));
+  const calledItAction = voided ? undefined : (
+    <CalledItCard
+      groupId={groupId}
+      groupName={groupName}
+      question={question}
+      outcomeLabel={headline}
+      resolvedAtIso={resolvedAtIso}
+      winners={sorted.filter((b) => b.isWinner).map((b) => ({ nickname: b.nickname, amount: b.amount, payout: b.payout ?? 0 }))}
+      losers={Array.from(new Set(sorted.filter((b) => !winnerNicknames.has(b.nickname)).map((b) => b.nickname)))}
+      viewerNickname={myNickname}
+    />
+  );
+
   return (
     <div className="space-y-6">
       <RevealTicket
+        extraAction={calledItAction}
         groupName={groupName}
         question={question}
         resolvedAtIso={resolvedAtIso}
         headline={headline}
         isVoid={voided}
-        isMultipleChoice={marketType === 'multiple_choice'}
+        isMultipleChoice={isOptionBased(marketType)}
         detailLine={detailLine}
         line={marketType === 'over_under' && line != null ? formatLine(line, unit) : undefined}
         odds={ticketOdds}

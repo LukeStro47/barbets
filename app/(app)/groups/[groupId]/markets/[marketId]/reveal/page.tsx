@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient, requireUser } from '@/lib/supabase/server';
 import { notFoundIfEmpty } from '@/lib/errors';
+import { isOptionBased } from '@/lib/marketType';
 import { Badge } from '@/components/ui/Badge';
 import { RevealSummary } from '@/components/markets/RevealSummary';
 import { Mention } from '@/components/ui/Mention';
@@ -18,7 +19,7 @@ export default async function RevealPage({ params }: { params: Promise<{ groupId
 
   const { data: market } = await supabase.from('visible_markets').select('*').eq('id', marketId).single();
   const marketRow = notFoundIfEmpty<Market>(market);
-  const isMultipleChoice = marketRow.market_type === 'multiple_choice';
+  const isMultipleChoice = isOptionBased(marketRow.market_type);
 
   if (marketRow.status !== 'resolved' && marketRow.status !== 'voided') {
     redirect(`/groups/${groupId}/markets/${marketId}`);

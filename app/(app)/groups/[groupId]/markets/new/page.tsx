@@ -1,9 +1,7 @@
 import { notFound } from 'next/navigation';
 import { createClient, requireUser } from '@/lib/supabase/server';
 import { CreateMarketForm } from '@/components/markets/MarketForms';
-import type { MarketType } from '@/lib/marketType';
-
-const VALID_TYPES: MarketType[] = ['yes_no', 'over_under', 'multiple_choice'];
+import { MARKET_TYPES, type MarketType } from '@/lib/marketType';
 
 export default async function NewMarketPage({
   params,
@@ -14,7 +12,7 @@ export default async function NewMarketPage({
 }) {
   const { groupId } = await params;
   const { type } = await searchParams;
-  const initialType = VALID_TYPES.includes(type as MarketType) ? (type as MarketType) : undefined;
+  const initialType = MARKET_TYPES.includes(type as MarketType) ? (type as MarketType) : undefined;
   const supabase = await createClient();
 
   const user = await requireUser(supabase);
