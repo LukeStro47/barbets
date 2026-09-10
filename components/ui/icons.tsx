@@ -190,6 +190,17 @@ export function CloseIcon({ className }: IconProps) {
   );
 }
 
+export function MicIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="2" width="6" height="12" rx="3" />
+      <path d="M5 10a7 7 0 0 0 14 0" />
+      <path d="M12 17v4" />
+      <path d="M8 21h8" />
+    </svg>
+  );
+}
+
 export function CameraIcon({ className }: IconProps) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">

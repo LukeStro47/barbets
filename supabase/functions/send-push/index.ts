@@ -230,11 +230,15 @@ function marketAndGroup(marketId: string) {
   });
 }
 
-/** A short, human "what happened" phrase for a resolved market's push copy, e.g. "YES" or a
-    multiple_choice option's own label. VOID reads as "voided" rather than the literal enum value. */
+/** The market types that settle on a market_options row. Mirrors OPTION_BASED_TYPES in lib/marketType.ts
+    and _is_option_market() in Postgres (this function can't import from lib/). */
+const OPTION_BASED_TYPES = ['multiple_choice', 'most_likely_to', 'when'];
+
+/** A short, human "what happened" phrase for a resolved market's push copy, e.g. "YES" or an
+    option-based market's winning option label. VOID reads as "voided" rather than the literal enum value. */
 async function marketOutcomeLabel(market: { outcome: string | null; outcome_option_id: string | null; market_type: string }): Promise<string> {
   if (market.outcome === 'void') return 'voided';
-  if (market.market_type === 'multiple_choice' && market.outcome_option_id) {
+  if (OPTION_BASED_TYPES.includes(market.market_type) && market.outcome_option_id) {
     const { data: option } = await admin.from('market_options').select('label').eq('id', market.outcome_option_id).single();
     return option?.label ?? 'resolved';
   }

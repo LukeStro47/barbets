@@ -41,4 +41,14 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Voice-to-bet (components/markets/VoiceBetButton.tsx): hold the mic on the create-market
+         screen and the speech plugin fills in the form. Audio never leaves the recognizer. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Android 11+ package visibility: without this, SpeechRecognizer.isRecognitionAvailable()
+         can't see the system speech service and reports "unavailable" on a phone that has it. -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
 </manifest>

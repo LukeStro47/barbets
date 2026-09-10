@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient, requireUser } from '@/lib/supabase/server';
 import { notFoundIfEmpty } from '@/lib/errors';
+import { isOptionBased, optionKindLabel } from '@/lib/marketType';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
@@ -70,7 +71,7 @@ export default async function MarketDetailPage({
   }
 
   const marketRow = notFoundIfEmpty<Market>(market);
-  const isMultipleChoice = marketRow.market_type === 'multiple_choice';
+  const isMultipleChoice = isOptionBased(marketRow.market_type);
 
   if (marketRow.status === 'resolved' || marketRow.status === 'voided') {
     redirect(`/groups/${groupId}/markets/${marketId}/reveal`);
@@ -261,7 +262,7 @@ export default async function MarketDetailPage({
       ? 'Yes / No'
       : marketRow.market_type === 'over_under'
         ? `Over / Under · line ${lineLabel}`
-        : `One of ${marketOptions?.length ?? 0} options`;
+        : optionKindLabel(marketRow.market_type, marketOptions?.length ?? 0);
 
   const overflowMenu = (
     <MarketOverflowMenu groupId={groupId} marketId={marketId} isOwner={isOwner} isCreator={isCreator} ownerIsSubject={ownerIsSubject} />

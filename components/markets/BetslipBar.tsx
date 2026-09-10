@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { placeBet } from '@/lib/actions/bets';
+import { isOptionBased } from '@/lib/marketType';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { useBetslip } from '@/components/markets/BetslipContext';
@@ -62,7 +63,7 @@ export function BetslipBar({
 }) {
   const router = useRouter();
   const betslip = useBetslip();
-  const isMultipleChoice = market.market_type === 'multiple_choice';
+  const isMultipleChoice = isOptionBased(market.market_type);
   const sides = market.market_type === 'yes_no' ? (['yes', 'no'] as const) : (['over', 'under'] as const);
 
   const existingSide = existingBets.find((b) => b.side)?.side as (typeof sides)[number] | undefined;

@@ -53,5 +53,9 @@
 	<string>Used to attach a proof photo when proposing how a market resolved.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Used to save a proof photo you've taken, if you choose to.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Barbets uses the microphone so you can say a bet out loud instead of typing it. Audio is used only to fill in the form and is not stored.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Barbets uses speech recognition so you can say a bet out loud instead of typing it. What you say is used only to fill in the form and is not stored.</string>
 </dict>
 </plist>
