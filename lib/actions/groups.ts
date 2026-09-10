@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { runRpc, type ActionResult } from '@/lib/errors';
 import { normalizeInviteCode } from '@/lib/inviteCode';
+import type { JoinSource } from '@/lib/inviteLink';
 
 export interface Group {
   id: string;
@@ -58,13 +59,23 @@ export async function createGroup(input: {
   return result;
 }
 
-export async function joinGroup(inviteCode: string, nickname?: string): Promise<ActionResult<Membership>> {
+export async function joinGroup(
+  inviteCode: string,
+  nickname?: string,
+  /** 'qr' | 'code' | 'link', from the join URL's ?src= (see lib/inviteLink.ts). Lands in the
+   * group_join lifecycle row's metadata; join_group stores anything else as null. */
+  joinSource: JoinSource | null = null
+): Promise<ActionResult<Membership>> {
   const supabase = await createClient();
   // Every join in the app funnels through here, so this is where a code still carrying the retired
   // "BB-" prefix (a printed card, an old shared link) gets cleaned up — join_group() itself only
   // ever sees the stored 4-character form.
   const result = await runRpc<Membership>(
-    await supabase.rpc('join_group', { p_invite_code: normalizeInviteCode(inviteCode), p_nickname: nickname ?? null })
+    await supabase.rpc('join_group', {
+      p_invite_code: normalizeInviteCode(inviteCode),
+      p_nickname: nickname ?? null,
+      p_join_source: joinSource,
+    })
   );
   if (result.error) return result;
   // A code that matches no group comes back as zero rows rather than a raise: join_group has to

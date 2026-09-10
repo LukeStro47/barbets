@@ -320,3 +320,14 @@ export function LinkIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+export function QrCodeIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="4" width="6" height="6" rx="1" />
+      <rect x="14" y="4" width="6" height="6" rx="1" />
+      <rect x="4" y="14" width="6" height="6" rx="1" />
+      <path d="M14 14h2v2h-2zM18 14h2M14 18h2M18 18h2v2" />
+    </svg>
+  );
+}

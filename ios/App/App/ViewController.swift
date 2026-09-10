@@ -7,5 +7,9 @@ import Capacitor
 class ViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         webView?.allowsBackForwardNavigationGestures = true
+        // Local plugin, not an npm package, so it has to be registered by hand here (the
+        // Capacitor CLI only auto-registers plugins it finds in node_modules). See
+        // DeferredInvitePlugin.swift.
+        bridge?.registerPluginInstance(DeferredInvitePlugin())
     }
 }

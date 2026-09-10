@@ -5,6 +5,18 @@ const nextConfig = {
   // build only, no effect on `next build`/production.
   devIndicators: { position: 'top-left' },
 
+  async headers() {
+    return [
+      // Apple's Universal Links file has no extension, so Next would serve it as a generic
+      // octet-stream; Apple's CDN wants it as JSON. Android's assetlinks.json needs nothing
+      // extra, its extension already says the right thing.
+      {
+        source: '/.well-known/apple-app-site-association',
+        headers: [{ key: 'Content-Type', value: 'application/json' }],
+      },
+    ];
+  },
+
   async redirects() {
     return [
       // /help was a page whose entire content was "email us". /feedback is the same conversation

@@ -4,13 +4,12 @@ import './globals.css';
 import { RegisterServiceWorker } from '@/components/pwa/RegisterServiceWorker';
 import { NativePushNavigation } from '@/components/pwa/NativePushNavigation';
 import { NativeBackButton } from '@/components/pwa/NativeBackButton';
+import { NativeDeepLink } from '@/components/pwa/NativeDeepLink';
+import { DeferredInviteLink } from '@/components/pwa/DeferredInviteLink';
 import { BootSplash } from '@/components/pwa/BootSplash';
 import { ChunkErrorRecovery } from '@/components/pwa/ChunkErrorRecovery';
 import { MovedBanner } from '@/components/pwa/MovedBanner';
-import { MobileAppGate } from '@/components/pwa/MobileAppGate';
 import { APP_ORIGIN } from '@/lib/appOrigin';
-import { GOOGLE_PLAY_URL, APPLE_APP_STORE_URL } from '@/lib/appStores';
-import { isProductionDeploy } from '@/lib/mobileGate';
 
 const bricolage = Bricolage_Grotesque({
   subsets: ['latin'],
@@ -67,13 +66,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Above {children} so it sits at the very top of every screen, signed in or not. Renders
             nothing unless the page was served from mybarbets.com — see the component. */}
         <MovedBanner />
-        {/* Renders nothing until its own client-side checks confirm an ordinary mobile browser
-            tab — see the component for why the store URLs are resolved here and handed down
-            rather than read client-side. */}
-        <MobileAppGate androidStoreUrl={GOOGLE_PLAY_URL} iosStoreUrl={APPLE_APP_STORE_URL} enabled={isProductionDeploy()} />
         {children}
         <RegisterServiceWorker />
         <NativePushNavigation />
+        {/* Both native-only, both render nothing: an App Link / Universal Link open, and the
+            install-referrer / pasteboard pickup for an invite QR scanned before install. In the
+            root layout rather than (app)'s because /join lives outside it. */}
+        <NativeDeepLink />
+        <DeferredInviteLink />
         <NativeBackButton />
         <BootSplash />
       </body>

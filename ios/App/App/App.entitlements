@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Universal Links for invite links: a scanned group QR code encodes
+	     https://app.mybarbets.com/join/<code>?src=qr, and with this entitlement plus the
+	     matching public/.well-known/apple-app-site-association on that host (paths: /join/*),
+	     iOS opens the installed app for it directly instead of Safari. The "Associated Domains"
+	     capability must also be enabled on the App ID in the Apple Developer portal, which is
+	     not something a file in this repo can do. -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:app.mybarbets.com</string>
+	</array>
+</dict>
+</plist>

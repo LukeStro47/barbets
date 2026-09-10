@@ -10,6 +10,7 @@ import { PendingBonusPoolNote } from '@/components/groups/PendingBonusPoolNote';
 import { OpenSeasonBettingButton, OpenBettingButton } from '@/components/groups/IntermissionActions';
 import { WaitingOnYouCard } from '@/components/groups/WaitingOnYouCard';
 import { InvitePill } from '@/components/groups/InvitePill';
+import { InviteQrButton } from '@/components/groups/InviteQrButton';
 import { SeasonRecapHero, type FinalBalanceRow } from '@/components/groups/SeasonRecapHero';
 import { SeasonSetupCard } from '@/components/groups/SeasonSetupCard';
 import type { RosterMember } from '@/components/groups/SeasonSetupEditSheet';
@@ -401,7 +402,10 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
                 Playing as <Mention nickname={membership.nickname} className="text-honey-200" />
               </p>
             )}
-            <InvitePill inviteCode={group!.invite_code} />
+            <div className="flex shrink-0 items-center gap-1.5">
+              <InviteQrButton inviteCode={group!.invite_code} groupName={group!.name} />
+              <InvitePill inviteCode={group!.invite_code} />
+            </div>
           </div>
         </div>
 

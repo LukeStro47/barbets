@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { INVITE_CODE_LENGTH, normalizeInviteCode } from '@/lib/inviteCode';
+import { inviteCodeFromText, inviteJoinPath } from '@/lib/inviteLink';
 
 const CODE_LENGTH = INVITE_CODE_LENGTH;
 
@@ -53,7 +54,9 @@ export function InviteCodeBoxes({ tone = 'dark' }: { tone?: keyof typeof TONE })
   async function handlePaste() {
     try {
       const text = await navigator.clipboard.readText();
-      const clean = normalizeInviteCode(text);
+      // A pasted invite *link* (a /join/XXXX URL, e.g. the one InvitePill/OpenAppPrompt copy)
+      // has to yield the code, not the first four letters of "https".
+      const clean = inviteCodeFromText(text) ?? normalizeInviteCode(text);
       if (!clean) return;
       setChars(Array.from({ length: CODE_LENGTH }, (_, i) => clean[i] ?? ''));
       inputRefs.current[Math.min(clean.length, CODE_LENGTH - 1)]?.focus();
@@ -64,7 +67,9 @@ export function InviteCodeBoxes({ tone = 'dark' }: { tone?: keyof typeof TONE })
 
   function join() {
     if (!ready) return;
-    router.push(`/join/${code}`);
+    // Tagged as a typed code so join_group's lifecycle row can tell it apart from a scanned QR
+    // (`src=qr`) or a bare shared link (no tag). See lib/inviteLink.ts.
+    router.push(inviteJoinPath(code, 'code'));
   }
 
   return (
