@@ -40,6 +40,12 @@ create table market_comments (
 -- unread count (market, newer than last_read_at) all walk this one index.
 create index market_comments_market_created_idx on market_comments (market_id, created_at);
 
+-- add_market_comment's once-per-hour lid asks "has a market_comments_heating_up event fired for this
+-- market in the last hour"; notification_events only had a partial index on created_at for the
+-- unprocessed queue, so without this the check would walk every event the market ever emitted.
+create index if not exists notification_events_market_type_created_idx
+  on notification_events (market_id, event_type, created_at);
+
 alter table market_comments enable row level security;
 
 create policy market_comments_select on market_comments for select
