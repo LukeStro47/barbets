@@ -435,6 +435,20 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
         return { title: group.name, body: `A market about you just resolved, come see what it was: "${market.title}"`, url: revealUrl };
       }
       const outcomeLabel = await marketOutcomeLabel(market);
+      // A void refund also pays out === staked for every bettor (see refund_all_bets()), which
+      // would otherwise fall into the "nobody took the other side" branch below and read as "you
+      // called it right" for a market that was never decided. Void gets its own neutral copy,
+      // checked first so it can never be shadowed by that coincidence.
+      if (market.outcome === 'void') {
+        if (staked) {
+          return {
+            title: group.name,
+            body: `"${market.title}" was voided, your ${staked} tokens were refunded.`,
+            url: revealUrl,
+          };
+        }
+        return { title: group.name, body: `"${market.title}" resolved: voided. See how it played out.`, url: revealUrl };
+      }
       // A payout that exactly equals the stake means nobody took the other side, so there were no
       // losing stakes to split. Quoting it as "you won N tokens" overstates it (they're up
       // nothing), and framing it as winning your own bet back reads like a consolation prize when
