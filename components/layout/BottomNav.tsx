@@ -241,6 +241,12 @@ export function BottomNav({
     router.push(`/groups/${currentGroup.id}/markets/new?type=${marketType}`);
   }
 
+  function browseTemplates() {
+    if (!currentGroup) return;
+    setCreateOpen(false);
+    router.push(`/groups/${currentGroup.id}/markets/templates`);
+  }
+
   function continueCreateGroup() {
     const name = groupName.trim();
     if (!name) return;
@@ -398,6 +404,19 @@ export function BottomNav({
                       </button>
                     );
                   })}
+                  <button
+                    onClick={browseTemplates}
+                    className="flex w-full items-center gap-3 rounded-2xl border-[1.5px] border-dashed border-white/25 bg-transparent px-3.5 py-3 text-left"
+                  >
+                    <svg aria-hidden className="h-5 w-5 shrink-0 text-paper-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4L12 3z" />
+                      <path d="M19 15l0.9 2.3L22 18l-2.1 0.7L19 21l-0.9-2.3L16 18l2.1-0.7L19 15z" />
+                    </svg>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13.5px] font-extrabold text-paper-white">Browse templates</span>
+                      <span className="block text-[11.5px] font-semibold text-paper-white/50">Start from a ready-made idea</span>
+                    </span>
+                  </button>
                 </div>
                 <div className="flex items-center gap-2.5 border-t border-white/10 pt-3.5">
                   <span className="min-w-0 flex-1">
