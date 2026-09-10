@@ -1,14 +1,17 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Capacitor } from '@capacitor/core';
 import { joinGroup, getGroupJoinMessage } from '@/lib/actions/groups';
 import { Button } from '@/components/ui/Button';
 import { GroupAvatar } from '@/components/ui/GroupAvatar';
 import { Modal } from '@/components/ui/Modal';
 import { JUST_JOINED_GROUP_KEY } from '@/components/pwa/PushReminderModal';
+import { OpenAppPrompt } from '@/components/groups/OpenAppPrompt';
 import { CaretLeftIcon } from '@/components/ui/icons';
+import { isMobileBrowserUA } from '@/lib/mobileBrowser';
 import type { JoinSource } from '@/lib/inviteLink';
 
 const NICKNAME_MAX_LENGTH = 20;
@@ -50,12 +53,40 @@ export function JoinFlow({
   blockedReason?: 'removed' | 'not_accepting' | null;
 }) {
   const router = useRouter();
-  const [step, setStep] = useState<'confirm' | 'nickname'>('confirm');
+  const [step, setStep] = useState<'confirm' | 'nickname' | 'open-app'>('confirm');
   const [showBlockedModal, setShowBlockedModal] = useState(false);
   const [nickname, setNickname] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [welcome, setWelcome] = useState<{ groupId: string; message: string } | null>(null);
+  const [isBrowserJoin, setIsBrowserJoin] = useState(false);
+  const [joinedGroupId, setJoinedGroupId] = useState<string | null>(null);
+
+  // There's no MobileAppGate any more, so a browser join always finishes and lands someone in
+  // their group either way - this only decides whether OpenAppPrompt's nudge shows in between.
+  // Same detection MobileAppGate used to gate on: not the native app, not an installed
+  // standalone PWA, an actual phone/tablet browser.
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) return;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
+    if (isStandalone) return;
+    if (!isMobileBrowserUA(navigator.userAgent)) return;
+    setIsBrowserJoin(true);
+  }, []);
+
+  function proceedToGroup(groupId: string) {
+    if (isBrowserJoin) {
+      setWelcome(null);
+      setJoinedGroupId(groupId);
+      setStep('open-app');
+    } else {
+      router.push(`/groups/${groupId}`);
+    }
+  }
+
+  if (step === 'open-app' && joinedGroupId) {
+    return <OpenAppPrompt groupName={groupName} inviteCode={inviteCode} onContinueInBrowser={() => router.push(`/groups/${joinedGroupId}`)} />;
+  }
 
   if (step === 'confirm') {
     return (
@@ -163,7 +194,7 @@ export function JoinFlow({
             if (!messageResult.error && messageResult.data) {
               setWelcome({ groupId, message: messageResult.data });
             } else {
-              router.push(`/groups/${groupId}`);
+              proceedToGroup(groupId);
             }
           })
         }
@@ -172,12 +203,12 @@ export function JoinFlow({
       </Button>
 
       {welcome && (
-        <Modal onClose={() => router.push(`/groups/${welcome.groupId}`)}>
+        <Modal onClose={() => proceedToGroup(welcome.groupId)}>
           <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">
             Welcome to {groupName}
           </p>
           <p className="whitespace-pre-wrap text-sm leading-[1.5] text-espresso-600">{welcome.message}</p>
-          <Button className="w-full" onClick={() => router.push(`/groups/${welcome.groupId}`)}>
+          <Button className="w-full" onClick={() => proceedToGroup(welcome.groupId)}>
             Continue
           </Button>
         </Modal>

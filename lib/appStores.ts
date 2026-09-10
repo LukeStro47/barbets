@@ -1,6 +1,6 @@
 /**
  * Where "get the app" points — shared by the printed-QR redirect (app/go/[batch]/route.ts) and
- * the mobile-browser interstitial (components/pwa/MobileAppGate.tsx).
+ * the post-join browser nudge (components/groups/OpenAppPrompt.tsx).
  */
 
 // `batch`/campaign params are appended by each caller, not baked in here, since they differ

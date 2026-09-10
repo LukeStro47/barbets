@@ -11,9 +11,8 @@ import { acceptCurrentPolicy } from '@/lib/actions/legal';
  * A full-screen, undismissable block for a signed-in user whose users.accepted_policy_version
  * doesn't match lib/legal.ts's CURRENT_POLICY_VERSION — mounted from app/(app)/layout.tsx, which
  * does the version comparison server-side and only renders this when they actually differ, so an
- * up-to-date user never sees so much as a flash of it. Same shape as MobileAppGate (full-screen,
- * no way to see the real page underneath, one action out) for the same reason: this is meant to
- * actually gate, not just suggest.
+ * up-to-date user never sees so much as a flash of it. Full-screen, no way to see the real page
+ * underneath, one action out: this is meant to actually gate, not just suggest.
  *
  * On accept, calls the server action and then router.refresh() rather than optimistically
  * unmounting itself — the parent layout is what decided to render this in the first place, so it

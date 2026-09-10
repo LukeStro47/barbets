@@ -6,11 +6,9 @@ import { CONTACT_EMAIL } from '@/lib/appOrigin';
 
 // This is the one copy of the privacy policy, not a mirror of a separate marketing-site copy —
 // mybarbets.com links here rather than hosting its own text, so there is exactly one place to
-// change when the policy changes. That only works because this route is exempt from
-// MobileAppGate (see lib/mobileGate.ts's EXEMPT_PATHS): a policy has to render for whoever
-// follows a link to it — App Store Connect, Google Play, the marketing site — regardless of
-// whether they're on a phone browser the app would otherwise gate. The signup flow's terms
-// checkbox and the profile small-print tiles also link here directly.
+// change when the policy changes. A policy has to render for whoever follows a link to it — App
+// Store Connect, Google Play, the marketing site. The signup flow's terms checkbox and the
+// profile small-print tiles also link here directly.
 //
 // Full legal text, not a paraphrase, since 2026-08-27. A content change here has to be paired
 // with a lib/legal.ts CURRENT_POLICY_VERSION bump so signed-in users are asked to re-agree.

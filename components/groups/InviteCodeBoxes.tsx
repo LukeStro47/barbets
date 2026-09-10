@@ -54,8 +54,8 @@ export function InviteCodeBoxes({ tone = 'dark' }: { tone?: keyof typeof TONE })
   async function handlePaste() {
     try {
       const text = await navigator.clipboard.readText();
-      // A pasted invite *link* (a /join/XXXX URL, e.g. the one MobileAppGate copies on the way
-      // to the store) has to yield the code, not the first four letters of "https".
+      // A pasted invite *link* (a /join/XXXX URL, e.g. the one InvitePill/OpenAppPrompt copy)
+      // has to yield the code, not the first four letters of "https".
       const clean = inviteCodeFromText(text) ?? normalizeInviteCode(text);
       if (!clean) return;
       setChars(Array.from({ length: CODE_LENGTH }, (_, i) => clean[i] ?? ''));

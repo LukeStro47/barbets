@@ -30,35 +30,31 @@ export function inviteJoinPath(code: string, source: JoinSource | null = null): 
   return source ? `${base}?src=${source}` : base;
 }
 
-/** What the on-screen QR code encodes. Absolute, on the canonical origin: a phone's camera app
+/** Absolute, shareable join link on the canonical origin. A phone's camera app or a pasted link
  * hands this to the OS, which opens the installed app directly if App Links / Universal Links
- * verify for `/join/*` (see the AndroidManifest intent-filter and public/.well-known/), and
- * otherwise opens the browser, where MobileAppGate turns it into a store link that still carries
- * the code (inviteStoreUrls below). */
-export function inviteQrUrl(code: string): string {
-  return `${APP_ORIGIN}${inviteJoinPath(code, 'qr')}`;
+ * verify for `/join/*` (see the AndroidManifest intent-filter and public/.well-known/); otherwise
+ * it opens straight into the browser join flow at `/join/[code]`, which works on its own now that
+ * there's no mobile-browser gate in front of it. */
+export function inviteUrl(code: string, source: JoinSource | null = null): string {
+  return `${APP_ORIGIN}${inviteJoinPath(code, source)}`;
 }
 
-/** Pulls a code out of a `/join/XXXX` path, or a `/login?next=/join/XXXX...` sign-in bounce, or
- * nothing. Used by MobileAppGate to notice it's standing in front of an invite. */
-export function inviteCodeFromLocation(pathname: string, search: string): string | null {
-  const direct = inviteCodeFromText(pathname);
-  if (direct) return direct;
-  if (pathname.replace(/\/$/, '') !== '/login') return null;
-  const next = new URLSearchParams(search).get('next');
-  return next ? inviteCodeFromText(next) : null;
+/** What the on-screen QR code encodes. */
+export function inviteQrUrl(code: string): string {
+  return inviteUrl(code, 'qr');
 }
 
 /** The key inside the Play install `referrer` string. Changing it silently orphans every QR
  * already scanned but not yet installed, same warning as the printed-card referrer shape. */
 export const INVITE_REFERRER_KEY = 'invite_code';
 
-/** Where a phone browser with no app installed sends someone holding an invite. Same shape as
+/** Store links offered alongside a browser join's OpenAppPrompt nudge (see
+ * components/groups/OpenAppPrompt.tsx), for anyone who doesn't have the app yet. Same shape as
  * the printed-QR redirect (app/go/[batch]/route.ts): Android carries it as a Play `referrer`,
  * which the Play Install Referrer API hands back to the app after install
  * (android/.../DeferredInvitePlugin.java); iOS has no equivalent, so its store link only carries
  * a campaign token for App Analytics and the code itself rides the pasteboard instead (see
- * components/pwa/MobileAppGate.tsx and ios/App/App/DeferredInvitePlugin.swift). */
+ * OpenAppPrompt.tsx and ios/App/App/DeferredInvitePlugin.swift). */
 export function inviteStoreUrls(code: string): { android: string; ios: string } {
   const referrer = encodeURIComponent(`utm_source=qr&utm_medium=invite&${INVITE_REFERRER_KEY}=${code}`);
   return {

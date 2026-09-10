@@ -5,8 +5,7 @@ import { BackButton } from '@/components/ui/BackButton';
 import { CONTACT_EMAIL } from '@/lib/appOrigin';
 
 // The one copy of the terms, not a mirror of a separate marketing-site copy. See
-// app/privacy/page.tsx for why: mybarbets.com links here instead of hosting its own text, which
-// is only possible because this route is exempt from MobileAppGate (lib/mobileGate.ts).
+// app/privacy/page.tsx for why: mybarbets.com links here instead of hosting its own text.
 //
 // Full legal text, not a paraphrase, since 2026-08-27. A content change here has to be paired
 // with a lib/legal.ts CURRENT_POLICY_VERSION bump so signed-in users are asked to re-agree.

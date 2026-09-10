@@ -7,7 +7,7 @@ import { inviteCodeFromDeferredPayload, inviteJoinPath } from '@/lib/inviteLink'
 
 /**
  * The "deferred" half of the QR invite: someone scanned a group's QR code without the app,
- * MobileAppGate sent them to the store with the invite code attached (see lib/inviteLink.ts's
+ * OpenAppPrompt sent them to the store with the invite code attached (see lib/inviteLink.ts's
  * inviteStoreUrls), and this is what picks it back up on the first open after install and lands
  * them on /join/[code] as if the scan had opened the app directly.
  *

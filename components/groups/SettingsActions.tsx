@@ -18,6 +18,7 @@ import { formatTokens, formatTokenInputValue } from '@/lib/formatNumber';
 import { TOKEN_ALLOCATION_MAX, JOIN_MESSAGE_MAX_LENGTH, PRIZE_MAX_LENGTH, PUNISHMENT_MAX_LENGTH } from '@/lib/limits';
 import { useKeyboardState } from '@/lib/useKeyboardInset';
 import { cn } from '@/lib/cn';
+import { inviteUrl } from '@/lib/inviteLink';
 import type { GroupSettings } from '@/lib/actions/groups';
 
 const inputClasses =
@@ -564,7 +565,7 @@ export function EditSettingsForm({
 /** The two pills under the invite code. Regenerating kills every copy already sent, so it asks first. */
 export function InviteCodeActions({ groupId, inviteCode, canRegenerate }: { groupId: string; inviteCode: string; canRegenerate: boolean }) {
   const router = useRouter();
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<'link' | 'code' | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -572,24 +573,22 @@ export function InviteCodeActions({ groupId, inviteCode, canRegenerate }: { grou
   const pillClasses =
     'flex-1 rounded-full border border-espresso-200 px-3 py-[7px] text-[12.5px] font-bold text-espresso-800 transition-colors hover:bg-espresso-50 disabled:cursor-not-allowed disabled:text-espresso-300';
 
+  function copy(kind: 'link' | 'code', value: string) {
+    navigator.clipboard.writeText(value).then(() => {
+      setCopied(kind);
+      setTimeout(() => setCopied(null), 2000);
+    });
+  }
+
   return (
     <div className="mt-2.5 space-y-2">
       {error && <p className="text-xs text-danger-700">{error}</p>}
       <div className="flex gap-2">
-        <button
-          type="button"
-          className={pillClasses}
-          onClick={async () => {
-            // Just the code, not a /join/[code] link: MobileAppGate blocks that route for a
-            // phone browser without the app already installed, so a link mostly just lands a
-            // friend on the "get the app" wall. The code is what actually works — typed into
-            // "Got an invite code?" once they have the app.
-            await navigator.clipboard.writeText(inviteCode);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-          }}
-        >
-          {copied ? 'Copied' : 'Copy code'}
+        <button type="button" className={pillClasses} onClick={() => copy('link', inviteUrl(inviteCode, 'link'))}>
+          {copied === 'link' ? 'Copied' : 'Copy link'}
+        </button>
+        <button type="button" className={pillClasses} onClick={() => copy('code', inviteCode)}>
+          {copied === 'code' ? 'Copied' : 'Copy code'}
         </button>
         {canRegenerate && (
           <button type="button" className={pillClasses} disabled={isPending} onClick={() => setConfirming(true)}>
