@@ -16,29 +16,7 @@ const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 webpush.setVapidDetails('mailto:barbets-app@example.com', VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
-// Diagnostic experiment, added 2026-09-12: PostgREST has been killing a growing share of this
-// function's calls with "Thread killed by timeout manager" (surfaces here as a 504 "Gateway
-// Timeout"), climbing from ~1/hour to 40-60/hour over the prior day with no matching code or
-// migration change. Postgres itself shows no long-running query and plenty of headroom on
-// connections, so this isn't a slow query - the leading theory is this isolate reusing a
-// keep-alive HTTP connection that PostgREST (or something in front of it) has already torn down,
-// which then hangs until PostgREST's own timeout kills it. `Connection: close` asks whatever this
-// client talks to directly to close the socket after every response, so the next call always
-// opens fresh instead of risking a stale one.
-//
-// This is unproven - test, not fix, until the numbers say otherwise. Judge it by comparing the
-// 504 rate on claim_notification_events/claim_unreported_sweep_failures before and after this
-// shipped, e.g.:
-//   select toStartOfHour(timestamp) as hour,
-//          countIf(event_message like 'POST | 504%claim_%') as failed,
-//          countIf(event_message like 'POST | 200%claim_%') as ok
-//   from logs where source = 'edge_logs' and event_message like '%rest/v1/rpc/claim_%'
-//   group by hour order by hour desc
-// If the rate doesn't drop after a few days of comparable traffic, remove this and treat a
-// reused connection as ruled out rather than leaving unproven dead weight in place.
-const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
-  global: { headers: { Connection: 'close' } },
-});
+const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
 // How many queued events one run takes. This sat at 50 for as long as a run was
 // serial and claimed nothing: 50 was a guess at what fits inside one cron minute,
@@ -215,6 +193,36 @@ async function runPooled(tasks: Array<() => Promise<void>>, concurrency: number,
     }
   };
   await Promise.all(Array.from({ length: Math.min(concurrency, tasks.length) }, worker));
+}
+
+/** Retries a single RPC call up to `attempts` times on failure. Since 2026-09-11, PostgREST has
+ *  been killing a climbing share of claim_notification_events/claim_unreported_sweep_failures
+ *  calls with "Thread killed by timeout manager" (a 504), reaching 40-66/hour at its worst, with
+ *  no matching code or migration change, no long-running query, and no connection exhaustion on
+ *  the Postgres side. First guess was this isolate reusing a stale keep-alive connection, tested
+ *  by sending `Connection: close` on every request on 2026-09-12 - reverted the same day after
+ *  under an hour showed no change at all in the failure rate, ruling that theory out (most likely
+ *  the header was simply ignored: these requests almost certainly negotiate HTTP/2, where
+ *  `Connection` is meaningless). The cause is still open.
+ *
+ *  Retrying is a safe mitigation regardless of cause, not a fix: both RPCs this wraps are single
+ *  atomic statements (`for update skip locked`), so a failed call claims nothing and a retry can
+ *  never double-claim or drop an event - it just keeps most of these failures from reaching Slack
+ *  instead of addressing why PostgREST is killing them. If this keeps recurring, the next step is
+ *  probably Supabase support rather than more application-side guessing, since nothing found so
+ *  far points at anything this codebase controls. */
+async function withRetry<T>(
+  fn: () => PromiseLike<{ data: T | null; error: { message: string } | null }>,
+  attempts = 3
+): Promise<{ data: T | null; error: { message: string } | null }> {
+  let lastError: { message: string } | null = null;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    const { data, error } = await fn();
+    if (!error) return { data, error: null };
+    lastError = error;
+    if (attempt < attempts) await new Promise((resolve) => setTimeout(resolve, attempt * 500));
+  }
+  return { data: null, error: lastError };
 }
 
 // Per-run memo for the small repeated lookups below. A batch is very often several events
@@ -825,7 +833,7 @@ interface SweepFailure {
 async function reportSweepFailures() {
   if (!SLACK_ERROR_WEBHOOK_URL) return;
 
-  const { data, error } = await admin.rpc('claim_unreported_sweep_failures', { p_limit: 10 });
+  const { data, error } = await withRetry(() => admin.rpc('claim_unreported_sweep_failures', { p_limit: 10 }));
   if (error) {
     // Not fatal to the push run, and worth distinguishing from a genuine sweep failure:
     // this is the reporting channel breaking, not the thing it reports on.
@@ -903,7 +911,7 @@ Deno.serve(async (_req) => {
   // run to overrun its cron minute: the next tick gets a disjoint slice instead of
   // re-sending this one. The tradeoff, spelled out in that migration, is at-most-once:
   // a run that dies mid-batch drops its claimed events rather than retrying them.
-  const { data: events, error } = await admin.rpc('claim_notification_events', { p_limit: EVENT_BATCH_LIMIT });
+  const { data: events, error } = await withRetry(() => admin.rpc('claim_notification_events', { p_limit: EVENT_BATCH_LIMIT }));
 
   if (error) {
     await reportToSlack('could not claim from the notification queue', error);
