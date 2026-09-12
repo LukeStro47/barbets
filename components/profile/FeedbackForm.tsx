@@ -5,8 +5,8 @@ import { submitFeedback, type FeedbackCategory } from '@/lib/actions/feedback';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/cn';
 
-// group_request has its own dedicated form now — see RequestGroupForm on /groups/discover —
-// rather than being buried as a fourth pill here.
+// group_request is deliberately not offered here — its dedicated /groups/discover form was
+// removed, and it wasn't reintroduced as a pill.
 const CATEGORIES: { value: FeedbackCategory; label: string }[] = [
   { value: 'bug', label: 'Bug' },
   { value: 'idea', label: 'Idea' },
