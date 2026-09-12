@@ -22,7 +22,7 @@ export interface Market {
   line: number | null;
   /** over_under only, e.g. "$", "min", "pts". */
   unit: string | null;
-  /** Null for a system-generated market (Sports/Weather pipelines), or a market whose creator has since deleted their account. */
+  /** Null for a system-generated market (the NFL/CFB pipeline), or a market whose creator has since deleted their account. */
   creator_id: string | null;
   sponsor_id: string | null;
   closes_at: string;

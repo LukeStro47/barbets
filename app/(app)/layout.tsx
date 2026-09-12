@@ -85,7 +85,7 @@ export default async function AppLayout({ children, modal }: { children: React.R
   // supabase/migrations/20260824120000_public_group_market_gates.sql. Overrides whatever the
   // betting-status checks above landed on, since a public group is always betting_enabled = true
   // with seasons off, so those checks alone never block a regular member here. This also covers
-  // Sports/Weather now that their mods (and owner) can hand-create a market too, in addition to
+  // NFL/CFB now that their mods (and owner) can hand-create a market too, in addition to
   // whatever the pipeline auto-creates (20260830180000) — same mod-or-owner check as any other
   // public group, no separate system_pipeline carve-out left.
   for (const g of groupRows ?? []) {

@@ -804,25 +804,24 @@ describe('pipeline_settings: the auto-generated-market kill switch', () => {
     expect(setErr?.message).toMatch(/forbidden/);
   });
 
-  test('both pipelines exist and start disabled', async () => {
+  test('the sports pipeline exists and starts disabled', async () => {
     const { data, error } = await users.admin.client.rpc('list_pipeline_settings');
     expect(error).toBeNull();
     const byPipeline = new Map((data ?? []).map((r: { pipeline: string; enabled: boolean }) => [r.pipeline, r.enabled]));
     expect(byPipeline.get('sports')).toBe(false);
-    expect(byPipeline.get('weather')).toBe(false);
   });
 
   test('an admin can flip a pipeline on and back off', async () => {
-    const { error: onErr } = await users.admin.client.rpc('set_pipeline_enabled', { p_pipeline: 'weather', p_enabled: true });
+    const { error: onErr } = await users.admin.client.rpc('set_pipeline_enabled', { p_pipeline: 'sports', p_enabled: true });
     expect(onErr).toBeNull();
 
-    const { data: afterOn } = await adminClient.from('pipeline_settings').select('enabled').eq('pipeline', 'weather').single();
+    const { data: afterOn } = await adminClient.from('pipeline_settings').select('enabled').eq('pipeline', 'sports').single();
     expect(afterOn!.enabled).toBe(true);
 
-    const { error: offErr } = await users.admin.client.rpc('set_pipeline_enabled', { p_pipeline: 'weather', p_enabled: false });
+    const { error: offErr } = await users.admin.client.rpc('set_pipeline_enabled', { p_pipeline: 'sports', p_enabled: false });
     expect(offErr).toBeNull();
 
-    const { data: afterOff } = await adminClient.from('pipeline_settings').select('enabled').eq('pipeline', 'weather').single();
+    const { data: afterOff } = await adminClient.from('pipeline_settings').select('enabled').eq('pipeline', 'sports').single();
     expect(afterOff!.enabled).toBe(false);
   });
 
@@ -832,7 +831,7 @@ describe('pipeline_settings: the auto-generated-market kill switch', () => {
   });
 });
 
-describe('NFL/CFB/Weather hand-created markets: mods and the owner can, ordinary members cannot', () => {
+describe('NFL/CFB hand-created markets: mods and the owner can, ordinary members cannot', () => {
   let users: Record<string, TestUser>;
   let nflGroup: PublicGroupRow;
 
@@ -842,7 +841,7 @@ describe('NFL/CFB/Weather hand-created markets: mods and the owner can, ordinary
     // A test group named exactly 'NFL' exercises the ordinary mod-or-owner gate the same way the
     // real seeded group would, without touching it — there's no unique constraint on groups.name,
     // so this can't collide with the real one. There's no name-based carve-out to test here
-    // (20260830180000 removed the one that used to exist): NFL/CFB/Weather use the exact same
+    // (20260830180000 removed the one that used to exist): NFL/CFB use the exact same
     // create_market() gate as any other public group, this just picks a realistic name.
     nflGroup = await createPublicGroup(users.admin, 'generic', 'NFL');
     await users.mod.client.rpc('join_public_group', { p_group_id: nflGroup.id, p_nickname: 'pgpipemod' });
@@ -891,7 +890,7 @@ describe('NFL/CFB/Weather hand-created markets: mods and the owner can, ordinary
     expect(error?.message).toMatch(/forbidden/);
   });
 
-  test('an otherwise-identical public group not named NFL/CFB/Weather behaves the same way', async () => {
+  test('an otherwise-identical public group not named NFL/CFB behaves the same way', async () => {
     const ordinaryGroup = await createPublicGroup(users.admin);
     const { error } = await users.admin.client.rpc('create_market', {
       p_group_id: ordinaryGroup.id,
@@ -1094,74 +1093,5 @@ describe('system_markets_opened: one push per pipeline run, not one per market',
 
     expect(await eventCount('market_opened')).toBe(beforeOpened);
     expect(await eventCount('system_markets_opened')).toBe(beforeConsolidated);
-  });
-});
-
-describe('Weather skips the market_closed push (resolves within minutes of its own close)', () => {
-  let users: Record<string, TestUser>;
-  let weatherGroup: PublicGroupRow;
-  let nflGroup: PublicGroupRow;
-
-  beforeAll(async () => {
-    users = await createTestUsers('pgwxclose', ['admin']);
-    await makeAdmin(users.admin);
-    // expire_stale()'s skip is matched by name ('Weather' specifically, see 20260828130000) --
-    // test groups, not the real seeded ones. The second group just needs to be named anything
-    // other than 'Weather' to prove the skip doesn't apply universally; 'NFL' is realistic.
-    weatherGroup = await createPublicGroup(users.admin, 'generic', 'Weather');
-    nflGroup = await createPublicGroup(users.admin, 'generic', 'NFL');
-  });
-
-  afterAll(async () => {
-    await cleanupTestUsers(users);
-  });
-
-  test('a Weather system market closes normally but emits no market_closed event', async () => {
-    const { data, error } = await adminClient.rpc('_create_system_market', {
-      p_group_id: weatherGroup.id,
-      p_title: `Will it rain in Testville today? ${Date.now()}`,
-      p_description: 'test',
-      p_market_type: 'yes_no',
-      p_closes_at: new Date(Date.now() + 2000).toISOString(),
-    });
-    expect(error).toBeNull();
-    const market = Array.isArray(data) ? data[0] : data;
-
-    await fastForwardCloseTime(market.id, 2000);
-    await new Promise((resolve) => setTimeout(resolve, 3000));
-    await adminClient.rpc('expire_stale');
-
-    const { data: closedMarket } = await adminClient.from('markets').select('status').eq('id', market.id).single();
-    expect(closedMarket!.status).toBe('closed');
-
-    const { data: closedEvents } = await adminClient
-      .from('notification_events')
-      .select('id')
-      .eq('event_type', 'market_closed')
-      .eq('market_id', market.id);
-    expect(closedEvents ?? []).toHaveLength(0);
-  });
-
-  test('a non-Weather system market still gets the market_closed push (real live-game gap)', async () => {
-    const { data, error } = await adminClient.rpc('_create_system_market', {
-      p_group_id: nflGroup.id,
-      p_title: `Will the Testers beat the Others? ${Date.now()}`,
-      p_description: 'test',
-      p_market_type: 'yes_no',
-      p_closes_at: new Date(Date.now() + 2000).toISOString(),
-    });
-    expect(error).toBeNull();
-    const market = Array.isArray(data) ? data[0] : data;
-
-    await fastForwardCloseTime(market.id, 2000);
-    await new Promise((resolve) => setTimeout(resolve, 3000));
-    await adminClient.rpc('expire_stale');
-
-    const { data: closedEvents } = await adminClient
-      .from('notification_events')
-      .select('id')
-      .eq('event_type', 'market_closed')
-      .eq('market_id', market.id);
-    expect(closedEvents ?? []).toHaveLength(1);
   });
 });

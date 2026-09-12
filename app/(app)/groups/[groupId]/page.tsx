@@ -30,7 +30,7 @@ import { getGroupTasks } from '@/lib/tasks';
 import { TITLE_ORDER, TITLE_META, type GroupTitleRow } from '@/lib/titles';
 import { diffTitleSnapshots, type TitleSnapshotEntry } from '@/lib/seasonTitleDiff';
 import type { GroupSettings } from '@/lib/actions/groups';
-import { PipelineGroupFeed, type PipelineKind } from '@/components/groups/PipelineGroupFeed';
+import { PipelineGroupFeed } from '@/components/groups/PipelineGroupFeed';
 
 // 44px, a real tap target rather than a decorative chip — it's the only control in this header
 // now that "My bets" has gone, and it's the way into everything about the group.
@@ -297,16 +297,15 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
     getSettledMarkets(supabase, groupId, user.id, null, season?.id),
   ]);
 
-  // NFL/CFB/Weather get a dedicated single-featured-market feed (PipelineGroupFeed) instead of
-  // the ordinary Open/Pending/Settled tabs — see that component's own doc comment. "Featured" is
+  // NFL/CFB get a dedicated single-featured-market feed (PipelineGroupFeed) instead of the
+  // ordinary Open/Pending/Settled tabs — see that component's own doc comment. "Featured" is
   // always the most recent system market regardless of status: an open or closed-awaiting-result
   // one if there is one, else the newest settled market, so the group never falls back to an
   // empty "come back later" placeholder the moment its one market resolves.
-  const PIPELINE_GROUP_KIND: Record<string, PipelineKind> = { NFL: 'sports', CFB: 'sports', Weather: 'weather' };
-  const pipelineKind = group!.is_public ? PIPELINE_GROUP_KIND[group!.name] : undefined;
+  const isPipelineGroup = !!group!.is_public && (group!.name === 'NFL' || group!.name === 'CFB');
   let pipelineFeatured: (typeof settledPage.markets)[number] | null = null;
   let pipelineHistory: typeof settledPage.markets = [];
-  if (pipelineKind) {
+  if (isPipelineGroup) {
     const active = buckets.open[0] ?? buckets.awaiting_resolution[0] ?? null;
     if (active) {
       pipelineFeatured = active;
@@ -421,10 +420,9 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
 
         {!settings?.seasons_enabled && !settings?.betting_enabled && isOwner && <OpenBettingButton groupId={groupId} />}
 
-        {pipelineKind ? (
+        {isPipelineGroup ? (
           <PipelineGroupFeed
             groupId={groupId}
-            kind={pipelineKind}
             featured={pipelineFeatured}
             history={pipelineHistory}
             historyNextCursor={settledPage.nextCursor}

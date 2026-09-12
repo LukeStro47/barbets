@@ -381,7 +381,7 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
     };
   }
 
-  // Sports/Weather pipelines: a single create-run that added 2+ markets at once collapses into
+  // The sports pipeline: a single create-run that added 2+ markets at once collapses into
   // this one push instead of one market_opened per market -- see _notify_system_markets_created()
   // in the migration that introduced this event type. No market_id to link to (several markets,
   // not one), so this deep-links at the group itself.

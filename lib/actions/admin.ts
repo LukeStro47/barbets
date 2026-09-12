@@ -87,13 +87,13 @@ export async function assignGroupModerator(groupId: string, targetUserId: string
 }
 
 export interface PipelineSetting {
-  pipeline: 'sports' | 'weather';
+  pipeline: 'sports';
   enabled: boolean;
   updated_at: string;
 }
 
-/** Admin-only: current on/off state of the auto-generated Sports and Weather market pipelines.
-    Not routed through runRpc() — table-returning, same note as listGroupModeratorCandidates(). */
+/** Admin-only: current on/off state of the auto-generated Sports market pipeline. Not routed
+    through runRpc() — table-returning, same note as listGroupModeratorCandidates(). */
 export async function listPipelineSettings(): Promise<ActionResult<PipelineSetting[]>> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc('list_pipeline_settings');
@@ -101,9 +101,9 @@ export async function listPipelineSettings(): Promise<ActionResult<PipelineSetti
   return { data: (data ?? []) as PipelineSetting[] };
 }
 
-/** Admin-only: the kill switch each pipeline's Edge Function checks before creating or resolving
+/** Admin-only: the kill switch the pipeline's Edge Functions check before creating or resolving
     any market. Seeded off — see 20260826130000_pipeline_settings.sql. */
-export async function setPipelineEnabled(pipeline: 'sports' | 'weather', enabled: boolean): Promise<ActionResult<null>> {
+export async function setPipelineEnabled(pipeline: 'sports', enabled: boolean): Promise<ActionResult<null>> {
   const supabase = await createClient();
   const result = await runRpc<null>(await supabase.rpc('set_pipeline_enabled', { p_pipeline: pipeline, p_enabled: enabled }));
   if (result.error) return result;
@@ -112,8 +112,8 @@ export async function setPipelineEnabled(pipeline: 'sports' | 'weather', enabled
 }
 
 export interface PipelineHealth {
-  pipeline: 'sports' | 'weather';
-  job: 'create' | 'resolve' | 'weekly_prepare' | 'weekly_publish';
+  pipeline: 'sports';
+  job: 'resolve' | 'weekly_prepare' | 'weekly_publish';
   last_run_at: string | null;
   last_run_succeeded: number | null;
   last_run_failed: number | null;
@@ -122,10 +122,9 @@ export interface PipelineHealth {
   last_failure_message: string | null;
 }
 
-/** Admin-only: last-run counts and open sweep_failures for each of the 5 pipeline jobs (sports
-    weekly_prepare/weekly_publish/resolve, weather create/resolve). Not routed through runRpc() —
-    table-returning, same note as listGroupModeratorCandidates(). See
-    20260906102000_pipeline_health_weekly_jobs.sql. */
+/** Admin-only: last-run counts and open sweep_failures for each of the 3 sports pipeline jobs
+    (weekly_prepare/weekly_publish/resolve). Not routed through runRpc() — table-returning, same
+    note as listGroupModeratorCandidates(). See 20260906102000_pipeline_health_weekly_jobs.sql. */
 export async function listPipelineHealth(): Promise<ActionResult<PipelineHealth[]>> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc('list_pipeline_health');
