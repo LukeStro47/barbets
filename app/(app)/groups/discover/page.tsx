@@ -13,7 +13,7 @@ import { numberWordCapitalized } from '@/lib/formatNumber';
  * away, no invite code or friend required. Fixes the "new user has nothing to try" problem: this
  * is the one group listing in this app that isn't gated by membership (see list_public_groups()).
  *
- * Scoped to the sports/weather pipeline groups only (see isHomeSurfacePublicGroup()) — a
+ * Scoped to the sports pipeline groups only (see isHomeSurfacePublicGroup()) — a
  * 'campus' public group, if one ever exists, isn't browsable here.
  */
 export default async function DiscoverGroupsPage({ searchParams }: { searchParams: Promise<{ all?: string }> }) {

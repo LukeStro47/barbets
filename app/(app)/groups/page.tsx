@@ -80,7 +80,7 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
   const hasGroups = (groups ?? []).length > 0;
 
   // The "Open to anyone" section (2A, zero-group user) / collapsed shelf row (2B, everyone
-  // else) — both scoped to the sports/weather pipeline groups only, never 'campus'. See
+  // else) — both scoped to the sports pipeline groups only, never 'campus'. See
   // isHomeSurfacePublicGroup() for why.
   const publicGroupsResult = await listPublicGroups();
   const homeSurfacePublicGroups = (publicGroupsResult.data ?? []).filter(isHomeSurfacePublicGroup);

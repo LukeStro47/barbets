@@ -18,7 +18,7 @@ const sections: Section[] = [
     title: '1. What Barbets is (and is not)',
     blocks: [
       { p: 'Barbets is a play-money prediction market for private friend groups. Members of a group create questions ("markets"), place bets using virtual tokens, and settle up through a group vote once the outcome is known.' },
-      { p: "Some markets are different: in Barbets' Sports and Weather public groups, markets are created and resolved automatically from public sports and weather data instead of by a group vote. Everything else in these Terms about betting, tokens, and resolution applies to those markets the same way." },
+      { p: "Some markets are different: in Barbets' Sports public groups, markets are created and resolved automatically from public sports data instead of by a group vote. Everything else in these Terms about betting, tokens, and resolution applies to those markets the same way." },
       { p: 'Barbets is not gambling and is not a financial product. Specifically:' },
       {
         ul: [
@@ -55,7 +55,7 @@ const sections: Section[] = [
   {
     title: '4. Groups, invites, group owners, and moderators',
     blocks: [
-      { p: 'Most groups on Barbets are private and joined by invite code. Barbets also runs certain public groups (for example, campus groups, and the Sports and Weather groups described in Section 1) that anyone can join from a directory, without an invite code.' },
+      { p: 'Most groups on Barbets are private and joined by invite code. Barbets also runs certain public groups (for example, campus groups, and the Sports groups described in Section 1) that anyone can join from a directory, without an invite code.' },
       { p: "Group owners run their groups. A group's owner can configure its settings, remove any member at any time for any reason, void markets, and rotate the group's invite code so a removed member cannot rejoin. If someone in your group is behaving badly, the group owner is the fastest line of moderation." },
       { p: "Public groups may also have one or more moderators, assigned by Barbets. A moderator has the same day-to-day authority as an owner over that group: they can create and void markets, remove members, and message the group. Moderators do not have an owner's ability to delete the group or change who owns it." },
       { p: "Invite codes are for people the group intends to invite. Do not attempt to guess, brute-force, or systematically test invite codes, and do not post a private group's invite code publicly without the owner's consent. The Service rate-limits invite-code attempts, and attempting to evade those limits violates these Terms." },

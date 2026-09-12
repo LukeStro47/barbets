@@ -31,8 +31,8 @@ export default async function NewMarketPage({
   // Public groups restrict hand-creating a market to mods/the owner — see
   // supabase/migrations/20260824120000_public_group_market_gates.sql. Same 404-not-403 posture
   // BottomNav's own pre-check and every other authorization gate in this app already uses.
-  // Sports/Weather mods (and the owner) are allowed through this same check as of
-  // 20260830180000 — no separate carve-out for those two groups anymore.
+  // NFL/CFB mods (and the owner) are allowed through this same check as of
+  // 20260830180000 — no separate carve-out for those groups anymore.
   if (group?.is_public && group.owner_id !== user.id && myMembership?.role !== 'moderator') {
     notFound();
   }

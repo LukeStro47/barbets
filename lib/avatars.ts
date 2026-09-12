@@ -22,7 +22,6 @@ export const GROUP_AVATARS = [
   { key: 'ticket', label: 'Ticket' },
   { key: 'trophy', label: 'Trophy' },
   { key: 'up', label: 'Up' },
-  { key: 'weather', label: 'Weather' },
 ] as const;
 
 export type GroupAvatarKey = (typeof GROUP_AVATARS)[number]['key'];

@@ -7,43 +7,32 @@ import { MarketCard, MarketRowList, type MarketCardData } from '@/components/mar
 import { loadMoreSettledMarkets } from '@/lib/actions/feed';
 import type { SettledCursor } from '@/lib/groupFeed';
 
-export type PipelineKind = 'sports' | 'weather';
-
-const COPY: Record<PipelineKind, { icon: string; badge: string; featuredLabel: string; historyLabel: string; emptyTitle: string }> = {
-  sports: { icon: '🏈', badge: '🏈 Game of the Week', featuredLabel: 'This week', historyLabel: 'Past picks', emptyTitle: 'No game yet' },
-  weather: { icon: '⛅', badge: '☔ Today’s weather', featuredLabel: 'Today', historyLabel: 'Past days', emptyTitle: 'No market yet' },
-};
+const COPY = { icon: '🏈', badge: '🏈 Game of the Week', featuredLabel: 'This week', historyLabel: 'Past picks', emptyTitle: 'No game yet' };
 
 /**
- * The NFL/CFB/Weather group hub feed: one always-featured market (this week's game, or today's
- * weather) instead of the ordinary Open/Pending/Settled tabs GroupMarketSections renders for
- * every other group. The featured slot always shows the most recent system market regardless of
- * status — open (still betting), closed (kickoff passed, no result yet), or already
- * resolved/voided — so the group never falls back to an empty "come back later" placeholder the
- * moment one settles; it just keeps showing that same market with its real outcome until the next
- * one replaces it. Everything older goes in the plain settled list below.
- *
- * Weather gets a visibly warmer/bigger treatment (the product ask was "more emphasis," since it's
- * the group's only market of the day); NFL/CFB get the same layout with a plain label instead —
- * see ARCHITECTURE.md's Phase 2 section.
+ * The NFL/CFB group hub feed: one always-featured market (this week's game) instead of the
+ * ordinary Open/Pending/Settled tabs GroupMarketSections renders for every other group. The
+ * featured slot always shows the most recent system market regardless of status — open (still
+ * betting), closed (kickoff passed, no result yet), or already resolved/voided — so the group
+ * never falls back to an empty "come back later" placeholder the moment one settles; it just
+ * keeps showing that same market with its real outcome until the next one replaces it. Everything
+ * older goes in the plain settled list below. See ARCHITECTURE.md's Phase 2 section.
  */
 export function PipelineGroupFeed({
   groupId,
-  kind,
   featured,
   history,
   historyNextCursor,
 }: {
   groupId: string;
-  kind: PipelineKind;
   /** The current system market, whatever its status — null only when this group has never
-   *  created one yet (a brand-new group before its first Tuesday/morning run). */
+   *  created one yet (a brand-new group before its first Tuesday run). */
   featured: MarketCardData | null;
   /** Settled markets older than `featured`, newest first. */
   history: MarketCardData[];
   historyNextCursor: SettledCursor | null;
 }) {
-  const copy = COPY[kind];
+  const copy = COPY;
   const [extraPages, setExtraPages] = useState<MarketCardData[][]>([]);
   const [cursor, setCursor] = useState<SettledCursor | null>(historyNextCursor);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -77,19 +66,12 @@ export function PipelineGroupFeed({
       <div className="flex flex-col gap-2">
         <h2 className="ml-1 text-xs font-bold uppercase tracking-[0.08em] text-espresso-400">{copy.featuredLabel}</h2>
         {featured ? (
-          kind === 'weather' ? (
-            <div className="rounded-[24px] border border-honey-200 bg-honey-50 p-2.5">
-              <p className="px-2 pt-1 pb-2 text-[10px] font-extrabold tracking-wide text-honey-800 uppercase">{copy.badge}</p>
-              <MarketCard market={featured} />
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <span className="ml-1 inline-flex w-fit items-center rounded-full bg-honey-100 px-2.5 py-1 text-[10px] font-extrabold tracking-wide text-honey-800 uppercase">
-                {copy.badge}
-              </span>
-              <MarketCard market={featured} />
-            </div>
-          )
+          <div className="flex flex-col gap-2">
+            <span className="ml-1 inline-flex w-fit items-center rounded-full bg-honey-100 px-2.5 py-1 text-[10px] font-extrabold tracking-wide text-honey-800 uppercase">
+              {copy.badge}
+            </span>
+            <MarketCard market={featured} />
+          </div>
         ) : (
           <EmptyState icon={copy.icon} title={copy.emptyTitle} />
         )}
