@@ -3,7 +3,6 @@ import { requireUser } from '@/lib/supabase/server';
 import { createClient } from '@/lib/supabase/server';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { DiscoverGroupCard } from '@/components/groups/DiscoverGroupCard';
-import { RequestGroupForm } from '@/components/groups/RequestGroupForm';
 import { CaretLeftIcon } from '@/components/ui/icons';
 import { listPublicGroups } from '@/lib/actions/discover';
 import { isHomeSurfacePublicGroup, publicGroupSettlesCopy } from '@/lib/publicGroups';
@@ -15,8 +14,7 @@ import { numberWordCapitalized } from '@/lib/formatNumber';
  * is the one group listing in this app that isn't gated by membership (see list_public_groups()).
  *
  * Scoped to the sports/weather pipeline groups only (see isHomeSurfacePublicGroup()) — a
- * 'campus' public group, if one ever exists, isn't browsable here; the request form below is the
- * only path for a school-specific ask.
+ * 'campus' public group, if one ever exists, isn't browsable here.
  */
 export default async function DiscoverGroupsPage({ searchParams }: { searchParams: Promise<{ all?: string }> }) {
   const { all } = await searchParams;
@@ -60,7 +58,7 @@ export default async function DiscoverGroupsPage({ searchParams }: { searchParam
         </div>
 
         {groups.length === 0 ? (
-          <EmptyState icon="🔍" title="Nothing open right now" subtitle="Check back soon, or request a group below." />
+          <EmptyState icon="🔍" title="Nothing open right now" subtitle="Check back soon." />
         ) : (
           <div className="flex flex-col gap-[18px]">
             {groups.map((g) => (
@@ -80,8 +78,6 @@ export default async function DiscoverGroupsPage({ searchParams }: { searchParam
             ))}
           </div>
         )}
-
-        <RequestGroupForm />
       </div>
     </main>
   );
