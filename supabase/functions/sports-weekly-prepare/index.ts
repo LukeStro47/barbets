@@ -89,9 +89,15 @@ async function pingAdmin(newlyPrepared: { label: string; count: number }[]) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        text: `🏈 This week's Game of the Week candidates are ready to pick.`,
+        text: `🏈 <!channel> This week's Game of the Week candidates are ready to pick.`,
         blocks: [
           { type: 'header', text: { type: 'plain_text', text: '🏈 Game of the Week', emoji: true } },
+          {
+            // <!channel> only notifies here, inside an mrkdwn block -- the header above is
+            // plain_text and would render it as literal characters instead of a real mention.
+            type: 'section',
+            text: { type: 'mrkdwn', text: `<!channel> this week's candidates are ready to pick.` },
+          },
           {
             type: 'section',
             fields: newlyPrepared.map((p) => ({ type: 'mrkdwn', text: `*${p.label}:*\n${p.count} candidate${p.count === 1 ? '' : 's'}` })),
