@@ -49,6 +49,25 @@ function marketTitle(home: string, away: string): string {
   return `${home} vs. ${away}`;
 }
 
+/** "Game starts at Sat, Sep 12, 7:30 PM ET" -- fixed to Eastern since that's the one time zone
+    every NFL/CFB broadcast schedule is already quoted in, and this copy is baked into the
+    market's description once at creation, not reformatted per viewer the way closes_at is. */
+function formatGameTime(commenceTime: string): string {
+  const formatted = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(commenceTime));
+  return `${formatted} ET`;
+}
+
+function resolutionCriteria(commenceTime: string): string {
+  return `Game starts at ${formatGameTime(commenceTime)}. Market resolves automatically after, with a tie resolving as a void.`;
+}
+
 async function stableId(input: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
   const bytes = new Uint8Array(digest).slice(0, 16);
@@ -114,7 +133,7 @@ Deno.serve(async () => {
       const { data: market, error: createErr } = await admin.rpc('_create_system_market', {
         p_group_id: row.group_id,
         p_title: marketTitle(chosen.home, chosen.away),
-        p_description: `Auto-generated Game of the Week pick from The Odds API. Resolves once the game is final; a tie voids the market.`,
+        p_description: resolutionCriteria(chosen.commence_time),
         p_market_type: 'multiple_choice',
         p_closes_at: chosen.commence_time,
         p_options: [chosen.home, chosen.away],
