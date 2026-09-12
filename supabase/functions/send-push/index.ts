@@ -16,7 +16,29 @@ const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 webpush.setVapidDetails('mailto:barbets-app@example.com', VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
-const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+// Diagnostic experiment, added 2026-09-12: PostgREST has been killing a growing share of this
+// function's calls with "Thread killed by timeout manager" (surfaces here as a 504 "Gateway
+// Timeout"), climbing from ~1/hour to 40-60/hour over the prior day with no matching code or
+// migration change. Postgres itself shows no long-running query and plenty of headroom on
+// connections, so this isn't a slow query - the leading theory is this isolate reusing a
+// keep-alive HTTP connection that PostgREST (or something in front of it) has already torn down,
+// which then hangs until PostgREST's own timeout kills it. `Connection: close` asks whatever this
+// client talks to directly to close the socket after every response, so the next call always
+// opens fresh instead of risking a stale one.
+//
+// This is unproven - test, not fix, until the numbers say otherwise. Judge it by comparing the
+// 504 rate on claim_notification_events/claim_unreported_sweep_failures before and after this
+// shipped, e.g.:
+//   select toStartOfHour(timestamp) as hour,
+//          countIf(event_message like 'POST | 504%claim_%') as failed,
+//          countIf(event_message like 'POST | 200%claim_%') as ok
+//   from logs where source = 'edge_logs' and event_message like '%rest/v1/rpc/claim_%'
+//   group by hour order by hour desc
+// If the rate doesn't drop after a few days of comparable traffic, remove this and treat a
+// reused connection as ruled out rather than leaving unproven dead weight in place.
+const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+  global: { headers: { Connection: 'close' } },
+});
 
 // How many queued events one run takes. This sat at 50 for as long as a run was
 // serial and claimed nothing: 50 was a guess at what fits inside one cron minute,
