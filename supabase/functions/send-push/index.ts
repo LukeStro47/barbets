@@ -211,22 +211,27 @@ function lookup<T>(key: string, load: () => Promise<T>): Promise<T> {
   return pending;
 }
 
-function groupRow(groupId: string): Promise<{ name: string }> {
+// Returns null rather than throwing when the row is gone: delete_group() is an immediate,
+// unscheduled delete (20260806140000_delete_group_immediate.sql) that cascades to markets and
+// to notification_events itself, but a run can have already claimed an event a split second
+// before the group behind it disappears. claim_notification_events already marked that event
+// processed, so there is no retry coming - the caller treats a missing group/market as "nothing
+// left to notify about" and skips the one push, same as the existing `!event.market_id` check.
+function groupRow(groupId: string): Promise<{ name: string } | null> {
   return lookup(`group:${groupId}`, async () => {
     const { data } = await admin.from('groups').select('name').eq('id', groupId).single();
-    return data as { name: string };
+    return (data as { name: string } | null) ?? null;
   });
 }
 
-function marketAndGroup(marketId: string) {
-  return lookup(`marketAndGroup:${marketId}`, async () => {
-    const { data: market } = await admin
+function marketRow(marketId: string) {
+  return lookup(`market:${marketId}`, async () => {
+    const { data } = await admin
       .from('markets')
       .select('title, group_id, market_type, outcome, outcome_option_id')
       .eq('id', marketId)
       .single();
-    const group = await groupRow(market!.group_id);
-    return { market: market!, group };
+    return data as { title: string; group_id: string; market_type: string; outcome: string | null; outcome_option_id: string | null } | null;
   });
 }
 
@@ -250,9 +255,13 @@ function resolutionWindowLabel(groupId: string): Promise<string> {
 }
 
 async function buildContent(event: NotificationEvent, isSubject: boolean, winnings?: number | null, staked?: number | null): Promise<Content | null> {
+  // Every branch below needs the group, and every branch treats a missing one the same way
+  // (skip the push), so it's resolved once here instead of at each of the ~15 call sites.
+  const group = await groupRow(event.group_id);
+  if (!group) return null;
+
   if (event.event_type === 'season_ended') {
     const { data: season } = await admin.from('seasons').select('number').eq('id', event.season_id).single();
-    const group = await groupRow(event.group_id);
     return {
       title: group.name,
       body: `Season ${season!.number} just wrapped up. Check the final standings and start the next one when you're ready.`,
@@ -261,7 +270,6 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
   }
 
   if (event.event_type === 'betting_opened') {
-    const group = await groupRow(event.group_id);
     return {
       title: group.name,
       body: 'Betting just opened. Be the first to start a market.',
@@ -270,7 +278,6 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
   }
 
   if (event.event_type === 'member_joined') {
-    const group = await groupRow(event.group_id);
     const { data: member } = await admin.from('memberships').select('nickname').eq('group_id', event.group_id).eq('user_id', event.actor_id).single();
     return {
       title: group.name,
@@ -282,7 +289,6 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
   }
 
   if (event.event_type === 'assigned_group_moderator') {
-    const group = await groupRow(event.group_id);
     return {
       title: group.name,
       body: `You're now a moderator of ${group.name}. You can create markets and remove bad actors.`,
@@ -291,7 +297,6 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
   }
 
   if (event.event_type === 'group_deletion_scheduled') {
-    const group = await groupRow(event.group_id);
     return {
       title: group.name,
       body: `The owner deleted ${group.name}. Every open market was refunded, and the group itself is gone for good in 5 days unless they undo it.`,
@@ -300,7 +305,6 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
   }
 
   if (event.event_type === 'group_deletion_canceled') {
-    const group = await groupRow(event.group_id);
     return {
       title: group.name,
       body: `False alarm, the owner canceled the deletion of ${group.name}.`,
@@ -309,7 +313,6 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
   }
 
   if (event.event_type === 'season_betting_opened') {
-    const group = await groupRow(event.group_id);
     return {
       title: group.name,
       body: 'Betting just opened for the season. Time to start a market.',
@@ -318,7 +321,6 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
   }
 
   if (event.event_type === 'group_deletion_scheduled_inactivity') {
-    const group = await groupRow(event.group_id);
     return {
       title: group.name,
       body: `Nobody's started a new season in ${group.name} for 30 days, so it'll be deleted for good in 5 days unless someone continues it.`,
@@ -334,7 +336,6 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
   // to actually stop this once it's scheduled is the owner calling
   // cancel_group_deletion() from the banner on the group page.
   if (event.event_type === 'group_deletion_notice_14d') {
-    const group = await groupRow(event.group_id);
     return {
       title: group.name,
       body: `Nobody's started a market or placed a bet in ${group.name} for 90 days, so it'll be deleted for good in 14 days unless the owner cancels it.`,
@@ -343,7 +344,6 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
   }
 
   if (event.event_type === 'group_deletion_notice_7d') {
-    const group = await groupRow(event.group_id);
     return {
       title: group.name,
       body: `${group.name} will be deleted for inactivity in 7 days unless the owner cancels it.`,
@@ -352,7 +352,6 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
   }
 
   if (event.event_type === 'group_deletion_notice_1d') {
-    const group = await groupRow(event.group_id);
     return {
       title: group.name,
       body: `${group.name} will be deleted for inactivity tomorrow unless the owner cancels it.`,
@@ -361,7 +360,6 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
   }
 
   if (event.event_type === 'group_titles_updated') {
-    const group = await groupRow(event.group_id);
     return {
       title: group.name,
       body: 'The Awards just shuffled. See who holds what now.',
@@ -373,7 +371,6 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
   // fires it for groups with nothing open), so it deep-links straight to the create form
   // rather than to a group page that has nothing on it worth landing on.
   if (event.event_type === 'weekend_nudge') {
-    const group = await groupRow(event.group_id);
     return {
       title: group.name,
       body: "Weekend's nearly here. Anyone up to something worth betting on?",
@@ -386,7 +383,6 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
   // in the migration that introduced this event type. No market_id to link to (several markets,
   // not one), so this deep-links at the group itself.
   if (event.event_type === 'system_markets_opened') {
-    const group = await groupRow(event.group_id);
     return {
       title: group.name,
       body: `New markets just opened in ${group.name}. Take a look and get your bets in.`,
@@ -403,7 +399,8 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
   }
 
   if (!event.market_id) return null;
-  const { market, group } = await marketAndGroup(event.market_id);
+  const market = await marketRow(event.market_id);
+  if (!market) return null;
   const url = `/groups/${event.group_id}/markets/${event.market_id}`;
   const revealUrl = `${url}/reveal`;
 
