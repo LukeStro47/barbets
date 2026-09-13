@@ -14,6 +14,14 @@ const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY')!;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+// This function is deployed --no-verify-jwt (pg_cron's net.http_post call carries no Supabase
+// auth token), which means the bare URL is otherwise callable by anyone on the internet with no
+// auth at all. CRON_SECRET is a value only pg_cron's own scheduled call knows (set as a header in
+// the migration that schedules this job, sourced from Vault so the value itself never lands in a
+// git-committed migration file) -- see ARCHITECTURE.md's note on the 2026-09-13 incident this
+// closes.
+const CRON_SECRET = Deno.env.get('CRON_SECRET');
+
 webpush.setVapidDetails('mailto:barbets-app@example.com', VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
@@ -901,7 +909,11 @@ async function reportSweepFailures() {
   }
 }
 
-Deno.serve(async (_req) => {
+Deno.serve(async (req) => {
+  if (!CRON_SECRET || req.headers.get('x-cron-secret') !== CRON_SECRET) {
+    return new Response('unauthorized', { status: 401 });
+  }
+
   reportedThisRun.clear();
   runLookups = new Map();
 

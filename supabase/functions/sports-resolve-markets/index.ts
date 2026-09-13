@@ -19,6 +19,15 @@ const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ODDS_API_KEY = Deno.env.get('ODDS_API_KEY')!;
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
+// This function is deployed --no-verify-jwt (pg_cron's net.http_post call carries no Supabase
+// auth token), which means the bare URL is otherwise callable by anyone on the internet with no
+// auth at all. CRON_SECRET is a value only pg_cron's own scheduled call knows (set as a header in
+// the migration that schedules this job, sourced from Vault so the value itself never lands in a
+// git-committed migration file) -- see ARCHITECTURE.md's note on the 2026-09-13 incident this
+// closes: an internet scanner probing for an open LLM API landed on this pipeline's sibling
+// functions (sports-weekly-prepare/publish) and ran their real logic with no auth required.
+const CRON_SECRET = Deno.env.get('CRON_SECRET');
+
 const LEAGUES: { oddsApiSport: string; groupName: string }[] = [
   { oddsApiSport: 'americanfootball_nfl', groupName: 'NFL' },
   { oddsApiSport: 'americanfootball_ncaaf', groupName: 'CFB' },
@@ -63,7 +72,11 @@ async function recordFailure(subject: string, err: unknown) {
   if (error) console.error(`recordFailure itself failed for ${subject}:`, error.message);
 }
 
-Deno.serve(async () => {
+Deno.serve(async (req) => {
+  if (!CRON_SECRET || req.headers.get('x-cron-secret') !== CRON_SECRET) {
+    return new Response('unauthorized', { status: 401 });
+  }
+
   const { data: setting } = await admin.from('pipeline_settings').select('enabled').eq('pipeline', 'sports').single();
   if (!setting?.enabled) return new Response('sports pipeline disabled', { status: 200 });
 
