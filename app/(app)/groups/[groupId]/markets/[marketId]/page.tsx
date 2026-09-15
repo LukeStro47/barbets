@@ -118,11 +118,14 @@ export default async function MarketDetailPage({
   const subjectUserIds = (subjectRows ?? []).map((s) => s.user_id);
   const ownerIsSubject = !!group?.owner_id && subjectUserIds.includes(group.owner_id);
   const clarifications = clarificationRows ?? [];
+  // Drop nulls before the `.in()` — system markets have creator_id = null, and a null in the
+  // list makes PostgREST reject/empty the whole membership lookup (see the reveal page's twin).
   const namedUserIds = [
-    marketRow.creator_id,
-    ...(marketRow.sponsor_id ? [marketRow.sponsor_id] : []),
-    ...subjectUserIds,
-    ...clarifications.map((c) => c.requester_id),
+    ...new Set(
+      [marketRow.creator_id, marketRow.sponsor_id, ...subjectUserIds, ...clarifications.map((c) => c.requester_id)].filter(
+        (id): id is string => id != null
+      )
+    ),
   ];
   const { data: namedMembers } =
     namedUserIds.length > 0

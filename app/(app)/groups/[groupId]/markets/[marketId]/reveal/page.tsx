@@ -50,13 +50,20 @@ export default async function RevealPage({ params }: { params: Promise<{ groupId
   const optionLabelById = (id: string) => marketOptions?.find((o) => o.id === id)?.label ?? '?';
 
   const subjectUserIds = (subjectRows ?? []).map((s) => s.user_id);
+  // Drop nulls before the `.in()` — system markets have creator_id = null (and deleted
+  // accounts null bets.user_id / reaction user_id). PostgREST rejects or empties an `in`
+  // list that contains null, which used to make every bettor render as "@?" on the ticket.
   const namedUserIds = [
-    marketRow.creator_id,
-    ...(marketRow.sponsor_id ? [marketRow.sponsor_id] : []),
-    ...(bets ?? []).map((b) => b.user_id),
-    ...subjectUserIds,
-    ...(reactionRows ?? []).map((r) => r.user_id),
-    ...(user ? [user.id] : []),
+    ...new Set(
+      [
+        marketRow.creator_id,
+        marketRow.sponsor_id,
+        ...(bets ?? []).map((b) => b.user_id),
+        ...subjectUserIds,
+        ...(reactionRows ?? []).map((r) => r.user_id),
+        user?.id,
+      ].filter((id): id is string => id != null)
+    ),
   ];
   const { data: namedMembers } =
     namedUserIds.length > 0
