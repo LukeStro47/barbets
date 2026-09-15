@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { cn } from '@/lib/cn';
 import { ChevronRightIcon } from '@/components/ui/icons';
 
@@ -80,6 +81,52 @@ export function StatusPill({ children, tone = 'dark' }: { children: React.ReactN
 /** Classes for the button/link that wraps `NavRowContent` — a whole row that opens something else. */
 export const settingsNavRowClasses =
   'flex w-full items-start justify-between gap-3.5 px-4 py-[13px] text-left transition-colors hover:bg-espresso-50/60';
+
+/** Front-door rows on Manage group: slightly taller than a control row, current value as the subtitle. */
+export const manageNavRowClasses =
+  'flex w-full items-center justify-between gap-3.5 px-4 py-[15px] text-left transition-colors hover:bg-espresso-50/60';
+
+export function ManageNavRow({
+  href,
+  onClick,
+  title,
+  subtitle,
+  trailing,
+  highlight,
+}: {
+  href?: string;
+  onClick?: () => void;
+  title: string;
+  subtitle: React.ReactNode;
+  trailing?: React.ReactNode;
+  highlight?: boolean;
+}) {
+  const className = cn(manageNavRowClasses, highlight && 'bg-[#fdf6ea] hover:bg-honey-50');
+  const inner = (
+    <>
+      <span className="min-w-0">
+        <span className="block truncate text-[14.5px] font-bold text-espresso-800">{title}</span>
+        <span className="mt-0.5 block truncate text-xs leading-[1.45] text-espresso-400">{subtitle}</span>
+      </span>
+      <span className="flex shrink-0 items-center gap-2">
+        {trailing}
+        <ChevronRightIcon className="h-3.5 w-2 text-espresso-300" />
+      </span>
+    </>
+  );
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {inner}
+      </Link>
+    );
+  }
+  return (
+    <button type="button" onClick={onClick} className={className}>
+      {inner}
+    </button>
+  );
+}
 
 export function NavRowContent({
   label,

@@ -41,7 +41,7 @@ export function PageHeader({
         <h1 className="min-w-0 font-display text-[26px] leading-[1.15] font-extrabold tracking-[-0.02em] text-espresso-950">{title}</h1>
         {action}
       </div>
-      {subtitle && <p className="text-espresso-500">{subtitle}</p>}
+      {subtitle && <p className="text-[13px] leading-[1.4] text-espresso-400">{subtitle}</p>}
     </div>
   );
 }

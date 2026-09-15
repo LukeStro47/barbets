@@ -387,3 +387,43 @@
     box-shadow: none;
   }
 }
+
+/* LiveRulesForm challenge-window slider: 6px track, honey fill driven by --fill, 20px thumb. */
+.challenge-window-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--color-honey-500) 0%,
+    var(--color-honey-500) var(--fill, 0%),
+    var(--color-espresso-100) var(--fill, 0%),
+    var(--color-espresso-100) 100%
+  );
+}
+.challenge-window-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 20px;
+  width: 20px;
+  border-radius: 999px;
+  background: var(--color-paper-white);
+  border: 1.5px solid var(--color-honey-600);
+  box-shadow: 0 1px 3px rgba(28, 19, 13, 0.3);
+  cursor: pointer;
+}
+.challenge-window-slider::-moz-range-thumb {
+  height: 20px;
+  width: 20px;
+  border-radius: 999px;
+  background: var(--color-paper-white);
+  border: 1.5px solid var(--color-honey-600);
+  box-shadow: 0 1px 3px rgba(28, 19, 13, 0.3);
+  cursor: pointer;
+}
+.challenge-window-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: transparent;
+}

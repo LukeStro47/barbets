@@ -38,7 +38,29 @@ export function InviteQrButton({ inviteCode, groupName }: { inviteCode: string; 
   );
 }
 
-function InviteQrScreen({ inviteCode, groupName, onClose }: { inviteCode: string; groupName: string; onClose: () => void }) {
+/** Icon-only trigger for the same full-screen QR, used on the Manage group invite card. */
+export function InviteQrIconButton({
+  inviteCode,
+  groupName,
+  className,
+}: {
+  inviteCode: string;
+  groupName: string;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} className={className} aria-label="Show QR code">
+        <QrCodeIcon className="h-[17px] w-[17px]" />
+      </button>
+      {open && <InviteQrScreen inviteCode={inviteCode} groupName={groupName} onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+export function InviteQrScreen({ inviteCode, groupName, onClose }: { inviteCode: string; groupName: string; onClose: () => void }) {
   const [dataUrl, setDataUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 

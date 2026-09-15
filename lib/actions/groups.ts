@@ -93,7 +93,7 @@ export async function renameGroup(groupId: string, name: string): Promise<Action
   const result = await runRpc<Group>(await supabase.rpc('rename_group', { p_group_id: groupId, p_name: name }));
   if (result.error) return result;
   revalidatePath(`/groups/${groupId}`);
-  revalidatePath(`/groups/${groupId}/settings`);
+  revalidatePath(`/groups/${groupId}/settings`, 'layout');
   revalidatePath('/groups');
   return result;
 }
@@ -104,7 +104,7 @@ export async function setGroupAvatar(groupId: string, avatarKey: string | null):
   const result = await runRpc<Group>(await supabase.rpc('set_group_avatar', { p_group_id: groupId, p_avatar_key: avatarKey }));
   if (result.error) return result;
   revalidatePath(`/groups/${groupId}`);
-  revalidatePath(`/groups/${groupId}/settings`);
+  revalidatePath(`/groups/${groupId}/settings`, 'layout');
   revalidatePath('/groups');
   revalidatePath('/profile');
   return result;
@@ -117,6 +117,7 @@ export async function updateNickname(groupId: string, nickname: string): Promise
   );
   if (result.error) return result;
   revalidatePath(`/groups/${groupId}`);
+  revalidatePath(`/groups/${groupId}/settings`, 'layout');
   return result;
 }
 
@@ -124,7 +125,7 @@ export async function removeMember(groupId: string, targetUserId: string): Promi
   const supabase = await createClient();
   const result = await runRpc<null>(await supabase.rpc('remove_member', { p_group_id: groupId, p_target_user_id: targetUserId }));
   if (result.error) return result;
-  revalidatePath(`/groups/${groupId}/settings`);
+  revalidatePath(`/groups/${groupId}/settings`, 'layout');
   // Also reachable from the Season N+1 setup card on the group hub itself (see
   // SeasonSetupEditSheet), not just /settings — revalidate both, same as transferOwnership below.
   revalidatePath(`/groups/${groupId}`);
@@ -202,7 +203,7 @@ export async function updateGroupSettings(
     })
   );
   if (result.error) return result;
-  revalidatePath(`/groups/${groupId}/settings`);
+  revalidatePath(`/groups/${groupId}/settings`, 'layout');
   revalidatePath(`/groups/${groupId}`);
   return result;
 }
@@ -214,7 +215,7 @@ export async function openBetting(groupId: string): Promise<ActionResult<GroupSe
   const result = await runRpc<GroupSettings>(await supabase.rpc('open_betting', { p_group_id: groupId }));
   if (result.error) return result;
   revalidatePath(`/groups/${groupId}`);
-  revalidatePath(`/groups/${groupId}/settings`);
+  revalidatePath(`/groups/${groupId}/settings`, 'layout');
   return result;
 }
 
@@ -231,7 +232,7 @@ export async function transferOwnership(groupId: string, newOwnerUserId: string)
     await supabase.rpc('transfer_ownership', { p_group_id: groupId, p_new_owner_id: newOwnerUserId })
   );
   if (result.error) return result;
-  revalidatePath(`/groups/${groupId}/settings`);
+  revalidatePath(`/groups/${groupId}/settings`, 'layout');
   revalidatePath(`/groups/${groupId}`);
   return result;
 }
@@ -242,7 +243,7 @@ export async function deleteGroup(groupId: string): Promise<ActionResult<Group>>
   const result = await runRpc<Group>(await supabase.rpc('delete_group', { p_group_id: groupId }));
   if (result.error) return result;
   revalidatePath(`/groups/${groupId}`);
-  revalidatePath(`/groups/${groupId}/settings`);
+  revalidatePath(`/groups/${groupId}/settings`, 'layout');
   revalidatePath('/groups');
   return result;
 }
@@ -252,7 +253,7 @@ export async function cancelGroupDeletion(groupId: string): Promise<ActionResult
   const result = await runRpc<Group>(await supabase.rpc('cancel_group_deletion', { p_group_id: groupId }));
   if (result.error) return result;
   revalidatePath(`/groups/${groupId}`);
-  revalidatePath(`/groups/${groupId}/settings`);
+  revalidatePath(`/groups/${groupId}/settings`, 'layout');
   return result;
 }
 
@@ -260,7 +261,7 @@ export async function regenerateInviteCode(groupId: string): Promise<ActionResul
   const supabase = await createClient();
   const result = await runRpc<Group>(await supabase.rpc('regenerate_invite_code', { p_group_id: groupId }));
   if (result.error) return result;
-  revalidatePath(`/groups/${groupId}/settings`);
+  revalidatePath(`/groups/${groupId}/settings`, 'layout');
   revalidatePath(`/groups/${groupId}`);
   return result;
 }

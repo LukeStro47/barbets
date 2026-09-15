@@ -10,7 +10,14 @@ import { GROUP_AVATARS } from '@/lib/avatars';
 import { SEASON_LENGTH_SHORT_LABEL, SEASON_LENGTH_HINTS, type SeasonLength } from '@/lib/seasonLength';
 import { COMMON_TIMEZONES, friendlyTimezoneName } from '@/lib/timezone';
 import { formatTokens, formatTokenInputValue } from '@/lib/formatNumber';
-import { GROUP_NAME_MAX_LENGTH, SEASON_NAME_MAX_LENGTH, TOKEN_ALLOCATION_MAX, PRIZE_MAX_LENGTH, PUNISHMENT_MAX_LENGTH } from '@/lib/limits';
+import {
+  GROUP_NAME_MAX_LENGTH,
+  SEASON_NAME_MAX_LENGTH,
+  TOKEN_ALLOCATION_MAX,
+  JOIN_MESSAGE_MAX_LENGTH,
+  PRIZE_MAX_LENGTH,
+  PUNISHMENT_MAX_LENGTH,
+} from '@/lib/limits';
 import { JUST_JOINED_GROUP_KEY } from '@/components/pwa/PushReminderModal';
 import { cn } from '@/lib/cn';
 
@@ -177,6 +184,7 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
   const [distributePayout, setDistributePayout] = useState(false);
   const [creatorPayoutPct, setCreatorPayoutPct] = useState(25);
   const [resolutionWindowHours, setResolutionWindowHours] = useState(2);
+  const [joinMessage, setJoinMessage] = useState('');
   const [prizeText, setPrizeText] = useState('');
   const [punishmentText, setPunishmentText] = useState('');
 
@@ -230,6 +238,7 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
           allowHedgedBets,
           resolutionWindowHours,
           requireEndorsement,
+          joinMessage: joinMessage.trim() || null,
           awardsEnabled: true,
           prizeText: prizeText.trim() || null,
           punishmentText: punishmentText.trim() || null,
@@ -395,30 +404,19 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
           </p>
         </div>
 
-        <SectionCard title="Stakes" hint="Optional. Shown to everyone in the group.">
-          <div className="mt-3 flex flex-col gap-3">
-            <label className="block">
-              <span className="block text-[11px] font-bold text-espresso-500">Prize</span>
-              <textarea
-                value={prizeText}
-                onChange={(e) => setPrizeText(e.target.value)}
-                maxLength={PRIZE_MAX_LENGTH}
-                rows={2}
-                placeholder="Winner picks the next group outing."
-                className="mt-1 block w-full rounded-xl border border-espresso-200 bg-paper-white px-3 py-2.5 text-sm font-bold text-espresso-950 focus:border-honey-500 focus:outline-none"
-              />
-            </label>
-            <label className="block">
-              <span className="block text-[11px] font-bold text-espresso-500">Punishment</span>
-              <textarea
-                value={punishmentText}
-                onChange={(e) => setPunishmentText(e.target.value)}
-                maxLength={PUNISHMENT_MAX_LENGTH}
-                rows={2}
-                placeholder="Loser buys the first round next time."
-                className="mt-1 block w-full rounded-xl border border-espresso-200 bg-paper-white px-3 py-2.5 text-sm font-bold text-espresso-950 focus:border-honey-500 focus:outline-none"
-              />
-            </label>
+        <SectionCard title="Join message" hint="Optional. Shown in a modal to a new member right after they join.">
+          <div className="mt-3">
+            <textarea
+              value={joinMessage}
+              onChange={(e) => setJoinMessage(e.target.value)}
+              maxLength={JOIN_MESSAGE_MAX_LENGTH}
+              rows={3}
+              placeholder="Welcome to the group. House rule: no crying about bad beats."
+              className="mt-1 block w-full rounded-xl border border-espresso-200 bg-paper-white px-3 py-2.5 text-sm font-bold text-espresso-950 focus:border-honey-500 focus:outline-none"
+            />
+            <span className="mt-1 block text-right text-[11px] text-espresso-400">
+              {joinMessage.length} / {JOIN_MESSAGE_MAX_LENGTH}
+            </span>
           </div>
         </SectionCard>
 
@@ -593,6 +591,33 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
               </div>
             )}
           </div>
+
+          <SectionCard title="Prize / Punishment" hint="Optional, but this is the fun part. Shown to everyone in the group.">
+            <div className="mt-3 flex flex-col gap-3">
+              <label className="block">
+                <span className="block text-[11px] font-bold text-espresso-500">Prize</span>
+                <textarea
+                  value={prizeText}
+                  onChange={(e) => setPrizeText(e.target.value)}
+                  maxLength={PRIZE_MAX_LENGTH}
+                  rows={2}
+                  placeholder="Winner picks the next group outing."
+                  className="mt-1 block w-full rounded-xl border border-espresso-200 bg-paper-white px-3 py-2.5 text-sm font-bold text-espresso-950 focus:border-honey-500 focus:outline-none"
+                />
+              </label>
+              <label className="block">
+                <span className="block text-[11px] font-bold text-espresso-500">Punishment</span>
+                <textarea
+                  value={punishmentText}
+                  onChange={(e) => setPunishmentText(e.target.value)}
+                  maxLength={PUNISHMENT_MAX_LENGTH}
+                  rows={2}
+                  placeholder="Loser buys the first round next time."
+                  className="mt-1 block w-full rounded-xl border border-espresso-200 bg-paper-white px-3 py-2.5 text-sm font-bold text-espresso-950 focus:border-honey-500 focus:outline-none"
+                />
+              </label>
+            </div>
+          </SectionCard>
 
           <SectionCard title="Time zone" hint="Shown next to every closing time.">
             <div className="relative mt-2.5 flex items-center gap-2.5 rounded-[14px] border border-espresso-200 px-[15px] py-3">

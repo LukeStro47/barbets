@@ -89,8 +89,7 @@ export default async function LeaderboardPage({
   members.sort((a, b) => b.balance - a.balance);
 
   const isOwner = group?.owner_id === user?.id;
-  const myMembershipRole = members.find((m) => m.user_id === user?.id)?.role;
-  const canEditStakes = isOwner || (!!group?.is_public && myMembershipRole === 'moderator');
+  const canEditStakes = isOwner && !group?.is_public;
 
   // One batched lookup for every member's avatar rather than a query inside the row loop below
   // (see lib/groupFeed.ts's "no query inside a per-market loop" rule, same idea applied here).
