@@ -24,7 +24,7 @@ import { WindingDownCard } from '@/components/groups/WindingDownCard';
 import { Mention } from '@/components/ui/Mention';
 import { GroupAvatar } from '@/components/ui/GroupAvatar';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
-import { SettingsIcon, InfoIcon } from '@/components/ui/icons';
+import { CaretDownIcon } from '@/components/ui/icons';
 import { formatTokens } from '@/lib/formatNumber';
 import { getGroupTasks } from '@/lib/tasks';
 import { TITLE_ORDER, TITLE_META, type GroupTitleRow } from '@/lib/titles';
@@ -32,24 +32,22 @@ import { diffTitleSnapshots, type TitleSnapshotEntry } from '@/lib/seasonTitleDi
 import type { GroupSettings } from '@/lib/actions/groups';
 import { PipelineGroupFeed } from '@/components/groups/PipelineGroupFeed';
 
-// 44px, a real tap target rather than a decorative chip — it's the only control in this header
-// now that "My bets" has gone, and it's the way into everything about the group.
-const iconLinkClass =
-  'flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-espresso-50 text-espresso-500 transition-colors hover:bg-espresso-100 hover:text-espresso-700 active:scale-[0.92]';
-
-function GroupHeader({ groupId, group, isOwner }: { groupId: string; group: { name: string; avatar_key: string | null }; isOwner: boolean }) {
+function GroupHeader({ groupId, group }: { groupId: string; group: { name: string; avatar_key: string | null } }) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <div className="flex min-w-0 items-center gap-2.5">
-        {group.avatar_key && <GroupAvatar name={group.name} avatarKey={group.avatar_key} className="h-12 w-12" />}
-        <h1 className="min-w-0 font-display text-[24px] leading-tight font-bold tracking-[-0.02em] text-espresso-950">{group.name}</h1>
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <Link href={`/groups/${groupId}/settings`} className={iconLinkClass} aria-label={isOwner ? 'Settings' : 'Group info'}>
-          {isOwner ? <SettingsIcon className="h-5 w-5" /> : <InfoIcon className="h-5 w-5" />}
-        </Link>
-      </div>
-    </div>
+    <Link
+      href={`/groups/${groupId}/settings`}
+      className="flex min-h-11 min-w-0 items-center gap-2.5"
+      aria-label={`Manage ${group.name}`}
+    >
+      <GroupAvatar
+        name={group.name}
+        avatarKey={group.avatar_key}
+        className="h-10 w-10 text-[11px]"
+        fallbackClassName="bg-espresso-900 text-honey-300"
+      />
+      <h1 className="min-w-0 truncate font-display text-[20px] font-bold tracking-[-0.02em] text-espresso-950">{group.name}</h1>
+      <CaretDownIcon className="h-[15px] w-[15px] shrink-0 text-espresso-300" />
+    </Link>
   );
 }
 
@@ -196,7 +194,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
 
     return (
       <main className="mx-auto max-w-lg px-5 pt-[22px] pb-[110px]">
-        <GroupHeader groupId={groupId} group={group!} isOwner={isOwner} />
+        <GroupHeader groupId={groupId} group={group!} />
 
         <div className="mt-[18px] flex flex-col gap-4">
           {group!.deletion_scheduled_at && (
@@ -349,7 +347,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
     <main className="mx-auto max-w-lg px-5 py-[22px]">
       <SaveBalanceSnapshot groupId={groupId} groupName={group!.name} balance={membership?.balance ?? 0} />
       <div className="flex flex-col gap-1.5">
-        <GroupHeader groupId={groupId} group={group!} isOwner={isOwner} />
+        <GroupHeader groupId={groupId} group={group!} />
         {season && season.status === 'active' && (
           <div className="flex items-center gap-2 text-[13px] font-medium text-espresso-400">
             <span>{season.name ?? `Season ${season.number}`}</span>

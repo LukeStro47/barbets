@@ -12,12 +12,10 @@ import { initials } from '@/lib/initials';
 import { cn } from '@/lib/cn';
 
 /**
- * The identity row's "Edit" control: the group's name, its logo, and (when there's an active
- * season) that season's name, in one sheet — replacing the two always-open cards that used to sit
- * at the top of the settings page, plus the inline pencil-edit the season name used to get right
- * next to the group name. All three are the same kind of decision ("what is this thing called and
- * what does it look like"), none of them edited often enough to earn permanent screen space above
- * the settings that actually govern play.
+ * Owner "Edit" control next to the Manage group title: the group's name, its logo, and (when
+ * there's an active season) that season's name, in one sheet. All three are the same kind of
+ * decision ("what is this thing called and what does it look like"), none of them edited often
+ * enough to earn a permanent identity row above the invite and rules.
  *
  * Unlike the old avatar grid, picking a logo here doesn't save on tap — the sheet has one Save, so
  * a tap you didn't mean is undone by Cancel rather than by tapping back to the previous tile.

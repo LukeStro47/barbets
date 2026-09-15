@@ -8,9 +8,9 @@ import { ChevronRightIcon } from '@/components/ui/icons';
  * means "something needs you now" (see lib/marketStatus.ts), and a punishment is neither urgent
  * nor an error.
  *
- * Static text for a member, no tap target. For an owner (or a public group's moderator), the whole
- * band links to the edit form instead of carrying a separate "Edit" affordance — including a
- * dedicated empty-state row when neither is set, which a member never sees at all.
+ * Static text for a member, no tap target. For an owner, the whole band links to the stakes
+ * editor instead of carrying a separate "Edit" affordance — including a dedicated empty-state
+ * row when neither is set, which a member never sees at all.
  */
 export function SeasonStakesBand({
   groupId,
@@ -25,7 +25,7 @@ export function SeasonStakesBand({
 }) {
   if (!prizeText && !punishmentText && !canEdit) return null;
 
-  const editHref = `/groups/${groupId}/settings/edit`;
+  const editHref = `/groups/${groupId}/settings/stakes`;
   const hoverClasses = canEdit ? 'transition-colors hover:bg-espresso-50/60' : '';
 
   if (!prizeText && !punishmentText) {
@@ -35,7 +35,7 @@ export function SeasonStakesBand({
         className={`flex items-center gap-3 rounded-[16px] border border-espresso-100 bg-paper-white px-3.5 py-3 ${hoverClasses}`}
       >
         <span className="min-w-0 flex-1">
-          <span className="block text-[10px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">Season stakes</span>
+          <span className="block text-[10px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">Prize / Punishment</span>
           <span className="mt-1 block text-[12.5px] leading-[1.35] font-semibold text-espresso-800">
             Add a prize and a punishment in Settings
           </span>

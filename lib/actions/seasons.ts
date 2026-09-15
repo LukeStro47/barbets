@@ -24,6 +24,7 @@ export async function endSeason(groupId: string): Promise<ActionResult<null>> {
   if (result.error) return result;
   revalidatePath(`/groups/${groupId}`);
   revalidatePath(`/groups/${groupId}/intermission`);
+  revalidatePath(`/groups/${groupId}/settings`, 'layout');
   return result;
 }
 
@@ -68,6 +69,7 @@ export async function openSeasonBetting(groupId: string, seasonId: string): Prom
   const result = await runRpc<Season>(await supabase.rpc('open_season_betting', { p_season_id: seasonId }));
   if (result.error) return result;
   revalidatePath(`/groups/${groupId}`);
+  revalidatePath(`/groups/${groupId}/settings`, 'layout');
   return result;
 }
 

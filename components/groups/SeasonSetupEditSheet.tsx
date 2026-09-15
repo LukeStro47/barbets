@@ -24,7 +24,7 @@ export interface RosterMember {
 const LENGTH_OPTIONS: SeasonLength[] = ['1m', '2m', '3m', 'manual', 'custom'];
 
 /** datetime-local wants "YYYY-MM-DDTHH:mm" in the browser's local time, not UTC — same helper
- * EditSettingsForm uses for the same field. */
+ * LiveRulesForm uses for the same field. */
 function toLocalDatetimeInputValue(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
@@ -35,7 +35,7 @@ function toLocalDatetimeInputValue(date: Date): string {
  * the roster (boot + transfer ownership), all without leaving the group hub, ending in the same
  * action that actually starts the season. `update_group_settings` is a full-object RPC, not a
  * patch, so `continueToSeason()` below submits every field from `settings` unchanged except the
- * two this sheet actually edits — same pattern EditSettingsForm uses on /settings/edit.
+ * two this sheet actually edits — same full-object write LiveRulesForm uses on /settings/rules.
  *
  * Banded header + `border-t`-divided `p-[18px]` sections, the same shell ProposeResolutionCard/
  * MarketOverflowMenu use — this used to be its own one-off layout (a plain title paragraph, `p-5`,
