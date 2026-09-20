@@ -2,14 +2,9 @@ import type { InputHTMLAttributes } from 'react';
 import { cn } from '@/lib/cn';
 
 /**
- * The underlined text field used by every pre-group form (sign in, sign up, forgot password,
- * reset password). Replaces the boxed `inputClasses` string that used to be copy-pasted into
- * AuthForms, ForgotPasswordForm and JoinFlow independently.
- *
- * The label sits above the input but comes *after* it in the DOM (`flex-col-reverse`), which is
- * what lets it react to focus with a plain `peer-focus:` variant instead of making this a client
- * component just to hold an isFocused boolean. The focus state thickens the rule from 1px to 2px
- * and takes a matching 1px off the bottom padding, so nothing below the field shifts.
+ * Text field used by pre-group forms (sign in, sign up, forgot/reset password).
+ * Label sits above the input but comes after it in the DOM (`flex-col-reverse`) so
+ * focus can thicken the rule via `peer-focus:` without a client isFocused flag.
  */
 export function Field({
   label,
@@ -20,13 +15,13 @@ export function Field({
     <label className="flex flex-col-reverse gap-2">
       <input
         className={cn(
-          'peer w-full border-b border-espresso-200 bg-transparent px-0.5 pt-1.5 pb-3 text-lg text-espresso-900',
-          'placeholder:text-espresso-500 focus:border-b-2 focus:border-honey-500 focus:pb-[11px] focus:outline-none',
+          'peer w-full rounded-[14px] border border-hairline bg-surface px-4 py-3.5 text-[15px] text-ink',
+          'placeholder:text-faint focus:border-signal focus:outline-none focus:ring-4 focus:ring-signal/15',
           className
         )}
         {...props}
       />
-      <span className="text-xs font-bold tracking-[1.4px] text-espresso-400 uppercase peer-focus:text-honey-700">
+      <span className="text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase peer-focus:text-signal">
         {label}
       </span>
     </label>

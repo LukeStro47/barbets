@@ -38,7 +38,7 @@ export function MarketOverflowMenu({ groupId, marketId, isOwner, isCreator, owne
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Market options"
-        className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-espresso-50 text-espresso-500 transition-colors hover:bg-espresso-100"
+        className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-rule text-muted transition-colors hover:bg-rule"
       >
         <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
           <circle cx="2" cy="7" r="1.5" />
@@ -98,37 +98,37 @@ function VoidAction({
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 bg-espresso-50 px-[18px] py-[13px]">
-        <p className="text-xs font-extrabold tracking-[0.06em] text-espresso-800 uppercase">
+      <div className="flex items-center justify-between gap-3 bg-rule px-[18px] py-[13px]">
+        <p className="text-xs font-extrabold tracking-[0.06em] text-ink uppercase">
           {asCreatorFallback ? "Void in the owner's place" : 'Owner controls'}
         </p>
-        <p className="shrink-0 text-xs font-semibold text-espresso-500">Step {confirming ? 2 : 1} of 2</p>
+        <p className="shrink-0 text-xs font-semibold text-muted">Step {confirming ? 2 : 1} of 2</p>
       </div>
 
       <div className="flex flex-col gap-3.5 p-[18px]">
         <div>
-          <p className="font-display text-[19px] font-extrabold tracking-[-0.01em] text-espresso-900">
+          <p className="font-display text-[19px] font-extrabold tracking-[-0.01em] text-ink">
             {confirming ? 'Void it for good?' : 'Void this market'}
           </p>
-          <p className="mt-1 text-[13.5px] leading-[1.45] text-espresso-500">
+          <p className="mt-1 text-[13.5px] leading-[1.45] text-muted">
             {asCreatorFallback
               ? "The group owner is @mentioned in this market, so it's hidden from them and they can't void it themselves. As the market's creator, you can void it in their place."
               : 'Cancels the market outright. Nobody wins and nobody loses.'}
           </p>
         </div>
 
-        {error && <p className="text-sm text-danger-700">{error}</p>}
+        {error && <p className="text-sm text-alert">{error}</p>}
 
         <div>
-          <p className="mb-2 text-[11.5px] font-extrabold tracking-[0.08em] text-espresso-400 uppercase">What this does</p>
+          <p className="mb-2 text-[11.5px] font-extrabold tracking-[0.08em] text-faint uppercase">What this does</p>
           <div className="flex flex-col">
-            <ConsequenceRow dotClassName="bg-danger-500">
-              Every bet on this market is <strong className="font-bold text-danger-700">refunded in full</strong>, right now.
+            <ConsequenceRow dotClassName="bg-alert">
+              Every bet on this market is <strong className="font-bold text-alert">refunded in full</strong>, right now.
             </ConsequenceRow>
-            <ConsequenceRow dotClassName="bg-espresso-800">
-              The market closes for good. <strong className="font-bold text-espresso-900">This can't be undone.</strong>
+            <ConsequenceRow dotClassName="bg-ink">
+              The market closes for good. <strong className="font-bold text-ink">This can't be undone.</strong>
             </ConsequenceRow>
-            <ConsequenceRow dotClassName="bg-espresso-200" isLast>
+            <ConsequenceRow dotClassName="bg-dash" isLast>
               Everyone in the group gets notified that it was voided.
             </ConsequenceRow>
           </div>
@@ -139,14 +139,14 @@ function VoidAction({
             the real thing. A red banner plus a solid (not outlined) button is a bigger visual
             jump than any label change alone could be. */}
         {confirming && (
-          <div className="flex items-center gap-2 rounded-[10px] bg-danger-50 px-3 py-2.5 text-[12.5px] font-bold text-danger-800">
+          <div className="flex items-center gap-2 rounded-[10px] bg-alert-bg px-3 py-2.5 text-[12.5px] font-bold text-alert">
             <AlertTriangleIcon className="h-4 w-4 shrink-0" />
             This is the final step, there's no undo after this.
           </div>
         )}
       </div>
 
-      <div className="flex gap-2 border-t border-espresso-50 px-[18px] py-[14px]">
+      <div className="flex gap-2 border-t border-rule px-[18px] py-[14px]">
         <Button type="button" variant="outline" className="flex-1" disabled={isPending} onClick={() => (confirming ? setConfirming(false) : onDone())}>
           {confirming ? 'Back' : 'Close'}
         </Button>
@@ -154,7 +154,7 @@ function VoidAction({
           <Button
             type="button"
             variant="outline"
-            className="flex-1 border-danger-200 text-danger-700 hover:bg-danger-50"
+            className="flex-1 border-alert-line text-alert hover:bg-alert-bg"
             onClick={() => setConfirming(true)}
           >
             Continue

@@ -92,7 +92,7 @@ export function GroupMarketSections({
   return (
     <div className="flex flex-col gap-[18px]">
       {!allEmpty && (
-        <div className="flex gap-0.5 rounded-2xl bg-espresso-50 p-1">
+        <div className="flex gap-0.5 rounded-2xl bg-rule p-1">
           {TABS.map((tab) => (
             <button
               key={tab.key}
@@ -101,8 +101,8 @@ export function GroupMarketSections({
               className={cn(
                 'flex-1 rounded-xl py-[7px] text-center text-[13px] transition-[background-color,box-shadow,color] duration-200',
                 filter === tab.key
-                  ? 'bg-paper-white font-semibold text-espresso-950 shadow-[0_1px_3px_rgba(44,31,23,0.12)]'
-                  : 'font-medium text-espresso-400'
+                  ? 'bg-surface font-semibold text-ink shadow-[0_1px_3px_rgba(44,31,23,0.12)]'
+                  : 'font-medium text-faint'
               )}
             >
               {tab.label}
@@ -189,7 +189,7 @@ export function GroupMarketSections({
               <MarketRowList markets={settled} />
               {cursor && (
                 <div className="flex flex-col items-center gap-2 pt-1">
-                  {loadError && <p className="text-xs text-danger-700">{loadError}</p>}
+                  {loadError && <p className="text-xs text-alert">{loadError}</p>}
                   <Button variant="outline" size="sm" onClick={loadMore} disabled={loadingMore}>
                     {loadingMore ? 'Loading...' : 'Load more'}
                   </Button>
@@ -206,7 +206,7 @@ export function GroupMarketSections({
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-2">
-      <h2 className="ml-1 text-xs font-bold uppercase tracking-[0.08em] text-espresso-400">{label}</h2>
+      <h2 className="ml-1 text-xs font-bold uppercase tracking-[0.08em] text-faint">{label}</h2>
       {children}
     </div>
   );

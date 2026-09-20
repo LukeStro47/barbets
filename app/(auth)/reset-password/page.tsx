@@ -15,7 +15,7 @@ export default async function ResetPasswordPage() {
       <AuthScreen title="This link is invalid or has expired.">
         <Link
           href="/forgot-password"
-          className="mt-9 block text-base font-bold text-honey-700 underline underline-offset-4"
+          className="mt-9 block text-base font-bold text-signal underline underline-offset-4"
         >
           Request a new one
         </Link>

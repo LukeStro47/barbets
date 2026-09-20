@@ -29,10 +29,10 @@ export function OfflineHeadline() {
 
   return (
     <>
-      <h1 className="mt-7 font-display text-[30px]/[34px] font-extrabold tracking-[-0.03em] text-espresso-900">
+      <h1 className="mt-7 font-display text-[30px]/[34px] font-extrabold tracking-[-0.03em] text-ink">
         {isOffline ? "You're offline." : "We're having trouble."}
       </h1>
-      <p className="mt-3 max-w-[310px] text-base/6 text-espresso-500">
+      <p className="mt-3 max-w-[310px] text-base/6 text-muted">
         {isOffline
           ? "Odds and balances move too fast to show you a guess. Reconnect and we'll pick up where you left off."
           : "Your connection looks fine, so this is on us. Hang tight and try again in a minute."}

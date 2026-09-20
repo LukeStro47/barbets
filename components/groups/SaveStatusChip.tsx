@@ -42,7 +42,7 @@ export function SaveStatusChip({ state, onRetry }: { state: SaveState; onRetry: 
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-[5px] text-[11.5px] font-bold text-success-700 transition-opacity duration-150',
+        'inline-flex items-center gap-[5px] text-[11.5px] font-bold text-gain transition-opacity duration-150',
         opaque ? 'opacity-100' : 'opacity-0'
       )}
     >

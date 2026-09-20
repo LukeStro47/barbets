@@ -95,7 +95,7 @@ export default async function RevealPage({ params }: { params: Promise<{ groupId
   return (
     <main className="mx-auto max-w-lg space-y-5 px-5 py-8">
       <div className="flex items-center justify-between gap-3">
-        <Link href={`/groups/${groupId}`} className="-ml-1 inline-flex min-w-0 items-center gap-0.5 text-sm font-medium text-espresso-500 hover:text-espresso-700">
+        <Link href={`/groups/${groupId}`} className="-ml-1 inline-flex min-w-0 items-center gap-0.5 text-sm font-medium text-muted hover:text-muted">
           <CaretLeftIcon className="h-4 w-4 shrink-0" />
           <span className="truncate">{group?.name ?? 'Group'}</span>
         </Link>
@@ -139,7 +139,7 @@ export default async function RevealPage({ params }: { params: Promise<{ groupId
         myNickname={myNickname}
         isSubjectOfThisMarket={isSubjectOfThisMarket}
       />
-      <p className="text-center text-xs text-espresso-400">
+      <p className="text-center text-xs text-faint">
         {marketRow.creator_id && (
           <>
             Started by <Mention nickname={creator?.nickname ?? ''} />

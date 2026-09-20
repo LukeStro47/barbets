@@ -148,7 +148,7 @@ const usageSections: Section[] = [
 function renderBlock(block: Block, i: number) {
   if ('ul' in block) {
     return (
-      <ul key={i} className="mt-2 list-disc space-y-1 pl-5 text-espresso-600">
+      <ul key={i} className="mt-2 list-disc space-y-1 pl-5 text-muted">
         {block.ul.map((item, j) => (
           <li key={j}>{item}</li>
         ))}
@@ -156,8 +156,8 @@ function renderBlock(block: Block, i: number) {
     );
   }
   return (
-    <p key={i} className="mt-2 text-espresso-600 first:mt-0">
-      {block.lead && <strong className="font-semibold text-espresso-800">{block.lead} </strong>}
+    <p key={i} className="mt-2 text-muted first:mt-0">
+      {block.lead && <strong className="font-semibold text-ink">{block.lead} </strong>}
       {block.p}
     </p>
   );
@@ -177,15 +177,15 @@ export default async function PrivacyPage() {
       </div>
 
       <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight text-espresso-900">Privacy policy</h1>
-        <p className="mt-1 text-espresso-500">Last updated: August 28, 2026</p>
-        <p className="mt-3 text-espresso-600">
+        <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Privacy policy</h1>
+        <p className="mt-1 text-muted">Last updated: August 28, 2026</p>
+        <p className="mt-3 text-muted">
           This Privacy Policy explains what information My Barbets LLC, doing business as Barbets ("Barbets," "we,"
           "us," or "our") collects when you use the Barbets application and websites, app.mybarbets.com,
           mybarbets.com, and the Barbets mobile apps (together, the "Service"), how we use it, who we share it with,
           and the choices you have.
         </p>
-        <p className="mt-2 text-espresso-600">
+        <p className="mt-2 text-muted">
           The short version: we collect only what the app needs to work. No ads, no advertising trackers, and no
           third-party analytics or tracking SDKs, we never sell your data. We do keep basic internal usage statistics
           (like sign-ups and active users) to run and improve Barbets, but that stays inside Barbets; it is never
@@ -195,11 +195,11 @@ export default async function PrivacyPage() {
       </div>
 
       <div>
-        <h2 className="font-display text-lg font-bold text-espresso-900">Information we collect</h2>
+        <h2 className="font-display text-lg font-bold text-ink">Information we collect</h2>
         <div className="mt-3 space-y-4">
           {policySections.map((s) => (
             <Card key={s.title}>
-              <h3 className="font-display font-bold text-espresso-800">{s.title}</h3>
+              <h3 className="font-display font-bold text-ink">{s.title}</h3>
               {s.blocks.map(renderBlock)}
             </Card>
           ))}
@@ -209,19 +209,19 @@ export default async function PrivacyPage() {
       <div className="space-y-4">
         {usageSections.map((s) => (
           <Card key={s.title}>
-            <h2 className="font-display font-bold text-espresso-800">{s.title}</h2>
+            <h2 className="font-display font-bold text-ink">{s.title}</h2>
             {s.blocks.map(renderBlock)}
           </Card>
         ))}
       </div>
 
-      <p className="text-sm text-espresso-500">
+      <p className="text-sm text-muted">
         Questions about this policy or your data? Reach out at{' '}
-        <a href={`mailto:${CONTACT_EMAIL}`} className="font-medium text-espresso-700 underline">
+        <a href={`mailto:${CONTACT_EMAIL}`} className="font-medium text-muted underline">
           {CONTACT_EMAIL}
         </a>
         . See also our{' '}
-        <a href="/terms" className="font-medium text-espresso-700 underline">
+        <a href="/terms" className="font-medium text-muted underline">
           Terms of use
         </a>
         .

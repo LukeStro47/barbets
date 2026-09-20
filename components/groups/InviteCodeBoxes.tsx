@@ -12,14 +12,14 @@ const CODE_LENGTH = INVITE_CODE_LENGTH;
  *  place rather than being forked into a near-identical paper component. */
 const TONE = {
   dark: {
-    box: 'border-white/[0.16] bg-white/[0.06] text-paper-white focus:border-honey-300/70 focus:bg-white/[0.09]',
-    paste: 'border-white/20 text-honey-200',
-    submit: 'bg-honey-500 text-espresso-950 disabled:opacity-45',
+    box: 'border-white/[0.16] bg-white/[0.06] text-white focus:border-signal/70 focus:bg-white/[0.09]',
+    paste: 'border-white/20 text-on-ink',
+    submit: 'bg-signal text-ink disabled:opacity-45',
   },
   paper: {
-    box: 'border-espresso-200 bg-paper-white text-espresso-900 focus:border-honey-500 focus:bg-honey-50',
-    paste: 'border-espresso-200 text-espresso-700',
-    submit: 'bg-honey-500 text-espresso-900 disabled:bg-espresso-100 disabled:text-espresso-400',
+    box: 'border-hairline bg-surface text-ink focus:border-signal focus:bg-signal-tint',
+    paste: 'border-hairline text-muted',
+    submit: 'bg-signal text-ink disabled:bg-rule disabled:text-faint',
   },
 } as const;
 

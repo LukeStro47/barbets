@@ -49,7 +49,7 @@ export function MovedBanner() {
   if (!show) return null;
 
   return (
-    <div className="border-b border-honey-300 bg-honey-100 pt-[env(safe-area-inset-top)] text-espresso-900">
+    <div className="border-b border-signal bg-signal-tint pt-[env(safe-area-inset-top)] text-ink">
       <div className="mx-auto flex max-w-lg items-start gap-3 px-5 py-3">
         <div className="min-w-0 flex-1">
           <p className="font-display text-[14px] font-extrabold tracking-[-0.01em]">Barbets has moved</p>
@@ -57,13 +57,13 @@ export function MovedBanner() {
               banner promising a future cutoff would be a promise this code cannot keep: once the
               domain moves, this component stops rendering entirely (the app no longer serves that
               host), so it can never come back to correct itself. */}
-          <p className="mt-0.5 text-[13px]/[19px] text-espresso-700">
+          <p className="mt-0.5 text-[13px]/[19px] text-muted">
             This address is being retired. Open Barbets at its new home and add it to your home
             screen again, then delete the old icon. Your groups and balances come with you.
           </p>
           <a
             href={APP_ORIGIN}
-            className="mt-2 inline-block rounded-full bg-espresso-800 px-3.5 py-1.5 text-[13px] font-bold text-paper-white"
+            className="mt-2 inline-block rounded-full bg-ink px-3.5 py-1.5 text-[13px] font-bold text-white"
           >
             Go to app.mybarbets.com
           </a>
@@ -79,7 +79,7 @@ export function MovedBanner() {
             }
             setShow(false);
           }}
-          className="-mr-1 shrink-0 rounded-full px-2 py-1 text-[15px] font-bold text-espresso-500"
+          className="-mr-1 shrink-0 rounded-full px-2 py-1 text-[15px] font-bold text-muted"
         >
           &times;
         </button>

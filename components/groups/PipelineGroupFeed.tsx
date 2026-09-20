@@ -64,10 +64,10 @@ export function PipelineGroupFeed({
   return (
     <div className="flex flex-col gap-[18px]">
       <div className="flex flex-col gap-2">
-        <h2 className="ml-1 text-xs font-bold uppercase tracking-[0.08em] text-espresso-400">{copy.featuredLabel}</h2>
+        <h2 className="ml-1 text-xs font-bold uppercase tracking-[0.08em] text-faint">{copy.featuredLabel}</h2>
         {featured ? (
           <div className="flex flex-col gap-2">
-            <span className="ml-1 inline-flex w-fit items-center rounded-full bg-honey-100 px-2.5 py-1 text-[10px] font-extrabold tracking-wide text-honey-800 uppercase">
+            <span className="ml-1 inline-flex w-fit items-center rounded-full bg-signal-tint px-2.5 py-1 text-[10px] font-extrabold tracking-wide text-signal-deep uppercase">
               {copy.badge}
             </span>
             <MarketCard market={featured} />
@@ -79,11 +79,11 @@ export function PipelineGroupFeed({
 
       {items.length > 0 && (
         <div className="flex flex-col gap-2">
-          <h2 className="ml-1 text-xs font-bold uppercase tracking-[0.08em] text-espresso-400">{copy.historyLabel}</h2>
+          <h2 className="ml-1 text-xs font-bold uppercase tracking-[0.08em] text-faint">{copy.historyLabel}</h2>
           <MarketRowList markets={items} />
           {cursor && (
             <div className="flex flex-col items-center gap-2 pt-1">
-              {loadError && <p className="text-xs text-danger-700">{loadError}</p>}
+              {loadError && <p className="text-xs text-alert">{loadError}</p>}
               <Button variant="outline" size="sm" onClick={loadMore} disabled={loadingMore}>
                 {loadingMore ? 'Loading...' : 'Load more'}
               </Button>

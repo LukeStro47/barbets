@@ -17,7 +17,7 @@ export function SignInForm({ next }: { next?: string }) {
   }
   return (
     <form action={formAction} className="mt-9">
-      {state?.error && <p className="mb-4 text-sm text-danger-700">{state.error}</p>}
+      {state?.error && <p className="mb-4 text-sm text-alert">{state.error}</p>}
       {next && <input type="hidden" name="next" value={next} />}
       <div className="flex flex-col gap-3.5">
         <Field
@@ -37,7 +37,7 @@ export function SignInForm({ next }: { next?: string }) {
       </Button>
       <Link
         href="/forgot-password"
-        className="mt-[18px] block text-center text-sm text-espresso-400 hover:text-espresso-700"
+        className="mt-[18px] block text-center text-sm text-faint hover:text-muted"
       >
         Forgot your password?
       </Link>
@@ -55,7 +55,7 @@ export function SignUpForm({ next }: { next?: string }) {
   }
   return (
     <form action={formAction} className="mt-8">
-      {state?.error && <p className="mb-4 text-sm text-danger-700">{state.error}</p>}
+      {state?.error && <p className="mb-4 text-sm text-alert">{state.error}</p>}
       {next && <input type="hidden" name="next" value={next} />}
       <div className="flex flex-col gap-6">
         <Field
@@ -90,7 +90,7 @@ export function SignUpForm({ next }: { next?: string }) {
           it's the one thing standing between a filled-in form and a disabled CTA, so it has to
           read as a step rather than as fine print. The checkbox itself is sr-only and drawn by
           the span beside it, since a native checkbox can't take the honey fill. */}
-      <label className="mt-7 flex items-start gap-3 rounded-2xl border border-espresso-100 bg-paper-white px-4 py-3.5">
+      <label className="mt-7 flex items-start gap-3 rounded-2xl border border-hairline bg-surface px-4 py-3.5">
         <input
           type="checkbox"
           name="agreeTerms"
@@ -100,19 +100,19 @@ export function SignUpForm({ next }: { next?: string }) {
         />
         <span
           aria-hidden
-          className={`mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-espresso-900 peer-focus-visible:ring-2 peer-focus-visible:ring-honey-400 ${
-            agreed ? 'border-honey-500 bg-honey-500' : 'border-espresso-200 bg-paper-white'
+          className={`mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-ink peer-focus-visible:ring-2 peer-focus-visible:ring-signal ${
+            agreed ? 'border-signal bg-signal' : 'border-hairline bg-surface'
           }`}
         >
           {agreed && <CheckIcon className="h-3.5 w-3.5" />}
         </span>
-        <span className="text-[13px]/[19px] text-espresso-400">
+        <span className="text-[13px]/[19px] text-faint">
           I agree to the{' '}
           <a
             href="/terms"
             target="_blank"
             onClick={(e) => e.stopPropagation()}
-            className="font-semibold text-espresso-900 underline"
+            className="font-semibold text-ink underline"
           >
             Terms of use
           </a>{' '}
@@ -121,7 +121,7 @@ export function SignUpForm({ next }: { next?: string }) {
             href="/privacy"
             target="_blank"
             onClick={(e) => e.stopPropagation()}
-            className="font-semibold text-espresso-900 underline"
+            className="font-semibold text-ink underline"
           >
             Privacy policy
           </a>
@@ -133,7 +133,7 @@ export function SignUpForm({ next }: { next?: string }) {
           create an account, hearing from us by email is not, and folding the two into one checkbox
           would make agreeing to the terms read as agreeing to marketing too. Unchecked by default,
           an explicit opt-in rather than an opt-out. */}
-      <label className="mt-3 flex items-start gap-3 rounded-2xl border border-espresso-100 bg-paper-white px-4 py-3.5">
+      <label className="mt-3 flex items-start gap-3 rounded-2xl border border-hairline bg-surface px-4 py-3.5">
         <input
           type="checkbox"
           name="marketingOptIn"
@@ -143,13 +143,13 @@ export function SignUpForm({ next }: { next?: string }) {
         />
         <span
           aria-hidden
-          className={`mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-espresso-900 peer-focus-visible:ring-2 peer-focus-visible:ring-honey-400 ${
-            marketingOptIn ? 'border-honey-500 bg-honey-500' : 'border-espresso-200 bg-paper-white'
+          className={`mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-ink peer-focus-visible:ring-2 peer-focus-visible:ring-signal ${
+            marketingOptIn ? 'border-signal bg-signal' : 'border-hairline bg-surface'
           }`}
         >
           {marketingOptIn && <CheckIcon className="h-3.5 w-3.5" />}
         </span>
-        <span className="text-[13px]/[19px] text-espresso-400">
+        <span className="text-[13px]/[19px] text-faint">
           Email me about new features and other Barbets news. You can turn this off any time in your profile.
         </span>
       </label>
@@ -193,13 +193,13 @@ function ConfirmEmailForm({
 
   return (
     <div className="mt-9">
-      <p className="text-sm text-honey-700">
+      <p className="text-sm text-signal">
         {fromSignIn
           ? `This account was never confirmed. Tap resend below and we'll send a fresh code to ${email}.`
           : `Account created. We sent a code to ${email}, enter it below to confirm.`}
       </p>
       <form action={formAction} className="mt-6">
-        {state?.error && <p className="mb-4 text-sm text-danger-700">{state.error}</p>}
+        {state?.error && <p className="mb-4 text-sm text-alert">{state.error}</p>}
         <input type="hidden" name="email" value={email} />
         {next && <input type="hidden" name="next" value={next} />}
         <ConfirmCodeBoxes onChange={setCode} />
@@ -216,15 +216,15 @@ function ConfirmEmailForm({
 
       <form ref={resendFormRef} action={resendAction} className="mt-5">
         <input type="hidden" name="email" value={email} />
-        {resendState?.error && <p className="mb-2 text-sm text-danger-700">{resendState.error}</p>}
+        {resendState?.error && <p className="mb-2 text-sm text-alert">{resendState.error}</p>}
         {resendState?.success ? (
-          <p className="text-center text-sm text-espresso-400">Code sent again, check your email.</p>
+          <p className="text-center text-sm text-faint">Code sent again, check your email.</p>
         ) : (
           <DeferredTurnstileButton
             formRef={resendFormRef}
             resetKey={resendState}
             disabled={isResending}
-            className="block w-full text-center text-sm font-semibold text-honey-700"
+            className="block w-full text-center text-sm font-semibold text-signal"
           >
             Didn&apos;t get it? Resend code
           </DeferredTurnstileButton>

@@ -17,10 +17,8 @@ export interface GroupTask {
  *   - vote: a disputed market where the viewer isn't a hidden subject and hasn't already
  *     cast a ballot (mirrors cast_vote's own eligible-voter check in
  *     supabase/migrations/20260721130000_resolution_window_setting.sql).
- * Shared by the group hub's "N waiting on you" card (full list), the all-groups page's
- * per-row "N need you" count, and BottomNav's Home-tab red dot (see ARCHITECTURE.md's note
- * that a cross-group "Inbox" aggregate was deliberately removed — this reintroduces just the
- * count/list, not a full re-homed inbox page).
+ * Shared by /inbox (cross-group list), the group hub's "N waiting on you" card, the all-groups
+ * page's per-row "N need you" count, and BottomNav's Inbox-tab badge (see ARCHITECTURE.md).
  */
 export async function getGroupTasks(
   supabase: Awaited<ReturnType<typeof createClient>>,

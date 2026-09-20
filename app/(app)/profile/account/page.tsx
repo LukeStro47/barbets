@@ -34,7 +34,7 @@ export default async function AccountPage() {
         trigger={
           <button
             type="button"
-            className="flex w-full items-center gap-3 rounded-[20px] border border-espresso-100 bg-paper-white px-4 py-3.5 transition-colors hover:border-espresso-200"
+            className="flex w-full items-center gap-3 rounded-[20px] border border-hairline bg-surface px-4 py-3.5 transition-colors hover:border-hairline"
           >
             <UserAvatar
               userId={user.id}
@@ -42,20 +42,20 @@ export default async function AccountPage() {
               avatarUpdatedAt={avatarRow?.avatar_updated_at ?? null}
               avatarPresetKey={avatarRow?.avatar_preset_key ?? null}
               className="h-9 w-9 shrink-0 text-xs"
-              fallbackClassName="bg-espresso-50 text-honey-700"
+              fallbackClassName="bg-rule text-signal"
             />
             <span className="min-w-0 flex-1 text-left">
-              <span className="block text-sm font-extrabold text-espresso-800">Profile picture</span>
-              <span className="mt-0.5 block text-[11.5px] text-espresso-400">A photo, or one of the built-in icons</span>
+              <span className="block text-sm font-extrabold text-ink">Profile picture</span>
+              <span className="mt-0.5 block text-[11.5px] text-faint">A photo, or one of the built-in icons</span>
             </span>
-            <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-espresso-300" />
+            <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-faint" />
           </button>
         }
       />
 
       <Card className="space-y-4">
         <ChangeEmailForm currentEmail={user?.email ?? ''} />
-        <div className="border-t border-espresso-100 pt-4">
+        <div className="border-t border-hairline pt-4">
           <ChangePasswordForm />
         </div>
       </Card>
@@ -70,8 +70,8 @@ export default async function AccountPage() {
           along with InstallBanner, see the design-decision note in "PWA & push". */}
 
       <Card>
-        <h2 className="mb-3 font-display font-bold text-danger-700">Danger zone</h2>
-        <p className="mb-3 text-sm leading-[1.5] text-espresso-500">
+        <h2 className="mb-3 font-display font-bold text-alert">Danger zone</h2>
+        <p className="mb-3 text-sm leading-[1.5] text-muted">
           Deleting refunds your open bets and removes you from every group. Groups you own have to be handed over
           or deleted first.
         </p>

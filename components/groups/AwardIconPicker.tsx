@@ -18,10 +18,10 @@ export function AwardIconPicker({ value, onChange }: { value: string; onChange: 
           title={icon.label}
           className={cn(
             'flex h-11 w-11 items-center justify-center rounded-full border-[1.5px] transition-colors',
-            value === icon.key ? 'border-honey-500 bg-honey-50' : 'border-espresso-200 bg-paper-white'
+            value === icon.key ? 'border-signal bg-signal-tint' : 'border-hairline bg-surface'
           )}
         >
-          <AwardGlyph iconKey={icon.key} stroke={value === icon.key ? 'var(--color-honey-700)' : 'var(--color-espresso-400)'} />
+          <AwardGlyph iconKey={icon.key} stroke={value === icon.key ? 'var(--color-signal)' : 'var(--color-faint)'} />
         </button>
       ))}
     </div>

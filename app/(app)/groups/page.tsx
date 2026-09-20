@@ -107,15 +107,15 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
     <main className="mx-auto max-w-lg space-y-[18px] px-5 py-8">
       <PageHeader
         title="Your groups"
-        subtitle={hasGroups ? <span className="text-[12.5px] text-espresso-400">{headerCaption}</span> : undefined}
+        subtitle={hasGroups ? <span className="text-[12.5px] text-faint">{headerCaption}</span> : undefined}
       />
 
       {!hasGroups ? (
         hasPublicGroups ? (
           <div className="flex flex-col gap-2">
             <div className="flex items-baseline justify-between gap-3 px-1">
-              <p className="text-[10.5px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">Open to anyone</p>
-              <span className="text-[11px] font-bold text-honey-700">No code needed</span>
+              <p className="text-[10.5px] font-extrabold tracking-[0.09em] text-faint uppercase">Open to anyone</p>
+              <span className="text-[11px] font-bold text-signal">No code needed</span>
             </div>
             <div className="flex flex-col gap-2.5">
               {homeSurfacePublicGroups.slice(0, 2).map((g) => (
@@ -176,46 +176,46 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
                     className={cn(
                       // The lift is the whole signal: a card asking for something sits slightly
                       // proud of the ones that aren't, without needing a second accent colour.
-                      'flex items-center gap-3 rounded-[20px] border border-espresso-100 bg-paper-white p-3.5 transition-colors hover:border-espresso-200',
-                      needsYou > 0 && 'shadow-sm shadow-espresso-900/5'
+                      'flex items-center gap-3 rounded-[20px] border border-hairline bg-surface p-3.5 transition-colors hover:border-hairline',
+                      needsYou > 0 && 'shadow-sm shadow-none'
                     )}
                   >
                     <GroupAvatar
                       name={g.name}
                       avatarKey={g.avatar_key}
                       className="h-12 w-12 text-[14px]"
-                      fallbackClassName={needsYou > 0 ? 'bg-espresso-900 text-honey-300' : 'bg-espresso-50 text-espresso-500'}
+                      fallbackClassName={needsYou > 0 ? 'bg-ink text-on-ink' : 'bg-rule text-muted'}
                     />
                     <span className="min-w-0 flex-1">
                       <span className="flex min-w-0 items-start gap-1.5">
-                        <p className="line-clamp-2 font-display text-[15.5px] leading-[1.15] font-extrabold tracking-[-0.01em] text-espresso-950">
+                        <p className="line-clamp-2 font-display text-[15.5px] leading-[1.15] font-extrabold tracking-[-0.01em] text-ink">
                           {g.name}
                         </p>
                         {g.is_public && (
-                          <span className="shrink-0 rounded-full bg-honey-100 px-1.5 py-[1px] text-[9.5px] font-extrabold tracking-[0.04em] text-honey-700 uppercase">
+                          <span className="shrink-0 rounded-full bg-signal-tint px-1.5 py-[1px] text-[9.5px] font-extrabold tracking-[0.04em] text-signal uppercase">
                             Public
                           </span>
                         )}
                       </span>
-                      <p className="mt-[3px] flex items-center gap-1.5 text-[12.5px] text-espresso-500">
+                      <p className="mt-[3px] flex items-center gap-1.5 text-[12.5px] text-muted">
                         {needsYou > 0 && (
                           <>
-                            <span className="inline-flex items-center gap-[5px] font-extrabold text-danger-700">
-                              <span className="h-1.5 w-1.5 rounded-full bg-danger-500" />
+                            <span className="inline-flex items-center gap-[5px] font-extrabold text-alert">
+                              <span className="h-1.5 w-1.5 rounded-full bg-alert" />
                               {needsYou} need{needsYou === 1 ? 's' : ''} you
                             </span>
-                            <span className="text-espresso-200">·</span>
+                            <span className="text-dash">·</span>
                           </>
                         )}
                         <span>{openCount > 0 ? `${openCount} open` : 'Nothing open right now'}</span>
                       </p>
-                      {g.deletion_scheduled_at && <p className="mt-0.5 text-xs font-semibold text-danger-700">Being deleted</p>}
+                      {g.deletion_scheduled_at && <p className="mt-0.5 text-xs font-semibold text-alert">Being deleted</p>}
                     </span>
                     <span className="shrink-0 text-right">
-                      <span className={cn('block text-[15px] font-extrabold tabular-nums', myNet >= 0 ? 'text-success-700' : 'text-danger-700')}>
+                      <span className={cn('block text-[15px] font-extrabold tabular-nums', myNet >= 0 ? 'text-gain' : 'text-alert')}>
                         {formatSignedTokens(myNet)}
                       </span>
-                      <span className="mt-0.5 block text-[11px] text-espresso-400">
+                      <span className="mt-0.5 block text-[11px] text-faint">
                         {formatOrdinal(myRank)} of {ranked.length}
                       </span>
                     </span>
@@ -234,24 +234,24 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
 
           {intermissionGroups.length > 0 && (
             <div className="flex flex-col gap-2">
-              <p className="ml-1 text-[10.5px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">Between seasons</p>
+              <p className="ml-1 text-[10.5px] font-extrabold tracking-[0.09em] text-faint uppercase">Between seasons</p>
               {intermissionGroups.map((g: any) => (
                 <Link
                   key={g.id}
                   href={`/groups/${g.id}`}
-                  className="flex items-center gap-[11px] rounded-2xl bg-paper-dim px-3.5 py-[11px]"
+                  className="flex items-center gap-[11px] rounded-2xl bg-rule px-3.5 py-[11px]"
                 >
                   <GroupAvatar
                     name={g.name}
                     avatarKey={g.avatar_key}
                     className="h-[34px] w-[34px] text-[11.5px]"
-                    fallbackClassName="bg-espresso-100 text-espresso-400"
+                    fallbackClassName="bg-rule text-faint"
                   />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13.5px] font-extrabold text-espresso-700">{g.name}</span>
-                    <span className="block text-[11.5px] text-espresso-400">Season ended · champion crowned</span>
+                    <span className="block truncate text-[13.5px] font-extrabold text-muted">{g.name}</span>
+                    <span className="block text-[11.5px] text-faint">Season ended · champion crowned</span>
                   </span>
-                  <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-espresso-300" />
+                  <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-faint" />
                 </Link>
               ))}
             </div>
@@ -261,9 +261,9 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
         </>
       )}
 
-      <div className="rounded-[22px] bg-gradient-to-br from-espresso-900 to-espresso-700 p-[18px]">
-        <p className="text-[15.5px] font-extrabold text-paper-white">Got an invite code?</p>
-        <p className="mt-0.5 text-[12.5px] text-paper-white/55">Four characters from whoever runs the group.</p>
+      <div className="rounded-[22px] bg-gradient-to-br from-ink to-ink p-[18px]">
+        <p className="text-[15.5px] font-extrabold text-white">Got an invite code?</p>
+        <p className="mt-0.5 text-[12.5px] text-white/55">Four characters from whoever runs the group.</p>
         <div className="mt-3.5">
           <InviteCodeBoxes />
         </div>

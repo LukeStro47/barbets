@@ -55,13 +55,13 @@ export function SwipeRail({ children }: { children: React.ReactNode[] }) {
             onClick={() => goTo(active - 1)}
             disabled={active === 0}
             aria-label="Previous"
-            className="flex h-7 w-7 items-center justify-center rounded-full border border-espresso-100 bg-paper-white text-espresso-600 disabled:opacity-30"
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-hairline bg-surface text-muted disabled:opacity-30"
           >
             <CaretLeftIcon className="h-3 w-3" />
           </button>
           <div className="flex gap-[5px]">
             {children.map((_, i) => (
-              <span key={i} className={cn('h-1 rounded-full transition-all', i === active ? 'w-4 bg-honey-600' : 'w-1 bg-espresso-200')} />
+              <span key={i} className={cn('h-1 rounded-full transition-all', i === active ? 'w-4 bg-signal' : 'w-1 bg-dash')} />
             ))}
           </div>
           <button
@@ -69,7 +69,7 @@ export function SwipeRail({ children }: { children: React.ReactNode[] }) {
             onClick={() => goTo(active + 1)}
             disabled={active === count - 1}
             aria-label="Next"
-            className="flex h-7 w-7 items-center justify-center rounded-full border border-espresso-100 bg-paper-white text-espresso-600 disabled:opacity-30"
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-hairline bg-surface text-muted disabled:opacity-30"
           >
             <CaretLeftIcon className="h-3 w-3 rotate-180" />
           </button>

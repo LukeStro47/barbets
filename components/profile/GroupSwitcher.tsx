@@ -26,17 +26,17 @@ export function GroupSwitcher({ groups, currentGroupId }: { groups: SwitcherGrou
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-[13px] rounded-[22px] border border-espresso-100 bg-paper-white px-4 py-3.5 text-left"
+        className="flex w-full items-center gap-[13px] rounded-[22px] border border-hairline bg-surface px-4 py-3.5 text-left"
       >
         <GroupAvatar
           name={current.name}
           avatarKey={current.avatarKey}
           className="h-11 w-11 text-sm"
-          fallbackClassName="bg-espresso-900 text-honey-300"
+          fallbackClassName="bg-ink text-on-ink"
         />
         <span className="min-w-0 flex-1">
-          <span className="block text-[10px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase">Showing</span>
-          <span className="mt-0.5 block truncate text-[19px] font-extrabold tracking-[-0.015em] text-espresso-900">{current.name}</span>
+          <span className="block text-[10px] font-extrabold tracking-[0.1em] text-faint uppercase">Showing</span>
+          <span className="mt-0.5 block truncate text-[19px] font-extrabold tracking-[-0.015em] text-ink">{current.name}</span>
         </span>
         {groups.length > 1 && (
           // A drawn caret, not a "▾" glyph: the glyph's position inside its em box is the font's
@@ -44,7 +44,7 @@ export function GroupSwitcher({ groups, currentGroupId }: { groups: SwitcherGrou
           // MarketOverflowMenu's dots.
           <span
             className={cn(
-              'flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-espresso-50 text-espresso-500 transition-transform',
+              'flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rule text-muted transition-transform',
               open && 'rotate-180'
             )}
           >
@@ -56,7 +56,7 @@ export function GroupSwitcher({ groups, currentGroupId }: { groups: SwitcherGrou
       {open && groups.length > 1 && (
         <>
           <div onClick={() => setOpen(false)} className="fixed inset-0 z-20" />
-          <div className="absolute inset-x-0 top-[calc(100%+6px)] z-30 rounded-[20px] border border-espresso-100 bg-paper-white p-1.5 shadow-[0_22px_40px_-20px_rgba(28,19,13,0.55)]">
+          <div className="absolute inset-x-0 top-[calc(100%+6px)] z-30 rounded-[20px] border border-hairline bg-surface p-1.5 shadow-[0_22px_40px_-20px_rgba(28,19,13,0.55)]">
             {groups.map((g) => {
               const active = g.id === current.id;
               return (
@@ -68,22 +68,22 @@ export function GroupSwitcher({ groups, currentGroupId }: { groups: SwitcherGrou
                   }}
                   className={cn(
                     'flex w-full items-center gap-[11px] rounded-2xl px-[11px] py-2.5 text-left',
-                    active ? 'bg-honey-500/10' : 'bg-transparent'
+                    active ? 'bg-signal/10' : 'bg-transparent'
                   )}
                 >
                   <GroupAvatar
                     name={g.name}
                     avatarKey={g.avatarKey}
                     className="h-[30px] w-[30px] text-[10.5px]"
-                    fallbackClassName="bg-espresso-900 text-honey-300"
+                    fallbackClassName="bg-ink text-on-ink"
                   />
                   <span className="min-w-0 flex-1">
-                    <span className={cn('block truncate text-[13.5px] font-extrabold', active ? 'text-honey-700' : 'text-espresso-900')}>
+                    <span className={cn('block truncate text-[13.5px] font-extrabold', active ? 'text-signal' : 'text-ink')}>
                       {g.name}
                     </span>
-                    <span className="mt-px block truncate text-[11.5px] italic text-espresso-400">@{g.handle}</span>
+                    <span className="mt-px block truncate text-[11.5px] italic text-faint">@{g.handle}</span>
                   </span>
-                  {active && <span className="shrink-0 text-[10px] text-honey-600">●</span>}
+                  {active && <span className="shrink-0 text-[10px] text-signal">●</span>}
                 </button>
               );
             })}

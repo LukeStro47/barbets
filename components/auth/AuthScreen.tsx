@@ -25,15 +25,15 @@ export function AuthScreen({
   children: ReactNode;
 }) {
   return (
-    <main className="flex min-h-dvh flex-col bg-paper px-7 pb-8 pt-[calc(env(safe-area-inset-top)+3.25rem)]">
+    <main className="flex min-h-dvh flex-col bg-canvas px-7 pb-8 pt-[calc(env(safe-area-inset-top)+3.25rem)]">
       <div className="flex items-center justify-between">
         <BackButton />
         {headerRight ?? <Coin size={46} className="h-[46px] w-auto opacity-90" />}
       </div>
-      <h1 className="mt-11 font-display text-[34px]/[38px] font-extrabold tracking-[-0.03em] text-espresso-900">
+      <h1 className="mt-11 font-display text-[34px]/[38px] font-extrabold tracking-[-0.03em] text-ink">
         {title}
       </h1>
-      {subtitle && <p className="mt-2.5 text-base/6 text-espresso-500">{subtitle}</p>}
+      {subtitle && <p className="mt-2.5 text-base/6 text-muted">{subtitle}</p>}
       {children}
     </main>
   );

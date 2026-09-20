@@ -22,19 +22,19 @@ export function OddsBar({
   return (
     <div className={cn('space-y-1.5', className)}>
       <div className="flex items-center justify-between text-sm font-semibold">
-        <span className="text-honey-800">
+        <span className="text-signal-deep">
           {left.label} {left.percent}%
         </span>
         {center !== undefined && (
-          <span className="rounded-full bg-espresso-100 px-2 py-0.5 text-xs font-bold text-espresso-600">{center}</span>
+          <span className="rounded-full bg-rule px-2 py-0.5 text-xs font-bold text-muted">{center}</span>
         )}
-        <span className="text-espresso-500">
+        <span className="text-muted">
           {right.label} {right.percent}%
         </span>
       </div>
-      <div className="flex h-3 overflow-hidden rounded-full bg-espresso-100">
-        <div className="h-full bg-honey-500" style={{ width: `${left.percent}%` }} />
-        <div className="h-full bg-espresso-300" style={{ width: `${right.percent}%` }} />
+      <div className="flex h-3 overflow-hidden rounded-full bg-rule">
+        <div className="h-full bg-signal" style={{ width: `${left.percent}%` }} />
+        <div className="h-full bg-faint" style={{ width: `${right.percent}%` }} />
       </div>
     </div>
   );
@@ -61,20 +61,20 @@ export function NeutralOddsBar({
 }) {
   return (
     <div className={cn('space-y-1.5', className)}>
-      <div className={cn('flex items-baseline justify-between gap-2 font-extrabold text-espresso-950', size === 'lg' ? 'text-[15px]' : 'text-sm')}>
+      <div className={cn('flex items-baseline justify-between gap-2 font-extrabold text-ink', size === 'lg' ? 'text-[15px]' : 'text-sm')}>
         <span className="whitespace-nowrap">
           {left.label} <span className="tabular-nums">{left.percent}%</span>
         </span>
         {center !== undefined && (
-          <span className="shrink-0 rounded-full bg-espresso-100 px-2.5 py-0.5 text-xs font-bold whitespace-nowrap text-espresso-600">{center}</span>
+          <span className="shrink-0 rounded-full bg-rule px-2.5 py-0.5 text-xs font-bold whitespace-nowrap text-muted">{center}</span>
         )}
         <span className="whitespace-nowrap">
           {right.label} <span className="tabular-nums">{right.percent}%</span>
         </span>
       </div>
       <div className={cn('flex gap-0.5 overflow-hidden rounded-full', size === 'lg' ? 'h-3' : 'h-2.5')}>
-        <div className="h-full rounded-full bg-honey-500" style={{ width: `${left.percent}%` }} />
-        <div className="h-full rounded-full bg-honey-200" style={{ width: `${right.percent}%` }} />
+        <div className="h-full rounded-full bg-signal" style={{ width: `${left.percent}%` }} />
+        <div className="h-full rounded-full bg-signal-tint" style={{ width: `${right.percent}%` }} />
       </div>
     </div>
   );
@@ -94,13 +94,13 @@ export function OddsBarMulti({ options, className }: { options: OddsOption[]; cl
       {sorted.map((o) => (
         <div key={o.id} className="space-y-1">
           <div className="flex justify-between gap-2 text-sm font-semibold">
-            <span className="min-w-0 flex-1 truncate text-espresso-700">
+            <span className="min-w-0 flex-1 truncate text-muted">
               <OptionLabel label={o.label} />
             </span>
-            <span className="shrink-0 text-honey-800">{o.percent}%</span>
+            <span className="shrink-0 text-signal-deep">{o.percent}%</span>
           </div>
-          <div className="h-2.5 overflow-hidden rounded-full bg-espresso-100">
-            <div className="h-full bg-honey-500" style={{ width: `${o.percent}%` }} />
+          <div className="h-2.5 overflow-hidden rounded-full bg-rule">
+            <div className="h-full bg-signal" style={{ width: `${o.percent}%` }} />
           </div>
         </div>
       ))}

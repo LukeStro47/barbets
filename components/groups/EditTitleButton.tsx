@@ -66,7 +66,7 @@ export function EditTitleButton({
         aria-label={`Edit ${defaultLabel}`}
         className={cn(
           'flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors',
-          dark ? 'text-honey-300/80 hover:bg-white/10 hover:text-honey-300' : 'text-espresso-400 hover:bg-espresso-50 hover:text-espresso-700'
+          dark ? 'text-on-ink/80 hover:bg-white/10 hover:text-on-ink' : 'text-faint hover:bg-rule hover:text-muted'
         )}
       >
         <PencilIcon className="h-3.5 w-3.5" />
@@ -74,22 +74,22 @@ export function EditTitleButton({
 
       {open && (
         <Modal onClose={() => setOpen(false)}>
-          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">Edit award</p>
-          {error && <p className="text-sm text-danger-700">{error}</p>}
+          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-ink">Edit award</p>
+          {error && <p className="text-sm text-alert">{error}</p>}
 
           <label className="block space-y-1.5">
-            <span className="block text-xs font-bold text-espresso-500">Name</span>
+            <span className="block text-xs font-bold text-muted">Name</span>
             <input
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               maxLength={AWARD_LABEL_MAX_LENGTH}
               placeholder={defaultLabel}
-              className="w-full rounded-[10px] border border-espresso-200 bg-paper-white px-3.5 py-2.5 text-[15px] font-semibold text-espresso-950 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200"
+              className="w-full rounded-[10px] border border-hairline bg-surface px-3.5 py-2.5 text-[15px] font-semibold text-ink focus:border-signal focus:outline-none focus:ring-2 focus:ring-signal/15"
             />
           </label>
 
           <div className="space-y-1.5">
-            <span className="block text-xs font-bold text-espresso-500">Symbol</span>
+            <span className="block text-xs font-bold text-muted">Symbol</span>
             <AwardIconPicker value={iconKey} onChange={setIconKey} />
           </div>
 

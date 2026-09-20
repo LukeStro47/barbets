@@ -21,11 +21,11 @@ export function TimezoneCaption({ groupTimezone }: { groupTimezone: string }) {
   if (!deviceTimezone) return null;
 
   if (deviceTimezone === groupTimezone) {
-    return <p className="text-xs text-espresso-400">Times shown in {friendlyTimezoneName(groupTimezone)}.</p>;
+    return <p className="text-xs text-faint">Times shown in {friendlyTimezoneName(groupTimezone)}.</p>;
   }
 
   return (
-    <p className="text-xs text-espresso-400">
+    <p className="text-xs text-faint">
       Times shown in {friendlyTimezoneName(deviceTimezone)}. Group's reference zone: {friendlyTimezoneName(groupTimezone)}.
     </p>
   );

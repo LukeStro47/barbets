@@ -25,8 +25,8 @@ export function FinalTableCard({
 
   return (
     <div className="flex flex-col gap-2">
-      <h2 className="ml-1 text-xs font-bold tracking-[0.08em] text-espresso-400 uppercase">Final table</h2>
-      <div className="flex flex-col gap-1.5 rounded-[22px] border border-espresso-100 bg-paper-white p-3">
+      <h2 className="ml-1 text-xs font-bold tracking-[0.08em] text-faint uppercase">Final table</h2>
+      <div className="flex flex-col gap-1.5 rounded-[22px] border border-hairline bg-surface p-3">
         {shown.map((m, i) => {
           const isMe = m.user_id === viewerUserId;
           const pct = Math.max(9, Math.round((m.balance / leaderBalance) * 100));
@@ -34,26 +34,26 @@ export function FinalTableCard({
             <div
               key={m.user_id}
               className={cn(
-                'relative h-[50px] overflow-hidden rounded-[14px] bg-espresso-50',
-                isMe && 'border-[1.5px] border-honey-500'
+                'relative h-[50px] overflow-hidden rounded-[14px] bg-rule',
+                isMe && 'border-[1.5px] border-signal'
               )}
             >
               <span
-                className={cn('absolute inset-y-0 left-0', isMe ? 'bg-honey-500' : 'bg-honey-500/30')}
+                className={cn('absolute inset-y-0 left-0', isMe ? 'bg-signal' : 'bg-signal/30')}
                 style={{ width: `${pct}%` }}
               />
               <span className="absolute inset-0 flex items-center gap-2.5 px-3">
-                <span className="w-5 shrink-0 text-center text-xs font-extrabold text-espresso-500">
+                <span className="w-5 shrink-0 text-center text-xs font-extrabold text-muted">
                   {MEDAL[i] ?? `${i + 1}.`}
                 </span>
-                <Mention nickname={m.nickname} className="min-w-0 flex-1 truncate text-[13.5px] font-bold text-espresso-900" />
-                <span className="shrink-0 font-display text-[15px] font-extrabold text-espresso-900">{formatTokens(m.balance)}</span>
+                <Mention nickname={m.nickname} className="min-w-0 flex-1 truncate text-[13.5px] font-bold text-ink" />
+                <span className="shrink-0 font-display text-[15px] font-extrabold text-ink">{formatTokens(m.balance)}</span>
               </span>
             </div>
           );
         })}
         {finalBalances.length > maxRows && (
-          <Link href={`/groups/${groupId}/leaderboard?lens=current`} className="px-1 pt-1 text-[12.5px] font-bold text-honey-700 hover:text-honey-800">
+          <Link href={`/groups/${groupId}/leaderboard?lens=current`} className="px-1 pt-1 text-[12.5px] font-bold text-signal hover:text-signal-deep">
             Show all {finalBalances.length} →
           </Link>
         )}

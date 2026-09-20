@@ -37,10 +37,10 @@ const STEPPER_MAX = 10_000;
 const STEPPER_STEP = 100;
 
 const selectClasses =
-  'w-full rounded-[10px] border border-espresso-200 bg-paper-white px-3.5 py-2.5 text-[15px] font-semibold text-espresso-950 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
+  'w-full rounded-[10px] border border-hairline bg-surface px-3.5 py-2.5 text-[15px] font-semibold text-ink focus:border-signal focus:outline-none focus:ring-2 focus:ring-signal/15';
 
 const inputClasses =
-  'w-full rounded-[10px] border border-espresso-200 bg-paper-white px-3.5 py-2.5 text-[15px] font-bold text-espresso-950 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
+  'w-full rounded-[10px] border border-hairline bg-surface px-3.5 py-2.5 text-[15px] font-bold text-ink focus:border-signal focus:outline-none focus:ring-2 focus:ring-signal/15';
 
 function toLocalDatetimeInputValue(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -246,7 +246,7 @@ export function LiveRulesForm({
       <section>
         <SectionLabel
           action={
-            <Link href={`/how-it-works?group=${groupId}&tab=your-group`} className="text-[11.5px] font-bold text-honey-700">
+            <Link href={`/how-it-works?group=${groupId}&tab=your-group`} className="text-[11.5px] font-bold text-signal">
               Explain the rules ›
             </Link>
           }
@@ -305,10 +305,10 @@ export function LiveRulesForm({
           {canEdit ? (
             <div className="flex items-center justify-between gap-3.5 px-4 py-[13px]">
               <span className="min-w-0">
-                <span className="block text-sm font-semibold text-espresso-800">Token allocation</span>
-                <span className="mt-0.5 block text-xs leading-[1.45] text-espresso-400">What each new member starts with</span>
+                <span className="block text-sm font-semibold text-ink">Token allocation</span>
+                <span className="mt-0.5 block text-xs leading-[1.45] text-faint">What each new member starts with</span>
               </span>
-              <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-espresso-200 p-[3px]">
+              <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-hairline p-[3px]">
                 <button
                   type="button"
                   aria-label="Decrease token allocation"
@@ -320,11 +320,11 @@ export function LiveRulesForm({
                   onPointerUp={stopHold}
                   onPointerCancel={stopHold}
                   onPointerLeave={stopHold}
-                  className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-espresso-50 text-[15px] font-extrabold text-espresso-700 disabled:opacity-40"
+                  className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-rule text-[15px] font-extrabold text-muted disabled:opacity-40"
                 >
                   −
                 </button>
-                <span className="min-w-12 text-center text-sm font-extrabold text-espresso-950">{formatTokens(local.seedAmount)}</span>
+                <span className="min-w-12 text-center text-sm font-extrabold text-ink">{formatTokens(local.seedAmount)}</span>
                 <button
                   type="button"
                   aria-label="Increase token allocation"
@@ -336,7 +336,7 @@ export function LiveRulesForm({
                   onPointerUp={stopHold}
                   onPointerCancel={stopHold}
                   onPointerLeave={stopHold}
-                  className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-espresso-50 text-[15px] font-extrabold text-espresso-700 disabled:opacity-40"
+                  className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-rule text-[15px] font-extrabold text-muted disabled:opacity-40"
                 >
                   +
                 </button>
@@ -349,12 +349,12 @@ export function LiveRulesForm({
           {!isPublic && (
             <div className="px-4 py-[13px]">
               <div className="flex items-baseline justify-between gap-3">
-                <span className="text-sm font-semibold text-espresso-800">Challenge window</span>
-                <span className="font-display text-[15px] font-extrabold text-honey-700">
+                <span className="text-sm font-semibold text-ink">Challenge window</span>
+                <span className="font-display text-[15px] font-extrabold text-signal">
                   {formatChallengeWindow(local.resolutionWindowHours)}
                 </span>
               </div>
-              <p className="mt-0.5 text-xs leading-[1.45] text-espresso-400">
+              <p className="mt-0.5 text-xs leading-[1.45] text-faint">
                 How long a called result can be disputed.
               </p>
               {canEdit && (
@@ -377,7 +377,7 @@ export function LiveRulesForm({
                     className="challenge-window-slider mt-2.5 w-full"
                     style={{ ['--fill' as string]: `${fillPct}%` }}
                   />
-                  <div className="mt-1 flex justify-between text-[11px] text-espresso-300">
+                  <div className="mt-1 flex justify-between text-[11px] text-faint">
                     <span>30 min</span>
                     <span>10 hours</span>
                   </div>
@@ -392,21 +392,21 @@ export function LiveRulesForm({
               onClick={() => setMoreOpen((v) => !v)}
               className="flex w-full items-center justify-between gap-3.5 px-4 py-[13px] text-left"
             >
-              <span className="text-[13px] font-bold text-honey-700">More rules</span>
+              <span className="text-[13px] font-bold text-signal">More rules</span>
               <span className="flex items-center gap-2">
-                <span className="text-[11.5px] text-espresso-400">{moreHint}</span>
-                <CaretDownIcon className={cn('h-3.5 w-3.5 text-honey-600 transition-transform duration-200', moreOpen && 'rotate-180')} />
+                <span className="text-[11.5px] text-faint">{moreHint}</span>
+                <CaretDownIcon className={cn('h-3.5 w-3.5 text-signal transition-transform duration-200', moreOpen && 'rotate-180')} />
               </span>
             </button>
             <div className={cn('grid transition-[grid-template-rows] duration-200 ease-out', moreOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}>
               <div className="overflow-hidden">
                 {!isPublic && (
-                  <div className="border-t border-espresso-100 px-4 py-[13px]">
+                  <div className="border-t border-hairline px-4 py-[13px]">
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-sm font-semibold text-espresso-800">Season length</span>
+                      <span className="text-sm font-semibold text-ink">Season length</span>
                       {canEdit ? (
                         seasonsLocked ? (
-                          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-espresso-50 px-2.5 py-[3px] text-[11px] font-bold text-espresso-500">
+                          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-rule px-2.5 py-[3px] text-[11px] font-bold text-muted">
                             <LockIcon className="h-[11px] w-[11px]" />
                             Seasons stay on
                           </span>
@@ -414,10 +414,10 @@ export function LiveRulesForm({
                           <Switch checked={local.seasonsEnabled} onChange={() => patchLocal({ seasonsEnabled: !local.seasonsEnabled })} />
                         )
                       ) : (
-                        <span className="shrink-0 text-sm font-bold text-espresso-800">{local.seasonsEnabled ? 'On' : 'Off'}</span>
+                        <span className="shrink-0 text-sm font-bold text-ink">{local.seasonsEnabled ? 'On' : 'Off'}</span>
                       )}
                     </div>
-                    <p className="mt-0.5 text-xs leading-[1.45] text-espresso-400">
+                    <p className="mt-0.5 text-xs leading-[1.45] text-faint">
                       {local.seasonsEnabled
                         ? 'Standings archive, then everyone is reseeded.'
                         : 'The board never resets. Turning seasons on is permanent.'}
@@ -433,15 +433,15 @@ export function LiveRulesForm({
                               aria-pressed={local.seasonLength === len}
                               className={`rounded-full border-[1.5px] px-3 py-[5px] text-[13px] ${
                                 local.seasonLength === len
-                                  ? 'border-honey-500 bg-honey-50 font-bold text-honey-800'
-                                  : 'border-espresso-200 font-semibold text-espresso-600'
+                                  ? 'border-signal bg-signal-tint font-bold text-signal-deep'
+                                  : 'border-hairline font-semibold text-muted'
                               }`}
                             >
                               {SEASON_LENGTH_SHORT_LABEL[len]}
                             </button>
                           ))}
                         </div>
-                        <p className="mt-2 text-xs leading-[1.45] text-espresso-400">{SEASON_LENGTH_BRIEF[local.seasonLength]}</p>
+                        <p className="mt-2 text-xs leading-[1.45] text-faint">{SEASON_LENGTH_BRIEF[local.seasonLength]}</p>
                         {local.seasonLength === 'custom' && (
                           <input
                             type="datetime-local"
@@ -464,14 +464,14 @@ export function LiveRulesForm({
                       </>
                     )}
                     {local.seasonsEnabled && !canEdit && (
-                      <p className="mt-1 text-sm font-bold text-espresso-800">{SEASON_LENGTH_SHORT_LABEL[local.seasonLength]}</p>
+                      <p className="mt-1 text-sm font-bold text-ink">{SEASON_LENGTH_SHORT_LABEL[local.seasonLength]}</p>
                     )}
                   </div>
                 )}
 
                 {!isPublic &&
                   (canEdit ? (
-                    <div className="border-t border-espresso-100">
+                    <div className="border-t border-hairline">
                       <ToggleRow
                         label="Split universal losses"
                         helper={
@@ -486,7 +486,7 @@ export function LiveRulesForm({
                         <div className="space-y-2 px-4 pb-3.5">
                           <div className="flex gap-3">
                             <label className="flex-1 space-y-1">
-                              <span className="block text-xs font-bold text-espresso-500">Creator %</span>
+                              <span className="block text-xs font-bold text-muted">Creator %</span>
                               <input
                                 type="number"
                                 min={0}
@@ -506,18 +506,18 @@ export function LiveRulesForm({
                               />
                             </label>
                             <div className="flex-1 space-y-1">
-                              <span className="block text-xs font-bold text-espresso-500">Open markets %</span>
-                              <div className="w-full rounded-[10px] border border-espresso-100 bg-espresso-50 px-3.5 py-2.5 text-[15px] font-bold text-espresso-400">
+                              <span className="block text-xs font-bold text-muted">Open markets %</span>
+                              <div className="w-full rounded-[10px] border border-hairline bg-rule px-3.5 py-2.5 text-[15px] font-bold text-faint">
                                 {openMarketsPct}
                               </div>
                             </div>
                           </div>
-                          {!creatorPctValid && <p className="text-xs text-danger-700">The creator percentage has to be between 0 and 100.</p>}
+                          {!creatorPctValid && <p className="text-xs text-alert">The creator percentage has to be between 0 and 100.</p>}
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div className="border-t border-espresso-100">
+                    <div className="border-t border-hairline">
                       <ValueRow
                         label="When nobody calls it"
                         helper={
@@ -530,11 +530,11 @@ export function LiveRulesForm({
                     </div>
                   ))}
 
-                <div className="border-t border-espresso-100 px-4 py-[13px]">
-                  <label className="block text-sm font-semibold text-espresso-800" htmlFor="group-timezone">
+                <div className="border-t border-hairline px-4 py-[13px]">
+                  <label className="block text-sm font-semibold text-ink" htmlFor="group-timezone">
                     Time zone
                   </label>
-                  <p className="mt-0.5 mb-2 text-xs leading-[1.45] text-espresso-400">Shown next to every closing time.</p>
+                  <p className="mt-0.5 mb-2 text-xs leading-[1.45] text-faint">Shown next to every closing time.</p>
                   {canEdit ? (
                     <select
                       id="group-timezone"
@@ -552,13 +552,13 @@ export function LiveRulesForm({
                       ))}
                     </select>
                   ) : (
-                    <p className="text-sm font-bold text-espresso-800">{friendlyTimezoneName(local.timezone).replace(/ time$/, '')}</p>
+                    <p className="text-sm font-bold text-ink">{friendlyTimezoneName(local.timezone).replace(/ time$/, '')}</p>
                   )}
                 </div>
 
                 {!isPublic &&
                   (canEdit ? (
-                    <div className="border-t border-espresso-100">
+                    <div className="border-t border-hairline">
                       <ToggleRow
                         label="Titles & custom awards"
                         helper={
@@ -571,7 +571,7 @@ export function LiveRulesForm({
                       />
                     </div>
                   ) : (
-                    <div className="border-t border-espresso-100">
+                    <div className="border-t border-hairline">
                       <ValueRow
                         label="Titles & custom awards"
                         helper={
@@ -586,7 +586,7 @@ export function LiveRulesForm({
 
                 {!isPublic &&
                   (canEdit ? (
-                    <div className="border-t border-espresso-100">
+                    <div className="border-t border-hairline">
                       <ToggleRow
                         label="Accepting new members"
                         helper={
@@ -599,7 +599,7 @@ export function LiveRulesForm({
                       />
                     </div>
                   ) : (
-                    <div className="border-t border-espresso-100">
+                    <div className="border-t border-hairline">
                       <ValueRow
                         label="Accepting new members"
                         helper={
@@ -613,11 +613,11 @@ export function LiveRulesForm({
                   ))}
 
                 {!isPublic && (
-                  <div className="border-t border-espresso-100 px-4 py-[13px]">
-                    <label className="block text-sm font-semibold text-espresso-800" htmlFor="join-message">
+                  <div className="border-t border-hairline px-4 py-[13px]">
+                    <label className="block text-sm font-semibold text-ink" htmlFor="join-message">
                       Join message
                     </label>
-                    <p className="mt-0.5 mb-2 text-xs leading-[1.45] text-espresso-400">Shown when someone joins. Leave blank for none.</p>
+                    <p className="mt-0.5 mb-2 text-xs leading-[1.45] text-faint">Shown when someone joins. Leave blank for none.</p>
                     {canEdit ? (
                       <>
                         <textarea
@@ -640,12 +640,12 @@ export function LiveRulesForm({
                           placeholder="Welcome to the group. House rule: no crying about bad beats."
                           className={inputClasses}
                         />
-                        <span className="mt-1 block text-right text-[11px] text-espresso-400">
+                        <span className="mt-1 block text-right text-[11px] text-faint">
                           {local.joinMessage.length} / {JOIN_MESSAGE_MAX_LENGTH}
                         </span>
                       </>
                     ) : (
-                      <p className="text-sm font-bold text-espresso-800">{local.joinMessage.trim() ? 'Set' : 'None'}</p>
+                      <p className="text-sm font-bold text-ink">{local.joinMessage.trim() ? 'Set' : 'None'}</p>
                     )}
                   </div>
                 )}
@@ -655,15 +655,15 @@ export function LiveRulesForm({
         </SettingsCard>
       </section>
 
-      <p className="px-0.5 text-[11.5px] leading-[1.5] text-espresso-400">
+      <p className="px-0.5 text-[11.5px] leading-[1.5] text-faint">
         {canEdit ? 'Applies to markets opened from now on.' : 'Set by the owner. Applies to markets opened from now on.'}
       </p>
 
       {confirmingBetting && (
         <Modal onClose={() => setConfirmingBetting(false)}>
-          <p className="font-display text-lg font-bold text-espresso-900">Turn betting on?</p>
-          <p className="text-sm text-espresso-600">Once betting is on, it can&apos;t be turned back off from here.</p>
-          {bettingError && <p className="text-sm text-danger-700">{bettingError}</p>}
+          <p className="font-display text-lg font-bold text-ink">Turn betting on?</p>
+          <p className="text-sm text-muted">Once betting is on, it can&apos;t be turned back off from here.</p>
+          {bettingError && <p className="text-sm text-alert">{bettingError}</p>}
           <div className="flex gap-2 pt-1">
             <Button type="button" variant="outline" className="flex-1" onClick={() => setConfirmingBetting(false)}>
               Cancel
@@ -726,8 +726,8 @@ function ToggleRow({
   return (
     <div className="flex items-start justify-between gap-3.5 px-4 py-[13px]">
       <span className="min-w-0">
-        <span className="block text-sm font-semibold text-espresso-800">{label}</span>
-        <span className="mt-0.5 block text-xs leading-[1.45] text-espresso-400">{helper}</span>
+        <span className="block text-sm font-semibold text-ink">{label}</span>
+        <span className="mt-0.5 block text-xs leading-[1.45] text-faint">{helper}</span>
       </span>
       <Switch checked={checked} onChange={onChange} disabled={disabled} className="mt-0.5" />
     </div>
@@ -738,10 +738,10 @@ function ValueRow({ label, helper, value }: { label: string; helper: React.React
   return (
     <div className="flex items-start justify-between gap-3.5 px-4 py-[13px]">
       <span className="min-w-0">
-        <span className="block text-sm font-semibold text-espresso-800">{label}</span>
-        <span className="mt-0.5 block text-xs leading-[1.45] text-espresso-400">{helper}</span>
+        <span className="block text-sm font-semibold text-ink">{label}</span>
+        <span className="mt-0.5 block text-xs leading-[1.45] text-faint">{helper}</span>
       </span>
-      <span className="shrink-0 text-sm font-bold text-espresso-800">{value}</span>
+      <span className="shrink-0 text-sm font-bold text-ink">{value}</span>
     </div>
   );
 }

@@ -19,7 +19,7 @@ export function ResetPasswordForm() {
 
   return (
     <form action={formAction} className="mt-9">
-      {state?.error && <p className="mb-4 text-sm text-danger-700">{state.error}</p>}
+      {state?.error && <p className="mb-4 text-sm text-alert">{state.error}</p>}
       <div className="flex flex-col gap-6">
         <Field label="New password" name="password" type="password" autoComplete="new-password" required />
         <Field

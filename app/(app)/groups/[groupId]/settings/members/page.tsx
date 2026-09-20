@@ -29,7 +29,7 @@ export default async function GroupMembersPage({ params }: { params: Promise<{ g
         title="Members"
         backHref={`/groups/${groupId}/settings`}
         backLabel={groupSetupTitle(isOwner)}
-        action={!isPublic ? <span className="shrink-0 text-[11.5px] font-extrabold text-espresso-400">{roster.length}</span> : undefined}
+        action={!isPublic ? <span className="shrink-0 text-[11.5px] font-extrabold text-faint">{roster.length}</span> : undefined}
       />
 
       {isPublic ? (

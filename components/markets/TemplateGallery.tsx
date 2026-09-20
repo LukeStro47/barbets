@@ -12,9 +12,9 @@ import type { MarketTemplate } from '@/lib/marketTemplates';
 import type { MemberOption } from '@/components/markets/MarketForms';
 import { cn } from '@/lib/cn';
 
-const eyebrowClasses = 'text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase';
-const cardClasses = 'relative rounded-[18px] border border-espresso-100 bg-paper-white p-3.5 text-left';
-const emptyStateClasses = 'rounded-[18px] border border-dashed border-espresso-200 p-4 text-[13px] leading-[1.45] text-espresso-400';
+const eyebrowClasses = 'text-[10.5px] font-extrabold tracking-[0.1em] text-faint uppercase';
+const cardClasses = 'relative rounded-[18px] border border-hairline bg-surface p-3.5 text-left';
+const emptyStateClasses = 'rounded-[18px] border border-dashed border-hairline p-4 text-[13px] leading-[1.45] text-faint';
 
 /** A section that always renders (so "you have none" is a real, legible state rather than the
  * section just vanishing), showing its cards or a dashed empty-state card in its place. */
@@ -41,22 +41,22 @@ function TemplateCard({
   return (
     <div className={cardClasses}>
       <button type="button" onClick={onTap} className="flex w-full items-center gap-3 border-0 bg-transparent p-0 text-left">
-        <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-espresso-50 text-base font-semibold text-espresso-700">
+        <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-rule text-base font-semibold text-muted">
           {MARKET_TYPE_ICON[template.market_type]}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[14.5px] leading-[1.35] font-semibold text-espresso-900">
+          <span className="block text-[14.5px] leading-[1.35] font-semibold text-ink">
             {template.has_placeholder ? <PlaceholderTitle title={template.title} /> : template.title}
           </span>
           <span className="mt-1 flex items-center gap-1.5">
             {template.has_placeholder && (
-              <span className="rounded-full bg-honey-50 px-2 py-0.5 text-[11px] font-extrabold text-honey-700">Fill in @</span>
+              <span className="rounded-full bg-signal-tint px-2 py-0.5 text-[11px] font-extrabold text-signal">Fill in @</span>
             )}
-            <span className="text-[11px] text-espresso-300">{MARKET_TYPE_LABEL[template.market_type]}</span>
+            <span className="text-[11px] text-faint">{MARKET_TYPE_LABEL[template.market_type]}</span>
           </span>
         </span>
         {!deletable && (
-          <svg className="h-3.5 w-3.5 shrink-0 text-espresso-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+          <svg className="h-3.5 w-3.5 shrink-0 text-dash" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
             <polyline points="9 18 15 12 9 6" />
           </svg>
         )}
@@ -66,7 +66,7 @@ function TemplateCard({
           type="button"
           onClick={onDelete}
           aria-label="Delete template"
-          className="absolute top-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-full border-0 bg-transparent text-base text-espresso-300 hover:bg-espresso-50 hover:text-danger-700"
+          className="absolute top-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-full border-0 bg-transparent text-base text-faint hover:bg-rule hover:text-alert"
         >
           ×
         </button>
@@ -85,7 +85,7 @@ function PlaceholderTitle({ title }: { title: string }) {
       {parts.map((chunk, i) => (
         <span key={i}>
           {chunk}
-          {i < parts.length - 1 && <span className="font-bold text-honey-700 italic">@</span>}
+          {i < parts.length - 1 && <span className="font-bold text-signal italic">@</span>}
         </span>
       ))}
     </>
@@ -105,9 +105,9 @@ function MemberPickerModal({
 }) {
   return (
     <Modal onClose={onClose} padded={false} panelClassName="overflow-hidden">
-      <div className="bg-espresso-50 px-[18px] py-[13px]">
-        <p className="text-xs font-extrabold tracking-[0.06em] text-espresso-800 uppercase">Who&apos;s this about?</p>
-        <p className="mt-1 text-[12.5px] text-espresso-500">
+      <div className="bg-rule px-[18px] py-[13px]">
+        <p className="text-xs font-extrabold tracking-[0.06em] text-ink uppercase">Who&apos;s this about?</p>
+        <p className="mt-1 text-[12.5px] text-muted">
           <PlaceholderTitle title={template.title} />
         </p>
       </div>
@@ -117,15 +117,15 @@ function MemberPickerModal({
             key={m.userId}
             type="button"
             onClick={() => onPick(m)}
-            className="rounded-full border-[1.5px] border-espresso-200 px-[15px] py-2 text-[13px] font-bold text-espresso-600"
+            className="rounded-full border-[1.5px] border-hairline px-[15px] py-2 text-[13px] font-bold text-muted"
           >
             <Mention nickname={m.nickname} />
           </button>
         ))}
-        {members.length === 0 && <p className="text-sm text-espresso-400">No one else to pick from yet.</p>}
+        {members.length === 0 && <p className="text-sm text-faint">No one else to pick from yet.</p>}
       </div>
-      <div className="border-t border-espresso-50 px-[18px] py-[14px]">
-        <button type="button" onClick={onClose} className="w-full rounded-full border border-espresso-200 py-3 text-sm font-semibold text-espresso-800">
+      <div className="border-t border-rule px-[18px] py-[14px]">
+        <button type="button" onClick={onClose} className="w-full rounded-full border border-hairline py-3 text-sm font-semibold text-ink">
           Cancel
         </button>
       </div>
@@ -147,7 +147,7 @@ function CollapsibleCategory({ label, children }: { label: string; children: Rea
         className="flex w-full items-center justify-between gap-2 border-0 bg-transparent p-0"
       >
         <span className={eyebrowClasses}>{label}</span>
-        <CaretDownIcon className={cn('h-3.5 w-3.5 text-espresso-400 transition-transform', open && 'rotate-180')} />
+        <CaretDownIcon className={cn('h-3.5 w-3.5 text-faint transition-transform', open && 'rotate-180')} />
       </button>
       {open && <div className="mt-2.5 flex flex-col gap-2">{children}</div>}
     </section>
@@ -214,16 +214,16 @@ export function TemplateGallery({
         <button
           type="button"
           onClick={() => router.push(`/groups/${groupId}`)}
-          className="-ml-1.5 inline-flex items-center gap-0.5 border-0 bg-transparent p-0 text-espresso-300"
+          className="-ml-1.5 inline-flex items-center gap-0.5 border-0 bg-transparent p-0 text-faint"
         >
           <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
-        <h1 className="mt-2.5 font-display text-[28px] leading-[1.1] font-extrabold tracking-[-0.02em] text-espresso-950">
+        <h1 className="mt-2.5 font-display text-[28px] leading-[1.1] font-extrabold tracking-[-0.02em] text-ink">
           Start from an idea
         </h1>
-        <p className="mt-1 text-[13.5px] leading-[1.45] text-espresso-400">
+        <p className="mt-1 text-[13.5px] leading-[1.45] text-faint">
           Pick one to prefill, or build a market from scratch.
         </p>
       </div>

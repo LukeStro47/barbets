@@ -85,7 +85,7 @@ export function ReactionBar({ groupId, marketId, counts, myReaction, nicknames, 
         }
       >
         {active.length === 0 ? (
-          <span className="text-lg leading-none text-paper-white">+</span>
+          <span className="text-lg leading-none text-white">+</span>
         ) : (
           <span className="flex items-center">
             {active.map((r, i) => (
@@ -97,7 +97,7 @@ export function ReactionBar({ groupId, marketId, counts, myReaction, nicknames, 
                 {r.glyph}
               </span>
             ))}
-            <span className="ml-1 text-base leading-none text-paper-white/70">+</span>
+            <span className="ml-1 text-base leading-none text-white/70">+</span>
           </span>
         )}
       </button>
@@ -106,7 +106,7 @@ export function ReactionBar({ groupId, marketId, counts, myReaction, nicknames, 
         <>
           {/* Click-outside-to-close backdrop, purely for dismissal — not part of the ticket's own visual design. */}
           <button type="button" aria-label="Close reaction picker" onClick={() => setOpen(false)} className="fixed inset-0 z-0 cursor-default" />
-          <div className="absolute top-full right-0 z-[1] mt-2 w-56 space-y-2 rounded-2xl bg-paper-white p-2.5 shadow-lg ring-1 ring-espresso-200/60">
+          <div className="absolute top-full right-0 z-[1] mt-2 w-56 space-y-2 rounded-2xl bg-surface p-2.5 shadow-lg ring-1 ring-hairline/60">
             <div className="flex items-center justify-between">
               {REACTIONS.map(({ emoji, glyph }) => (
                 <button
@@ -115,7 +115,7 @@ export function ReactionBar({ groupId, marketId, counts, myReaction, nicknames, 
                   disabled={isPending}
                   onClick={() => tap(emoji)}
                   className={`flex h-9 w-9 items-center justify-center rounded-full text-xl ${
-                    mine === emoji ? 'bg-honey-100 ring-2 ring-honey-400' : 'hover:bg-espresso-50'
+                    mine === emoji ? 'bg-signal-tint ring-2 ring-signal' : 'hover:bg-rule'
                   }`}
                 >
                   {glyph}
@@ -124,11 +124,11 @@ export function ReactionBar({ groupId, marketId, counts, myReaction, nicknames, 
             </div>
 
             {active.length > 0 && (
-              <div className="space-y-1 border-t border-espresso-100 pt-2">
+              <div className="space-y-1 border-t border-hairline pt-2">
                 {active.map((r) => (
                   <div key={r.emoji} className="flex items-center gap-2 text-xs">
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center text-sm">{r.glyph}</span>
-                    <span className="truncate text-espresso-600">
+                    <span className="truncate text-muted">
                       {(localNicknames[r.emoji] ?? []).map((n) => `@${n}`).join(', ')}
                     </span>
                   </div>
@@ -139,7 +139,7 @@ export function ReactionBar({ groupId, marketId, counts, myReaction, nicknames, 
         </>
       )}
 
-      {error && <p className="absolute top-full right-0 z-0 mt-2 w-40 text-right text-[11px] text-danger-300">{error}</p>}
+      {error && <p className="absolute top-full right-0 z-0 mt-2 w-40 text-right text-[11px] text-alert">{error}</p>}
     </div>
   );
 }

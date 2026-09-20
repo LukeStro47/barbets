@@ -91,18 +91,18 @@ export function JoinFlow({
   if (step === 'confirm') {
     return (
       <div className="flex flex-1 flex-col items-center justify-center px-7 py-11 pt-[calc(env(safe-area-inset-top)+2.75rem)] text-center">
-        <span className="text-xs font-bold tracking-[2px] text-honey-700 uppercase">You're invited</span>
+        <span className="text-xs font-bold tracking-[2px] text-signal uppercase">You're invited</span>
 
-        <div className="mt-5 w-full rounded-[24px] border border-espresso-100 bg-paper-white px-5 pt-8 pb-[34px]">
+        <div className="mt-5 w-full rounded-[24px] border border-hairline bg-surface px-5 pt-8 pb-[34px]">
           <GroupAvatar
             name={groupName}
             avatarKey={groupAvatarKey}
-            fallbackClassName="bg-espresso-50 text-[26px] text-honey-700"
+            fallbackClassName="bg-rule text-[26px] text-signal"
             className="mx-auto h-16 w-16"
           />
           {/* balance, not pretty: a long group name has to wrap evenly across two lines here
               rather than leave one orphaned word under a full first line. */}
-          <p className="mt-5 font-display text-[26px]/[34px] font-extrabold tracking-[-0.02em] text-balance text-espresso-900">
+          <p className="mt-5 font-display text-[26px]/[34px] font-extrabold tracking-[-0.02em] text-balance text-ink">
             {groupName}
           </p>
         </div>
@@ -116,15 +116,15 @@ export function JoinFlow({
           >
             Join {groupName}
           </Button>
-          <Link href="/groups" className="text-sm text-espresso-500 hover:text-espresso-800">
+          <Link href="/groups" className="text-sm text-muted hover:text-ink">
             Not your group? Go to your groups →
           </Link>
         </div>
 
         {showBlockedModal && blockedReason && (
           <Modal onClose={() => setShowBlockedModal(false)}>
-            <p className="font-display font-bold text-espresso-900">{BLOCKED_COPY[blockedReason].title}</p>
-            <p className="text-sm text-espresso-500">{BLOCKED_COPY[blockedReason].body}</p>
+            <p className="font-display font-bold text-ink">{BLOCKED_COPY[blockedReason].title}</p>
+            <p className="text-sm text-muted">{BLOCKED_COPY[blockedReason].body}</p>
             <Button className="w-full" onClick={() => setShowBlockedModal(false)}>
               Got it
             </Button>
@@ -140,37 +140,37 @@ export function JoinFlow({
         <button
           type="button"
           onClick={() => setStep('confirm')}
-          className="-ml-1 inline-flex items-center gap-0.5 text-sm font-semibold text-espresso-500 hover:text-espresso-800"
+          className="-ml-1 inline-flex items-center gap-0.5 text-sm font-semibold text-muted hover:text-ink"
         >
           <CaretLeftIcon className="h-4 w-4" />
           Back
         </button>
-        <span className="text-xs font-bold tracking-[1.6px] text-espresso-500 uppercase">Step 2 of 2</span>
+        <span className="text-xs font-bold tracking-[1.6px] text-muted uppercase">Step 2 of 2</span>
       </div>
 
-      <h1 className="mt-11 font-display text-[34px]/[38px] font-extrabold tracking-[-0.03em] text-espresso-900">
+      <h1 className="mt-11 font-display text-[34px]/[38px] font-extrabold tracking-[-0.03em] text-ink">
         Pick your name.
       </h1>
-      <p className="mt-2.5 text-base/6 text-espresso-500">
+      <p className="mt-2.5 text-base/6 text-muted">
         This is what {groupName} will @mention you as. One word, letters, numbers and underscores.
       </p>
 
-      {error && <p className="mt-6 text-sm text-danger-700">{error}</p>}
+      {error && <p className="mt-6 text-sm text-alert">{error}</p>}
 
       {/* The nickname is the whole point of this screen, so it's set at display size rather than
           in a boxed input the eye skims past. The "@" is a static prefix, not part of the value. */}
-      <div className="mt-10 flex items-baseline gap-1 border-b-2 border-honey-500 pb-3">
-        <span className="font-display text-[32px] font-extrabold text-espresso-400">@</span>
+      <div className="mt-10 flex items-baseline gap-1 border-b-2 border-signal pb-3">
+        <span className="font-display text-[32px] font-extrabold text-faint">@</span>
         <input
           value={nickname}
           onChange={(e) => setNickname(e.target.value.toLowerCase())}
           maxLength={NICKNAME_MAX_LENGTH}
           autoFocus
           aria-label="Nickname"
-          className="w-full min-w-0 bg-transparent font-display text-[32px] font-extrabold text-espresso-900 caret-honey-500 focus:outline-none"
+          className="w-full min-w-0 bg-transparent font-display text-[32px] font-extrabold text-ink caret-signal focus:outline-none"
         />
       </div>
-      <span className="mt-3 text-[13px] text-espresso-500">
+      <span className="mt-3 text-[13px] text-muted">
         {nickname.length} / {NICKNAME_MAX_LENGTH}
       </span>
 
@@ -204,10 +204,10 @@ export function JoinFlow({
 
       {welcome && (
         <Modal onClose={() => proceedToGroup(welcome.groupId)}>
-          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">
+          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-ink">
             Welcome to {groupName}
           </p>
-          <p className="whitespace-pre-wrap text-sm leading-[1.5] text-espresso-600">{welcome.message}</p>
+          <p className="whitespace-pre-wrap text-sm leading-[1.5] text-muted">{welcome.message}</p>
           <Button className="w-full" onClick={() => proceedToGroup(welcome.groupId)}>
             Continue
           </Button>

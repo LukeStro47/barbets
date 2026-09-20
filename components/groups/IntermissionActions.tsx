@@ -40,7 +40,7 @@ export function RosterControl({
     }
     return (
       <div>
-        {error && <p className="mb-2 text-sm text-danger-700">{error}</p>}
+        {error && <p className="mb-2 text-sm text-alert">{error}</p>}
         <Button
           variant="accent"
           size="lg"
@@ -63,7 +63,7 @@ export function RosterControl({
   if (hasOptedOut) {
     return (
       <div>
-        {error && <p className="mb-2 text-sm text-danger-700">{error}</p>}
+        {error && <p className="mb-2 text-sm text-alert">{error}</p>}
         <Button
           variant="outline"
           disabled={isPending}
@@ -84,7 +84,7 @@ export function RosterControl({
 
   return (
     <div>
-      {error && <p className="mb-2 text-sm text-danger-700">{error}</p>}
+      {error && <p className="mb-2 text-sm text-alert">{error}</p>}
       <Button
         variant="outline"
         disabled={isPending}
@@ -114,10 +114,10 @@ export function OpenSeasonBettingButton({ groupId, seasonId }: { groupId: string
   const [isPending, startTransition] = useTransition();
 
   return (
-    <div className="rounded-2xl border-[1.5px] border-honey-500 bg-honey-50 px-4 py-3.5">
-      <p className="text-sm font-extrabold text-espresso-900">Betting is paused for this season</p>
-      <p className="mt-0.5 text-[12.5px] leading-[1.4] text-espresso-500">Nobody can start a market until you open it.</p>
-      {error && <p className="mt-2 text-xs text-danger-700">{error}</p>}
+    <div className="rounded-2xl border-[1.5px] border-signal bg-signal-tint px-4 py-3.5">
+      <p className="text-sm font-extrabold text-ink">Betting is paused for this season</p>
+      <p className="mt-0.5 text-[12.5px] leading-[1.4] text-muted">Nobody can start a market until you open it.</p>
+      {error && <p className="mt-2 text-xs text-alert">{error}</p>}
       <Button
         variant="accent"
         size="lg"
@@ -149,10 +149,10 @@ export function OpenBettingButton({ groupId }: { groupId: string }) {
   const [isPending, startTransition] = useTransition();
 
   return (
-    <div className="rounded-2xl border-[1.5px] border-honey-500 bg-honey-50 px-4 py-3.5">
-      <p className="text-sm font-extrabold text-espresso-900">Betting isn't open yet</p>
-      <p className="mt-0.5 text-[12.5px] leading-[1.4] text-espresso-500">Nobody can start a market until you open it.</p>
-      {error && <p className="mt-2 text-xs text-danger-700">{error}</p>}
+    <div className="rounded-2xl border-[1.5px] border-signal bg-signal-tint px-4 py-3.5">
+      <p className="text-sm font-extrabold text-ink">Betting isn't open yet</p>
+      <p className="mt-0.5 text-[12.5px] leading-[1.4] text-muted">Nobody can start a market until you open it.</p>
+      {error && <p className="mt-2 text-xs text-alert">{error}</p>}
       <Button
         variant="accent"
         size="lg"

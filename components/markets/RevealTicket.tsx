@@ -169,7 +169,7 @@ export function RevealTicket({
         <div
           ref={ticketRef}
           className={cn(
-            'relative overflow-visible rounded-[28px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 text-paper-white shadow-lg shadow-espresso-950/25',
+            'relative overflow-visible rounded-[28px] bg-gradient-to-br from-ink via-ink to-ink text-white shadow-lg shadow-ink/25',
             tearing && 'animate-mystery-ticket-pop'
           )}
         >
@@ -177,10 +177,10 @@ export function RevealTicket({
           <div className="mb-4 flex items-center gap-[7px]">
             {/* A plain <img>, not next/image, so html-to-image captures the exact same-origin asset with no optimization endpoint in the way. */}
             <img src="/barbets-mono-white.png" alt="" width={20} height={20} className="block" />
-            <span className="text-[12.5px] font-extrabold tracking-[0.08em] text-honey-300 uppercase">Barbets</span>
+            <span className="text-[12.5px] font-extrabold tracking-[0.08em] text-on-ink uppercase">Barbets</span>
           </div>
 
-          <p className="mb-2 text-[11.5px] font-bold tracking-[0.1em] text-honey-400 uppercase">
+          <p className="mb-2 text-[11.5px] font-bold tracking-[0.1em] text-signal uppercase">
             {groupName} &middot; {isVoid ? 'Voided' : 'Resolved'} {formattedDate}
           </p>
           <p
@@ -193,7 +193,7 @@ export function RevealTicket({
           </p>
 
           {line != null && (
-            <p className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-honey-500/15 px-3.5 py-2 text-[15px] font-extrabold text-paper-white">
+            <p className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-signal/15 px-3.5 py-2 text-[15px] font-extrabold text-white">
               Line: {line}
             </p>
           )}
@@ -201,11 +201,11 @@ export function RevealTicket({
           <div className={cn('flex items-center gap-3.5', isMultipleChoice && 'flex-col items-start gap-3')}>
             <div
               className={cn(
-                'bg-honey-500 font-extrabold text-espresso-950 uppercase',
+                'bg-signal font-extrabold text-ink uppercase',
                 isMultipleChoice
                   ? 'line-clamp-2 w-fit max-w-[240px] -rotate-3 rounded-[20px] px-[18px] py-[11px] text-center text-[15.5px] leading-[1.25] tracking-[0.02em]'
                   : cn(
-                      'flex h-[74px] w-[74px] shrink-0 -rotate-6 items-center justify-center rounded-full border-[3px] border-espresso-950/20 px-1 text-center leading-[1.1] shadow-[0_8px_18px_-6px_rgba(232,163,61,0.55)]',
+                      'flex h-[74px] w-[74px] shrink-0 -rotate-6 items-center justify-center rounded-full border-[3px] border-ink/20 px-1 text-center leading-[1.1] shadow-[0_8px_18px_-6px_rgba(232,163,61,0.55)]',
                       headlineBadgeTextClass(headline)
                     ),
                 tearing && 'animate-mystery-badge'
@@ -214,12 +214,12 @@ export function RevealTicket({
               <OptionLabel label={headline} />
             </div>
             {detailLine && (
-              <p className={cn('text-[13.5px] leading-[1.45] text-paper-white/70', tearing && 'animate-mystery-detail')}>{detailLine}</p>
+              <p className={cn('text-[13.5px] leading-[1.45] text-white/70', tearing && 'animate-mystery-detail')}>{detailLine}</p>
             )}
           </div>
 
           {hiddenFrom.length > 0 && (
-            <p className={cn('mt-2.5 text-[12px] text-paper-white/45', tearing && 'animate-mystery-detail')}>
+            <p className={cn('mt-2.5 text-[12px] text-white/45', tearing && 'animate-mystery-detail')}>
               Hidden from {hiddenFrom.join(', ')} until now.
             </p>
           )}
@@ -227,15 +227,15 @@ export function RevealTicket({
 
         {(odds.length > 0 || callers.length > 0) && (
           <div className="relative border-t-2 border-dashed border-white/20">
-            <span className="absolute top-1/2 -left-2.5 h-5 w-5 -translate-y-1/2 rounded-full bg-paper" />
-            <span className="absolute top-1/2 -right-2.5 h-5 w-5 -translate-y-1/2 rounded-full bg-paper" />
+            <span className="absolute top-1/2 -left-2.5 h-5 w-5 -translate-y-1/2 rounded-full bg-canvas" />
+            <span className="absolute top-1/2 -right-2.5 h-5 w-5 -translate-y-1/2 rounded-full bg-canvas" />
           </div>
         )}
 
         <div className="px-6 pt-5 pb-[22px]">
           {odds.length > 0 && (
             <>
-              <p className="mb-2.5 text-[11.5px] font-bold tracking-[0.1em] text-honey-400 uppercase">Odds at close</p>
+              <p className="mb-2.5 text-[11.5px] font-bold tracking-[0.1em] text-signal uppercase">Odds at close</p>
               {isMultipleChoice ? (
                 <ul className="mb-5 flex flex-col gap-[11px]">
                   {odds.map((o) => (
@@ -244,19 +244,19 @@ export function RevealTicket({
                         <span
                           className={cn(
                             'flex min-w-0 items-center gap-1 truncate text-[13px] font-bold',
-                            o.isWinner ? 'text-paper-white' : 'text-paper-white/60'
+                            o.isWinner ? 'text-white' : 'text-white/60'
                           )}
                         >
-                          {o.isWinner && <CheckIcon className="h-[13px] w-[13px] shrink-0 text-honey-400" />}
+                          {o.isWinner && <CheckIcon className="h-[13px] w-[13px] shrink-0 text-signal" />}
                           <OptionLabel label={o.label} />
                         </span>
-                        <span className={cn('shrink-0 text-[12.5px] font-extrabold', o.isWinner ? 'text-honey-300' : 'text-paper-white/45')}>
+                        <span className={cn('shrink-0 text-[12.5px] font-extrabold', o.isWinner ? 'text-on-ink' : 'text-white/45')}>
                           {o.percent}%
                         </span>
                       </div>
                       <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
                         <div
-                          className={cn('h-full', o.isWinner ? 'bg-honey-500' : 'bg-white/25', barTransitionClass)}
+                          className={cn('h-full', o.isWinner ? 'bg-signal' : 'bg-white/25', barTransitionClass)}
                           style={{ width: `${barWidth(o.percent)}%` }}
                         />
                       </div>
@@ -266,21 +266,21 @@ export function RevealTicket({
               ) : (
                 <>
                   <div className="mb-2 flex items-baseline justify-between">
-                    <span className="text-[13px] font-extrabold text-honey-300">
+                    <span className="text-[13px] font-extrabold text-on-ink">
                       {odds[0].label} {odds[0].percent}%
                     </span>
-                    <span className="text-[13px] font-extrabold text-paper-white/50">
+                    <span className="text-[13px] font-extrabold text-white/50">
                       {odds[1].label} {odds[1].percent}%
                     </span>
                   </div>
                   <div className="flex h-2 overflow-hidden rounded-full bg-white/10">
-                    <div className={cn('h-full bg-honey-500', barTransitionClass)} style={{ width: `${barWidth(odds[0].percent)}%` }} />
+                    <div className={cn('h-full bg-signal', barTransitionClass)} style={{ width: `${barWidth(odds[0].percent)}%` }} />
                     <div className={cn('h-full bg-white/15', barTransitionClass)} style={{ width: `${barWidth(odds[1].percent)}%` }} />
                   </div>
                 </>
               )}
               {winnerPercent != null && (
-                <p className={cn('mt-[9px] mb-5 text-[13px] text-paper-white/60', tearing && 'animate-mystery-detail')}>
+                <p className={cn('mt-[9px] mb-5 text-[13px] text-white/60', tearing && 'animate-mystery-detail')}>
                   {formatPercent(100 - winnerPercent)}% called it wrong.
                 </p>
               )}
@@ -289,7 +289,7 @@ export function RevealTicket({
 
           {callers.length > 0 ? (
             <>
-              <p className="mb-2.5 text-[11.5px] font-bold tracking-[0.1em] text-honey-400 uppercase">Who called it</p>
+              <p className="mb-2.5 text-[11.5px] font-bold tracking-[0.1em] text-signal uppercase">Who called it</p>
               <ul className="flex flex-col gap-[9px]">
                 {callers.map((c, i) => (
                   <li
@@ -298,33 +298,33 @@ export function RevealTicket({
                     style={tearing ? { animationDelay: `${1000 + i * 130}ms` } : undefined}
                   >
                     <div className="flex min-w-0 items-center gap-2">
-                      <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-white/10 text-[11px] font-extrabold text-paper-white/70">
+                      <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-white/10 text-[11px] font-extrabold text-white/70">
                         {i + 1}
                       </span>
-                      <span className="truncate text-[14.5px] font-bold text-paper-white">@{c.nickname}</span>
-                      <span className="shrink-0 text-[12.5px] text-paper-white/50">{formatTokens(c.amount)} &rarr;</span>
+                      <span className="truncate text-[14.5px] font-bold text-white">@{c.nickname}</span>
+                      <span className="shrink-0 text-[12.5px] text-white/50">{formatTokens(c.amount)} &rarr;</span>
                     </div>
                     <div className="flex shrink-0 items-baseline gap-1.5">
-                      <b className="text-[15px] font-extrabold text-honey-300">{formatTokens(c.payout)}</b>
-                      <span className="text-[10.5px] font-bold text-paper-white/40">{(c.payout / c.amount).toFixed(1)}&times;</span>
+                      <b className="text-[15px] font-extrabold text-on-ink">{formatTokens(c.payout)}</b>
+                      <span className="text-[10.5px] font-bold text-white/40">{(c.payout / c.amount).toFixed(1)}&times;</span>
                     </div>
                   </li>
                 ))}
               </ul>
             </>
           ) : (
-            <p className="text-[13px] text-paper-white/55">{isVoid ? 'Every stake was refunded.' : 'Nobody predicted this one.'}</p>
+            <p className="text-[13px] text-white/55">{isVoid ? 'Every stake was refunded.' : 'Nobody predicted this one.'}</p>
           )}
 
           <div className="mt-5 flex flex-col items-center gap-2 border-t border-white/10 pt-4">
             <div className="flex items-center gap-1.5">
               <img src="/barbets-mono-white.png" alt="" width={15} height={15} />
-              <span className="text-[11px] font-extrabold tracking-[0.07em] text-paper-white/55 uppercase">Barbets</span>
+              <span className="text-[11px] font-extrabold tracking-[0.07em] text-white/55 uppercase">Barbets</span>
             </div>
             {/* The shareable domain, deliberately not the deployment's own URL — this ticket gets
                 screenshotted and sent to people outside the app, and mybarbets.com is the address
                 that's meant to outlive whatever Vercel deployment happens to be serving it. */}
-            <span className="text-[10.5px] tracking-[0.02em] text-paper-white/30">mybarbets.com</span>
+            <span className="text-[10.5px] tracking-[0.02em] text-white/30">mybarbets.com</span>
           </div>
         </div>
         </div>
@@ -376,7 +376,7 @@ export function RevealTicket({
         {hasProof && <ResolutionProofButton marketId={marketId} variant="action" className={!SHARE_BUTTONS_ENABLED ? 'flex-1' : undefined} />}
       </div>
       {SHARE_BUTTONS_ENABLED && shareStatus === 'failed' && shareReason && (
-        <p className="mt-1.5 text-center text-[11.5px] text-espresso-400">{shareReason}</p>
+        <p className="mt-1.5 text-center text-[11.5px] text-faint">{shareReason}</p>
       )}
     </div>
   );

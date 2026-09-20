@@ -91,7 +91,7 @@ export function MemberProfileModal({ data }: { data: MemberProfileData }) {
             <button
               type="button"
               onClick={startCompare}
-              className="w-full rounded-[10px] border border-espresso-200 px-4 py-2.5 text-sm font-bold text-espresso-700 hover:bg-espresso-50"
+              className="w-full rounded-[10px] border border-hairline px-4 py-2.5 text-sm font-bold text-muted hover:bg-rule"
             >
               Compare with someone
             </button>
@@ -106,12 +106,12 @@ export function MemberProfileModal({ data }: { data: MemberProfileData }) {
             <button
               key={m.id}
               type="button"
-              className="flex w-full min-w-0 items-center rounded-xl px-3 py-2.5 text-left hover:bg-espresso-50"
+              className="flex w-full min-w-0 items-center rounded-xl px-3 py-2.5 text-left hover:bg-rule"
               onClick={() => pick(m)}
             >
               <Mention
                 nickname={m.id === meMembershipId ? 'me' : m.nickname}
-                className="block min-w-0 flex-1 truncate font-semibold text-espresso-900"
+                className="block min-w-0 flex-1 truncate font-semibold text-ink"
               />
             </button>
           ))}
@@ -122,9 +122,9 @@ export function MemberProfileModal({ data }: { data: MemberProfileData }) {
           style={{ transform: `translateX(${offset('comparing')})` }}
         >
           {isPending ? (
-            <p className="py-6 text-center text-sm text-espresso-400">Loading…</p>
+            <p className="py-6 text-center text-sm text-faint">Loading…</p>
           ) : error ? (
-            <p className="py-6 text-center text-sm text-danger-700">{error}</p>
+            <p className="py-6 text-center text-sm text-alert">{error}</p>
           ) : compareData ? (
             <HeadToHeadCard data={compareData} />
           ) : null}

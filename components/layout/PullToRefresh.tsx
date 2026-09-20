@@ -117,7 +117,7 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
           style={{ height: indicatorHeight }}
         >
           <div
-            className="mt-2 flex h-7 w-7 items-center justify-center rounded-full bg-paper-white text-espresso-500 shadow-[0_1px_4px_rgba(44,31,23,0.18)]"
+            className="mt-2 flex h-7 w-7 items-center justify-center rounded-full bg-surface text-muted shadow-[0_1px_4px_rgba(44,31,23,0.18)]"
             style={{ transform: spinning ? undefined : `rotate(${spinDeg}deg)` }}
           >
             <RefreshIcon className={`h-4 w-4 ${spinning ? 'animate-spin' : ''}`} />

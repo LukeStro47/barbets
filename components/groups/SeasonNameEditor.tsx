@@ -44,7 +44,7 @@ export function SeasonNameEditor({
   if (!isEditing) {
     return (
       <div className={`flex flex-wrap items-center gap-1.5 ${className ?? ''}`}>
-        {displayName && <span className={nameClassName ?? 'text-sm font-semibold text-espresso-800'}>{displayName}</span>}
+        {displayName && <span className={nameClassName ?? 'text-sm font-semibold text-ink'}>{displayName}</span>}
         <button
           type="button"
           onClick={() => {
@@ -53,7 +53,7 @@ export function SeasonNameEditor({
             setIsEditing(true);
           }}
           aria-label={currentName ? 'Rename season' : 'Name this season'}
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-espresso-400 transition-colors hover:bg-espresso-50 hover:text-espresso-700"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-faint transition-colors hover:bg-rule hover:text-muted"
         >
           <PencilIcon className="h-3 w-3" />
         </button>
@@ -63,7 +63,7 @@ export function SeasonNameEditor({
 
   return (
     <div className={`space-y-1.5 ${className ?? ''}`}>
-      {error && <p className="text-xs text-danger-700">{error}</p>}
+      {error && <p className="text-xs text-alert">{error}</p>}
       <div className="flex items-center gap-2">
         <input
           value={value}
@@ -71,7 +71,7 @@ export function SeasonNameEditor({
           placeholder="e.g. Friday Game Night"
           maxLength={SEASON_NAME_MAX_LENGTH}
           autoFocus
-          className="min-w-0 flex-1 rounded-lg border border-espresso-200 bg-paper-white px-2.5 py-1.5 text-sm text-espresso-900 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200"
+          className="min-w-0 flex-1 rounded-lg border border-hairline bg-surface px-2.5 py-1.5 text-sm text-ink focus:border-signal focus:outline-none focus:ring-2 focus:ring-signal/15"
         />
         <Button
           type="button"

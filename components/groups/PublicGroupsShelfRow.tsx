@@ -15,26 +15,26 @@ export function PublicGroupsShelfRow({
   totalOpenMarkets: number;
 }) {
   return (
-    <Link href="/groups/discover" className="flex items-center gap-[11px] rounded-2xl border border-espresso-100 bg-paper-white px-3.5 py-3">
+    <Link href="/groups/discover" className="flex items-center gap-[11px] rounded-2xl border border-hairline bg-surface px-3.5 py-3">
       <span className="flex shrink-0">
         {groups.slice(0, 2).map((g, i) => (
           <GroupAvatar
             key={g.name}
             name={g.name}
             avatarKey={g.avatarKey}
-            className={i === 0 ? 'h-[26px] w-[26px] border-2 border-paper-white text-[10px]' : '-ml-[9px] h-[26px] w-[26px] border-2 border-paper-white text-[10px]'}
-            fallbackClassName="bg-espresso-50 text-espresso-500"
+            className={i === 0 ? 'h-[26px] w-[26px] border-2 border-surface text-[10px]' : '-ml-[9px] h-[26px] w-[26px] border-2 border-surface text-[10px]'}
+            fallbackClassName="bg-rule text-muted"
           />
         ))}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[13.5px] font-extrabold text-espresso-950">Public groups</span>
-        <span className="mt-px block text-[11.5px] text-espresso-400">
+        <span className="block text-[13.5px] font-extrabold text-ink">Public groups</span>
+        <span className="mt-px block text-[11.5px] text-faint">
           {numberWordCapitalized(groups.length)} open to anyone
           {totalOpenMarkets > 0 && ` · ${totalOpenMarkets} ${totalOpenMarkets === 1 ? 'market' : 'markets'} live`}
         </span>
       </span>
-      <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-espresso-300" />
+      <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-faint" />
     </Link>
   );
 }

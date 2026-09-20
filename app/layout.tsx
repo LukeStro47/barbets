@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Bricolage_Grotesque } from 'next/font/google';
+import { Plus_Jakarta_Sans, IBM_Plex_Mono } from 'next/font/google';
 import './globals.css';
 import { RegisterServiceWorker } from '@/components/pwa/RegisterServiceWorker';
 import { NativePushNavigation } from '@/components/pwa/NativePushNavigation';
@@ -11,9 +11,16 @@ import { ChunkErrorRecovery } from '@/components/pwa/ChunkErrorRecovery';
 import { MovedBanner } from '@/components/pwa/MovedBanner';
 import { APP_ORIGIN } from '@/lib/appOrigin';
 
-const bricolage = Bricolage_Grotesque({
+const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
-  variable: '--font-bricolage',
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-jakarta',
+});
+
+const plexMono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  variable: '--font-plex-mono',
 });
 
 export const metadata: Metadata = {
@@ -40,7 +47,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#3B2A20',
+  themeColor: '#2d55f5',
   // Capacitor's native WebView renders edge-to-edge behind the status bar/notch by default, with
   // no browser chrome to auto-inset content the way standalone Safari/Chrome already do — without
   // viewport-fit=cover, the env(safe-area-inset-*) values BetslipBar and friends already lean on
@@ -58,7 +65,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={bricolage.variable}>
+    <html lang="en" className={`${jakarta.variable} ${plexMono.variable}`}>
       <body className="font-sans antialiased">
         {/* Mounted first and unconditionally so it's listening before anything else has a chance
             to throw a stale-chunk error - see the component. */}

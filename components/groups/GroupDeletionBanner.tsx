@@ -29,18 +29,18 @@ export function GroupDeletionBanner({
     // danger-100/danger-500/danger-700 are the steps that actually exist in globals.css. This used
     // to reach for danger-50/200/600, none of which are defined, so the banner rendered with no
     // fill, no border and default body colour — an urgent message that looked like a caption.
-    <div className="flex gap-3 rounded-[14px] border-[1.5px] border-danger-500 bg-danger-100 px-4 py-3.5">
-      <AlertTriangleIcon className="mt-px h-5 w-5 shrink-0 text-danger-700" />
+    <div className="flex gap-3 rounded-[14px] border-[1.5px] border-alert bg-alert-bg px-4 py-3.5">
+      <AlertTriangleIcon className="mt-px h-5 w-5 shrink-0 text-alert" />
       <div className="space-y-2">
         <div>
-          <p className="text-sm font-bold text-danger-700">
+          <p className="text-sm font-bold text-alert">
             Deleted in {days} day{days === 1 ? '' : 's'}
           </p>
-          <p className="mt-[3px] text-[12.5px] leading-[1.5] text-danger-700">
+          <p className="mt-[3px] text-[12.5px] leading-[1.5] text-alert">
             Every open market was voided and refunded already. Everything stays viewable until then.
           </p>
         </div>
-        {error && <p className="text-xs font-semibold text-danger-700">{error}</p>}
+        {error && <p className="text-xs font-semibold text-alert">{error}</p>}
         {isOwner && (
           <Button
             variant="outline"

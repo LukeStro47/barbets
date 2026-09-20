@@ -84,8 +84,8 @@ export function CompareMemberPicker({
 
       {open && (
         <Modal onClose={close} padded={false} panelClassName="flex max-h-[85dvh] flex-col overflow-hidden">
-          <div className="flex shrink-0 items-center justify-between gap-3 bg-espresso-50 px-[18px] py-[13px]">
-            <p className="text-xs font-extrabold tracking-[0.06em] text-espresso-800 uppercase">
+          <div className="flex shrink-0 items-center justify-between gap-3 bg-rule px-[18px] py-[13px]">
+            <p className="text-xs font-extrabold tracking-[0.06em] text-ink uppercase">
               {step === 'picking' ? 'Compare with' : 'Head to head'}
             </p>
           </div>
@@ -97,26 +97,26 @@ export function CompareMemberPicker({
                   <button
                     key={m.id}
                     type="button"
-                    className="flex w-full min-w-0 items-center rounded-xl px-3 py-2.5 text-left hover:bg-espresso-50"
+                    className="flex w-full min-w-0 items-center rounded-xl px-3 py-2.5 text-left hover:bg-rule"
                     onClick={() => pick(m)}
                   >
                     <Mention
                       nickname={m.id === meMembershipId ? 'me' : m.nickname}
-                      className="block min-w-0 flex-1 truncate font-semibold text-espresso-900"
+                      className="block min-w-0 flex-1 truncate font-semibold text-ink"
                     />
                   </button>
                 ))}
               </div>
             ) : isPending ? (
-              <p className="py-6 text-center text-sm text-espresso-400">Loading…</p>
+              <p className="py-6 text-center text-sm text-faint">Loading…</p>
             ) : error ? (
-              <p className="py-6 text-center text-sm text-danger-700">{error}</p>
+              <p className="py-6 text-center text-sm text-alert">{error}</p>
             ) : data ? (
               <HeadToHeadCard data={data} />
             ) : null}
           </div>
 
-          <div className="flex shrink-0 gap-2 border-t border-espresso-50 px-[18px] py-[14px]">
+          <div className="flex shrink-0 gap-2 border-t border-rule px-[18px] py-[14px]">
             {step === 'picking' ? (
               <Button type="button" variant="outline" className="flex-1" onClick={close}>
                 Cancel

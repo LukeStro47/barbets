@@ -40,22 +40,22 @@ export function SeasonSetupCard({
   const seasonLength = (settings.season_length ?? 'manual') as SeasonLength;
 
   return (
-    <div className="overflow-hidden rounded-[24px] border-[1.5px] border-honey-500 bg-paper-white">
-      <div className="flex items-center gap-2 bg-honey-50 px-3.5 py-2">
-        <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-honey-500" />
-        <p className="flex-1 text-xs font-extrabold tracking-[0.06em] text-honey-800 uppercase">Season {nextSeasonNumber} setup</p>
+    <div className="overflow-hidden rounded-[24px] border-[1.5px] border-signal bg-surface">
+      <div className="flex items-center gap-2 bg-signal-tint px-3.5 py-2">
+        <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-signal" />
+        <p className="flex-1 text-xs font-extrabold tracking-[0.06em] text-signal-deep uppercase">Season {nextSeasonNumber} setup</p>
       </div>
       <div className="flex flex-col gap-3 px-4 py-4">
-        <p className="text-[11.5px] leading-[1.35] text-espresso-400">
+        <p className="text-[11.5px] leading-[1.35] text-faint">
           {seasonName ?? `Season ${nextSeasonNumber}`} · {formatSeasonLength(seasonLength)} · {formatTokens(settings.seed_amount)} each
         </p>
         <div>
-          <ConsequenceRow dotClassName="bg-honey-500">
-            <strong className="font-bold text-espresso-900">{playingCount} playing</strong>
+          <ConsequenceRow dotClassName="bg-signal">
+            <strong className="font-bold text-ink">{playingCount} playing</strong>
             {sittingOutLabel && `, ${sittingOutLabel}`}
           </ConsequenceRow>
-          <ConsequenceRow dotClassName="bg-espresso-200" isLast>
-            Everyone reseeded to <strong className="font-bold text-espresso-900">{formatTokens(settings.seed_amount)}</strong> when you
+          <ConsequenceRow dotClassName="bg-dash" isLast>
+            Everyone reseeded to <strong className="font-bold text-ink">{formatTokens(settings.seed_amount)}</strong> when you
             start
           </ConsequenceRow>
         </div>

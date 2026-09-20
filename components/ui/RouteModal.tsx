@@ -17,7 +17,7 @@ import { CaretLeftIcon, CloseIcon } from '@/components/ui/icons';
  * these is a same-app link tap, never a page someone can land on directly (that's what the
  * intercepted route's real, non-modal sibling page is for), so there's always a page underneath.
  *
- * The header band is the same `bg-espresso-50` strip every other banded modal in the app uses
+ * The header band is the same `bg-rule` strip every other banded modal in the app uses
  * (see `Modal`'s `padded={false}` callers) — the close control lives inside that row rather than
  * floating over the content's own top-right corner, which used to collide with whatever the
  * content put there (an avatar, a badge link) and never lined up with the same close affordance
@@ -65,28 +65,28 @@ export function RouteModal({
   if (!mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-espresso-950/40 px-5 py-8" onClick={() => router.back()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-5 py-8" onClick={() => router.back()}>
       <div
-        className="flex max-h-full w-full max-w-lg flex-col overflow-hidden rounded-[22px] bg-paper-white shadow-xl"
+        className="flex max-h-full w-full max-w-lg flex-col overflow-hidden rounded-[22px] bg-surface shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex shrink-0 items-center gap-2 bg-espresso-50 px-[18px] py-[13px]">
+        <div className="flex shrink-0 items-center gap-2 bg-rule px-[18px] py-[13px]">
           {onBack && (
             <button
               type="button"
               onClick={onBack}
               aria-label="Back"
-              className="-ml-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-espresso-500 transition-colors hover:bg-espresso-100"
+              className="-ml-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-rule"
             >
               <CaretLeftIcon className="h-4 w-4" />
             </button>
           )}
-          <p className="flex-1 truncate text-xs font-extrabold tracking-[0.06em] text-espresso-800 uppercase">{title}</p>
+          <p className="flex-1 truncate text-xs font-extrabold tracking-[0.06em] text-ink uppercase">{title}</p>
           <button
             type="button"
             onClick={() => router.back()}
             aria-label="Close"
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-espresso-500 transition-colors hover:bg-espresso-100"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-rule"
           >
             <CloseIcon className="h-4 w-4" />
           </button>

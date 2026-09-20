@@ -16,8 +16,8 @@ interface BetRow {
   markets: { title: string; outcome: string | null } | null;
 }
 
-const listClass = 'overflow-hidden rounded-2xl border border-espresso-100 bg-paper-white';
-const rowClass = 'flex items-center justify-between gap-2.5 px-4 py-3 text-sm transition-colors hover:bg-espresso-50';
+const listClass = 'overflow-hidden rounded-2xl border border-hairline bg-surface';
+const rowClass = 'flex items-center justify-between gap-2.5 px-4 py-3 text-sm transition-colors hover:bg-rule';
 
 export default async function MyBetsPage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
@@ -54,21 +54,21 @@ export default async function MyBetsPage({ params }: { params: Promise<{ groupId
       ) : (
         <>
           <div className="space-y-2">
-            <h2 className="mx-0.5 text-[13px] font-extrabold tracking-[0.06em] text-espresso-400 uppercase">Open</h2>
+            <h2 className="mx-0.5 text-[13px] font-extrabold tracking-[0.06em] text-faint uppercase">Open</h2>
             {openBets.length === 0 ? (
-              <p className="text-sm text-espresso-400">Nothing open right now.</p>
+              <p className="text-sm text-faint">Nothing open right now.</p>
             ) : (
               <ul className={listClass}>
                 {openBets.map((b, i) => (
-                  <li key={b.id} className={i > 0 ? 'border-t border-espresso-100' : ''}>
+                  <li key={b.id} className={i > 0 ? 'border-t border-hairline' : ''}>
                     <Link href={`/groups/${groupId}/markets/${b.market_id}`} className={rowClass}>
                       <div className="min-w-0">
-                        <p className="line-clamp-2 font-medium text-espresso-800">{b.markets?.title}</p>
-                        <p className="text-xs text-espresso-400">
+                        <p className="line-clamp-2 font-medium text-ink">{b.markets?.title}</p>
+                        <p className="text-xs text-faint">
                           {formatTokens(b.amount)} on <OptionLabel label={betLabel(b)} />
                         </p>
                       </div>
-                      <span className="shrink-0 text-xs font-semibold text-espresso-400">pending</span>
+                      <span className="shrink-0 text-xs font-semibold text-faint">pending</span>
                     </Link>
                   </li>
                 ))}
@@ -77,9 +77,9 @@ export default async function MyBetsPage({ params }: { params: Promise<{ groupId
           </div>
 
           <div className="space-y-2">
-            <h2 className="mx-0.5 text-[13px] font-extrabold tracking-[0.06em] text-espresso-400 uppercase">Past</h2>
+            <h2 className="mx-0.5 text-[13px] font-extrabold tracking-[0.06em] text-faint uppercase">Past</h2>
             {pastBets.length === 0 ? (
-              <p className="text-sm text-espresso-400">No settled bets yet.</p>
+              <p className="text-sm text-faint">No settled bets yet.</p>
             ) : (
               <ul className={listClass}>
                 {pastBets.map((b, i) => {
@@ -87,21 +87,21 @@ export default async function MyBetsPage({ params }: { params: Promise<{ groupId
                   const won = !refunded && (b.payout ?? 0) > 0;
                   const lost = !refunded && (b.payout ?? 0) === 0;
                   return (
-                    <li key={b.id} className={i > 0 ? 'border-t border-espresso-100' : ''}>
+                    <li key={b.id} className={i > 0 ? 'border-t border-hairline' : ''}>
                       <Link href={`/groups/${groupId}/markets/${b.market_id}/reveal`} className={rowClass}>
                         <div className="min-w-0">
-                          <p className="line-clamp-2 font-medium text-espresso-800">{b.markets?.title}</p>
-                          <p className="text-xs text-espresso-400">
+                          <p className="line-clamp-2 font-medium text-ink">{b.markets?.title}</p>
+                          <p className="text-xs text-faint">
                             {formatTokens(b.amount)} on <OptionLabel label={betLabel(b)} />
                           </p>
                         </div>
-                        {refunded && <span className="shrink-0 text-xs font-semibold text-espresso-400">refunded</span>}
+                        {refunded && <span className="shrink-0 text-xs font-semibold text-faint">refunded</span>}
                         {won && (
-                          <span className="shrink-0 text-xs font-semibold text-success-700">
+                          <span className="shrink-0 text-xs font-semibold text-gain">
                             +{formatTokens((b.payout ?? 0) - b.amount)} won
                           </span>
                         )}
-                        {lost && <span className="shrink-0 text-xs font-semibold text-espresso-300">-{formatTokens(b.amount)} lost</span>}
+                        {lost && <span className="shrink-0 text-xs font-semibold text-faint">-{formatTokens(b.amount)} lost</span>}
                       </Link>
                     </li>
                   );

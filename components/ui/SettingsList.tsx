@@ -17,7 +17,7 @@ import { ChevronRightIcon } from '@/components/ui/icons';
 export function SectionLabel({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
   return (
     <div className="mb-2 flex items-baseline justify-between gap-3 px-0.5">
-      <p className="text-[10.5px] font-extrabold uppercase tracking-[0.1em] text-espresso-400">{children}</p>
+      <p className="text-[10.5px] font-extrabold uppercase tracking-[0.1em] text-faint">{children}</p>
       {action}
     </div>
   );
@@ -28,8 +28,8 @@ export function SettingsCard({ className, children }: { className?: string; chil
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-[14px] border border-espresso-100 bg-paper-white shadow-sm shadow-espresso-900/5',
-        '[&>*+*]:border-t [&>*+*]:border-espresso-100',
+        'overflow-hidden rounded-[14px] border border-hairline bg-surface shadow-sm shadow-none',
+        '[&>*+*]:border-t [&>*+*]:border-hairline',
         className
       )}
     >
@@ -52,11 +52,11 @@ export function SettingRow({
   return (
     <div className="flex items-start justify-between gap-3.5 px-4 py-[13px]">
       <span className="min-w-0">
-        <span className="block text-sm font-semibold text-espresso-800">{label}</span>
-        <span className="mt-0.5 block text-xs leading-[1.45] text-espresso-400">{consequence}</span>
+        <span className="block text-sm font-semibold text-ink">{label}</span>
+        <span className="mt-0.5 block text-xs leading-[1.45] text-faint">{consequence}</span>
       </span>
       {typeof value === 'string' ? (
-        <span className="shrink-0 text-sm font-bold text-espresso-800">{value}</span>
+        <span className="shrink-0 text-sm font-bold text-ink">{value}</span>
       ) : (
         <span className="shrink-0">{value}</span>
       )}
@@ -70,7 +70,7 @@ export function StatusPill({ children, tone = 'dark' }: { children: React.ReactN
     <span
       className={cn(
         'inline-block rounded-full px-2.5 py-[3px] text-[11.5px] font-bold',
-        tone === 'dark' ? 'bg-espresso-800 text-paper-white' : 'bg-espresso-50 text-espresso-600'
+        tone === 'dark' ? 'bg-ink text-white' : 'bg-rule text-muted'
       )}
     >
       {children}
@@ -80,11 +80,11 @@ export function StatusPill({ children, tone = 'dark' }: { children: React.ReactN
 
 /** Classes for the button/link that wraps `NavRowContent` — a whole row that opens something else. */
 export const settingsNavRowClasses =
-  'flex w-full items-start justify-between gap-3.5 px-4 py-[13px] text-left transition-colors hover:bg-espresso-50/60';
+  'flex w-full items-start justify-between gap-3.5 px-4 py-[13px] text-left transition-colors hover:bg-rule/60';
 
 /** Front-door rows on Manage group: slightly taller than a control row, current value as the subtitle. */
 export const manageNavRowClasses =
-  'flex w-full items-center justify-between gap-3.5 px-4 py-[15px] text-left transition-colors hover:bg-espresso-50/60';
+  'flex w-full items-center justify-between gap-3.5 px-4 py-[15px] text-left transition-colors hover:bg-rule/60';
 
 export function ManageNavRow({
   href,
@@ -101,16 +101,16 @@ export function ManageNavRow({
   trailing?: React.ReactNode;
   highlight?: boolean;
 }) {
-  const className = cn(manageNavRowClasses, highlight && 'bg-[#fdf6ea] hover:bg-honey-50');
+  const className = cn(manageNavRowClasses, highlight && 'bg-[#fdf6ea] hover:bg-signal-tint');
   const inner = (
     <>
       <span className="min-w-0">
-        <span className="block truncate text-[14.5px] font-bold text-espresso-800">{title}</span>
-        <span className="mt-0.5 block truncate text-xs leading-[1.45] text-espresso-400">{subtitle}</span>
+        <span className="block truncate text-[14.5px] font-bold text-ink">{title}</span>
+        <span className="mt-0.5 block truncate text-xs leading-[1.45] text-faint">{subtitle}</span>
       </span>
       <span className="flex shrink-0 items-center gap-2">
         {trailing}
-        <ChevronRightIcon className="h-3.5 w-2 text-espresso-300" />
+        <ChevronRightIcon className="h-3.5 w-2 text-faint" />
       </span>
     </>
   );
@@ -140,10 +140,10 @@ export function NavRowContent({
   return (
     <>
       <span className="min-w-0">
-        <span className={cn('block text-sm font-semibold', danger ? 'text-danger-700' : 'text-espresso-800')}>{label}</span>
-        <span className="mt-0.5 block text-xs leading-[1.45] text-espresso-400">{consequence}</span>
+        <span className={cn('block text-sm font-semibold', danger ? 'text-alert' : 'text-ink')}>{label}</span>
+        <span className="mt-0.5 block text-xs leading-[1.45] text-faint">{consequence}</span>
       </span>
-      <ChevronRightIcon className="mt-[3px] h-3.5 w-2 shrink-0 text-espresso-300" />
+      <ChevronRightIcon className="mt-[3px] h-3.5 w-2 shrink-0 text-faint" />
     </>
   );
 }

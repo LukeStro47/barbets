@@ -39,50 +39,50 @@ export function SeasonHighlightsCard({
 
   return (
     <div className="flex flex-col gap-2">
-      <h2 className="ml-1 text-xs font-bold tracking-[0.08em] text-espresso-400 uppercase">Highlights</h2>
-      <div className="overflow-hidden rounded-[22px] border border-espresso-100 bg-paper-white">
+      <h2 className="ml-1 text-xs font-bold tracking-[0.08em] text-faint uppercase">Highlights</h2>
+      <div className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
         {biggestSingleWin && (
           <Link
             href={`/groups/${groupId}/markets/${biggestSingleWin.market_id}/reveal`}
-            className="flex items-center gap-3 border-b border-espresso-50 px-4 py-[14px] transition-colors hover:bg-espresso-50/25 last:border-b-0"
+            className="flex items-center gap-3 border-b border-rule px-4 py-[14px] transition-colors hover:bg-rule/25 last:border-b-0"
           >
-            <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-honey-50">
-              <CheckCircleIcon className="h-5 w-5 text-honey-700" />
+            <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-signal-tint">
+              <CheckCircleIcon className="h-5 w-5 text-signal" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[13.5px] font-extrabold text-espresso-950">Biggest single win</span>
-              <span className="block truncate text-[11.5px] leading-[1.35] text-espresso-400">
+              <span className="block text-[13.5px] font-extrabold text-ink">Biggest single win</span>
+              <span className="block truncate text-[11.5px] leading-[1.35] text-faint">
                 <Mention nickname={biggestSingleWin.nickname} /> on &quot;{biggestSingleWin.market_title ?? 'a settled market'}&quot;
               </span>
             </span>
-            <span className="shrink-0 text-[13.5px] font-extrabold text-success-700">+{formatTokens(biggestSingleWin.amount)}</span>
+            <span className="shrink-0 text-[13.5px] font-extrabold text-gain">+{formatTokens(biggestSingleWin.amount)}</span>
           </Link>
         )}
         {biggestUpset && (
           <Link
             href={`/groups/${groupId}/markets/${biggestUpset.market_id}/reveal`}
-            className="flex items-center gap-3 border-b border-espresso-50 px-4 py-[14px] transition-colors hover:bg-espresso-50/25 last:border-b-0"
+            className="flex items-center gap-3 border-b border-rule px-4 py-[14px] transition-colors hover:bg-rule/25 last:border-b-0"
           >
-            <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-honey-50">
-              <AwardGlyph iconKey="spike" stroke="var(--color-honey-700)" size={20} />
+            <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-signal-tint">
+              <AwardGlyph iconKey="spike" stroke="var(--color-signal)" size={20} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[13.5px] font-extrabold text-espresso-950">Biggest upset</span>
-              <span className="block truncate text-[11.5px] leading-[1.35] text-espresso-400">
+              <span className="block text-[13.5px] font-extrabold text-ink">Biggest upset</span>
+              <span className="block truncate text-[11.5px] leading-[1.35] text-faint">
                 &quot;{biggestUpset.market_title ?? 'a settled market'}&quot;, <Mention nickname={biggestUpset.nickname} />
               </span>
             </span>
-            <span className="shrink-0 text-[13.5px] font-extrabold text-honey-700">{biggestUpset.multiple}x</span>
+            <span className="shrink-0 text-[13.5px] font-extrabold text-signal">{biggestUpset.multiple}x</span>
           </Link>
         )}
         {titleChanges.length > 0 && (
           <div className="flex items-center gap-3 px-4 py-[14px]">
-            <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-honey-50">
-              <AwardGlyph iconKey="target" stroke="var(--color-honey-700)" size={20} />
+            <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-signal-tint">
+              <AwardGlyph iconKey="target" stroke="var(--color-signal)" size={20} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[13.5px] font-extrabold text-espresso-950">Titles changed hands</span>
-              <span className="block text-[11.5px] leading-[1.35] text-espresso-400">
+              <span className="block text-[13.5px] font-extrabold text-ink">Titles changed hands</span>
+              <span className="block text-[11.5px] leading-[1.35] text-faint">
                 {titleChanges.map((t, i) => (
                   <span key={t.titleKey}>
                     {i > 0 && ', '}

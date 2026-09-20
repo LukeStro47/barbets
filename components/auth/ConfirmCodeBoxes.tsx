@@ -68,14 +68,14 @@ export function ConfirmCodeBoxes({ onChange }: { onChange?: (code: string) => vo
             maxLength={1}
             autoFocus={i === 0}
             aria-label={`Digit ${i + 1} of confirmation code`}
-            className="h-[46px] w-0 min-w-0 flex-1 rounded-xl border-[1.5px] border-espresso-200 bg-paper-white text-center font-display text-lg font-extrabold text-espresso-900 focus:border-honey-500 focus:bg-honey-50 focus:outline-none"
+            className="h-[46px] w-0 min-w-0 flex-1 rounded-xl border-[1.5px] border-hairline bg-surface text-center font-display text-lg font-extrabold text-ink focus:border-signal focus:bg-signal-tint focus:outline-none"
           />
         ))}
       </div>
       <button
         type="button"
         onClick={handlePaste}
-        className="shrink-0 rounded-full border-[1.5px] border-espresso-200 px-4 py-[9px] text-[13px] font-bold text-espresso-700"
+        className="shrink-0 rounded-full border-[1.5px] border-hairline px-4 py-[9px] text-[13px] font-bold text-muted"
       >
         Paste
       </button>

@@ -45,17 +45,17 @@ export function WaitingOnYouCard({ groupId, tasks }: { groupId: string; tasks: G
   }
 
   return (
-    <div className="overflow-hidden rounded-[20px] border-[1.5px] border-danger-500 bg-paper-white">
-      <div className="flex items-center gap-2 bg-danger-100 py-[7px] pr-[10px] pl-4">
-        <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-danger-500" />
-        <p className="flex-1 text-xs font-extrabold tracking-[0.06em] text-danger-700 uppercase">
+    <div className="overflow-hidden rounded-[20px] border-[1.5px] border-alert bg-surface">
+      <div className="flex items-center gap-2 bg-alert-bg py-[7px] pr-[10px] pl-4">
+        <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-alert" />
+        <p className="flex-1 text-xs font-extrabold tracking-[0.06em] text-alert uppercase">
           {tasks.length} waiting on you
         </p>
         <button
           type="button"
           onClick={dismiss}
           aria-label="Dismiss"
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-danger-700"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-alert"
         >
           <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
             <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
@@ -65,13 +65,13 @@ export function WaitingOnYouCard({ groupId, tasks }: { groupId: string; tasks: G
       {tasks.map((task, i) => (
         <div
           key={`${task.type}:${task.marketId}`}
-          className={`flex items-center gap-3 px-4 py-3 ${i < tasks.length - 1 ? 'border-b border-espresso-50' : ''}`}
+          className={`flex items-center gap-3 px-4 py-3 ${i < tasks.length - 1 ? 'border-b border-rule' : ''}`}
         >
           <span className="min-w-0 flex-1">
-            <p className="text-[14.5px] leading-[1.25] font-bold text-espresso-950">
-              {task.type === 'vote' ? 'Vote on' : 'Endorse'} <span className="font-semibold text-espresso-600">{task.marketTitle}</span>
+            <p className="text-[14.5px] leading-[1.25] font-bold text-ink">
+              {task.type === 'vote' ? 'Vote on' : 'Endorse'} <span className="font-semibold text-muted">{task.marketTitle}</span>
             </p>
-            <p className={`mt-0.5 text-xs ${task.type === 'vote' ? 'text-danger-700' : 'text-espresso-400'}`}>
+            <p className={`mt-0.5 text-xs ${task.type === 'vote' ? 'text-alert' : 'text-faint'}`}>
               <CountdownTimer target={task.deadline} prefix={task.type === 'vote' ? 'Voting closes in' : 'Expires in'} />
             </p>
           </span>
@@ -79,8 +79,8 @@ export function WaitingOnYouCard({ groupId, tasks }: { groupId: string; tasks: G
             href={`/groups/${groupId}/markets/${task.marketId}`}
             className={
               task.type === 'vote'
-                ? 'shrink-0 rounded-full bg-espresso-800 px-3.5 py-[7px] text-[12.5px] font-bold text-paper-white'
-                : 'shrink-0 rounded-full border-[1.5px] border-espresso-200 px-3.5 py-[6px] text-[12.5px] font-bold text-espresso-800'
+                ? 'shrink-0 rounded-full bg-ink px-3.5 py-[7px] text-[12.5px] font-bold text-white'
+                : 'shrink-0 rounded-full border-[1.5px] border-hairline px-3.5 py-[6px] text-[12.5px] font-bold text-ink'
             }
           >
             {task.type === 'vote' ? 'Vote' : 'Endorse'}

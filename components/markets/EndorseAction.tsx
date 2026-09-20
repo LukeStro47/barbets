@@ -42,21 +42,21 @@ export function EndorseActionBar({ groupId, marketId }: { groupId: string; marke
 
   const bar = (
     <div className="mx-auto max-w-lg space-y-2.5">
-      {error && <p className="text-sm font-semibold text-danger-100">{error}</p>}
-      {notice && <p className="text-sm font-semibold text-paper-white/70">{notice}</p>}
+      {error && <p className="text-sm font-semibold text-alert-bg">{error}</p>}
+      {notice && <p className="text-sm font-semibold text-white/70">{notice}</p>}
       <div className="flex gap-2.5">
         <button
           type="button"
           disabled={isPending}
           onClick={runSponsor}
-          className="flex-1 rounded-full bg-honey-500 px-5 py-[13px] text-[15px] font-extrabold whitespace-nowrap text-espresso-950 transition-colors hover:bg-honey-600 disabled:bg-honey-500/30 disabled:text-espresso-950/40"
+          className="flex-1 rounded-full bg-signal px-5 py-[13px] text-[15px] font-extrabold whitespace-nowrap text-ink transition-colors hover:bg-signal disabled:bg-signal/30 disabled:text-ink/40"
         >
           Endorse it
         </button>
         <button
           type="button"
           onClick={() => router.push(`/groups/${groupId}`)}
-          className="shrink-0 rounded-full border border-white/18 bg-white/6 px-[18px] py-[13px] text-[15px] font-semibold whitespace-nowrap text-paper-white/75 transition-colors hover:bg-white/12"
+          className="shrink-0 rounded-full border border-white/18 bg-white/6 px-[18px] py-[13px] text-[15px] font-semibold whitespace-nowrap text-white/75 transition-colors hover:bg-white/12"
         >
           Not now
         </button>
@@ -72,9 +72,9 @@ export function EndorseActionBar({ groupId, marketId }: { groupId: string; marke
         {bar}
       </div>
 
-      <div aria-hidden="true" className="fixed inset-x-0 bottom-[var(--bottomnav-height)] z-20 !m-0 bg-espresso-900 pb-5" />
+      <div aria-hidden="true" className="fixed inset-x-0 bottom-[var(--bottomnav-height)] z-20 !m-0 bg-ink pb-5" />
 
-      <div className="fixed inset-x-0 bottom-[var(--bottomnav-height)] z-30 !m-0 rounded-t-[20px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 px-5 pt-3.5 pb-4 shadow-[0_-14px_28px_-10px_rgba(28,19,13,0.4)]">
+      <div className="fixed inset-x-0 bottom-[var(--bottomnav-height)] z-30 !m-0 rounded-t-[20px] bg-gradient-to-br from-ink via-ink to-ink px-5 pt-3.5 pb-4 shadow-[0_-14px_28px_-10px_rgba(28,19,13,0.4)]">
         {bar}
       </div>
     </>

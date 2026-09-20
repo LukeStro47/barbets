@@ -19,7 +19,7 @@ export default async function YouInThisGroupPage({ params }: { params: Promise<{
         <SectionLabel>Nickname</SectionLabel>
         <SettingsCard>
           <div className="px-4 py-3.5">
-            <p className="mb-2 text-xs text-espresso-400">Your nickname is how everyone sees you here.</p>
+            <p className="mb-2 text-xs text-faint">Your nickname is how everyone sees you here.</p>
             {myMembership && <NicknameEditor groupId={groupId} nickname={myMembership.nickname} />}
           </div>
           {isPublic && isModerator && !isOwner && <ForfeitModeratorButton groupId={groupId} groupName={group.name} />}

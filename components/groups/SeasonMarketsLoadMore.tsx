@@ -46,7 +46,7 @@ export function SeasonMarketsLoadMore({
       <MarketRowList markets={markets} />
       {cursor && (
         <div className="flex flex-col items-center gap-2 pt-1">
-          {error && <p className="text-xs text-danger-700">{error}</p>}
+          {error && <p className="text-xs text-alert">{error}</p>}
           <Button variant="outline" size="sm" onClick={loadMore} disabled={loading}>
             {loading ? 'Loading…' : 'Load more'}
           </Button>

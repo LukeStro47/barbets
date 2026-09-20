@@ -24,7 +24,7 @@ export function LeaderboardLenses({
 
   return (
     <div>
-      <div className="mb-4 flex gap-1 rounded-full bg-espresso-50 p-1">
+      <div className="mb-4 flex gap-1 rounded-full bg-rule p-1">
         {(['current', 'alltime'] as const).map((k) => (
           <button
             key={k}
@@ -32,7 +32,7 @@ export function LeaderboardLenses({
             onClick={() => setLens(k)}
             className={cn(
               'flex-1 rounded-full py-2 text-[12.5px] font-bold transition-colors',
-              lens === k ? 'bg-paper-white text-espresso-900 shadow-sm' : 'text-espresso-400 hover:text-espresso-600'
+              lens === k ? 'bg-surface text-ink shadow-sm' : 'text-faint hover:text-muted'
             )}
           >
             {k === 'current' ? currentLabel : 'All-time'}

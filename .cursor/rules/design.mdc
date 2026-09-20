@@ -1,0 +1,30 @@
+---
+description: Visual design system for Barbets UI. Read DESIGN.md before any UI work.
+alwaysApply: true
+---
+
+# Design system
+
+Before any UI change, read root [`DESIGN.md`](DESIGN.md). It is the source of truth for colours, type, radii, spacing, motion, and voice. If a screen looks decorative, it is wrong.
+
+## Five rules
+
+1. **One blue.** Signal (`#2d55f5`) marks live and actionable only. Nothing else is blue.
+2. **Hairlines, not shadows.** Separation is `1px #e7eaef`. Only CTA glow and sheet lift use real shadow.
+3. **Sans to read, mono to compare.** Plus Jakarta Sans for prose; IBM Plex Mono for every figure.
+4. **Say the state.** open / sealed / closed / settled / challenged on the card, not only on detail.
+5. **Nothing needs explaining twice.** If a row needs a paragraph, the row is wrong.
+
+## Tokens (use theme names from globals.css)
+
+canvas, surface, hairline, rule, ink, muted, faint, dash, signal, signal-deep, signal-tint, on-ink, gain / gain-bg / gain-line, alert / alert-bg / alert-line, disabled-bg / disabled-ink.
+
+Radius by role: chip 8 · tile/avatar 10–11 · field/button 14 · row 18–20 · card 24–26 · pill 999.
+
+## Voice
+
+No em dashes in user-facing copy. Sentence case. Second person. No exclamation marks, emoji, or "Oops". Errors: what happened, then what to do.
+
+## Shell
+
+Phone-first at 393px (max ~430 centred). Fixed white header; sticky single-CTA footer; bottom nav Markets · Inbox · + · Group · You (ink plus tile, not blue).

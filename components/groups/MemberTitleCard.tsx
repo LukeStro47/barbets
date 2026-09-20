@@ -20,14 +20,14 @@ export function MemberTitleCard({
   otherCount: number;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-[22px] border border-honey-200 bg-honey-50 p-4">
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[1.5px] border-honey-300 bg-paper-white">
-        <AwardGlyph iconKey={iconKey} stroke="var(--color-honey-700)" size={22} />
+    <div className="flex items-center gap-3 rounded-[22px] border border-signal-tint bg-signal-tint p-4">
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[1.5px] border-signal bg-surface">
+        <AwardGlyph iconKey={iconKey} stroke="var(--color-signal)" size={22} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[10px] font-extrabold tracking-[0.1em] text-honey-700 uppercase">You took a title</span>
-        <span className="mt-0.5 block text-[15px] font-extrabold text-espresso-950">{label}</span>
-        <span className="block text-[11.5px] text-espresso-500">
+        <span className="block text-[10px] font-extrabold tracking-[0.1em] text-signal uppercase">You took a title</span>
+        <span className="mt-0.5 block text-[15px] font-extrabold text-ink">{label}</span>
+        <span className="block text-[11.5px] text-muted">
           {TITLE_META[titleKey].format(statValue)}
           {otherCount > 0 && ` · plus ${otherCount} more`}
         </span>

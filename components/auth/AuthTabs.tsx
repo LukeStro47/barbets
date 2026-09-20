@@ -29,11 +29,11 @@ export function AuthTabs({
   if (mode === 'signin') {
     return (
       <AuthScreen title="Welcome back." subtitle="Your markets are still running.">
-        {bannerError && <p className="mt-6 text-sm text-danger-700">{bannerError}</p>}
+        {bannerError && <p className="mt-6 text-sm text-alert">{bannerError}</p>}
         <SignInForm next={next} />
-        <p className="mt-auto pt-8 text-center text-[15px] text-espresso-400">
+        <p className="mt-auto pt-8 text-center text-[15px] text-faint">
           No account yet?{' '}
-          <button type="button" onClick={() => switchMode('signup')} className="font-bold text-honey-700">
+          <button type="button" onClick={() => switchMode('signup')} className="font-bold text-signal">
             Make one
           </button>
         </p>
@@ -43,11 +43,11 @@ export function AuthTabs({
 
   return (
     <AuthScreen title="Get a seat at the table." subtitle="Two fields, then you're in.">
-      {bannerError && <p className="mt-6 text-sm text-danger-700">{bannerError}</p>}
+      {bannerError && <p className="mt-6 text-sm text-alert">{bannerError}</p>}
       <SignUpForm next={next} />
-      <p className="mt-auto pt-8 text-center text-[15px] text-espresso-400">
+      <p className="mt-auto pt-8 text-center text-[15px] text-faint">
         Already have one?{' '}
-        <button type="button" onClick={() => switchMode('signin')} className="font-bold text-honey-700">
+        <button type="button" onClick={() => switchMode('signin')} className="font-bold text-signal">
           Sign in
         </button>
       </p>

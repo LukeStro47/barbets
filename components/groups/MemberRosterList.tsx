@@ -39,19 +39,19 @@ export function MemberRosterList({ groupId, members, canRemove }: { groupId: str
               nickname={m.nickname}
               avatarUpdatedAt={m.avatarUpdatedAt}
               avatarPresetKey={m.avatarPresetKey}
-              className="h-9 w-9 shrink-0 border-[1.5px] border-espresso-100 text-xs"
-              fallbackClassName="bg-espresso-50 text-espresso-700"
+              className="h-9 w-9 shrink-0 border-[1.5px] border-hairline text-xs"
+              fallbackClassName="bg-rule text-muted"
             />
-            <span className="min-w-0 truncate text-sm text-espresso-800">
+            <span className="min-w-0 truncate text-sm text-ink">
               <Mention nickname={m.nickname} className="font-semibold" />
-              {m.isOwner && <span className="ml-1.5 text-[11.5px] font-bold text-honey-700">owner</span>}
-              {m.isDormant && <span className="ml-1.5 text-[11.5px] text-espresso-400">dormant</span>}
+              {m.isOwner && <span className="ml-1.5 text-[11.5px] font-bold text-signal">owner</span>}
+              {m.isDormant && <span className="ml-1.5 text-[11.5px] text-faint">dormant</span>}
             </span>
           </Link>
           {canRemove && !m.isOwner ? (
             <RemoveMemberButton groupId={groupId} userId={m.userId} nickname={m.nickname} />
           ) : m.isYou ? (
-            <span className="shrink-0 text-[12.5px] text-espresso-300">you</span>
+            <span className="shrink-0 text-[12.5px] text-faint">you</span>
           ) : null}
         </div>
       ))}

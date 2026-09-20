@@ -43,10 +43,10 @@ function GroupHeader({ groupId, group }: { groupId: string; group: { name: strin
         name={group.name}
         avatarKey={group.avatar_key}
         className="h-10 w-10 text-[11px]"
-        fallbackClassName="bg-espresso-900 text-honey-300"
+        fallbackClassName="bg-ink text-on-ink"
       />
-      <h1 className="min-w-0 truncate font-display text-[20px] font-bold tracking-[-0.02em] text-espresso-950">{group.name}</h1>
-      <CaretDownIcon className="h-[15px] w-[15px] shrink-0 text-espresso-300" />
+      <h1 className="min-w-0 truncate font-display text-[20px] font-bold tracking-[-0.02em] text-ink">{group.name}</h1>
+      <CaretDownIcon className="h-[15px] w-[15px] shrink-0 text-faint" />
     </Link>
   );
 }
@@ -349,11 +349,11 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
       <div className="flex flex-col gap-1.5">
         <GroupHeader groupId={groupId} group={group!} />
         {season && season.status === 'active' && (
-          <div className="flex items-center gap-2 text-[13px] font-medium text-espresso-400">
+          <div className="flex items-center gap-2 text-[13px] font-medium text-faint">
             <span>{season.name ?? `Season ${season.number}`}</span>
             {season.ends_at && (
               <>
-                <span className="h-1 w-1 shrink-0 rounded-full bg-espresso-300" />
+                <span className="h-1 w-1 shrink-0 rounded-full bg-faint" />
                 <CountdownTimer target={season.ends_at} prefix="Ends in" />
               </>
             )}
@@ -366,7 +366,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
           <GroupDeletionBanner groupId={groupId} deletionScheduledAt={group!.deletion_scheduled_at} isOwner={isOwner} />
         )}
 
-        <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-espresso-900 to-espresso-700 px-5 py-[18px]">
+        <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-ink to-ink px-5 py-[18px]">
           <Image
             src="/barbets-mono-white.png"
             alt=""
@@ -382,21 +382,21 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
               ARCHITECTURE.md), so `balance` is already exactly what's free to bet; subtracting
               pendingTokens from it here double-counted every open stake. */}
           <div className="relative">
-            <p className="text-[10.5px] font-bold tracking-[0.12em] text-honey-400 uppercase">Free to bet</p>
-            <p className="mt-0.5 font-display text-[38px] leading-none font-extrabold tracking-[-0.02em] text-paper-white">
+            <p className="text-[10.5px] font-bold tracking-[0.12em] text-signal uppercase">Free to bet</p>
+            <p className="mt-0.5 font-display text-[38px] leading-none font-extrabold tracking-[-0.02em] text-white">
               {formatTokens(membership?.balance ?? 0)}
             </p>
             {pendingTokens > 0 && (
-              <p className="mt-2 flex items-baseline gap-1.5 text-[13px] font-semibold text-paper-white/45">
+              <p className="mt-2 flex items-baseline gap-1.5 text-[13px] font-semibold text-white/45">
                 <span className="text-[10.5px] font-bold tracking-[0.12em] uppercase">In play</span>
-                <span className="text-[15px] font-bold text-honey-200">{formatTokens(pendingTokens)}</span>
+                <span className="text-[15px] font-bold text-on-ink">{formatTokens(pendingTokens)}</span>
               </p>
             )}
           </div>
           <div className="relative mt-3.5 flex items-center justify-between border-t border-white/10 pt-3">
             {membership?.nickname && (
-              <p className="text-[13px] text-espresso-200">
-                Playing as <Mention nickname={membership.nickname} className="text-honey-200" />
+              <p className="text-[13px] text-dash">
+                Playing as <Mention nickname={membership.nickname} className="text-on-ink" />
               </p>
             )}
             <div className="flex shrink-0 items-center gap-1.5">

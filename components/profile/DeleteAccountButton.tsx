@@ -5,7 +5,7 @@ import { deleteAccount } from '@/lib/actions/profile';
 import { Button } from '@/components/ui/Button';
 
 const inputClasses =
-  'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-espresso-900 placeholder:text-espresso-300 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
+  'w-full rounded-xl border border-hairline bg-surface px-4 py-2.5 text-ink placeholder:text-faint focus:border-signal focus:outline-none focus:ring-2 focus:ring-signal/15';
 
 /** Same effect as remove_member() run on yourself, everywhere you're a member, then the auth account itself is gone. Blocked while you still own a group. */
 export function DeleteAccountButton() {
@@ -24,8 +24,8 @@ export function DeleteAccountButton() {
 
   return (
     <div className="space-y-2">
-      {error && <p className="text-sm text-danger-700">{error}</p>}
-      <p className="text-sm text-espresso-600">
+      {error && <p className="text-sm text-alert">{error}</p>}
+      <p className="text-sm text-muted">
         This refunds your open bets, removes you from every group, and permanently deletes your account. Groups you
         own need to be transferred or deleted first. Type DELETE to confirm.
       </p>

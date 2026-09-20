@@ -20,7 +20,7 @@ export function SeasonChips({ groupId, options, selected }: { groupId: string; o
           href={`/groups/${groupId}/seasons?season=${opt.value}`}
           className={cn(
             'shrink-0 rounded-full px-3.5 py-1.5 text-xs font-bold whitespace-nowrap',
-            opt.value === selected ? 'bg-espresso-900 text-honey-300' : 'border border-espresso-200 text-espresso-700'
+            opt.value === selected ? 'bg-ink text-on-ink' : 'border border-hairline text-muted'
           )}
         >
           {opt.label}

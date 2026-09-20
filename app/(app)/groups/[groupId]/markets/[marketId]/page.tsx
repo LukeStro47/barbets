@@ -279,7 +279,7 @@ export default async function MarketDetailPage({
         <div className="flex items-center gap-1.5">
           {isCreator && clarificationList.length > 0 && (
             <span
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-danger-100 text-sm font-bold text-danger-700"
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-alert-bg text-sm font-bold text-alert"
               title="Needs clarification"
             >
               !
@@ -344,7 +344,7 @@ export default async function MarketDetailPage({
         </Card>
 
         {isCreator ? (
-          <p className="text-xs text-espresso-400">
+          <p className="text-xs text-faint">
             Waiting for another member to endorse this market. It expires automatically if nobody does before betting
             would close, or after 24 hours, whichever comes first.
           </p>
@@ -383,7 +383,7 @@ export default async function MarketDetailPage({
                     {
                       label: 'Bonus',
                       value: <BonusPoolValue bonusPool={marketRow.bonus_pool} staked={staked} />,
-                      tone: 'honey',
+                      tone: 'signal',
                       highlight: true,
                       flex: 1,
                     },

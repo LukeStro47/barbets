@@ -37,18 +37,18 @@ export function PolicyReapprovalGate() {
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-7 bg-paper px-6 py-11 text-center">
+    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-7 bg-canvas px-6 py-11 text-center">
       <StackedLogo height={130} />
       <div>
-        <h1 className="font-display text-2xl font-extrabold tracking-[-0.02em] text-espresso-950">
+        <h1 className="font-display text-2xl font-extrabold tracking-[-0.02em] text-ink">
           Our terms and privacy policy have changed
         </h1>
-        <p className="mt-2.5 max-w-[300px] text-[15px] leading-[1.5] text-espresso-500">
+        <p className="mt-2.5 max-w-[300px] text-[15px] leading-[1.5] text-muted">
           Take a look, then agree to keep using Barbets.
         </p>
       </div>
 
-      <label className="flex w-full max-w-[300px] items-start gap-3 rounded-2xl border border-espresso-100 bg-paper-white px-4 py-3.5 text-left">
+      <label className="flex w-full max-w-[300px] items-start gap-3 rounded-2xl border border-hairline bg-surface px-4 py-3.5 text-left">
         <input
           type="checkbox"
           checked={agreed}
@@ -57,26 +57,26 @@ export function PolicyReapprovalGate() {
         />
         <span
           aria-hidden
-          className={`mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-espresso-900 peer-focus-visible:ring-2 peer-focus-visible:ring-honey-400 ${
-            agreed ? 'border-honey-500 bg-honey-500' : 'border-espresso-200 bg-paper-white'
+          className={`mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-ink peer-focus-visible:ring-2 peer-focus-visible:ring-signal ${
+            agreed ? 'border-signal bg-signal' : 'border-hairline bg-surface'
           }`}
         >
           {agreed && <CheckIcon className="h-3.5 w-3.5" />}
         </span>
-        <span className="text-[13px]/[19px] text-espresso-400">
+        <span className="text-[13px]/[19px] text-faint">
           I agree to the updated{' '}
-          <a href="/terms" target="_blank" onClick={(e) => e.stopPropagation()} className="font-semibold text-espresso-900 underline">
+          <a href="/terms" target="_blank" onClick={(e) => e.stopPropagation()} className="font-semibold text-ink underline">
             Terms of use
           </a>{' '}
           and{' '}
-          <a href="/privacy" target="_blank" onClick={(e) => e.stopPropagation()} className="font-semibold text-espresso-900 underline">
+          <a href="/privacy" target="_blank" onClick={(e) => e.stopPropagation()} className="font-semibold text-ink underline">
             Privacy policy
           </a>
           .
         </span>
       </label>
 
-      {error && <p className="max-w-[300px] text-sm text-danger-700">{error}</p>}
+      {error && <p className="max-w-[300px] text-sm text-alert">{error}</p>}
 
       <Button variant="accent" size="xl" disabled={!agreed || isPending} onClick={handleAccept} className="w-full max-w-[300px]">
         Continue

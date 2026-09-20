@@ -17,7 +17,7 @@ import { cn } from '@/lib/cn';
 import type { Market, MarketOption } from '@/lib/actions/markets';
 
 const inputClasses =
-  'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-espresso-900 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
+  'w-full rounded-xl border border-hairline bg-surface px-4 py-2.5 text-ink focus:border-signal focus:outline-none focus:ring-2 focus:ring-signal/15';
 
 /**
  * The "propose what happened" trigger and its two-step modal (pick the answer, then read a
@@ -203,31 +203,31 @@ export function ProposeResolutionCard({
       <button
         type="button"
         onClick={openModal}
-        className="w-full rounded-full bg-espresso-800 px-4 py-2.5 text-sm font-bold text-paper-white transition-colors hover:bg-espresso-900"
+        className="w-full rounded-full bg-ink px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-ink"
       >
         {market.status === 'open' ? 'Propose result early' : 'Propose the outcome'}
       </button>
 
       {modalOpen && (
         <Modal onClose={closeModal} padded={false} panelClassName="max-h-[85dvh] overflow-x-hidden overflow-y-auto">
-          <div className="flex items-center justify-between gap-3 bg-espresso-50 px-[18px] py-[13px]">
-            <p className="text-xs font-extrabold tracking-[0.06em] text-espresso-800 uppercase">Call the result</p>
-            <p className="shrink-0 text-xs font-semibold text-espresso-500">Step {step === 'choose' ? 1 : 2} of 2</p>
+          <div className="flex items-center justify-between gap-3 bg-rule px-[18px] py-[13px]">
+            <p className="text-xs font-extrabold tracking-[0.06em] text-ink uppercase">Call the result</p>
+            <p className="shrink-0 text-xs font-semibold text-muted">Step {step === 'choose' ? 1 : 2} of 2</p>
           </div>
 
           {step === 'choose' ? (
             <>
               <div className="flex flex-col gap-3.5 p-[18px]">
                 <div>
-                  <p className="font-display text-[19px] font-extrabold tracking-[-0.01em] text-espresso-900">
+                  <p className="font-display text-[19px] font-extrabold tracking-[-0.01em] text-ink">
                     What actually happened?
                   </p>
-                  <p className="mt-1 text-[13.5px] leading-[1.45] text-espresso-500">
+                  <p className="mt-1 text-[13.5px] leading-[1.45] text-muted">
                     This is the result, not a bet. Pick what the group should settle on.
                   </p>
                 </div>
 
-                {error && <p className="text-sm text-danger-700">{error}</p>}
+                {error && <p className="text-sm text-alert">{error}</p>}
 
                 {/* Rows rather than a wrap of pills: this is the one irreversible choice in the
                     flow, and a row per outcome makes "which one is selected" readable without
@@ -248,18 +248,18 @@ export function ProposeResolutionCard({
                   {/* VOID refunds everyone rather than settling anything, so it sits under a
                       divider and in a dashed outline: available, but never mistaken for one of
                       the market's own answers. */}
-                  <div className="border-t border-espresso-50 pt-2.5">
+                  <div className="border-t border-rule pt-2.5">
                     <OutcomeRow selected={proposeOutcome === 'void'} onClick={() => setProposeOutcome('void')} dashed>
                       <span className="min-w-0 flex-1 text-left">
                         <span className="block text-sm font-extrabold tracking-[0.02em]">VOID</span>
-                        <span className="block text-xs text-espresso-400">Refunds bets</span>
+                        <span className="block text-xs text-faint">Refunds bets</span>
                       </span>
                     </OutcomeRow>
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <p className="text-[11.5px] font-extrabold tracking-[0.08em] text-espresso-400 uppercase">Why, optional</p>
+                  <p className="text-[11.5px] font-extrabold tracking-[0.08em] text-faint uppercase">Why, optional</p>
                   <textarea
                     value={justification}
                     onChange={(e) => setJustification(e.target.value)}
@@ -304,7 +304,7 @@ export function ProposeResolutionCard({
                 </div>
               </div>
 
-              <div className="flex gap-2 border-t border-espresso-50 px-[18px] py-[14px]">
+              <div className="flex gap-2 border-t border-rule px-[18px] py-[14px]">
                 <Button type="button" variant="outline" className="flex-1" onClick={closeModal}>
                   Cancel
                 </Button>
@@ -317,52 +317,52 @@ export function ProposeResolutionCard({
             <>
               <div className="flex flex-col gap-3.5 p-[18px]">
                 <div>
-                  <p className="font-display text-[19px] font-extrabold tracking-[-0.01em] text-espresso-900">
+                  <p className="font-display text-[19px] font-extrabold tracking-[-0.01em] text-ink">
                     Confirm what you're calling
                   </p>
-                  <p className="mt-1 text-[13.5px] leading-[1.45] text-espresso-500">{market.title}</p>
+                  <p className="mt-1 text-[13.5px] leading-[1.45] text-muted">{market.title}</p>
                 </div>
 
                 {/* The call restated as the same outlined ticket the market page uses for "the
                     thing you're deciding about", stock shell and all — reusing that exact outline
                     is the whole point, so what you confirm looks like what the group will read. */}
                 <TicketCard label="You're calling it" meta={kindLabel} bodyClassName="flex flex-col gap-2.5">
-                  <p className="font-display text-[30px] leading-none font-extrabold tracking-[-0.02em] text-espresso-950">
+                  <p className="font-display text-[30px] leading-none font-extrabold tracking-[-0.02em] text-ink">
                     <OptionLabel label={chosenLabel} />
                   </p>
                   {justification && (
-                    <p className="border-l-2 border-espresso-100 pl-2.5 text-[13.5px] leading-[1.45] text-espresso-600">
+                    <p className="border-l-2 border-hairline pl-2.5 text-[13.5px] leading-[1.45] text-muted">
                       {justification}
                     </p>
                   )}
                   {photoPreview && <img src={photoPreview} alt="Proof preview" className="h-14 w-14 rounded-[10px] object-cover" />}
                 </TicketCard>
 
-                {error && <p className="text-sm text-danger-700">{error}</p>}
+                {error && <p className="text-sm text-alert">{error}</p>}
 
                 <div>
-                  <p className="mb-2 text-[11.5px] font-extrabold tracking-[0.08em] text-espresso-400 uppercase">What this does</p>
+                  <p className="mb-2 text-[11.5px] font-extrabold tracking-[0.08em] text-faint uppercase">What this does</p>
                   <div className="flex flex-col">
-                    <ConsequenceRow dotClassName="bg-danger-500">
+                    <ConsequenceRow dotClassName="bg-alert">
                       {market.status === 'open' ? (
                         <>
-                          Betting is still open, so this <strong className="font-bold text-danger-700">locks it for everyone right now</strong>.
+                          Betting is still open, so this <strong className="font-bold text-alert">locks it for everyone right now</strong>.
                         </>
                       ) : (
                         <>Betting is already closed, so nothing changes for bettors.</>
                       )}
                     </ConsequenceRow>
-                    <ConsequenceRow dotClassName="bg-espresso-800">
-                      The group gets <strong className="font-bold text-espresso-900">{windowLabel} to challenge</strong> your call.
+                    <ConsequenceRow dotClassName="bg-ink">
+                      The group gets <strong className="font-bold text-ink">{windowLabel} to challenge</strong> your call.
                     </ConsequenceRow>
-                    <ConsequenceRow dotClassName="bg-espresso-200" isLast>
+                    <ConsequenceRow dotClassName="bg-dash" isLast>
                       No challenge and it's final: the pool pays out and the ticket unseals.
                     </ConsequenceRow>
                   </div>
                 </div>
               </div>
 
-              <div className="flex gap-2 border-t border-espresso-50 px-[18px] py-[14px]">
+              <div className="flex gap-2 border-t border-rule px-[18px] py-[14px]">
                 <Button type="button" variant="outline" className="flex-1" disabled={isPending} onClick={() => setStep('choose')}>
                   Back
                 </Button>
@@ -399,17 +399,17 @@ function OutcomeRow({
         'flex w-full items-center gap-3 rounded-[14px] border-[1.5px] px-3.5 transition-colors',
         dashed ? 'border-dashed py-[11px]' : 'py-[13px]',
         selected
-          ? 'border-honey-500 bg-honey-50 text-espresso-900'
-          : `bg-paper-white text-espresso-600 ${dashed ? 'border-espresso-200' : 'border-espresso-100'}`
+          ? 'border-signal bg-signal-tint text-ink'
+          : `bg-surface text-muted ${dashed ? 'border-hairline' : 'border-hairline'}`
       )}
     >
       <span
         className={cn(
           'flex h-5 w-5 shrink-0 items-center justify-center rounded-full',
-          selected ? 'bg-honey-500' : 'border-[1.5px] border-espresso-200'
+          selected ? 'bg-signal' : 'border-[1.5px] border-hairline'
         )}
       >
-        {selected && <CheckIcon className="h-[13px] w-[13px] text-espresso-950" />}
+        {selected && <CheckIcon className="h-[13px] w-[13px] text-ink" />}
       </span>
       {children}
     </button>

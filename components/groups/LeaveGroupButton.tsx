@@ -28,14 +28,14 @@ export function LeaveGroupButton({ groupId, groupName }: { groupId: string; grou
 
       {confirming && (
         <Modal onClose={() => setConfirming(false)}>
-          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">Leave {groupName}?</p>
-          {error && <p className="text-sm text-danger-700">{error}</p>}
+          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-ink">Leave {groupName}?</p>
+          {error && <p className="text-sm text-alert">{error}</p>}
           <div className="pt-0.5">
-            <ConsequenceRow dotClassName="bg-danger-500">Any market about you is voided and refunded.</ConsequenceRow>
-            <ConsequenceRow dotClassName="bg-espresso-800">
+            <ConsequenceRow dotClassName="bg-alert">Any market about you is voided and refunded.</ConsequenceRow>
+            <ConsequenceRow dotClassName="bg-ink">
               Your other open bets stay in play and settle without you.
             </ConsequenceRow>
-            <ConsequenceRow dotClassName="bg-espresso-200" isLast>
+            <ConsequenceRow dotClassName="bg-dash" isLast>
               If you come back later, you aren&apos;t reseeded.
             </ConsequenceRow>
           </div>

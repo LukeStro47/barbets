@@ -38,21 +38,21 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
   return (
     <html lang="en" className={bricolage.variable}>
       <body className="font-sans antialiased">
-        <main className="flex min-h-dvh flex-col items-center justify-center bg-paper px-7 py-11 pt-[calc(env(safe-area-inset-top)+2.75rem)] text-center">
+        <main className="flex min-h-dvh flex-col items-center justify-center bg-canvas px-7 py-11 pt-[calc(env(safe-area-inset-top)+2.75rem)] text-center">
           {/* Texture, not a heading — same treatment as the 404's numerals. */}
-          <span aria-hidden className="font-display text-[120px]/none font-extrabold tracking-[-0.05em] text-espresso-100">
+          <span aria-hidden className="font-display text-[120px]/none font-extrabold tracking-[-0.05em] text-rule">
             !
           </span>
-          <h1 className="mt-6 font-display text-[30px]/[34px] font-extrabold tracking-[-0.03em] text-espresso-900">
+          <h1 className="mt-6 font-display text-[30px]/[34px] font-extrabold tracking-[-0.03em] text-ink">
             Something went wrong on our end.
           </h1>
-          <p className="mt-3 max-w-[300px] text-base/6 text-espresso-500">
+          <p className="mt-3 max-w-[300px] text-base/6 text-muted">
             Nothing you did caused this, and no bets or balances are affected. We've been told about it.
           </p>
           <button
             type="button"
             onClick={reset}
-            className="mt-9 w-full max-w-[330px] rounded-full bg-honey-500 px-6 py-4 text-[17px] font-bold whitespace-nowrap text-espresso-900 transition-colors hover:bg-honey-600"
+            className="mt-9 w-full max-w-[330px] rounded-full bg-signal px-6 py-4 text-[17px] font-bold whitespace-nowrap text-ink transition-colors hover:bg-signal"
           >
             Try again
           </button>

@@ -196,13 +196,13 @@ export function BetslipBar({
           <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-white/25" />
           <div className="mx-auto flex max-w-lg items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[15px] font-extrabold text-paper-white">{title}</p>
-              <p className="mt-0.5 text-xs font-semibold text-paper-white/55">{subtitle}</p>
+              <p className="text-[15px] font-extrabold text-white">{title}</p>
+              <p className="mt-0.5 text-xs font-semibold text-white/55">{subtitle}</p>
             </div>
             <button
               type="button"
               onClick={() => betslip?.open()}
-              className="inline-flex shrink-0 items-center gap-[7px] rounded-full bg-honey-500 px-[18px] py-[11px] text-sm font-extrabold text-espresso-950 transition-colors hover:bg-honey-600"
+              className="inline-flex shrink-0 items-center gap-[7px] rounded-full bg-signal px-[18px] py-[11px] text-sm font-extrabold text-ink transition-colors hover:bg-signal"
             >
               Bet
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -218,13 +218,13 @@ export function BetslipBar({
       <div className="px-5 pt-[13px] pb-4">
         <div className="mx-auto max-w-lg">
           <div className="mb-2.5 flex items-baseline justify-between gap-2.5">
-            <p className="text-[13px] font-extrabold text-paper-white">{title}</p>
-            <p className="shrink-0 text-[11.5px] font-semibold text-paper-white/55">{subtitle}</p>
+            <p className="text-[13px] font-extrabold text-white">{title}</p>
+            <p className="shrink-0 text-[11.5px] font-semibold text-white/55">{subtitle}</p>
           </div>
           <div className="flex items-center gap-2.5">
             <SideButton label={sides[0]} onClick={() => betslip?.open({ side: sides[0] })} />
             {lineLabel && (
-              <span className="shrink-0 rounded-full bg-white/10 px-[13px] py-2 text-[13.5px] font-extrabold whitespace-nowrap text-paper-white tabular-nums">
+              <span className="shrink-0 rounded-full bg-white/10 px-[13px] py-2 text-[13.5px] font-extrabold whitespace-nowrap text-white tabular-nums">
                 {lineLabel}
               </span>
             )}
@@ -252,7 +252,7 @@ export function BetslipBar({
           background, that translation would otherwise uncover BottomNav's own bar for the
           duration of the bounce. This sits behind it at the same color so the strip between the
           bar and the nav always reads as solid brown, bounce or not. */}
-      <div aria-hidden="true" className="fixed inset-x-0 bottom-[var(--bottomnav-height)] z-20 !m-0 bg-espresso-900 pb-5" />
+      <div aria-hidden="true" className="fixed inset-x-0 bottom-[var(--bottomnav-height)] z-20 !m-0 bg-ink pb-5" />
 
       {/* !m-0 on every top-level element here: the parent <main> uses space-y-*, which in
           Tailwind v4 puts margin-bottom on every child except the literal last one — since
@@ -262,7 +262,7 @@ export function BetslipBar({
           would silently break again if page.tsx's structure ever changes. */}
       <div
         className={cn(
-          'fixed inset-x-0 bottom-[var(--bottomnav-height)] z-30 !m-0 rounded-t-[20px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 shadow-[0_-14px_28px_-10px_rgba(28,19,13,0.4)]',
+          'fixed inset-x-0 bottom-[var(--bottomnav-height)] z-30 !m-0 rounded-t-[20px] bg-gradient-to-br from-ink via-ink to-ink shadow-[0_-14px_28px_-10px_rgba(28,19,13,0.4)]',
           idleNudge && 'animate-betslip-idle-bounce'
         )}
         onAnimationEnd={() => setIdleNudge(false)}
@@ -270,11 +270,11 @@ export function BetslipBar({
         {barContents()}
       </div>
 
-      {isOpen && <div className="fixed inset-0 z-40 !m-0 bg-espresso-950/45" onClick={() => betslip?.close()} />}
+      {isOpen && <div className="fixed inset-0 z-40 !m-0 bg-ink/45" onClick={() => betslip?.close()} />}
 
       <div
         className={cn(
-          'fixed inset-x-0 bottom-0 z-50 !m-0 max-h-[85dvh] overflow-y-auto rounded-t-[22px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 pb-[calc(env(safe-area-inset-bottom)+24px)] transition-transform duration-300 ease-out',
+          'fixed inset-x-0 bottom-0 z-50 !m-0 max-h-[85dvh] overflow-y-auto rounded-t-[22px] bg-gradient-to-br from-ink via-ink to-ink pb-[calc(env(safe-area-inset-bottom)+24px)] transition-transform duration-300 ease-out',
           isOpen ? 'translate-y-0' : 'translate-y-full'
         )}
         // The keyboard's height is *added* to the sheet's normal bottom padding, never swapped
@@ -291,15 +291,15 @@ export function BetslipBar({
         <div className="mx-auto my-3 h-1 w-9 rounded-full bg-white/25" />
         <div className="mx-auto max-w-lg px-5">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-[11.5px] font-extrabold tracking-[0.1em] text-paper-white/50 uppercase">Your bet</p>
-            <button type="button" onClick={() => betslip?.close()} className="text-[13px] font-semibold text-paper-white/60">
+            <p className="text-[11.5px] font-extrabold tracking-[0.1em] text-white/50 uppercase">Your bet</p>
+            <button type="button" onClick={() => betslip?.close()} className="text-[13px] font-semibold text-white/60">
               Cancel
             </button>
           </div>
 
-          {error && <p className="mt-3 text-sm font-semibold text-danger-100">{error}</p>}
+          {error && <p className="mt-3 text-sm font-semibold text-alert-bg">{error}</p>}
           {blockedByHedgeSetting && (
-            <p className="mt-3 text-sm font-semibold text-danger-100">
+            <p className="mt-3 text-sm font-semibold text-alert-bg">
               This group only allows one side per market, and you already have a bet on the other side. You can still add to
               your existing bet.
             </p>
@@ -326,10 +326,10 @@ export function BetslipBar({
               just say 37. The field is the control; the chips fill it in. */}
           <div className="mt-4 border-t border-white/12 pt-4">
             <div className="flex items-baseline justify-between gap-3">
-              <label htmlFor="betslip-stake" className="text-[11.5px] font-extrabold tracking-[0.1em] text-paper-white/50 uppercase">
+              <label htmlFor="betslip-stake" className="text-[11.5px] font-extrabold tracking-[0.1em] text-white/50 uppercase">
                 Stake
               </label>
-              <span className="text-[11.5px] font-semibold text-paper-white/45">You have {formatTokens(balance)}</span>
+              <span className="text-[11.5px] font-semibold text-white/45">You have {formatTokens(balance)}</span>
             </div>
             <div className="relative mt-2">
               <input
@@ -342,9 +342,9 @@ export function BetslipBar({
                 value={betAmount}
                 onChange={(e) => setBetAmount(e.target.value)}
                 onFocus={(e) => e.target.select()}
-                className="w-full rounded-2xl border-[1.5px] border-white/22 bg-white/6 py-3 pr-[86px] pl-4 font-display text-[30px] leading-none font-extrabold tracking-[-0.02em] text-paper-white tabular-nums placeholder:text-paper-white/25 focus:border-honey-500 focus:outline-none"
+                className="w-full rounded-2xl border-[1.5px] border-white/22 bg-white/6 py-3 pr-[86px] pl-4 font-display text-[30px] leading-none font-extrabold tracking-[-0.02em] text-white tabular-nums placeholder:text-white/25 focus:border-signal focus:outline-none"
               />
-              <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-xs font-semibold text-paper-white/50">
+              <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-xs font-semibold text-white/50">
                 tokens
               </span>
             </div>
@@ -375,17 +375,17 @@ export function BetslipBar({
               odds readout by another name — anyone could divide their way back to the split. So
               the slip commits to the one number it can state honestly. */}
           <div className="mt-3.5 flex items-baseline justify-between gap-3">
-            <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-paper-white/60">
+            <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-white/60">
               {hasPick ? (
                 <>
-                  Betting on <OptionLabel label={selectedLabel.toUpperCase()} className="text-honey-200" />
+                  Betting on <OptionLabel label={selectedLabel.toUpperCase()} className="text-on-ink" />
                 </>
               ) : (
-                <span className="text-honey-200">Pick a side above</span>
+                <span className="text-on-ink">Pick a side above</span>
               )}
             </span>
-            <span className="shrink-0 text-[13px] font-semibold text-paper-white/60">
-              Balance after <strong className="font-extrabold text-honey-200">{formatTokens(balanceAfter)}</strong>
+            <span className="shrink-0 text-[13px] font-semibold text-white/60">
+              Balance after <strong className="font-extrabold text-on-ink">{formatTokens(balanceAfter)}</strong>
             </span>
           </div>
 
@@ -393,7 +393,7 @@ export function BetslipBar({
             type="button"
             disabled={isPending || betAmountNum < 1 || betAmountNum > balance || !hasPick || blockedByHedgeSetting}
             onClick={submit}
-            className="mt-3.5 w-full rounded-full bg-honey-500 px-5 py-3.5 text-[15px] font-extrabold text-espresso-950 transition-colors hover:bg-honey-600 disabled:bg-honey-500/30 disabled:text-espresso-950/40"
+            className="mt-3.5 w-full rounded-full bg-signal px-5 py-3.5 text-[15px] font-extrabold text-ink transition-colors hover:bg-signal disabled:bg-signal/30 disabled:text-ink/40"
           >
             Place bet
           </button>
@@ -421,7 +421,7 @@ function SideButton({ label, onClick }: { label: string; onClick: () => void }) 
     <button
       type="button"
       onClick={onClick}
-      className="flex-1 rounded-full border-[1.5px] border-white/28 bg-white/8 px-2.5 py-[13px] text-[15px] font-extrabold tracking-[0.04em] whitespace-nowrap text-paper-white uppercase transition-colors hover:border-white/50 hover:bg-white/16"
+      className="flex-1 rounded-full border-[1.5px] border-white/28 bg-white/8 px-2.5 py-[13px] text-[15px] font-extrabold tracking-[0.04em] whitespace-nowrap text-white uppercase transition-colors hover:border-white/50 hover:bg-white/16"
     >
       {label}
     </button>
@@ -449,7 +449,7 @@ function PickChip({
       className={cn(
         'rounded-full border-[1.5px] px-4 py-[9px] text-sm font-extrabold',
         fullWidth ? 'w-full text-left' : 'text-center',
-        selected ? 'border-honey-500 bg-honey-500 text-espresso-950' : 'border-white/22 bg-white/6 text-paper-white'
+        selected ? 'border-signal bg-signal text-ink' : 'border-white/22 bg-white/6 text-white'
       )}
     >
       {children}
@@ -475,7 +475,7 @@ function QuickAmount({
       onClick={onClick}
       className={cn(
         'flex-1 rounded-xl border-[1.5px] py-[11px] text-sm font-extrabold tabular-nums',
-        selected ? 'border-honey-500 bg-honey-500 text-espresso-950' : 'border-white/22 bg-white/6 text-paper-white',
+        selected ? 'border-signal bg-signal text-ink' : 'border-white/22 bg-white/6 text-white',
         disabled && 'opacity-40'
       )}
     >
@@ -523,14 +523,14 @@ function BetConfirmedOverlay({
 }) {
   return (
     <div
-      className="fixed inset-0 z-[60] flex flex-col justify-between bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700"
+      className="fixed inset-0 z-[60] flex flex-col justify-between bg-gradient-to-br from-ink via-ink to-ink"
       style={{
         padding: 'calc(env(safe-area-inset-top) + 56px) calc(env(safe-area-inset-right) + 24px) calc(env(safe-area-inset-bottom) + 40px) calc(env(safe-area-inset-left) + 24px)',
       }}
     >
       <div className="flex flex-col items-center gap-5">
         <svg width="64" height="64" viewBox="0 0 76 76" fill="none" className="animate-bet-check-circle">
-          <circle cx="38" cy="38" r="38" className="fill-honey-500" />
+          <circle cx="38" cy="38" r="38" className="fill-signal" />
           <path
             d="M24 39l9 9 19-19"
             className="animate-bet-check-mark"
@@ -542,25 +542,25 @@ function BetConfirmedOverlay({
           />
         </svg>
         <div className="text-center">
-          <p className="font-display text-[26px] font-extrabold tracking-[-0.01em] text-paper-white">Bet placed</p>
-          <p className="mt-1 text-[13px] font-bold tracking-[0.1em] text-paper-white/45 uppercase">{groupName}</p>
+          <p className="font-display text-[26px] font-extrabold tracking-[-0.01em] text-white">Bet placed</p>
+          <p className="mt-1 text-[13px] font-bold tracking-[0.1em] text-white/45 uppercase">{groupName}</p>
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-sm rounded-[20px] bg-paper-white shadow-[0_22px_44px_-18px_rgba(0,0,0,0.55)]">
+      <div className="mx-auto w-full max-w-sm rounded-[20px] bg-surface shadow-[0_22px_44px_-18px_rgba(0,0,0,0.55)]">
         <div className="px-5 pt-5 pb-4">
-          <p className="text-[11px] font-extrabold tracking-[0.12em] text-espresso-400 uppercase">Your bet</p>
-          <p className="mt-2 font-display text-[19px] leading-[1.25] font-extrabold text-espresso-950 text-pretty">{marketTitle}</p>
+          <p className="text-[11px] font-extrabold tracking-[0.12em] text-faint uppercase">Your bet</p>
+          <p className="mt-2 font-display text-[19px] leading-[1.25] font-extrabold text-ink text-pretty">{marketTitle}</p>
           <div className="mt-4 flex items-end justify-between gap-3">
             <div className="min-w-0 shrink-0">
-              <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase">Staked</p>
-              <p className="mt-1 font-display text-[38px] leading-none font-extrabold tracking-[-0.02em] text-espresso-950 tabular-nums">
+              <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-faint uppercase">Staked</p>
+              <p className="mt-1 font-display text-[38px] leading-none font-extrabold tracking-[-0.02em] text-ink tabular-nums">
                 {formatTokens(amount)}
               </p>
             </div>
             <div className="min-w-0 flex-1 text-right">
-              <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase">On</p>
-              <p className={`mt-1 font-display ${onLabelSizeClass(label)} leading-[1.1] font-extrabold tracking-[-0.02em] text-honey-700 text-pretty`}>
+              <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-faint uppercase">On</p>
+              <p className={`mt-1 font-display ${onLabelSizeClass(label)} leading-[1.1] font-extrabold tracking-[-0.02em] text-signal text-pretty`}>
                 <OptionLabel label={label.toUpperCase()} />
               </p>
             </div>
@@ -574,32 +574,32 @@ function BetConfirmedOverlay({
             className="absolute top-1/2 right-0 left-0 h-px"
             style={{ backgroundImage: 'repeating-linear-gradient(to right, #cbb6a2 0 6px, transparent 6px 12px)' }}
           />
-          <div className="absolute top-1/2 -left-[11px] h-[22px] w-[22px] -translate-y-1/2 rounded-full bg-espresso-900" />
-          <div className="absolute top-1/2 -right-[11px] h-[22px] w-[22px] -translate-y-1/2 rounded-full bg-espresso-900" />
+          <div className="absolute top-1/2 -left-[11px] h-[22px] w-[22px] -translate-y-1/2 rounded-full bg-ink" />
+          <div className="absolute top-1/2 -right-[11px] h-[22px] w-[22px] -translate-y-1/2 rounded-full bg-ink" />
         </div>
 
         <div className="flex px-5 pb-5">
           <div className="flex-1">
-            <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase">Closes in</p>
-            <p className="mt-[3px] text-base font-extrabold text-espresso-900 tabular-nums">
+            <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-faint uppercase">Closes in</p>
+            <p className="mt-[3px] text-base font-extrabold text-ink tabular-nums">
               <CountdownTimer target={closesAt} prefix="" />
             </p>
           </div>
           <div className="flex-1 text-right">
-            <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase">Balance after</p>
-            <p className="mt-[3px] text-base font-extrabold text-espresso-900 tabular-nums">{formatTokens(balanceAfter)}</p>
+            <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-faint uppercase">Balance after</p>
+            <p className="mt-[3px] text-base font-extrabold text-ink tabular-nums">{formatTokens(balanceAfter)}</p>
           </div>
         </div>
       </div>
 
       <div className="mx-auto flex w-full max-w-sm flex-col gap-3">
-        <p className="text-center text-[13px] leading-[1.45] text-paper-white/55">
+        <p className="text-center text-[13px] leading-[1.45] text-white/55">
           Nobody sees the odds until betting closes. You can add to this bet any time before then.
         </p>
         <button
           type="button"
           onClick={onClose}
-          className="w-full rounded-full bg-honey-500 py-[15px] text-[15px] font-extrabold text-espresso-950 transition-colors hover:bg-honey-600"
+          className="w-full rounded-full bg-signal py-[15px] text-[15px] font-extrabold text-ink transition-colors hover:bg-signal"
         >
           All markets
         </button>

@@ -25,14 +25,14 @@ export function InvitePill({ inviteCode }: { inviteCode: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/[0.09] px-[11px] py-[5px] text-xs font-bold text-honey-200"
+        className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/[0.09] px-[11px] py-[5px] text-xs font-bold text-on-ink"
       >
         <LinkIcon className="h-3 w-3" />
         Invite
       </button>
       {open && (
         <Modal onClose={() => setOpen(false)}>
-          <p className="font-display font-bold text-espresso-900">Invite code</p>
+          <p className="font-display font-bold text-ink">Invite code</p>
           {/* Boxed per character to match the join entry screen's own InviteCodeBoxes, not
               just for looks. The code is what still works if the app asks for it directly;
               the link below is what actually gets a friend into the group now that there's
@@ -41,7 +41,7 @@ export function InvitePill({ inviteCode }: { inviteCode: string }) {
             {inviteCode.split('').map((char, i) => (
               <span
                 key={i}
-                className="flex h-[54px] w-[46px] items-center justify-center rounded-2xl border-[1.5px] border-espresso-200 bg-paper font-display text-2xl font-extrabold text-espresso-900"
+                className="flex h-[54px] w-[46px] items-center justify-center rounded-2xl border-[1.5px] border-hairline bg-canvas font-display text-2xl font-extrabold text-ink"
               >
                 {char}
               </span>

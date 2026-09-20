@@ -29,16 +29,16 @@ export function SeasonNumbersCard({
 
   return (
     <div className="flex flex-col gap-2">
-      <h2 className="ml-1 text-xs font-bold tracking-[0.08em] text-espresso-400 uppercase">Season in numbers</h2>
+      <h2 className="ml-1 text-xs font-bold tracking-[0.08em] text-faint uppercase">Season in numbers</h2>
       <div className="flex gap-2">
         {tiles.map((t) => {
           const formatted = formatTokens(t.value);
           return (
-            <div key={t.label} className="min-w-0 flex-1 rounded-[18px] border border-espresso-100 bg-paper-white px-2.5 py-3.5">
-              <p className={cn('font-display font-extrabold whitespace-nowrap text-espresso-950 tabular-nums', valueSizeClass(formatted))}>
+            <div key={t.label} className="min-w-0 flex-1 rounded-[18px] border border-hairline bg-surface px-2.5 py-3.5">
+              <p className={cn('font-display font-extrabold whitespace-nowrap text-ink tabular-nums', valueSizeClass(formatted))}>
                 {formatted}
               </p>
-              <p className="mt-0.5 text-[10.5px] font-extrabold tracking-[0.06em] text-espresso-400 uppercase">{t.label}</p>
+              <p className="mt-0.5 text-[10.5px] font-extrabold tracking-[0.06em] text-faint uppercase">{t.label}</p>
             </div>
           );
         })}

@@ -17,7 +17,7 @@ export function BackButton({ fallbackHref = '/', label = 'Back' }: { fallbackHre
         if (window.history.length > 1) router.back();
         else router.push(fallbackHref);
       }}
-      className="-ml-1 inline-flex items-center gap-0.5 text-[13px] font-bold text-espresso-500 hover:text-espresso-800"
+      className="-ml-1 inline-flex items-center gap-0.5 text-[13px] font-bold text-muted hover:text-ink"
     >
       <CaretLeftIcon className="h-[15px] w-[15px]" />
       {label}

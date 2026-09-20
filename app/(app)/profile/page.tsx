@@ -48,14 +48,14 @@ function SettingsRow({
   return (
     <Link
       href={href}
-      className="flex items-center gap-3 rounded-[20px] border border-espresso-100 bg-paper-white px-4 py-3.5 transition-colors hover:border-espresso-200"
+      className="flex items-center gap-3 rounded-[20px] border border-hairline bg-surface px-4 py-3.5 transition-colors hover:border-hairline"
     >
-      <Icon className="h-[19px] w-[19px] shrink-0 text-espresso-700" />
+      <Icon className="h-[19px] w-[19px] shrink-0 text-muted" />
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-extrabold text-espresso-800">{label}</span>
-        <span className="mt-0.5 block text-[11.5px] text-espresso-400">{sub}</span>
+        <span className="block text-sm font-extrabold text-ink">{label}</span>
+        <span className="mt-0.5 block text-[11.5px] text-faint">{sub}</span>
       </span>
-      <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-espresso-300" />
+      <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-faint" />
     </Link>
   );
 }
@@ -67,10 +67,10 @@ function QuickLink({ href, label, Icon }: { href: string; label: string; Icon: (
   return (
     <Link
       href={href}
-      className="flex items-center gap-2.5 rounded-2xl border border-espresso-100 bg-paper-white px-3 py-[13px] transition-colors hover:border-espresso-200"
+      className="flex items-center gap-2.5 rounded-2xl border border-hairline bg-surface px-3 py-[13px] transition-colors hover:border-hairline"
     >
-      <Icon className="h-4 w-4 shrink-0 text-espresso-500" />
-      <span className="min-w-0 flex-1 truncate text-[12.5px] font-extrabold text-espresso-700">{label}</span>
+      <Icon className="h-4 w-4 shrink-0 text-muted" />
+      <span className="min-w-0 flex-1 truncate text-[12.5px] font-extrabold text-muted">{label}</span>
     </Link>
   );
 }
@@ -124,9 +124,9 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
       {isAdmin && (
         <Link
           href="/admin"
-          className="flex h-[52px] items-center justify-center gap-2.5 rounded-full bg-espresso-900 text-[14.5px] font-extrabold text-paper-white"
+          className="flex h-[52px] items-center justify-center gap-2.5 rounded-full bg-ink text-[14.5px] font-extrabold text-white"
         >
-          <ShieldAlertIcon className="h-[18px] w-[18px] text-honey-300" />
+          <ShieldAlertIcon className="h-[18px] w-[18px] text-on-ink" />
           Admin
         </Link>
       )}
@@ -134,7 +134,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
       <form action={signOut}>
         <button
           type="submit"
-          className="flex h-[50px] w-full items-center justify-center gap-2.5 rounded-full border-[1.5px] border-espresso-200 bg-transparent text-sm font-extrabold text-espresso-700 transition-colors hover:bg-espresso-50"
+          className="flex h-[50px] w-full items-center justify-center gap-2.5 rounded-full border-[1.5px] border-hairline bg-transparent text-sm font-extrabold text-muted transition-colors hover:bg-rule"
         >
           <SignOutIcon className="h-[17px] w-[17px]" />
           Sign out
@@ -281,7 +281,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
       <GroupSwitcher groups={switcherGroups} currentGroupId={groupId} />
 
       <ShareRecordCard groupName={groupName} handle={selected.nickname}>
-        <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 p-5 text-paper-white">
+        <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-ink via-ink to-ink p-5 text-white">
           <div className="pointer-events-none absolute inset-0 opacity-50 [background:radial-gradient(circle_at_88%_0%,rgba(232,163,61,0.3),rgba(232,163,61,0)_60%)]" />
           <div className="relative mb-3.5 flex items-center gap-3">
             {!isPublicGroup && (
@@ -291,46 +291,46 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
                 avatarUpdatedAt={avatarRow?.avatar_updated_at ?? null}
                 avatarPresetKey={avatarRow?.avatar_preset_key ?? null}
                 className="h-11 w-11 border-2 border-white/20 text-sm"
-                fallbackClassName="bg-white/10 text-honey-300"
+                fallbackClassName="bg-white/10 text-on-ink"
                 enlargeOnTap
               />
             )}
             <div className="min-w-0">
               <p className="truncate text-base font-extrabold italic">@{selected.nickname}</p>
-              <p className="truncate text-[11px] text-paper-white/50">{groupName}</p>
+              <p className="truncate text-[11px] text-white/50">{groupName}</p>
             </div>
           </div>
           <div className="relative grid grid-cols-2 gap-x-2.5 gap-y-3.5">
             <div>
               <p className="text-2xl font-extrabold tracking-[-0.02em]">{formatTokens(selected.balance)}</p>
-              <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-paper-white/50 uppercase">Tokens</p>
+              <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-white/50 uppercase">Tokens</p>
             </div>
             <div>
-              <p className="text-2xl font-extrabold tracking-[-0.02em] text-honey-300">{standing}</p>
-              <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-paper-white/50 uppercase">Standing</p>
+              <p className="text-2xl font-extrabold tracking-[-0.02em] text-on-ink">{standing}</p>
+              <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-white/50 uppercase">Standing</p>
             </div>
             <div>
               <p className="text-2xl font-extrabold tracking-[-0.02em]">{accuracyPct == null ? '—' : `${accuracyPct}%`}</p>
-              <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-paper-white/50 uppercase">Accuracy</p>
+              <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-white/50 uppercase">Accuracy</p>
             </div>
             <div>
-              <p className="text-2xl font-extrabold tracking-[-0.02em] text-honey-300">
+              <p className="text-2xl font-extrabold tracking-[-0.02em] text-on-ink">
                 {netHere >= 0 ? '+' : '−'}
                 {formatTokens(Math.abs(netHere))}
               </p>
-              <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-paper-white/50 uppercase">Net here</p>
+              <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-white/50 uppercase">Net here</p>
             </div>
           </div>
           <div className="relative mt-4 border-t border-white/10 pt-3.5">
-            <p className="text-[10.5px] font-bold tracking-[0.07em] text-honey-400 uppercase">Best call</p>
+            <p className="text-[10.5px] font-bold tracking-[0.07em] text-signal uppercase">Best call</p>
             {bestCall ? (
-              <p className="mt-1 line-clamp-2 text-[13.5px] leading-[1.35] font-bold text-paper-white">
+              <p className="mt-1 line-clamp-2 text-[13.5px] leading-[1.35] font-bold text-white">
                 {bestCall.multiple.toFixed(1)}&times; on &ldquo;{bestCall.title}&rdquo;
               </p>
             ) : (
-              <p className="mt-1 text-[13.5px] leading-[1.35] text-paper-white/50">Nothing settled yet.</p>
+              <p className="mt-1 text-[13.5px] leading-[1.35] text-white/50">Nothing settled yet.</p>
             )}
-            <p className="mt-1.5 text-[11px] text-paper-white/40">{tenureLine}</p>
+            <p className="mt-1.5 text-[11px] text-white/40">{tenureLine}</p>
           </div>
         </div>
       </ShareRecordCard>
@@ -341,8 +341,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
               (-mx-5 … px-5), so any inset here would leave the heading a couple of pixels to the
               right of the card edges it is supposed to sit above. */}
           <div className="mb-2 flex items-baseline justify-between gap-3">
-            <h3 className="text-xs font-extrabold tracking-[0.06em] text-espresso-400 uppercase">Open Bets</h3>
-            <span className="shrink-0 text-xs text-espresso-400">
+            <h3 className="text-xs font-extrabold tracking-[0.06em] text-faint uppercase">Open Bets</h3>
+            <span className="shrink-0 text-xs text-faint">
               {openCount} {openCount === 1 ? 'bet' : 'bets'} riding · swipe
             </span>
           </div>
@@ -354,30 +354,30 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
                 <Link
                   key={b.id}
                   href={`/groups/${market.group_id}/markets/${market.id}`}
-                  className="flex w-full shrink-0 flex-col justify-between gap-3 rounded-[20px] border border-espresso-100 bg-paper-white p-3.5 [scroll-snap-align:start]"
+                  className="flex w-full shrink-0 flex-col justify-between gap-3 rounded-[20px] border border-hairline bg-surface p-3.5 [scroll-snap-align:start]"
                 >
                   <span>
                     {showGroupLabels && (
-                      <span className="block text-[10px] font-extrabold tracking-[0.05em] text-espresso-300 uppercase">
+                      <span className="block text-[10px] font-extrabold tracking-[0.05em] text-faint uppercase">
                         {groupNameById.get(market.group_id)}
                       </span>
                     )}
-                    <span className={cn('block text-balance text-[14.5px] font-bold leading-[1.32] text-espresso-900', showGroupLabels && 'mt-1')}>
+                    <span className={cn('block text-balance text-[14.5px] font-bold leading-[1.32] text-ink', showGroupLabels && 'mt-1')}>
                       {market.title}
                     </span>
                   </span>
-                  <span className="flex items-center justify-between gap-2.5 border-t border-espresso-50 pt-3">
+                  <span className="flex items-center justify-between gap-2.5 border-t border-rule pt-3">
                     <span className="min-w-0">
-                      <span className="block truncate text-[13px] font-extrabold text-honey-700">
+                      <span className="block truncate text-[13px] font-extrabold text-signal">
                         <OptionLabel label={sideLabel} />
                       </span>
-                      <span className="mt-0.5 block text-[11px] text-espresso-400">
+                      <span className="mt-0.5 block text-[11px] text-faint">
                         <CountdownTimer target={market.closes_at} />
                       </span>
                     </span>
                     <span className="shrink-0 text-right">
-                      <span className="block text-[13px] font-extrabold text-espresso-900">{formatTokens(estimatedToWin(b))}</span>
-                      <span className="mt-0.5 block text-[10px] font-bold tracking-[0.06em] text-espresso-400 uppercase">to win</span>
+                      <span className="block text-[13px] font-extrabold text-ink">{formatTokens(estimatedToWin(b))}</span>
+                      <span className="mt-0.5 block text-[10px] font-bold tracking-[0.06em] text-faint uppercase">to win</span>
                     </span>
                   </span>
                 </Link>
