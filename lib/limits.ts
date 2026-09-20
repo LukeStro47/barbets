@@ -56,3 +56,7 @@ export const PUNISHMENT_MAX_LENGTH = 120;
     reasoning as CUSTOM_AWARD_MAX_PER_GROUP bounding custom awards. Checked per scope, so a
     user's private list and a given group's shared list are each capped independently. */
 export const MARKET_TEMPLATE_MAX_PER_SCOPE = 30;
+
+/** Banter on a market (DESIGN Comments tab). Short enough to read in a thread without
+    becoming a paste dump; mirrored by post_market_comment()'s 500-char check. */
+export const MARKET_COMMENT_MAX_LENGTH = 500;

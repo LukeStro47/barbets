@@ -31,10 +31,12 @@ import { LineTicket, OptionsTicket } from '@/components/markets/MarketExplainer'
 import { VouchingTicket } from '@/components/markets/VouchingTicket';
 import { ProposedOutcomeTicket } from '@/components/markets/ProposedOutcomeTicket';
 import { SubjectMarketPulse, type SubjectMarketPulseData } from '@/components/markets/SubjectMarketPulse';
+import { MarketComments } from '@/components/markets/MarketComments';
 import { STATUS_LABEL, STATUS_TONE } from '@/lib/marketStatus';
 import { formatTokens } from '@/lib/formatNumber';
 import { formatLine } from '@/lib/units';
 import type { Market, MarketOption } from '@/lib/actions/markets';
+import type { MarketComment } from '@/lib/actions/comments';
 
 /** An unendorsed market dies at the earlier of its own close time and 24h after creation — the
  * same pair expire_stale() sweeps on, surfaced as one deadline so an endorser sees the real one. */
@@ -217,20 +219,22 @@ export default async function MarketDetailPage({
       .maybeSingle();
     myVote = vote;
 
-    // Mirrors cast_vote's own eligible-voter query exactly (memberships not removed, minus
-    // this market's subjects) so "N of M voted" never promises a headcount the vote itself
-    // wouldn't recognize.
-    const [{ count: votesCount }, eligibleResult] = await Promise.all([
-      supabase.from('votes').select('id', { count: 'exact', head: true }).eq('market_id', marketId),
-      (() => {
-        let q = supabase.from('memberships').select('user_id', { count: 'exact', head: true }).eq('group_id', groupId).neq('status', 'removed');
-        if (subjectUserIds.length > 0) q = q.not('user_id', 'in', `(${subjectUserIds.join(',')})`);
-        return q;
-      })(),
-    ]);
-    votesCast = votesCount ?? 0;
-    eligibleVoters = eligibleResult.count ?? 0;
+    // SECURITY DEFINER aggregate only — a plain votes count under RLS can only see the
+    // caller's own ballot until are_votes_revealed(), so it would always read 0 or 1.
+    const { data: ballot } = await supabase
+      .rpc('get_ballot_progress', { p_market_id: marketId })
+      .maybeSingle<{
+        votes_cast: number;
+        eligible_voters: number;
+        closes_at: string;
+        has_voted: boolean;
+      }>();
+    votesCast = ballot?.votes_cast ?? 0;
+    eligibleVoters = ballot?.eligible_voters ?? 0;
   }
+
+  const { data: commentRows } = await supabase.rpc('list_market_comments', { p_market_id: marketId });
+  const comments = (commentRows ?? []) as MarketComment[];
 
   const [sideA, sideB] = marketRow.market_type === 'yes_no' ? ['yes', 'no'] : ['over', 'under'];
   const oddsA = odds?.find((o) => o.side === sideA);
@@ -613,6 +617,13 @@ export default async function MarketDetailPage({
           </Card>
         </>
       )}
+
+      <MarketComments
+        groupId={groupId}
+        marketId={marketId}
+        currentUserId={user.id}
+        initialComments={comments}
+      />
     </main>
   );
 }
