@@ -90,19 +90,19 @@ export function GroupMarketSections({
   const effectiveFilter: Filter = allEmpty ? 'open' : filter;
 
   return (
-    <div className="flex flex-col gap-[18px]">
+    <div className="flex flex-col gap-[22px]">
       {!allEmpty && (
-        <div className="flex gap-0.5 rounded-2xl bg-rule p-1">
+        <div className="flex flex-wrap gap-2">
           {TABS.map((tab) => (
             <button
               key={tab.key}
               type="button"
               onClick={() => setFilter(tab.key)}
               className={cn(
-                'flex-1 rounded-xl py-[7px] text-center text-[13px] transition-[background-color,box-shadow,color] duration-200',
+                'rounded-full px-3.5 py-[7px] text-[13px] font-bold transition-colors duration-150',
                 filter === tab.key
-                  ? 'bg-surface font-semibold text-ink shadow-[0_1px_3px_rgba(44,31,23,0.12)]'
-                  : 'font-medium text-faint'
+                  ? 'bg-ink text-white'
+                  : 'border border-hairline bg-surface text-muted'
               )}
             >
               {tab.label}
@@ -115,10 +115,10 @@ export function GroupMarketSections({
         <Section label="Betting open">
           {openEmpty ? (
             allEmpty ? (
-              <EmptyState icon="🎲" title="Nothing open right now" subtitle="Tap the + below to start one." />
+              <EmptyState icon="" title="Nothing open right now" subtitle="Tap the + below to start one." />
             ) : nothingActive ? (
               <EmptyState
-                icon="🎲"
+                icon=""
                 title="Nothing open right now"
                 subtitle="Tap the + below to start one, or see what's already settled instead."
                 action={
@@ -129,7 +129,7 @@ export function GroupMarketSections({
               />
             ) : (
               <EmptyState
-                icon="🎲"
+                icon=""
                 title="Nothing open right now"
                 subtitle="Tap the + below to start one, or check what's still pending."
                 action={
@@ -146,7 +146,7 @@ export function GroupMarketSections({
       )}
 
       {effectiveFilter === 'pending' && (
-        <>
+        <div className="flex flex-col gap-[22px]">
           {pendingSponsor.length > 0 && (
             <Section label={STATUS_LABEL.pending_sponsor}>
               <MarketRowList markets={pendingSponsor} />
@@ -165,7 +165,7 @@ export function GroupMarketSections({
           {pendingEmpty &&
             (nothingActive ? (
               <EmptyState
-                icon="⏳"
+                icon=""
                 title="Nothing pending"
                 subtitle="See what's already settled instead."
                 action={
@@ -175,15 +175,15 @@ export function GroupMarketSections({
                 }
               />
             ) : (
-              <EmptyState icon="⏳" title="Nothing pending" subtitle="No markets awaiting endorsement, resolution, or a vote." />
+              <EmptyState icon="" title="Nothing pending" subtitle="No markets awaiting endorsement, resolution, or a vote." />
             ))}
-        </>
+        </div>
       )}
 
       {effectiveFilter === 'settled' && (
         <Section label="Settled">
           {settled.length === 0 ? (
-            <EmptyState icon="🏁" title="No settled markets yet" subtitle="Once a market resolves, it'll show up here." />
+            <EmptyState icon="" title="No settled markets yet" subtitle="Once a market resolves, it'll show up here." />
           ) : (
             <>
               <MarketRowList markets={settled} />
@@ -205,8 +205,8 @@ export function GroupMarketSections({
 
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-2">
-      <h2 className="ml-1 text-xs font-bold uppercase tracking-[0.08em] text-faint">{label}</h2>
+    <div className="flex flex-col gap-[13px]">
+      <h2 className="text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase">{label}</h2>
       {children}
     </div>
   );

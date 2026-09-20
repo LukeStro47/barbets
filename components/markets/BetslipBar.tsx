@@ -192,7 +192,7 @@ export function BetslipBar({
   function barContents() {
     if (isMultipleChoice) {
       return (
-        <div className="px-5 pt-3 pb-4">
+        <div className="px-[18px] pt-3 pb-7">
           <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-white/25" />
           <div className="mx-auto flex max-w-lg items-center justify-between gap-3">
             <div className="min-w-0">
@@ -202,7 +202,7 @@ export function BetslipBar({
             <button
               type="button"
               onClick={() => betslip?.open()}
-              className="inline-flex shrink-0 items-center gap-[7px] rounded-full bg-signal px-[18px] py-[11px] text-sm font-extrabold text-ink transition-colors hover:bg-signal"
+              className="inline-flex shrink-0 items-center gap-[7px] rounded-[14px] bg-signal px-[18px] py-[11px] text-sm font-bold text-white shadow-[var(--elevation-cta)] transition-colors hover:bg-signal-deep"
             >
               Bet
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -215,7 +215,7 @@ export function BetslipBar({
     }
 
     return (
-      <div className="px-5 pt-[13px] pb-4">
+      <div className="px-[18px] pt-3 pb-7">
         <div className="mx-auto max-w-lg">
           <div className="mb-2.5 flex items-baseline justify-between gap-2.5">
             <p className="text-[13px] font-extrabold text-white">{title}</p>
@@ -224,7 +224,7 @@ export function BetslipBar({
           <div className="flex items-center gap-2.5">
             <SideButton label={sides[0]} onClick={() => betslip?.open({ side: sides[0] })} />
             {lineLabel && (
-              <span className="shrink-0 rounded-full bg-white/10 px-[13px] py-2 text-[13.5px] font-extrabold whitespace-nowrap text-white tabular-nums">
+              <span className="shrink-0 rounded-[14px] bg-white/10 px-[13px] py-2 font-mono text-[13.5px] font-semibold whitespace-nowrap text-white">
                 {lineLabel}
               </span>
             )}
@@ -262,7 +262,7 @@ export function BetslipBar({
           would silently break again if page.tsx's structure ever changes. */}
       <div
         className={cn(
-          'fixed inset-x-0 bottom-[var(--bottomnav-height)] z-30 !m-0 rounded-t-[20px] bg-gradient-to-br from-ink via-ink to-ink shadow-[0_-14px_28px_-10px_rgba(28,19,13,0.4)]',
+          'fixed inset-x-0 bottom-[var(--bottomnav-height)] z-30 !m-0 rounded-t-[24px] border-t border-white/10 bg-ink shadow-[var(--elevation-sheet)]',
           idleNudge && 'animate-betslip-idle-bounce'
         )}
         onAnimationEnd={() => setIdleNudge(false)}
@@ -274,7 +274,7 @@ export function BetslipBar({
 
       <div
         className={cn(
-          'fixed inset-x-0 bottom-0 z-50 !m-0 max-h-[85dvh] overflow-y-auto rounded-t-[22px] bg-gradient-to-br from-ink via-ink to-ink pb-[calc(env(safe-area-inset-bottom)+24px)] transition-transform duration-300 ease-out',
+          'fixed inset-x-0 bottom-0 z-50 !m-0 max-h-[85dvh] overflow-y-auto rounded-t-[26px] border-t border-white/10 bg-ink pb-[calc(env(safe-area-inset-bottom)+24px)] shadow-[var(--elevation-sheet)] transition-transform duration-300 ease-out',
           isOpen ? 'translate-y-0' : 'translate-y-full'
         )}
         // The keyboard's height is *added* to the sheet's normal bottom padding, never swapped
@@ -289,7 +289,7 @@ export function BetslipBar({
         aria-hidden={!isOpen}
       >
         <div className="mx-auto my-3 h-1 w-9 rounded-full bg-white/25" />
-        <div className="mx-auto max-w-lg px-5">
+        <div className="mx-auto max-w-lg px-[18px]">
           <div className="flex items-center justify-between gap-3">
             <p className="text-[11.5px] font-extrabold tracking-[0.1em] text-white/50 uppercase">Your bet</p>
             <button type="button" onClick={() => betslip?.close()} className="text-[13px] font-semibold text-white/60">
@@ -329,7 +329,7 @@ export function BetslipBar({
               <label htmlFor="betslip-stake" className="text-[11.5px] font-extrabold tracking-[0.1em] text-white/50 uppercase">
                 Stake
               </label>
-              <span className="text-[11.5px] font-semibold text-white/45">You have {formatTokens(balance)}</span>
+              <span className="font-mono text-[11.5px] font-semibold text-white/45">You have {formatTokens(balance)}</span>
             </div>
             <div className="relative mt-2">
               <input
@@ -342,7 +342,7 @@ export function BetslipBar({
                 value={betAmount}
                 onChange={(e) => setBetAmount(e.target.value)}
                 onFocus={(e) => e.target.select()}
-                className="w-full rounded-2xl border-[1.5px] border-white/22 bg-white/6 py-3 pr-[86px] pl-4 font-display text-[30px] leading-none font-extrabold tracking-[-0.02em] text-white tabular-nums placeholder:text-white/25 focus:border-signal focus:outline-none"
+                className="w-full rounded-[14px] border border-white/22 bg-white/6 py-3 pr-[86px] pl-4 font-mono text-[30px] leading-none font-semibold tracking-[-0.02em] text-white placeholder:text-white/25 focus:border-signal focus:outline-none"
               />
               <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-xs font-semibold text-white/50">
                 tokens
@@ -385,7 +385,7 @@ export function BetslipBar({
               )}
             </span>
             <span className="shrink-0 text-[13px] font-semibold text-white/60">
-              Balance after <strong className="font-extrabold text-on-ink">{formatTokens(balanceAfter)}</strong>
+              Balance after <strong className="font-mono font-semibold text-on-ink">{formatTokens(balanceAfter)}</strong>
             </span>
           </div>
 
@@ -393,7 +393,7 @@ export function BetslipBar({
             type="button"
             disabled={isPending || betAmountNum < 1 || betAmountNum > balance || !hasPick || blockedByHedgeSetting}
             onClick={submit}
-            className="mt-3.5 w-full rounded-full bg-signal px-5 py-3.5 text-[15px] font-extrabold text-ink transition-colors hover:bg-signal disabled:bg-signal/30 disabled:text-ink/40"
+            className="mt-3.5 w-full rounded-[14px] bg-signal px-5 py-[15px] text-[15px] font-bold text-white shadow-[var(--elevation-cta)] transition-colors hover:bg-signal-deep disabled:bg-disabled-bg disabled:text-disabled-ink disabled:shadow-none"
           >
             Place bet
           </button>
@@ -421,7 +421,7 @@ function SideButton({ label, onClick }: { label: string; onClick: () => void }) 
     <button
       type="button"
       onClick={onClick}
-      className="flex-1 rounded-full border-[1.5px] border-white/28 bg-white/8 px-2.5 py-[13px] text-[15px] font-extrabold tracking-[0.04em] whitespace-nowrap text-white uppercase transition-colors hover:border-white/50 hover:bg-white/16"
+      className="flex-1 rounded-[14px] border border-white/28 bg-white/8 px-2.5 py-[13px] text-[15px] font-bold tracking-[0.04em] whitespace-nowrap text-white uppercase transition-colors hover:border-white/50 hover:bg-white/16"
     >
       {label}
     </button>
@@ -447,9 +447,9 @@ function PickChip({
       type="button"
       onClick={onClick}
       className={cn(
-        'rounded-full border-[1.5px] px-4 py-[9px] text-sm font-extrabold',
+        'rounded-[14px] border px-4 py-[9px] text-sm font-bold',
         fullWidth ? 'w-full text-left' : 'text-center',
-        selected ? 'border-signal bg-signal text-ink' : 'border-white/22 bg-white/6 text-white'
+        selected ? 'border-signal bg-signal text-white' : 'border-white/22 bg-white/6 text-white'
       )}
     >
       {children}
@@ -474,8 +474,8 @@ function QuickAmount({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'flex-1 rounded-xl border-[1.5px] py-[11px] text-sm font-extrabold tabular-nums',
-        selected ? 'border-signal bg-signal text-ink' : 'border-white/22 bg-white/6 text-white',
+        'flex-1 rounded-[14px] border py-[11px] font-mono text-sm font-semibold',
+        selected ? 'border-signal bg-signal text-white' : 'border-white/22 bg-white/6 text-white',
         disabled && 'opacity-40'
       )}
     >
@@ -485,9 +485,9 @@ function QuickAmount({
 }
 
 /**
- * What replaces the drawer once `placeBet` succeeds: the stake as a real torn ticket stub, plus
- * exactly the facts a bettor wants in the two seconds after committing — what they backed, on
- * which market, in which group, when it closes, what they have left.
+ * What replaces the drawer once `placeBet` succeeds: a dark torn ticket stub, plus exactly the
+ * facts a bettor wants in the two seconds after committing — what they backed, on which market,
+ * in which group, when it closes, what they have left.
  *
  * No odds and no projected payout, for the same reason the slip above carries none: the split
  * stays sealed while betting is open, and a payout figure is a live odds readout by another name.
@@ -523,7 +523,7 @@ function BetConfirmedOverlay({
 }) {
   return (
     <div
-      className="fixed inset-0 z-[60] flex flex-col justify-between bg-gradient-to-br from-ink via-ink to-ink"
+      className="fixed inset-0 z-[60] flex flex-col justify-between bg-canvas"
       style={{
         padding: 'calc(env(safe-area-inset-top) + 56px) calc(env(safe-area-inset-right) + 24px) calc(env(safe-area-inset-bottom) + 40px) calc(env(safe-area-inset-left) + 24px)',
       }}
@@ -534,7 +534,7 @@ function BetConfirmedOverlay({
           <path
             d="M24 39l9 9 19-19"
             className="animate-bet-check-mark"
-            stroke="#1c130d"
+            stroke="#ffffff"
             strokeWidth="5"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -542,64 +542,64 @@ function BetConfirmedOverlay({
           />
         </svg>
         <div className="text-center">
-          <p className="font-display text-[26px] font-extrabold tracking-[-0.01em] text-white">Bet placed</p>
-          <p className="mt-1 text-[13px] font-bold tracking-[0.1em] text-white/45 uppercase">{groupName}</p>
+          <p className="text-[26px] font-extrabold tracking-[-0.02em] text-ink">Bet placed</p>
+          <p className="mt-1 text-[13px] font-bold tracking-[0.1em] text-faint uppercase">{groupName}</p>
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-sm rounded-[20px] bg-surface shadow-[0_22px_44px_-18px_rgba(0,0,0,0.55)]">
+      {/* Dark ticket stub — ink ground, dashed tear, mono figures. */}
+      <div className="mx-auto w-full max-w-sm rounded-[24px] bg-ink">
         <div className="px-5 pt-5 pb-4">
-          <p className="text-[11px] font-extrabold tracking-[0.12em] text-faint uppercase">Your bet</p>
-          <p className="mt-2 font-display text-[19px] leading-[1.25] font-extrabold text-ink text-pretty">{marketTitle}</p>
+          <p className="text-[11px] font-extrabold tracking-[0.12em] text-white/40 uppercase">Your bet</p>
+          <p className="mt-2 text-[19px] leading-[1.25] font-extrabold text-white text-pretty">{marketTitle}</p>
           <div className="mt-4 flex items-end justify-between gap-3">
             <div className="min-w-0 shrink-0">
-              <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-faint uppercase">Staked</p>
-              <p className="mt-1 font-display text-[38px] leading-none font-extrabold tracking-[-0.02em] text-ink tabular-nums">
+              <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-white/40 uppercase">Staked</p>
+              <p className="mt-1 font-mono text-[38px] leading-none font-semibold tracking-[-0.02em] text-white">
                 {formatTokens(amount)}
               </p>
             </div>
             <div className="min-w-0 flex-1 text-right">
-              <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-faint uppercase">On</p>
-              <p className={`mt-1 font-display ${onLabelSizeClass(label)} leading-[1.1] font-extrabold tracking-[-0.02em] text-signal text-pretty`}>
+              <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-white/40 uppercase">On</p>
+              <p className={`mt-1 font-mono ${onLabelSizeClass(label)} leading-[1.1] font-semibold tracking-[-0.02em] text-on-ink text-pretty`}>
                 <OptionLabel label={label.toUpperCase()} />
               </p>
             </div>
           </div>
         </div>
 
-        {/* The tear. The notches are circles filled with the backdrop's colour at this height,
-            not real cutouts, which no amount of border-radius can produce on a solid card. */}
+        {/* The tear. Notches are circles filled with the canvas behind the ticket. */}
         <div className="relative h-[22px]">
           <div
             className="absolute top-1/2 right-0 left-0 h-px"
-            style={{ backgroundImage: 'repeating-linear-gradient(to right, #cbb6a2 0 6px, transparent 6px 12px)' }}
+            style={{ backgroundImage: 'repeating-linear-gradient(to right, rgba(255,255,255,.26) 0 6px, transparent 6px 12px)' }}
           />
-          <div className="absolute top-1/2 -left-[11px] h-[22px] w-[22px] -translate-y-1/2 rounded-full bg-ink" />
-          <div className="absolute top-1/2 -right-[11px] h-[22px] w-[22px] -translate-y-1/2 rounded-full bg-ink" />
+          <div className="absolute top-1/2 -left-[11px] h-[22px] w-[22px] -translate-y-1/2 rounded-full bg-canvas" />
+          <div className="absolute top-1/2 -right-[11px] h-[22px] w-[22px] -translate-y-1/2 rounded-full bg-canvas" />
         </div>
 
         <div className="flex px-5 pb-5">
           <div className="flex-1">
-            <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-faint uppercase">Closes in</p>
-            <p className="mt-[3px] text-base font-extrabold text-ink tabular-nums">
+            <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-white/40 uppercase">Closes in</p>
+            <p className="mt-[3px] font-mono text-base font-semibold text-white">
               <CountdownTimer target={closesAt} prefix="" />
             </p>
           </div>
           <div className="flex-1 text-right">
-            <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-faint uppercase">Balance after</p>
-            <p className="mt-[3px] text-base font-extrabold text-ink tabular-nums">{formatTokens(balanceAfter)}</p>
+            <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-white/40 uppercase">Balance after</p>
+            <p className="mt-[3px] font-mono text-base font-semibold text-white">{formatTokens(balanceAfter)}</p>
           </div>
         </div>
       </div>
 
       <div className="mx-auto flex w-full max-w-sm flex-col gap-3">
-        <p className="text-center text-[13px] leading-[1.45] text-white/55">
+        <p className="text-center text-[13px] leading-[1.45] text-muted">
           Nobody sees the odds until betting closes. You can add to this bet any time before then.
         </p>
         <button
           type="button"
           onClick={onClose}
-          className="w-full rounded-full bg-signal py-[15px] text-[15px] font-extrabold text-ink transition-colors hover:bg-signal"
+          className="w-full rounded-[14px] bg-signal py-[15px] text-[15px] font-bold text-white shadow-[var(--elevation-cta)] transition-colors hover:bg-signal-deep"
         >
           All markets
         </button>

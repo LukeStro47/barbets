@@ -19,10 +19,9 @@ function taskSignature(tasks: GroupTask[]): string {
     .join(',');
 }
 
-/** The group hub's "N waiting on you" card — red-bordered, dismissible, one row per task the
- * viewer specifically can act on right now (endorse an unsponsored market, vote on a disputed
- * one). Reappears automatically once the task set changes, since dismissal is keyed to a
- * signature of the current tasks rather than a plain seen/unseen flag. */
+/** The group hub's "N waiting on you" card — alert-bg / alert-line needs-you surface per
+ * DESIGN.md, dismissible, one row per task the viewer can act on right now. Reappears when
+ * the task set changes, since dismissal is keyed to a signature rather than a plain flag. */
 export function WaitingOnYouCard({ groupId, tasks }: { groupId: string; tasks: GroupTask[] }) {
   const [dismissedSignature, setDismissedSignature] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -45,17 +44,19 @@ export function WaitingOnYouCard({ groupId, tasks }: { groupId: string; tasks: G
   }
 
   return (
-    <div className="overflow-hidden rounded-[20px] border-[1.5px] border-alert bg-surface">
-      <div className="flex items-center gap-2 bg-alert-bg py-[7px] pr-[10px] pl-4">
-        <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-alert" />
-        <p className="flex-1 text-xs font-extrabold tracking-[0.06em] text-alert uppercase">
-          {tasks.length} waiting on you
+    <div className="overflow-hidden rounded-[20px] border border-alert-line bg-alert-bg">
+      <div className="flex items-center gap-3 px-4 pt-3.5 pb-2.5">
+        <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] bg-alert font-mono text-[15px] font-semibold text-white">
+          {tasks.length}
+        </span>
+        <p className="flex-1 text-[13.5px] font-bold text-ink">
+          {tasks.length === 1 ? 'One thing needs you' : `${tasks.length} things need you`}
         </p>
         <button
           type="button"
           onClick={dismiss}
           aria-label="Dismiss"
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-alert"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] text-alert"
         >
           <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
             <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
@@ -65,7 +66,7 @@ export function WaitingOnYouCard({ groupId, tasks }: { groupId: string; tasks: G
       {tasks.map((task, i) => (
         <div
           key={`${task.type}:${task.marketId}`}
-          className={`flex items-center gap-3 px-4 py-3 ${i < tasks.length - 1 ? 'border-b border-rule' : ''}`}
+          className={`flex items-center gap-3 px-4 py-3 ${i === 0 ? 'border-t border-alert-line' : ''} ${i < tasks.length - 1 ? 'border-b border-alert-line' : ''}`}
         >
           <span className="min-w-0 flex-1">
             <p className="text-[14.5px] leading-[1.25] font-bold text-ink">
@@ -79,8 +80,8 @@ export function WaitingOnYouCard({ groupId, tasks }: { groupId: string; tasks: G
             href={`/groups/${groupId}/markets/${task.marketId}`}
             className={
               task.type === 'vote'
-                ? 'shrink-0 rounded-full bg-ink px-3.5 py-[7px] text-[12.5px] font-bold text-white'
-                : 'shrink-0 rounded-full border-[1.5px] border-hairline px-3.5 py-[6px] text-[12.5px] font-bold text-ink'
+                ? 'shrink-0 rounded-[14px] bg-ink px-3.5 py-[7px] text-[12.5px] font-bold text-white'
+                : 'shrink-0 rounded-[14px] border border-hairline bg-surface px-3.5 py-[6px] text-[12.5px] font-bold text-ink'
             }
           >
             {task.type === 'vote' ? 'Vote' : 'Endorse'}

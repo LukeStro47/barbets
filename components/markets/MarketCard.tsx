@@ -145,7 +145,7 @@ export function MarketCard({ market }: { market: MarketCardData }) {
         {market.status === 'open' && (
           <div>
             <div className="flex items-center justify-between text-sm text-muted">
-              <span>🤫 {market.openBetCount ?? 0} bets placed</span>
+              <span>{market.openBetCount ?? 0} bets placed</span>
               <CountdownTimer target={market.closesAt} />
             </div>
             <MyBetsChips myBets={market.myBets} />
