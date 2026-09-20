@@ -12,7 +12,7 @@ import { LinkIcon, RefreshIcon } from '@/components/ui/icons';
 import { InviteQrIconButton } from '@/components/groups/InviteQrButton';
 
 const ghostBtn =
-  'flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full border border-surface/30 text-white transition-colors hover:bg-white/10';
+  'flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[11px] border border-white/30 text-white transition-colors hover:bg-white/10';
 
 async function shareInviteLink(groupName: string, inviteCode: string): Promise<'shared' | 'copied'> {
   const url = inviteUrl(inviteCode, 'link');
@@ -81,9 +81,9 @@ export function InviteHeroCard({
   }
 
   return (
-    <div className="rounded-[20px] bg-gradient-to-br from-ink to-ink px-5 py-[18px]">
-      <p className="text-[10.5px] font-bold tracking-[0.12em] text-signal uppercase">Invite code</p>
-      <p className="mt-1 font-display text-[34px] leading-none font-extrabold tracking-[0.08em] text-white">{inviteCode}</p>
+    <div className="rounded-[24px] bg-ink px-5 py-[18px]">
+      <p className="text-[11.5px] font-bold tracking-[0.1em] text-on-ink uppercase">Invite code</p>
+      <p className="mt-1 font-mono text-[28px] leading-none font-semibold tracking-[0.08em] text-white">{inviteCode}</p>
 
       {error && <p className="mt-2 text-xs text-on-ink">{error}</p>}
 
@@ -91,7 +91,7 @@ export function InviteHeroCard({
         <button
           type="button"
           onClick={() => void share()}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-signal px-3 py-[9px] text-[12.5px] font-extrabold text-ink transition-colors hover:bg-[#d4912f]"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-[14px] bg-signal px-3 py-[11px] text-[13px] font-bold text-white shadow-[var(--elevation-cta)] transition-colors hover:bg-signal-deep"
         >
           <LinkIcon className="h-[15px] w-[15px]" />
           {copied ? 'Copied' : 'Share link'}

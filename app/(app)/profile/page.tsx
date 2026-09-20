@@ -48,12 +48,12 @@ function SettingsRow({
   return (
     <Link
       href={href}
-      className="flex items-center gap-3 rounded-[20px] border border-hairline bg-surface px-4 py-3.5 transition-colors hover:border-hairline"
+      className="flex items-center gap-3 rounded-[20px] border border-hairline bg-surface px-4 py-3.5 transition-colors hover:bg-rule/40"
     >
       <Icon className="h-[19px] w-[19px] shrink-0 text-muted" />
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-extrabold text-ink">{label}</span>
-        <span className="mt-0.5 block text-[11.5px] text-faint">{sub}</span>
+        <span className="block text-[14.5px] font-bold text-ink">{label}</span>
+        <span className="mt-0.5 block text-[11.5px] leading-[1.45] text-faint">{sub}</span>
       </span>
       <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-faint" />
     </Link>
@@ -67,11 +67,23 @@ function QuickLink({ href, label, Icon }: { href: string; label: string; Icon: (
   return (
     <Link
       href={href}
-      className="flex items-center gap-2.5 rounded-2xl border border-hairline bg-surface px-3 py-[13px] transition-colors hover:border-hairline"
+      className="flex items-center gap-2.5 rounded-[18px] border border-hairline bg-surface px-3 py-[13px] transition-colors hover:bg-rule/40"
     >
       <Icon className="h-4 w-4 shrink-0 text-muted" />
-      <span className="min-w-0 flex-1 truncate text-[12.5px] font-extrabold text-muted">{label}</span>
+      <span className="min-w-0 flex-1 truncate text-[12.5px] font-bold text-muted">{label}</span>
     </Link>
+  );
+}
+
+/** DESIGN.md stat-cluster: mono 15/600 figure, 11px sans faint label 3px below. */
+function StatCell({ value, label, accent }: { value: string; label: string; accent?: boolean }) {
+  return (
+    <div>
+      <p className={cn('font-mono text-[15px] font-semibold tracking-tight', accent ? 'text-on-ink' : 'text-white')}>
+        {value}
+      </p>
+      <p className="mt-[3px] text-[11px] text-white/50">{label}</p>
+    </div>
   );
 }
 
@@ -124,7 +136,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
       {isAdmin && (
         <Link
           href="/admin"
-          className="flex h-[52px] items-center justify-center gap-2.5 rounded-full bg-ink text-[14.5px] font-extrabold text-white"
+          className="flex h-[50px] items-center justify-center gap-2.5 rounded-[14px] bg-ink text-[14.5px] font-bold text-white"
         >
           <ShieldAlertIcon className="h-[18px] w-[18px] text-on-ink" />
           Admin
@@ -134,7 +146,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
       <form action={signOut}>
         <button
           type="submit"
-          className="flex h-[50px] w-full items-center justify-center gap-2.5 rounded-full border-[1.5px] border-hairline bg-transparent text-sm font-extrabold text-muted transition-colors hover:bg-rule"
+          className="flex h-[50px] w-full items-center justify-center gap-2.5 rounded-[14px] border border-hairline bg-surface text-sm font-bold text-muted transition-colors hover:bg-rule"
         >
           <SignOutIcon className="h-[17px] w-[17px]" />
           Sign out
@@ -281,8 +293,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
       <GroupSwitcher groups={switcherGroups} currentGroupId={groupId} />
 
       <ShareRecordCard groupName={groupName} handle={selected.nickname}>
-        <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-ink via-ink to-ink p-5 text-white">
-          <div className="pointer-events-none absolute inset-0 opacity-50 [background:radial-gradient(circle_at_88%_0%,rgba(232,163,61,0.3),rgba(232,163,61,0)_60%)]" />
+        <div className="relative overflow-hidden rounded-[24px] bg-ink p-5 text-white">
           <div className="relative mb-3.5 flex items-center gap-3">
             {!isPublicGroup && (
               <UserAvatar
@@ -296,36 +307,26 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
               />
             )}
             <div className="min-w-0">
-              <p className="truncate text-base font-extrabold italic">@{selected.nickname}</p>
+              <p className="truncate text-base font-extrabold tracking-[-0.015em]">@{selected.nickname}</p>
               <p className="truncate text-[11px] text-white/50">{groupName}</p>
             </div>
           </div>
           <div className="relative grid grid-cols-2 gap-x-2.5 gap-y-3.5">
-            <div>
-              <p className="text-2xl font-extrabold tracking-[-0.02em]">{formatTokens(selected.balance)}</p>
-              <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-white/50 uppercase">Tokens</p>
-            </div>
-            <div>
-              <p className="text-2xl font-extrabold tracking-[-0.02em] text-on-ink">{standing}</p>
-              <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-white/50 uppercase">Standing</p>
-            </div>
-            <div>
-              <p className="text-2xl font-extrabold tracking-[-0.02em]">{accuracyPct == null ? '—' : `${accuracyPct}%`}</p>
-              <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-white/50 uppercase">Accuracy</p>
-            </div>
-            <div>
-              <p className="text-2xl font-extrabold tracking-[-0.02em] text-on-ink">
-                {netHere >= 0 ? '+' : '−'}
-                {formatTokens(Math.abs(netHere))}
-              </p>
-              <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-white/50 uppercase">Net here</p>
-            </div>
+            <StatCell value={formatTokens(selected.balance)} label="Tokens" />
+            <StatCell value={standing} label="Standing" accent />
+            <StatCell value={accuracyPct == null ? '—' : `${accuracyPct}%`} label="Accuracy" />
+            <StatCell
+              value={`${netHere >= 0 ? '+' : '−'}${formatTokens(Math.abs(netHere))}`}
+              label="Net here"
+              accent
+            />
           </div>
           <div className="relative mt-4 border-t border-white/10 pt-3.5">
-            <p className="text-[10.5px] font-bold tracking-[0.07em] text-signal uppercase">Best call</p>
+            <p className="text-[11.5px] font-bold tracking-[0.1em] text-on-ink uppercase">Best call</p>
             {bestCall ? (
               <p className="mt-1 line-clamp-2 text-[13.5px] leading-[1.35] font-bold text-white">
-                {bestCall.multiple.toFixed(1)}&times; on &ldquo;{bestCall.title}&rdquo;
+                <span className="font-mono font-semibold">{bestCall.multiple.toFixed(1)}&times;</span>
+                {' '}on &ldquo;{bestCall.title}&rdquo;
               </p>
             ) : (
               <p className="mt-1 text-[13.5px] leading-[1.35] text-white/50">Nothing settled yet.</p>
@@ -341,9 +342,9 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
               (-mx-5 … px-5), so any inset here would leave the heading a couple of pixels to the
               right of the card edges it is supposed to sit above. */}
           <div className="mb-2 flex items-baseline justify-between gap-3">
-            <h3 className="text-xs font-extrabold tracking-[0.06em] text-faint uppercase">Open Bets</h3>
-            <span className="shrink-0 text-xs text-faint">
-              {openCount} {openCount === 1 ? 'bet' : 'bets'} riding · swipe
+            <h3 className="text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase">Open bets</h3>
+            <span className="shrink-0 text-[11.5px] text-faint">
+              {openCount} {openCount === 1 ? 'bet' : 'bets'} riding
             </span>
           </div>
           <SwipeRail>
@@ -358,7 +359,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
                 >
                   <span>
                     {showGroupLabels && (
-                      <span className="block text-[10px] font-extrabold tracking-[0.05em] text-faint uppercase">
+                      <span className="block text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase">
                         {groupNameById.get(market.group_id)}
                       </span>
                     )}
@@ -366,9 +367,9 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
                       {market.title}
                     </span>
                   </span>
-                  <span className="flex items-center justify-between gap-2.5 border-t border-rule pt-3">
+                  <span className="flex items-center justify-between gap-2.5 border-t border-hairline pt-3">
                     <span className="min-w-0">
-                      <span className="block truncate text-[13px] font-extrabold text-signal">
+                      <span className="block truncate text-[13px] font-bold text-signal">
                         <OptionLabel label={sideLabel} />
                       </span>
                       <span className="mt-0.5 block text-[11px] text-faint">
@@ -376,8 +377,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
                       </span>
                     </span>
                     <span className="shrink-0 text-right">
-                      <span className="block text-[13px] font-extrabold text-ink">{formatTokens(estimatedToWin(b))}</span>
-                      <span className="mt-0.5 block text-[10px] font-bold tracking-[0.06em] text-faint uppercase">to win</span>
+                      <span className="block font-mono text-[13px] font-semibold text-ink">{formatTokens(estimatedToWin(b))}</span>
+                      <span className="mt-[3px] block text-[11px] text-faint">to win</span>
                     </span>
                   </span>
                 </Link>

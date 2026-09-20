@@ -106,6 +106,7 @@ export function JoinFlow({
           <p className="mt-5 text-[26px] leading-[1.14] font-extrabold tracking-[-0.02em] text-balance text-ink">
             {groupName}
           </p>
+          <p className="mt-2 text-[13.5px] leading-[1.5] text-muted">Join this group to start playing.</p>
         </div>
 
         <Link href="/groups" className="mt-5 block text-center text-[13.5px] font-bold text-signal">

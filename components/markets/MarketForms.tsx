@@ -23,12 +23,12 @@ import { friendlyTimezoneName } from '@/lib/timezone';
 import { MARKET_TITLE_MAX_LENGTH, MARKET_TITLE_COUNTER_THRESHOLD, OPTION_LABEL_MAX_LENGTH } from '@/lib/limits';
 import { cn } from '@/lib/cn';
 
-const cardClasses = 'rounded-[18px] border border-hairline bg-surface p-4';
-const focusCardClasses = 'rounded-[18px] border-[1.5px] border-signal bg-surface p-4';
-const headingClasses = 'font-display text-[30px] leading-[1.08] font-extrabold tracking-[-0.025em] text-ink';
+const cardClasses = 'rounded-[20px] border border-hairline bg-surface p-4';
+const focusCardClasses = 'rounded-[20px] border border-signal bg-surface p-4';
+const headingClasses = 'text-[26px] leading-[1.14] font-extrabold tracking-[-0.02em] text-ink';
 const footerButtonClasses =
-  'flex h-[52px] w-full items-center justify-center rounded-full border-0 bg-ink text-[15px] font-extrabold text-white disabled:opacity-45';
-const eyebrowClasses = 'text-[10.5px] font-extrabold tracking-[0.1em] text-faint uppercase';
+  'flex h-[50px] w-full items-center justify-center rounded-[14px] border-0 bg-signal text-[15px] font-bold text-white shadow-[var(--elevation-cta)] disabled:bg-disabled-bg disabled:text-disabled-ink disabled:shadow-none';
+const eyebrowClasses = 'text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -145,14 +145,14 @@ function OptionRow({
           placeholder={`Option ${index + 1}, or @nickname`}
           maxLength={OPTION_LABEL_MAX_LENGTH}
           className={cn(
-            'w-full rounded-xl border px-3.5 py-2.5 text-[15px] placeholder:text-faint focus:outline-none',
+            'w-full rounded-[14px] border px-3.5 py-2.5 text-[15px] placeholder:text-faint focus:outline-none',
             isMention
               ? 'border-signal bg-surface font-semibold text-signal italic focus:border-signal'
               : 'border-hairline bg-surface text-ink focus:border-signal'
           )}
         />
         {suggestions.length > 0 && (
-          <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-xl border border-hairline bg-surface shadow-lg">
+          <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-[14px] border border-hairline bg-surface shadow-[var(--elevation-card)]">
             {suggestions.map((m) => (
               <li key={m.userId}>
                 <button
@@ -172,7 +172,7 @@ function OptionRow({
           type="button"
           onClick={onRemove}
           aria-label="Remove option"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg text-faint hover:bg-rule hover:text-alert"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-lg text-faint hover:bg-rule hover:text-alert"
         >
           ×
         </button>
@@ -419,7 +419,7 @@ export function CreateMarketForm({
       onClick={() => setUnitPickerOpen((v) => !v)}
       aria-expanded={unitPickerOpen}
       className={cn(
-        'flex shrink-0 items-center gap-1.5 rounded-[14px] border-[1.5px] px-3.5 py-3 text-sm font-extrabold',
+        'flex shrink-0 items-center gap-1.5 rounded-[14px] border px-3.5 py-3 text-sm font-bold',
         hasUnit ? 'border-hairline bg-rule text-muted' : 'border-dashed border-hairline bg-transparent text-muted'
       )}
     >
@@ -486,7 +486,7 @@ export function CreateMarketForm({
 
         {isOverUnder && (
           <div className={cardClasses}>
-            <p className="text-[13px] font-extrabold text-ink">The line</p>
+            <p className="text-[13px] font-bold text-ink">The line</p>
             <div className="mt-2.5 flex items-center gap-2.5">
               {/* Currencies read before the number everywhere else in the app (formatLine's
                   PREFIXED_UNITS), so the field you fill in is laid out the way the line will
@@ -500,14 +500,14 @@ export function CreateMarketForm({
                   step="0.5"
                   inputMode="decimal"
                   placeholder="5.5"
-                  className="min-w-0 flex-1 rounded-[14px] border-[1.5px] border-hairline bg-surface px-3.5 py-3 text-xl font-extrabold text-ink placeholder:text-dash focus:border-signal focus:outline-none"
+                  className="min-w-0 flex-1 rounded-[14px] border border-hairline bg-surface px-3.5 py-3 font-mono text-xl font-semibold text-ink placeholder:text-dash focus:border-signal focus:outline-none"
                 />
               ) : (
                 <input
                   value={line}
                   onChange={(e) => setLine(e.target.value)}
                   type={lineFormat === 'date' ? 'date' : 'time'}
-                  className="min-w-0 flex-1 rounded-[14px] border-[1.5px] border-hairline bg-surface px-3.5 py-3 text-base font-extrabold text-ink focus:border-signal focus:outline-none"
+                  className="min-w-0 flex-1 rounded-[14px] border border-hairline bg-surface px-3.5 py-3 text-base font-bold text-ink focus:border-signal focus:outline-none"
                 />
               )}
               {!(isPrefixedUnit(unit) && lineFormat === 'number') && unitButton}
@@ -612,7 +612,7 @@ export function CreateMarketForm({
                     onChange={(e) => setUnit(e.target.value)}
                     maxLength={OVER_UNDER_UNIT_MAX_LENGTH}
                     placeholder="e.g. laps, pints, minutes"
-                    className="w-full rounded-xl border border-hairline bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-faint focus:border-signal focus:outline-none"
+                    className="w-full rounded-[14px] border border-hairline bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-faint focus:border-signal focus:outline-none"
                   />
                 )}
                 {!showCurrencyAlternates && !customUnit && (
@@ -629,7 +629,7 @@ export function CreateMarketForm({
 
         {marketType === 'multiple_choice' && (
           <div className={cardClasses}>
-            <p className="text-[13px] font-extrabold text-ink">The options</p>
+            <p className="text-[13px] font-bold text-ink">The options</p>
             <div className="mt-3 space-y-2.5">
               {options.map((option, i) => (
                 <OptionRow
@@ -646,7 +646,7 @@ export function CreateMarketForm({
                 <button
                   type="button"
                   onClick={() => setOptions([...options, newOption()])}
-                  className="w-full rounded-xl border border-dashed border-hairline bg-transparent py-2.5 text-sm font-semibold text-muted"
+                  className="w-full rounded-[14px] border border-dashed border-hairline bg-transparent py-2.5 text-sm font-semibold text-muted"
                 >
                   + Add option
                 </button>
@@ -663,7 +663,7 @@ export function CreateMarketForm({
 
         {!hasOptionSubject && !isPublic && (
           <div className={cardClasses}>
-            <p className="text-[13px] font-extrabold text-ink">About someone?</p>
+            <p className="text-[13px] font-bold text-ink">About someone?</p>
             <SubjectChips
               members={members}
               selected={subjects}
@@ -718,15 +718,15 @@ export function CreateMarketForm({
         </div>
 
         <div className={cardClasses}>
-          <p className="text-[13px] font-extrabold text-ink">Betting closes</p>
-          <div className="relative mt-2.5 flex items-center gap-2.5 rounded-[14px] border-[1.5px] border-signal px-3.5 py-3">
+          <p className="text-[13px] font-bold text-ink">Betting closes</p>
+          <div className="relative mt-2.5 flex items-center gap-2.5 rounded-[14px] border border-signal px-3.5 py-3">
             <CalendarIcon className="h-[17px] w-[17px] shrink-0 text-signal" />
             <input
               type="datetime-local"
               min={minCloseTime}
               value={closesAt}
               onChange={(e) => setClosesAt(e.target.value)}
-              className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[15px] font-extrabold text-ink focus:outline-none"
+              className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[15px] font-bold text-ink focus:outline-none"
             />
           </div>
           <p className="mt-2.5 text-[11.5px] leading-[1.45] text-faint">
@@ -736,7 +736,7 @@ export function CreateMarketForm({
         </div>
 
         {requireEndorsement && (
-          <div className="flex items-start gap-2.5 rounded-2xl bg-signal-tint px-4 py-3.5">
+          <div className="flex items-start gap-2.5 rounded-[20px] border border-hairline bg-signal-tint px-4 py-3.5">
             <InfoIcon className="mt-px h-[17px] w-[17px] shrink-0 text-signal-deep" />
             <p className="text-[12.5px] leading-[1.45] text-signal-deep">
               One other member endorses this before betting opens. Nobody in 24 hours and it expires.
@@ -805,7 +805,7 @@ export function CreateMarketForm({
  * criteria paragraph can't visually merge with the close time under it. */
 function ReviewRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="border-t border-rule px-[18px] py-[13px]">
+    <div className="border-t border-hairline px-[18px] py-[13px]">
       <p className={eyebrowClasses}>{label}</p>
       {children}
     </div>
@@ -853,14 +853,14 @@ function ReviewTicket({
     marketType === 'yes_no' ? 'Yes / No' : marketType === 'over_under' ? 'Over / Under' : `One of ${options.length} options`;
 
   return (
-    <div className="overflow-hidden rounded-[20px] border-[1.5px] border-ink bg-surface">
-      <div className="flex items-center justify-between gap-3 bg-rule px-[18px] py-[11px]">
-        <p className="text-xs font-extrabold tracking-[0.06em] text-ink uppercase">Review your market</p>
+    <div className="overflow-hidden rounded-[24px] border border-hairline bg-surface">
+      <div className="flex items-center justify-between gap-3 border-b border-hairline bg-canvas px-[18px] py-[11px]">
+        <p className="text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase">Review your market</p>
         <p className="shrink-0 text-xs font-semibold text-muted">{kindLabel}</p>
       </div>
 
       <div className="px-[18px] pt-4 pb-1">
-        <p className="font-display text-[21px] leading-[1.2] font-extrabold tracking-[-0.01em] text-ink text-pretty">
+        <p className="text-[21px] leading-[1.2] font-extrabold tracking-[-0.01em] text-ink text-pretty">
           {title}
         </p>
       </div>
@@ -871,9 +871,9 @@ function ReviewTicket({
 
       {marketType === 'over_under' && (
         <ReviewRow label="The line">
-          <p className="mt-1 text-[15px] font-extrabold text-ink">{formatLine(line, displayUnit)}</p>
+          <p className="mt-1 font-mono text-[15px] font-semibold text-ink">{formatLine(line, displayUnit)}</p>
           {lineIsWholeNumber && (
-            <p className="mt-1.5 rounded-lg bg-signal-tint px-2.5 py-1.5 text-xs text-signal-deep">
+            <p className="mt-1.5 rounded-[8px] bg-signal-tint px-2.5 py-1.5 text-xs text-signal-deep">
               A whole number can land on an exact tie, which the group would have to resolve as VOID.
             </p>
           )}
@@ -881,7 +881,7 @@ function ReviewTicket({
       )}
 
       <ReviewRow label="Betting closes">
-        <p className="mt-1 text-[15px] font-extrabold text-ink">
+        <p className="mt-1 text-[15px] font-bold text-ink">
           {closesAtDate.toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
         </p>
         <p className="mt-1 text-xs text-faint">Group time, {friendlyTimezoneName(timezone).replace(/ time$/, '')}.</p>
@@ -924,7 +924,7 @@ function ReviewTicket({
           highlighted callout to say "nothing unusual happens next" is a rule where there isn't
           one. */}
       {requireEndorsement && (
-        <div className="flex items-start gap-2.5 border-t border-rule bg-signal-tint px-[18px] py-[13px]">
+        <div className="flex items-start gap-2.5 border-t border-hairline bg-signal-tint px-[18px] py-[13px]">
           <InfoIcon className="mt-px h-[17px] w-[17px] shrink-0 text-signal-deep" />
           <p className="text-[13px] leading-[1.45] text-signal-deep">
             One other member has to endorse this before betting opens. If nobody does within 24 hours, it expires.

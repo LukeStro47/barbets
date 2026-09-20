@@ -301,10 +301,10 @@ export function BottomNav({
             className="fixed inset-0 z-40 animate-bottomnav-scrim-in bg-ink/40"
           />
           <div
-            className="fixed right-3 left-3 z-40 origin-bottom-left animate-bottomnav-sheet-up rounded-3xl border border-hairline bg-surface p-3 pt-3.5 shadow-[0_26px_46px_-22px_rgba(28,19,13,0.5)]"
+            className="fixed right-3 left-3 z-40 origin-bottom-left animate-bottomnav-sheet-up rounded-[24px] border border-hairline bg-surface p-3 pt-3.5 shadow-[var(--elevation-sheet)]"
             style={{ bottom: 'calc(var(--bottomnav-height) + 8px)' }}
           >
-            <p className="mb-2.5 ml-1.5 text-[10.5px] font-extrabold tracking-[0.09em] text-faint uppercase">Your groups</p>
+            <p className="mb-2.5 ml-1.5 text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase">Your groups</p>
             <div className="flex flex-col gap-1">
               {groups.map((g) => {
                 const current = inGroup && g.id === currentGroup!.id;
@@ -313,8 +313,8 @@ export function BottomNav({
                     key={g.id}
                     onClick={() => selectGroup(g.id)}
                     className={cn(
-                      'flex w-full items-center gap-[11px] rounded-2xl border-[1.5px] px-[11px] py-2.5 text-left',
-                      current ? 'border-signal bg-signal/10' : 'border-transparent bg-transparent'
+                      'flex w-full items-center gap-[11px] rounded-[18px] border px-[11px] py-2.5 text-left',
+                      current ? 'border-signal bg-signal-tint' : 'border-transparent bg-transparent'
                     )}
                   >
                     <GroupAvatar
@@ -324,7 +324,7 @@ export function BottomNav({
                       fallbackClassName="bg-ink text-on-ink"
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13.5px] font-extrabold text-ink">{g.name}</span>
+                      <span className="block truncate text-[13.5px] font-bold text-ink">{g.name}</span>
                       <span className="block truncate text-[11px] text-faint">{g.meta}</span>
                     </span>
                     {current && <span className="shrink-0 text-[11px] text-signal">●</span>}
@@ -338,9 +338,9 @@ export function BottomNav({
                 setSwitcherOpen(false);
                 router.push('/groups?all=1');
               }}
-              className="mt-2 flex w-full items-center justify-between gap-2.5 border-0 border-t border-rule bg-transparent px-[11px] pt-[11px] pb-[3px] text-left"
+              className="mt-2 flex w-full items-center justify-between gap-2.5 border-0 border-t border-hairline bg-transparent px-[11px] pt-[11px] pb-[3px] text-left"
             >
-              <span className="text-[13px] font-extrabold text-signal">All groups</span>
+              <span className="text-[13px] font-bold text-signal">All groups</span>
               <ChevronRightIcon className="h-3.5 w-2 shrink-0 text-signal" />
             </button>
           </div>
@@ -352,7 +352,7 @@ export function BottomNav({
         <>
           <div onClick={toggleCreate} className="fixed inset-0 z-40 animate-bottomnav-scrim-in bg-ink/45" />
           <div
-            className="fixed inset-x-0 bottom-0 z-40 animate-bottomnav-sheet-up rounded-t-[28px] bg-gradient-to-br from-ink via-ink to-ink px-5 pt-3.5 pb-[env(safe-area-inset-bottom)]"
+            className="fixed inset-x-0 bottom-0 z-40 animate-bottomnav-sheet-up rounded-t-[26px] border-t border-white/10 bg-ink px-[18px] pt-3.5 pb-[env(safe-area-inset-bottom)] shadow-[var(--elevation-sheet)]"
             // Once the keyboard pushes this sheet up, the browser scrolls just far enough to
             // reveal the focused input — which leaves the Continue button sitting flush against
             // the keyboard with no breathing room. Add the keyboard's height to the sheet's normal
@@ -370,8 +370,8 @@ export function BottomNav({
 
             {inGroup ? (
               <>
-                <p className="mb-0.5 font-display text-base font-extrabold tracking-[-0.01em] text-white">New market</p>
-                <p className="mb-3.5 text-xs text-white/50">How should it settle?</p>
+                <p className="mb-0.5 text-[15px] font-extrabold tracking-[-0.015em] text-white">New market</p>
+                <p className="mb-3.5 text-[12.5px] text-white/50">Pick how it settles.</p>
                 <div className="mb-3.5 flex flex-col gap-1.5">
                   {MARKET_TYPES.map((t) => {
                     const on = marketType === t;
@@ -380,18 +380,18 @@ export function BottomNav({
                         key={t}
                         onClick={() => setMarketType(t)}
                         className={cn(
-                          'flex w-full items-center gap-3 rounded-2xl border-[1.5px] px-3.5 py-3 text-left transition-colors',
+                          'flex w-full items-center gap-3 rounded-[20px] border px-3.5 py-3 text-left transition-colors',
                           on ? 'border-signal bg-signal' : 'border-white/15 bg-white/5'
                         )}
                       >
-                        <span aria-hidden className={cn('text-xl', on ? 'text-ink' : 'text-white')}>
+                        <span aria-hidden className="text-xl text-white">
                           {MARKET_TYPE_ICON[t]}
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className={cn('block text-[13.5px] font-extrabold', on ? 'text-ink' : 'text-white')}>
+                          <span className="block text-[13.5px] font-bold text-white">
                             {MARKET_TYPE_LABEL[t]}
                           </span>
-                          <span className={cn('block text-[11.5px] font-semibold', on ? 'text-ink/60' : 'text-white/50')}>
+                          <span className={cn('block text-[11.5px]', on ? 'text-white/70' : 'text-white/50')}>
                             {MARKET_TYPE_DESCRIPTION[t]}
                           </span>
                         </span>
@@ -400,26 +400,26 @@ export function BottomNav({
                   })}
                   <button
                     onClick={browseTemplates}
-                    className="flex w-full items-center gap-3 rounded-2xl border-[1.5px] border-dashed border-white/25 bg-transparent px-3.5 py-3 text-left"
+                    className="flex w-full items-center gap-3 rounded-[20px] border border-dashed border-white/25 bg-transparent px-3.5 py-3 text-left"
                   >
                     <svg aria-hidden className="h-5 w-5 shrink-0 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4L12 3z" />
                       <path d="M19 15l0.9 2.3L22 18l-2.1 0.7L19 21l-0.9-2.3L16 18l2.1-0.7L19 15z" />
                     </svg>
                     <span className="min-w-0 flex-1">
-                      <span className="block text-[13.5px] font-extrabold text-white">Browse templates</span>
-                      <span className="block text-[11.5px] font-semibold text-white/50">Start from a ready-made idea</span>
+                      <span className="block text-[13.5px] font-bold text-white">Browse templates</span>
+                      <span className="block text-[11.5px] text-white/50">Start from a saved idea</span>
                     </span>
                   </button>
                 </div>
-                <div className="flex items-center gap-2.5 border-t border-white/10 pt-3.5">
+                <div className="flex items-center gap-2.5 border-t border-white/10 pt-3.5 pb-3.5">
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[10px] font-bold tracking-[0.07em] text-white/40 uppercase">Posting to</span>
-                    <span className="block truncate text-[13px] font-extrabold text-white">{currentGroup!.name}</span>
+                    <span className="block text-[11.5px] font-bold tracking-[0.1em] text-white/40 uppercase">Posting to</span>
+                    <span className="block truncate text-[13px] font-bold text-white">{currentGroup!.name}</span>
                   </span>
                   <button
                     onClick={continueCreateMarket}
-                    className="shrink-0 rounded-[14px] border-0 bg-signal px-[18px] py-2.5 text-[12.5px] font-extrabold text-white shadow-[var(--elevation-cta)]"
+                    className="shrink-0 rounded-[14px] border-0 bg-signal px-[18px] py-2.5 text-[13px] font-bold text-white shadow-[var(--elevation-cta)]"
                   >
                     Continue
                   </button>
@@ -427,11 +427,11 @@ export function BottomNav({
               </>
             ) : (
               <>
-                <p className="mb-0.5 font-display text-base font-extrabold tracking-[-0.01em] text-white">New group</p>
-                <p className="mb-3.5 text-xs text-white/50">A private table, everyone starts even.</p>
+                <p className="mb-0.5 text-[15px] font-extrabold tracking-[-0.015em] text-white">New group</p>
+                <p className="mb-3.5 text-[12.5px] text-white/50">A private table. Everyone starts even.</p>
                 <div className="mb-3.5 flex flex-col gap-2">
-                  <div className="rounded-2xl border-[1.5px] border-white/15 bg-white/5 px-[15px] py-3">
-                    <label className="block text-[10px] font-bold tracking-[0.07em] text-white/40 uppercase">Group name</label>
+                  <div className="rounded-[14px] border border-white/15 bg-white/5 px-[15px] py-3">
+                    <label className="block text-[11.5px] font-bold tracking-[0.1em] text-white/40 uppercase">Group name</label>
                     <input
                       value={groupName}
                       onChange={(e) => setGroupName(e.target.value)}
@@ -440,21 +440,21 @@ export function BottomNav({
                       className="mt-[3px] block w-full border-0 bg-transparent p-0 text-sm font-bold text-white placeholder:text-white/30 focus:outline-none"
                     />
                   </div>
-                  <div className="rounded-2xl border-[1.5px] border-white/15 bg-white/5 px-[15px] py-3">
-                    <label className="block text-[10px] font-bold tracking-[0.07em] text-white/40 uppercase">Token allocation</label>
+                  <div className="rounded-[14px] border border-white/15 bg-white/5 px-[15px] py-3">
+                    <label className="block text-[11.5px] font-bold tracking-[0.1em] text-white/40 uppercase">Token allocation</label>
                     <input
                       type="text"
                       inputMode="numeric"
                       value={groupSeedAmount}
                       onChange={(e) => setGroupSeedAmount(formatTokenInputValue(e.target.value, TOKEN_ALLOCATION_MAX))}
-                      className="mt-[3px] block w-full border-0 bg-transparent p-0 text-sm font-bold text-white focus:outline-none"
+                      className="mt-[3px] block w-full border-0 bg-transparent p-0 font-mono text-sm font-semibold text-white focus:outline-none"
                     />
                   </div>
                 </div>
                 <button
                   onClick={continueCreateGroup}
                   disabled={!groupName.trim()}
-                  className="w-full rounded-[14px] border-0 bg-signal py-[15px] text-[15px] font-bold text-white shadow-[var(--elevation-cta)] disabled:bg-disabled-bg disabled:text-disabled-ink disabled:shadow-none"
+                  className="mb-3.5 w-full rounded-[14px] border-0 bg-signal py-[15px] text-[15px] font-bold text-white shadow-[var(--elevation-cta)] disabled:bg-disabled-bg disabled:text-disabled-ink disabled:shadow-none"
                 >
                   Continue
                 </button>
