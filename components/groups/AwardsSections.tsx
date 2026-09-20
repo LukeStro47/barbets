@@ -22,30 +22,29 @@ export interface ResolvedTitle {
  *
  * The icon sits top-right rather than top-left: the title/stat/description is the actual content
  * and reads left-to-right from the card's leading edge, with the glyph as a corner mark rather
- * than something the eye has to step around first. The description (never shown on this card
- * before) fills what used to be a lot of bare gradient underneath the stat line. */
+ * than something the eye has to step around first. The description fills what used to be a lot of
+ * bare chrome underneath the stat line. */
 export function AwardsRail({ groupId, isOwner, titles }: { groupId: string; isOwner: boolean; titles: (ResolvedTitle & { stat: string })[] }) {
   return (
     <SwipeRail>
       {titles.map((t) => (
         <div
           key={t.key}
-          className="relative w-full shrink-0 overflow-hidden rounded-[22px] bg-gradient-to-br from-ink to-ink p-5 [scroll-snap-align:start]"
+          className="relative w-full shrink-0 overflow-hidden rounded-[24px] bg-ink p-5 [scroll-snap-align:start]"
         >
-          <div className="pointer-events-none absolute inset-0 opacity-50 [background:radial-gradient(circle_at_85%_6%,rgba(232,163,61,0.34),rgba(232,163,61,0)_60%)]" />
           <div className="relative flex items-start justify-between gap-3">
-            <p className="text-[10px] font-extrabold tracking-[0.1em] text-on-ink uppercase">Yours</p>
+            <p className="text-[11.5px] font-bold tracking-[0.1em] text-on-ink uppercase">Yours</p>
             <span className="flex shrink-0 items-center gap-1">
               {isOwner && (
                 <EditTitleButton groupId={groupId} titleKey={t.key} currentLabel={t.label} currentIconKey={t.iconKey} defaultLabel={t.label} dark />
               )}
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[1.5px] border-signal/45 bg-signal/16">
-                <AwardGlyph iconKey={t.iconKey} stroke="var(--color-on-ink)" size={22} />
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-white/15 bg-white/[0.06]">
+                <AwardGlyph iconKey={t.iconKey} stroke="var(--color-on-ink)" size={20} />
               </span>
             </span>
           </div>
-          <p className="relative mt-2.5 text-[19px] leading-[1.15] font-extrabold tracking-[-0.01em] text-balance text-white">{t.label}</p>
-          <p className="relative mt-1 text-[12.5px] leading-[1.35] font-bold text-on-ink">{t.stat}</p>
+          <p className="relative mt-2.5 text-[17px] leading-[1.15] font-bold tracking-[-0.01em] text-balance text-white">{t.label}</p>
+          <p className="relative mt-1 font-mono text-[12.5px] font-semibold text-on-ink">{t.stat}</p>
           <p className="relative mt-3 border-t border-white/10 pt-3 text-[12.5px] leading-[1.45] text-white/60">{t.description}</p>
         </div>
       ))}
@@ -65,9 +64,9 @@ export function UnclaimedTitles({ groupId, isOwner, titles }: { groupId: string;
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between rounded-2xl border-0 bg-rule px-[15px] py-[13px] text-left"
+        className="flex w-full items-center justify-between rounded-[20px] border border-hairline bg-surface px-4 py-[13px] text-left"
       >
-        <span className="text-[12.5px] font-extrabold text-muted">
+        <span className="text-[13.5px] font-bold text-muted">
           {numberWordCapitalized(titles.length)} {titles.length === 1 ? 'title' : 'titles'} unclaimed
         </span>
         <ChevronRightIcon className={cn('h-3 w-[7px] text-faint transition-transform', open && 'rotate-90')} />
@@ -77,13 +76,13 @@ export function UnclaimedTitles({ groupId, isOwner, titles }: { groupId: string;
         <div className="mt-2 space-y-2">
           {titles.map((t) => (
             <div key={t.key} className="flex items-center gap-2">
-              <div className="flex flex-1 items-center gap-[11px] rounded-2xl border border-dashed border-hairline px-3.5 py-3">
-                <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full border border-dashed border-hairline">
+              <div className="flex flex-1 items-center gap-3 rounded-[20px] border border-dashed border-dash px-3.5 py-3">
+                <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] border border-dashed border-dash">
                   <AwardGlyph iconKey={t.iconKey} stroke="var(--color-faint)" size={20} />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[13.5px] font-extrabold text-muted">{t.label}</span>
-                  <span className="block text-[11px] leading-[1.4] text-faint">{t.description}</span>
+                  <span className="block text-[13.5px] font-bold text-muted">{t.label}</span>
+                  <span className="block text-[11.5px] leading-[1.4] text-faint">{t.description}</span>
                 </span>
               </div>
               {isOwner && (

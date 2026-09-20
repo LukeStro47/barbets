@@ -82,17 +82,17 @@ function Row({
   divided?: boolean;
 }) {
   return (
-    <div className={`flex items-baseline justify-between gap-3 ${divided ? 'border-t border-rule pt-2' : ''}`}>
+    <div className={`flex items-baseline justify-between gap-3 ${divided ? 'border-t border-hairline pt-2' : ''}`}>
       <span className={tone === 'total' ? 'text-[13.5px] font-bold text-ink' : 'text-[13.5px] text-muted'}>
         {label}
       </span>
       <span
         className={
           tone === 'total'
-            ? 'text-base font-extrabold text-ink tabular-nums'
+            ? 'font-mono text-[15px] font-semibold text-ink'
             : tone === 'bonus'
-              ? 'text-sm font-extrabold text-signal tabular-nums'
-              : 'text-sm font-extrabold text-ink tabular-nums'
+              ? 'font-mono text-[12.5px] font-semibold text-signal'
+              : 'font-mono text-[12.5px] font-semibold text-ink'
         }
       >
         {value}
@@ -102,7 +102,7 @@ function Row({
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <p className="text-[11.5px] font-extrabold tracking-[0.08em] text-faint uppercase">{children}</p>;
+  return <p className="text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase">{children}</p>;
 }
 
 /**
@@ -159,14 +159,14 @@ export function SettlementLedger({
           <span className="block text-[14.5px] font-bold text-ink">Full ledger</span>
           <span className="block truncate text-[12.5px] text-faint">{summary}</span>
         </span>
-        <ChevronRightIcon className="h-4 w-4 shrink-0 text-faint" />
+        <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-faint" />
       </button>
 
       {open && (
         <Modal onClose={() => setOpen(false)} padded={false} panelClassName="overflow-hidden">
-          <div className="flex items-center justify-between gap-3 bg-rule px-[18px] py-[13px]">
-            <p className="text-xs font-extrabold tracking-[0.06em] text-ink uppercase">Full ledger</p>
-            <p className="shrink-0 text-xs font-semibold text-muted">
+          <div className="flex items-center justify-between gap-3 border-b border-hairline bg-surface px-4 py-3">
+            <p className="text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase">Full ledger</p>
+            <p className="shrink-0 font-mono text-[12.5px] font-semibold text-muted">
               {bets.length} bet{bets.length === 1 ? '' : 's'}
             </p>
           </div>
@@ -214,7 +214,7 @@ export function SettlementLedger({
               )}
 
               {bets.length > 0 && (
-              <div className="flex flex-col gap-2 border-t border-rule pt-3.5">
+              <div className="flex flex-col gap-2 border-t border-hairline pt-3.5">
                 <SectionLabel>How it settled</SectionLabel>
 
                 {mode === 'paid' && (
@@ -303,10 +303,10 @@ export function SettlementLedger({
               )}
 
               {bets.length > 0 && (
-              <div className="flex flex-col gap-2 border-t border-rule pt-3.5">
+              <div className="flex flex-col gap-2 border-t border-hairline pt-3.5">
                 <SectionLabel>Every bet</SectionLabel>
                 {sorted.length > 0 && (
-                  <ul className="overflow-hidden rounded-[16px] border border-hairline">
+                  <ul className="overflow-hidden rounded-[18px] border border-hairline">
                     {sorted.map((b, i) => {
                       const won = !refundish && b.isWinner;
                       const lost = !refundish && !b.isWinner;
@@ -322,17 +322,18 @@ export function SettlementLedger({
                             <div className="min-w-0">
                               <Mention nickname={b.nickname} className="text-[14px] font-bold text-ink" />
                               <p className="truncate text-[12px] text-faint">
-                                Bet {formatTokens(b.amount)} on <OptionLabel label={b.choiceLabel.toUpperCase()} />
+                                Bet <span className="font-mono font-semibold">{formatTokens(b.amount)}</span> on{' '}
+                                <OptionLabel label={b.choiceLabel.toUpperCase()} />
                               </p>
                             </div>
                           </div>
-                          <div className="shrink-0 text-right text-[14px] font-extrabold">
+                          <div className="shrink-0 text-right font-mono text-[12.5px] font-semibold">
                             {refundish && (
                               <span className="text-muted">
                                 {b.payout === b.amount
-                                  ? `↩ refunded ${formatTokens(b.payout)}`
+                                  ? `refunded ${formatTokens(b.payout)}`
                                   : b.payout && b.payout > 0
-                                    ? `↩ ${formatTokens(b.payout)} back`
+                                    ? `${formatTokens(b.payout)} back`
                                     : '0 back'}
                               </span>
                             )}
@@ -342,20 +343,20 @@ export function SettlementLedger({
                                 right and the money simply comes back untouched. */}
                             {won && winnings === 0 && (
                               <>
-                                <p className="text-gain">Won</p>
+                                <p className="font-sans text-[13.5px] font-bold text-gain">Won</p>
                                 <p className="text-[11px] font-semibold text-faint">{formatTokens(b.payout ?? 0)} returned</p>
                               </>
                             )}
                             {won && winnings > 0 && (
                               <>
-                                <p className="text-gain">+{formatTokens(winnings)} won</p>
+                                <p className="text-gain">+{formatTokens(winnings)}</p>
                                 <p className="text-[11px] font-semibold text-faint">
-                                  {formatTokens(b.payout ?? 0)} back total
+                                  {formatTokens(b.payout ?? 0)} back
                                   {dust > 0 && dustBet === b ? `, incl. ${formatTokens(dust)} rounding` : ''}
                                 </p>
                               </>
                             )}
-                            {lost && <span className="font-bold text-faint">−{formatTokens(b.amount)} lost</span>}
+                            {lost && <span className="text-faint">−{formatTokens(b.amount)}</span>}
                           </div>
                         </li>
                       );
@@ -367,7 +368,7 @@ export function SettlementLedger({
             </div>
           </div>
 
-          <div className="border-t border-rule px-[18px] py-[14px]">
+          <div className="border-t border-hairline px-4 py-3.5">
             <Button className="w-full" onClick={() => setOpen(false)}>
               Done
             </Button>

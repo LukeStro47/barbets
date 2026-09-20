@@ -40,14 +40,15 @@ export function SeasonSetupCard({
   const seasonLength = (settings.season_length ?? 'manual') as SeasonLength;
 
   return (
-    <div className="overflow-hidden rounded-[24px] border-[1.5px] border-signal bg-surface">
-      <div className="flex items-center gap-2 bg-signal-tint px-3.5 py-2">
+    <div className="overflow-hidden rounded-[24px] border border-hairline bg-surface">
+      <div className="flex items-center gap-2 border-b border-hairline px-4 py-2.5">
         <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-signal" />
-        <p className="flex-1 text-xs font-extrabold tracking-[0.06em] text-signal-deep uppercase">Season {nextSeasonNumber} setup</p>
+        <p className="flex-1 text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase">Season {nextSeasonNumber} setup</p>
       </div>
       <div className="flex flex-col gap-3 px-4 py-4">
-        <p className="text-[11.5px] leading-[1.35] text-faint">
-          {seasonName ?? `Season ${nextSeasonNumber}`} · {formatSeasonLength(seasonLength)} · {formatTokens(settings.seed_amount)} each
+        <p className="text-[12.5px] leading-[1.45] text-muted">
+          {seasonName ?? `Season ${nextSeasonNumber}`} · {formatSeasonLength(seasonLength)} ·{' '}
+          <span className="font-mono font-semibold text-ink">{formatTokens(settings.seed_amount)}</span> each
         </p>
         <div>
           <ConsequenceRow dotClassName="bg-signal">
@@ -55,7 +56,7 @@ export function SeasonSetupCard({
             {sittingOutLabel && `, ${sittingOutLabel}`}
           </ConsequenceRow>
           <ConsequenceRow dotClassName="bg-dash" isLast>
-            Everyone reseeded to <strong className="font-bold text-ink">{formatTokens(settings.seed_amount)}</strong> when you
+            Everyone reseeded to <strong className="font-mono font-semibold text-ink">{formatTokens(settings.seed_amount)}</strong> when you
             start
           </ConsequenceRow>
         </div>
