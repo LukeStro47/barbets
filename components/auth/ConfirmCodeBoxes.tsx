@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { cn } from '@/lib/cn';
 
 /** Must match the Supabase project's actual Authentication > Emails > "OTP Length" setting
  *  (mirrored for local dev in supabase/config.toml's `[auth.email] otp_length`) - there's no
@@ -10,14 +11,13 @@ import { useRef, useState } from 'react';
  *  and this constant is what needs updating to match. */
 export const CONFIRM_CODE_LENGTH = 6;
 
-/** Digit-per-box entry for the sign-up confirmation code, the same shape as InviteCodeBoxes
- *  (components/groups/InviteCodeBoxes.tsx) so a code someone's typing in from an email reads the
- *  same way a join code does elsewhere in the app. Unlike InviteCodeBoxes this doesn't own its
- *  own submit - it sits inside confirmSignup's <form action>, so it writes the joined value into
- *  a hidden `token` input and reports readiness upward via `onChange` so the real submit button
- *  can disable itself until all digits are in. */
+/** Digit-per-box entry for the sign-up confirmation code (DESIGN 5f). Mono figures, 1.5px signal
+ *  border + glow on the active box. Same shape as InviteCodeBoxes so a code from email reads the
+ *  same way a join code does. Writes the joined value into a hidden `token` input and reports
+ *  readiness via `onChange` so the submit button can disable until all digits are in. */
 export function ConfirmCodeBoxes({ onChange }: { onChange?: (code: string) => void }) {
   const [chars, setChars] = useState<string[]>(Array(CONFIRM_CODE_LENGTH).fill(''));
+  const [focused, setFocused] = useState<number | null>(0);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   function setChar(i: number, value: string) {
@@ -64,18 +64,25 @@ export function ConfirmCodeBoxes({ onChange }: { onChange?: (code: string) => vo
             value={c}
             onChange={(e) => setChar(i, e.target.value)}
             onKeyDown={(e) => handleKeyDown(i, e)}
+            onFocus={() => setFocused(i)}
+            onBlur={() => setFocused(null)}
             inputMode="numeric"
             maxLength={1}
             autoFocus={i === 0}
             aria-label={`Digit ${i + 1} of confirmation code`}
-            className="h-[46px] w-0 min-w-0 flex-1 rounded-xl border-[1.5px] border-hairline bg-surface text-center font-display text-lg font-extrabold text-ink focus:border-signal focus:bg-signal-tint focus:outline-none"
+            className={cn(
+              'h-[48px] w-0 min-w-0 flex-1 rounded-[14px] border-[1.5px] bg-surface text-center font-mono text-[18px] font-semibold text-ink outline-none',
+              focused === i
+                ? 'border-signal shadow-[0_0_0_3px_rgba(45,85,245,0.18)]'
+                : 'border-hairline'
+            )}
           />
         ))}
       </div>
       <button
         type="button"
         onClick={handlePaste}
-        className="shrink-0 rounded-full border-[1.5px] border-hairline px-4 py-[9px] text-[13px] font-bold text-muted"
+        className="shrink-0 rounded-[14px] border border-hairline bg-surface px-4 py-[9px] text-[13px] font-bold text-muted"
       >
         Paste
       </button>

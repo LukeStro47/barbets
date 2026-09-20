@@ -17,18 +17,19 @@ import { ChevronRightIcon } from '@/components/ui/icons';
 export function SectionLabel({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
   return (
     <div className="mb-2 flex items-baseline justify-between gap-3 px-0.5">
-      <p className="text-[10.5px] font-extrabold uppercase tracking-[0.1em] text-faint">{children}</p>
+      <p className="text-[11.5px] font-bold uppercase tracking-[0.1em] text-faint">{children}</p>
       {action}
     </div>
   );
 }
 
-/** The card every section's rows live in. Children are separated by a hairline, never by margin. */
+/** The card every section's rows live in. Children are separated by a hairline, never by margin.
+ *  Row radius 18–20 per DESIGN.md — one card wraps the section, not each row. */
 export function SettingsCard({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-[14px] border border-hairline bg-surface shadow-sm shadow-none',
+        'overflow-hidden rounded-[20px] border border-hairline bg-surface',
         '[&>*+*]:border-t [&>*+*]:border-hairline',
         className
       )}
@@ -101,7 +102,7 @@ export function ManageNavRow({
   trailing?: React.ReactNode;
   highlight?: boolean;
 }) {
-  const className = cn(manageNavRowClasses, highlight && 'bg-[#fdf6ea] hover:bg-signal-tint');
+  const className = cn(manageNavRowClasses, highlight && 'bg-alert-bg hover:bg-alert-bg');
   const inner = (
     <>
       <span className="min-w-0">

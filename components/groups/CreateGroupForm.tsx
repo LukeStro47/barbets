@@ -37,7 +37,7 @@ const SEASON_LENGTH_SUMMARY: Record<SeasonLength, string> = {
 
 const cardClasses = 'rounded-[20px] border border-hairline bg-surface p-4';
 const footerButtonClasses =
-  'flex h-[52px] w-full items-center justify-center rounded-full border-0 bg-ink text-[15px] font-extrabold text-white disabled:opacity-45';
+  'flex h-[50px] w-full items-center justify-center rounded-[14px] border-0 bg-signal text-[15px] font-bold text-white shadow-[var(--elevation-cta)] disabled:bg-disabled-bg disabled:text-disabled-ink disabled:shadow-none';
 
 /** datetime-local wants "YYYY-MM-DDTHH:mm" in the browser's local time, not UTC. */
 function toLocalDatetimeInputValue(date: Date): string {
@@ -256,50 +256,50 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
    * as two more fields. Same block on both steps so the group being made never leaves the top of
    * the screen; step 2 folds in the picture and nickname, which exist by then. */
   const ticket = (withIdentity: boolean) => (
-    <div className="flex items-center gap-3 rounded-[18px] bg-gradient-to-br from-ink to-ink px-4 py-3.5">
+    <div className="flex items-center gap-3 rounded-[20px] bg-ink px-4 py-3.5">
       {withIdentity && (
-        <img src={`/avatars/${avatarKey}.png`} alt="" className="h-[38px] w-[38px] shrink-0 rounded-full object-cover" />
+        <img src={`/avatars/${avatarKey}.png`} alt="" className="h-[38px] w-[38px] shrink-0 rounded-[11px] object-cover" />
       )}
       <span className="min-w-0 flex-1">
-        <span className="block truncate font-display text-[16.5px] font-extrabold tracking-[-0.015em] text-white">
+        <span className="block truncate text-[16.5px] font-bold tracking-[-0.015em] text-white">
           {name || 'Your group'}
         </span>
         <span className="mt-0.5 block text-xs text-white/55">
           {withIdentity && nickname.trim() ? `@${nickname.trim()} · ` : ''}
-          {formatTokens(seedAmountNumber || 0)} tokens each
+          <span className="font-mono font-semibold text-on-ink">{formatTokens(seedAmountNumber || 0)}</span> tokens each
         </span>
       </span>
       <button
         type="button"
         onClick={() => setEditingTicket((v) => !v)}
-        className="flex shrink-0 items-center gap-1.5 rounded-full border-0 bg-surface/12 px-[13px] py-[7px]"
+        className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-[13px] py-[7px]"
       >
         <PencilIcon className="h-[13px] w-[13px] text-on-ink" />
-        <span className="text-[11.5px] font-extrabold text-on-ink">Edit</span>
+        <span className="text-[11.5px] font-bold text-on-ink">Edit</span>
       </button>
     </div>
   );
 
   const ticketEditor = editingTicket && (
-    <div className="flex flex-col gap-2 rounded-[18px] border border-hairline bg-surface p-4">
+    <div className="flex flex-col gap-2 rounded-[20px] border border-hairline bg-surface p-4">
       <label className="block">
-        <span className="block text-[10px] font-bold tracking-[0.07em] text-faint uppercase">Group name</span>
+        <span className="block text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase">Group name</span>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           maxLength={GROUP_NAME_MAX_LENGTH}
           placeholder="The Wednesday Wagers"
-          className="mt-1 block w-full rounded-xl border border-hairline bg-surface px-3 py-2.5 text-sm font-bold text-ink focus:border-signal focus:outline-none"
+          className="mt-1 block w-full rounded-[14px] border border-hairline bg-surface px-3 py-2.5 text-sm font-bold text-ink focus:border-signal focus:outline-none"
         />
       </label>
       <label className="block">
-        <span className="block text-[10px] font-bold tracking-[0.07em] text-faint uppercase">Token allocation</span>
+        <span className="block text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase">Token allocation</span>
         <input
           type="text"
           inputMode="numeric"
           value={seedAmount}
           onChange={(e) => setSeedAmount(formatTokenInputValue(e.target.value, TOKEN_ALLOCATION_MAX))}
-          className="mt-1 block w-full rounded-xl border border-hairline bg-surface px-3 py-2.5 text-sm font-bold text-ink focus:border-signal focus:outline-none"
+          className="mt-1 block w-full rounded-[14px] border border-hairline bg-surface px-3 py-2.5 font-mono text-sm font-semibold text-ink focus:border-signal focus:outline-none"
         />
       </label>
     </div>

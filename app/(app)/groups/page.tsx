@@ -104,7 +104,7 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
     .join(' · ');
 
   return (
-    <main className="mx-auto max-w-lg space-y-[18px] px-5 py-8">
+    <main className="mx-auto max-w-[430px] space-y-[13px] px-[18px] py-8">
       <PageHeader
         title="Your groups"
         subtitle={hasGroups ? <span className="text-[12.5px] text-faint">{headerCaption}</span> : undefined}
@@ -113,11 +113,11 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
       {!hasGroups ? (
         hasPublicGroups ? (
           <div className="flex flex-col gap-2">
-            <div className="flex items-baseline justify-between gap-3 px-1">
-              <p className="text-[10.5px] font-extrabold tracking-[0.09em] text-faint uppercase">Open to anyone</p>
-              <span className="text-[11px] font-bold text-signal">No code needed</span>
+            <div className="flex items-baseline justify-between gap-3 px-0.5">
+              <p className="text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase">Open to anyone</p>
+              <span className="text-[11.5px] font-bold text-signal">No code needed</span>
             </div>
-            <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col gap-[9px]">
               {homeSurfacePublicGroups.slice(0, 2).map((g) => (
                 <DiscoverGroupCard
                   key={g.id}
@@ -132,7 +132,10 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
                 />
               ))}
             </div>
-            <Link href="/groups/discover" className="flex items-center justify-center gap-1.5 py-1 pt-0.5 text-center text-[12.5px] font-bold">
+            <Link
+              href="/groups/discover"
+              className="flex items-center justify-center gap-1.5 py-1 text-center text-[13px] font-bold text-signal"
+            >
               See all public groups
               <ChevronRightIcon className="h-[11px] w-[6px]" />
             </Link>
@@ -144,7 +147,7 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
               subtitle="Start one, or join with a friend's invite code below."
               action={
                 <Link href="/demo" className="block">
-                  <Button size="lg" variant="accent" className="w-full">
+                  <Button size="lg" variant="primary" className="w-full">
                     Try a live demo
                   </Button>
                 </Link>
@@ -155,7 +158,7 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
       ) : (
         <>
           {activeGroups.length > 0 && (
-            <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col gap-[9px]">
               {activeGroups.map((g: any) => {
                 // Same rank definition the leaderboard page uses: currently-playing members
                 // (active or dormant, i.e. not removed or left) sorted by balance descending,
@@ -174,25 +177,21 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
                     key={g.id}
                     href={`/groups/${g.id}`}
                     className={cn(
-                      // The lift is the whole signal: a card asking for something sits slightly
-                      // proud of the ones that aren't, without needing a second accent colour.
-                      'flex items-center gap-3 rounded-[20px] border border-hairline bg-surface p-3.5 transition-colors hover:border-hairline',
-                      needsYou > 0 && 'shadow-sm shadow-none'
+                      'flex items-center gap-3 rounded-[20px] border bg-surface px-4 py-[14px]',
+                      needsYou > 0 ? 'border-alert-line bg-alert-bg' : 'border-hairline'
                     )}
                   >
                     <GroupAvatar
                       name={g.name}
                       avatarKey={g.avatar_key}
-                      className="h-12 w-12 text-[14px]"
-                      fallbackClassName={needsYou > 0 ? 'bg-ink text-on-ink' : 'bg-rule text-muted'}
+                      className="h-11 w-11 text-[13px]"
+                      fallbackClassName={needsYou > 0 ? 'bg-alert text-white' : 'bg-rule text-muted'}
                     />
                     <span className="min-w-0 flex-1">
                       <span className="flex min-w-0 items-start gap-1.5">
-                        <p className="line-clamp-2 font-display text-[15.5px] leading-[1.15] font-extrabold tracking-[-0.01em] text-ink">
-                          {g.name}
-                        </p>
+                        <p className="line-clamp-2 text-[14.5px] leading-[1.2] font-bold text-ink">{g.name}</p>
                         {g.is_public && (
-                          <span className="shrink-0 rounded-full bg-signal-tint px-1.5 py-[1px] text-[9.5px] font-extrabold tracking-[0.04em] text-signal uppercase">
+                          <span className="shrink-0 rounded-[8px] bg-signal-tint px-1.5 py-[1px] text-[9.5px] font-extrabold tracking-[0.04em] text-signal uppercase">
                             Public
                           </span>
                         )}
@@ -200,22 +199,37 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
                       <p className="mt-[3px] flex items-center gap-1.5 text-[12.5px] text-muted">
                         {needsYou > 0 && (
                           <>
-                            <span className="inline-flex items-center gap-[5px] font-extrabold text-alert">
-                              <span className="h-1.5 w-1.5 rounded-full bg-alert" />
-                              {needsYou} need{needsYou === 1 ? 's' : ''} you
+                            <span className="inline-flex items-center gap-[5px] font-bold text-alert">
+                              <span className="flex h-[15px] min-w-[15px] items-center justify-center rounded-full bg-alert px-1 font-mono text-[10px] font-semibold text-white">
+                                {needsYou}
+                              </span>
+                              need{needsYou === 1 ? 's' : ''} you
                             </span>
                             <span className="text-dash">·</span>
                           </>
                         )}
-                        <span>{openCount > 0 ? `${openCount} open` : 'Nothing open right now'}</span>
+                        <span>
+                          {openCount > 0 ? (
+                            <>
+                              <span className="font-mono text-[12.5px] font-semibold text-ink">{openCount}</span> open
+                            </>
+                          ) : (
+                            'Nothing open right now'
+                          )}
+                        </span>
                       </p>
                       {g.deletion_scheduled_at && <p className="mt-0.5 text-xs font-semibold text-alert">Being deleted</p>}
                     </span>
                     <span className="shrink-0 text-right">
-                      <span className={cn('block text-[15px] font-extrabold tabular-nums', myNet >= 0 ? 'text-gain' : 'text-alert')}>
+                      <span
+                        className={cn(
+                          'block font-mono text-[15px] font-semibold tracking-tight',
+                          myNet >= 0 ? 'text-gain' : 'text-alert'
+                        )}
+                      >
                         {formatSignedTokens(myNet)}
                       </span>
-                      <span className="mt-0.5 block text-[11px] text-faint">
+                      <span className="mt-[3px] block font-mono text-[11px] font-semibold text-faint">
                         {formatOrdinal(myRank)} of {ranked.length}
                       </span>
                     </span>
@@ -234,12 +248,12 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
 
           {intermissionGroups.length > 0 && (
             <div className="flex flex-col gap-2">
-              <p className="ml-1 text-[10.5px] font-extrabold tracking-[0.09em] text-faint uppercase">Between seasons</p>
+              <p className="px-0.5 text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase">Between seasons</p>
               {intermissionGroups.map((g: any) => (
                 <Link
                   key={g.id}
                   href={`/groups/${g.id}`}
-                  className="flex items-center gap-[11px] rounded-2xl bg-rule px-3.5 py-[11px]"
+                  className="flex items-center gap-3 rounded-[18px] border border-hairline bg-surface px-4 py-[14px]"
                 >
                   <GroupAvatar
                     name={g.name}
@@ -248,7 +262,7 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
                     fallbackClassName="bg-rule text-faint"
                   />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13.5px] font-extrabold text-muted">{g.name}</span>
+                    <span className="block truncate text-[13.5px] font-bold text-muted">{g.name}</span>
                     <span className="block text-[11.5px] text-faint">Season ended · champion crowned</span>
                   </span>
                   <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-faint" />
@@ -261,8 +275,8 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
         </>
       )}
 
-      <div className="rounded-[22px] bg-gradient-to-br from-ink to-ink p-[18px]">
-        <p className="text-[15.5px] font-extrabold text-white">Got an invite code?</p>
+      <div className="rounded-[24px] bg-ink p-[18px]">
+        <p className="text-[15px] font-bold text-white">Got an invite code?</p>
         <p className="mt-0.5 text-[12.5px] text-white/55">Four characters from whoever runs the group.</p>
         <div className="mt-3.5">
           <InviteCodeBoxes />

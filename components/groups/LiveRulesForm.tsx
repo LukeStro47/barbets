@@ -37,10 +37,10 @@ const STEPPER_MAX = 10_000;
 const STEPPER_STEP = 100;
 
 const selectClasses =
-  'w-full rounded-[10px] border border-hairline bg-surface px-3.5 py-2.5 text-[15px] font-semibold text-ink focus:border-signal focus:outline-none focus:ring-2 focus:ring-signal/15';
+  'w-full rounded-[14px] border border-hairline bg-surface px-3.5 py-2.5 text-[15px] font-semibold text-ink focus:border-signal focus:outline-none focus:ring-2 focus:ring-signal/15';
 
 const inputClasses =
-  'w-full rounded-[10px] border border-hairline bg-surface px-3.5 py-2.5 text-[15px] font-bold text-ink focus:border-signal focus:outline-none focus:ring-2 focus:ring-signal/15';
+  'w-full rounded-[14px] border border-hairline bg-surface px-3.5 py-2.5 text-[15px] font-bold text-ink focus:border-signal focus:outline-none focus:ring-2 focus:ring-signal/15';
 
 function toLocalDatetimeInputValue(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -507,7 +507,7 @@ export function LiveRulesForm({
                             </label>
                             <div className="flex-1 space-y-1">
                               <span className="block text-xs font-bold text-muted">Open markets %</span>
-                              <div className="w-full rounded-[10px] border border-hairline bg-rule px-3.5 py-2.5 text-[15px] font-bold text-faint">
+                              <div className="w-full rounded-[14px] border border-hairline bg-rule px-3.5 py-2.5 text-[15px] font-bold text-faint">
                                 {openMarketsPct}
                               </div>
                             </div>
