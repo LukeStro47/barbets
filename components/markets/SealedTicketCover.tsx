@@ -22,7 +22,7 @@ function RedactedLines() {
   );
 }
 
-const HATCH = 'opacity-[0.14] bg-[repeating-linear-gradient(-45deg,#e8a33d_0_2px,transparent_2px_13px)]';
+const HATCH = 'opacity-[0.14] bg-[repeating-linear-gradient(-45deg,#2d55f5_0_2px,transparent_2px_13px)]';
 
 /** The perforation line + punch holes + wax seal, all centered on the exact boundary between the
  * two cover halves. An explicit z-index (rather than DOM order) is what keeps it painting above
@@ -42,7 +42,7 @@ function Seam({ mode, tearing, onOpen }: { mode: 'static' | 'overlay'; tearing?:
     !tearing && 'animate-mystery-seal-glow',
     clickable && 'cursor-pointer transition-transform duration-150 hover:scale-[1.04] active:scale-95'
   );
-  const sealStyle = { background: 'radial-gradient(circle at 34% 28%, #f1c480, #e8a33d 46%, #ac6f18)' };
+  const sealStyle = { background: 'radial-gradient(circle at 34% 28%, #6b8cff, #2d55f5 46%, #1f3fc4)' };
   const sealInner = (
     <>
       <span className="absolute inset-[9px] rounded-full border-[1.5px] border-dashed border-[rgba(28,19,13,0.28)]" />
@@ -99,7 +99,7 @@ export function SealedTicketCover({ groupLabel, stats, mode, tearing, onOpen, on
     <div className={cn('overflow-hidden', mode === 'static' ? 'relative rounded-t-[28px]' : 'absolute inset-x-0 top-0 h-[53%] rounded-t-[28px]')}>
       <div
         className={cn(mode === 'overlay' ? 'absolute inset-0' : 'relative', tearing && 'animate-mystery-cover-top')}
-        style={{ background: 'linear-gradient(150deg,#1c130d,#2c1f17 60%,#3b2a20)' }}
+        style={{ background: 'linear-gradient(150deg,#0c1018,#121821 60%,#1a2230)' }}
         onAnimationEnd={
           tearing
             ? (e) => {
@@ -130,7 +130,7 @@ export function SealedTicketCover({ groupLabel, stats, mode, tearing, onOpen, on
     <div className={cn('overflow-hidden', mode === 'static' ? 'relative rounded-b-[28px]' : 'absolute inset-x-0 bottom-0 top-[53%] rounded-b-[28px]')}>
       <div
         className={cn(mode === 'overlay' ? 'absolute inset-0' : 'relative', tearing && 'animate-mystery-cover-bottom')}
-        style={{ background: 'linear-gradient(150deg,#3b2a20,#2c1f17 70%,#1c130d)' }}
+        style={{ background: 'linear-gradient(150deg,#1a2230,#121821 70%,#0c1018)' }}
       >
         <div className={cn('absolute inset-0', HATCH)} />
         {stats && stats.length > 0 && (
