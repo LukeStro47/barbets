@@ -157,7 +157,7 @@ export function SealedTicketCover({ groupLabel, stats, mode, tearing, onOpen, on
 
   if (mode === 'static') {
     return (
-      <div className="relative overflow-visible rounded-[28px] bg-gradient-to-br from-ink via-ink to-muted text-surface shadow-lg shadow-ink/25">
+      <div className="relative overflow-visible rounded-[28px] bg-ink text-surface">
         {topHalf}
         <Seam mode="static" />
         {bottomHalf}

@@ -116,7 +116,7 @@ export function MarketCard({ market }: { market: MarketCardData }) {
 
   return (
     <Link href={href}>
-      <Card className="space-y-3 transition-shadow hover:shadow-md">
+      <Card className="space-y-3 transition-colors hover:border-dash">
         <div className="flex items-start justify-between gap-3">
           <div>
             {market.groupName && <p className="text-xs font-semibold uppercase tracking-wide text-signal-deep">{market.groupName}</p>}

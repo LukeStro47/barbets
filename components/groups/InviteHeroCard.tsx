@@ -81,7 +81,7 @@ export function InviteHeroCard({
   }
 
   return (
-    <div className="rounded-[20px] bg-gradient-to-br from-ink to-muted px-5 py-[18px]">
+    <div className="rounded-[20px] bg-ink px-5 py-[18px]">
       <p className="text-[10.5px] font-bold tracking-[0.12em] text-signal uppercase">Invite code</p>
       <p className="mt-1 font-display text-[34px] leading-none font-extrabold tracking-[0.08em] text-surface">{inviteCode}</p>
 

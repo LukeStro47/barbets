@@ -366,7 +366,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
           <GroupDeletionBanner groupId={groupId} deletionScheduledAt={group!.deletion_scheduled_at} isOwner={isOwner} />
         )}
 
-        <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-ink to-muted px-5 py-[18px]">
+        <div className="relative overflow-hidden rounded-[24px] bg-ink px-5 py-[18px]">
           <Image
             src="/barbets-mono-white.png"
             alt=""

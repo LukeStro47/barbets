@@ -56,7 +56,7 @@ export function GroupSwitcher({ groups, currentGroupId }: { groups: SwitcherGrou
       {open && groups.length > 1 && (
         <>
           <div onClick={() => setOpen(false)} className="fixed inset-0 z-20" />
-          <div className="absolute inset-x-0 top-[calc(100%+6px)] z-30 rounded-[20px] border border-hairline bg-surface p-1.5 shadow-[0_22px_40px_-20px_rgba(28,19,13,0.55)]">
+          <div className="absolute inset-x-0 top-[calc(100%+6px)] z-30 rounded-[20px] border border-hairline bg-surface p-1.5 border border-hairline">
             {groups.map((g) => {
               const active = g.id === current.id;
               return (

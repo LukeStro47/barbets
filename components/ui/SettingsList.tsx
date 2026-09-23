@@ -28,7 +28,7 @@ export function SettingsCard({ className, children }: { className?: string; chil
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-[14px] border border-hairline bg-surface shadow-sm shadow-ink/5',
+        'overflow-hidden rounded-[14px] border border-hairline bg-surface',
         '[&>*+*]:border-t [&>*+*]:border-hairline',
         className
       )}

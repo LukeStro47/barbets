@@ -30,9 +30,9 @@ export function AwardsRail({ groupId, isOwner, titles }: { groupId: string; isOw
       {titles.map((t) => (
         <div
           key={t.key}
-          className="relative w-full shrink-0 overflow-hidden rounded-[22px] bg-gradient-to-br from-ink to-muted p-5 [scroll-snap-align:start]"
+          className="relative w-full shrink-0 overflow-hidden rounded-[22px] bg-ink p-5 [scroll-snap-align:start]"
         >
-          <div className="pointer-events-none absolute inset-0 opacity-50 [background:radial-gradient(circle_at_85%_6%,rgba(45, 85, 245,0.34),rgba(45, 85, 245,0)_60%)]" />
+          <div className="pointer-events-none absolute inset-0 opacity-50 [background:radial-gradient(circle_at_85%_6%,rgba(45,85,245,0.34),rgba(45,85,245,0)_60%)]" />
           <div className="relative flex items-start justify-between gap-3">
             <p className="text-[10px] font-extrabold tracking-[0.1em] text-on-ink uppercase">Yours</p>
             <span className="flex shrink-0 items-center gap-1">

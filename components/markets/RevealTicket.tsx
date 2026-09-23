@@ -169,7 +169,7 @@ export function RevealTicket({
         <div
           ref={ticketRef}
           className={cn(
-            'relative overflow-visible rounded-[28px] bg-gradient-to-br from-ink via-ink to-muted text-surface shadow-lg shadow-ink/25',
+            'relative overflow-visible rounded-[28px] bg-ink text-surface',
             tearing && 'animate-mystery-ticket-pop'
           )}
         >
@@ -205,7 +205,7 @@ export function RevealTicket({
                 isMultipleChoice
                   ? 'line-clamp-2 w-fit max-w-[240px] -rotate-3 rounded-[20px] px-[18px] py-[11px] text-center text-[15.5px] leading-[1.25] tracking-[0.02em]'
                   : cn(
-                      'flex h-[74px] w-[74px] shrink-0 -rotate-6 items-center justify-center rounded-full border-[3px] border-ink/20 px-1 text-center leading-[1.1] shadow-[0_8px_18px_-6px_rgba(45, 85, 245,0.55)]',
+                      'flex h-[74px] w-[74px] shrink-0 -rotate-6 items-center justify-center rounded-full border-[3px] border-ink/20 px-1 text-center leading-[1.1] shadow-[0_8px_18px_-6px_rgba(45,85,245,0.55)]',
                       headlineBadgeTextClass(headline)
                     ),
                 tearing && 'animate-mystery-badge'

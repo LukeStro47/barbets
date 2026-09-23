@@ -174,10 +174,11 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
                     key={g.id}
                     href={`/groups/${g.id}`}
                     className={cn(
-                      // The lift is the whole signal: a card asking for something sits slightly
-                      // proud of the ones that aren't, without needing a second accent colour.
-                      'flex items-center gap-3 rounded-[20px] border border-hairline bg-surface p-3.5 transition-colors hover:border-dash',
-                      needsYou > 0 && 'shadow-sm shadow-ink/5'
+                      // TODO(ledger-redesign phase 3): DESIGN.md's needs-you-card spec calls for
+                      // an alert-tinted background/border here, not a shadow lift (dropped as part
+                      // of the "hairlines, not shadows" pass) — revisit with the rest of the
+                      // screen-level fidelity work rather than guessing a replacement now.
+                      'flex items-center gap-3 rounded-[20px] border border-hairline bg-surface p-3.5 transition-colors hover:border-dash'
                     )}
                   >
                     <GroupAvatar
@@ -261,7 +262,7 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
         </>
       )}
 
-      <div className="rounded-[22px] bg-gradient-to-br from-ink to-muted p-[18px]">
+      <div className="rounded-[22px] bg-ink p-[18px]">
         <p className="text-[15.5px] font-extrabold text-surface">Got an invite code?</p>
         <p className="mt-0.5 text-[12.5px] text-surface/55">Four characters from whoever runs the group.</p>
         <div className="mt-3.5">

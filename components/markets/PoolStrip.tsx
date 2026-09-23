@@ -27,7 +27,7 @@ interface PoolStripCell {
 export function PoolStrip({ cells, className }: { cells: PoolStripCell[]; className?: string }) {
   const tight = cells.length > 3;
   return (
-    <div className={cn('flex items-stretch overflow-hidden rounded-2xl bg-gradient-to-br from-ink to-muted', className)}>
+    <div className={cn('flex items-stretch overflow-hidden rounded-2xl bg-ink', className)}>
       {cells.map((cell, i) => (
         <div key={i} className={cn('flex items-center', cell.highlight && 'bg-signal/12')} style={{ flex: `${cell.flex ?? 1} 1 0` }}>
           {i > 0 && (

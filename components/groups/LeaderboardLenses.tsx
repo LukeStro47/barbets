@@ -32,7 +32,7 @@ export function LeaderboardLenses({
             onClick={() => setLens(k)}
             className={cn(
               'flex-1 rounded-full py-2 text-[12.5px] font-bold transition-colors',
-              lens === k ? 'bg-surface text-ink shadow-sm' : 'text-faint hover:text-muted'
+              lens === k ? 'bg-surface text-ink' : 'text-faint hover:text-muted'
             )}
           >
             {k === 'current' ? currentLabel : 'All-time'}

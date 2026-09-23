@@ -50,8 +50,8 @@ export function SeasonRecapHero({
   const youLead = viewer === 'member' && yourRank === 1;
 
   return (
-    <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-ink via-ink to-muted px-5 pt-[22px] pb-5">
-      <div className="pointer-events-none absolute inset-0 opacity-[0.55] [background:radial-gradient(circle_at_88%_4%,rgba(45, 85, 245,0.34),rgba(45, 85, 245,0)_60%)]" />
+    <div className="relative overflow-hidden rounded-[28px] bg-ink px-5 pt-[22px] pb-5">
+      <div className="pointer-events-none absolute inset-0 opacity-[0.55] [background:radial-gradient(circle_at_88%_4%,rgba(45,85,245,0.34),rgba(45,85,245,0)_60%)]" />
       <div className="relative">
         <p className="text-[10.5px] font-bold tracking-[0.14em] text-signal uppercase">Season complete</p>
         <p className="mt-1.5 font-display text-[27px] leading-[1.1] font-extrabold tracking-[-0.02em] text-surface">{seasonName}</p>
@@ -62,7 +62,7 @@ export function SeasonRecapHero({
         {viewer === 'owner' ? (
           champion && (
             <div className="mt-5 flex items-center gap-3.5">
-              <span className="flex h-[62px] w-[62px] shrink-0 -rotate-6 items-center justify-center rounded-full border-[3px] border-signal bg-ink text-[26px] shadow-[0_8px_18px_-6px_rgba(45, 85, 245,0.55)]">
+              <span className="flex h-[62px] w-[62px] shrink-0 -rotate-6 items-center justify-center rounded-full border-[3px] border-signal bg-ink text-[26px] shadow-[0_8px_18px_-6px_rgba(45,85,245,0.55)]">
                 🏆
               </span>
               <span className="min-w-0 flex-1">

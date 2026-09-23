@@ -256,7 +256,7 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
    * as two more fields. Same block on both steps so the group being made never leaves the top of
    * the screen; step 2 folds in the picture and nickname, which exist by then. */
   const ticket = (withIdentity: boolean) => (
-    <div className="flex items-center gap-3 rounded-[18px] bg-gradient-to-br from-ink to-muted px-4 py-3.5">
+    <div className="flex items-center gap-3 rounded-[18px] bg-ink px-4 py-3.5">
       {withIdentity && (
         <img src={`/avatars/${avatarKey}.png`} alt="" className="h-[38px] w-[38px] shrink-0 rounded-full object-cover" />
       )}

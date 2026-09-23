@@ -27,7 +27,7 @@ export function DemoRevealCard({
 
   return (
     <div
-      className="animate-demo-fade-up-scale relative overflow-visible rounded-[28px] bg-gradient-to-br from-ink via-ink to-muted text-surface shadow-lg shadow-ink/25"
+      className="animate-demo-fade-up-scale relative overflow-visible rounded-[28px] bg-ink text-surface"
     >
       <div className="px-6 pt-6 pb-[18px]">
         <div className="mb-3.5 flex items-center gap-[7px]">
@@ -39,7 +39,7 @@ export function DemoRevealCard({
         <p className="mb-4 max-w-[88%] text-[22px] leading-[1.2] font-extrabold tracking-[-0.01em]">{question}</p>
 
         <div className="flex items-center gap-3.5">
-          <div className="flex h-[68px] w-[68px] shrink-0 -rotate-6 items-center justify-center rounded-full border-[3px] border-ink/20 bg-signal text-center text-lg leading-[1.1] font-extrabold uppercase text-ink shadow-[0_8px_18px_-6px_rgba(45, 85, 245,0.55)]">
+          <div className="flex h-[68px] w-[68px] shrink-0 -rotate-6 items-center justify-center rounded-full border-[3px] border-ink/20 bg-signal text-center text-lg leading-[1.1] font-extrabold uppercase text-ink shadow-[0_8px_18px_-6px_rgba(45,85,245,0.55)]">
             {headline}
           </div>
           <p className="text-[13px] leading-[1.45] text-surface/70">The vote upheld the call.</p>

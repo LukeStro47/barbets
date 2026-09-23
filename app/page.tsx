@@ -25,7 +25,7 @@ export default async function LandingPage() {
     <main className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-canvas px-6 py-11 pt-[calc(env(safe-area-inset-top)+2.75rem)] text-center">
       <div
         aria-hidden
-        className="animate-splash-glow pointer-events-none absolute top-[120px] left-1/2 -ml-[210px] h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,rgba(45, 85, 245,0.35)_0%,rgba(45, 85, 245,0)_68%)]"
+        className="animate-splash-glow pointer-events-none absolute top-[120px] left-1/2 -ml-[210px] h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,rgba(45,85,245,0.35)_0%,rgba(45,85,245,0)_68%)]"
       />
 
       <Link
@@ -48,11 +48,7 @@ export default async function LandingPage() {
 
       <div className="relative mt-11 flex w-full max-w-[330px] flex-col gap-3">
         <Link href="/login?mode=signup" className="w-full">
-          <Button
-            variant="accent"
-            size="xl"
-            className="w-full shadow-[0_8px_22px_-10px_rgba(172,111,24,0.5)]"
-          >
+          <Button variant="accent" size="xl" className="w-full">
             Start betting
           </Button>
         </Link>

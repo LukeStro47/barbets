@@ -281,8 +281,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
       <GroupSwitcher groups={switcherGroups} currentGroupId={groupId} />
 
       <ShareRecordCard groupName={groupName} handle={selected.nickname}>
-        <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-ink via-ink to-muted p-5 text-surface">
-          <div className="pointer-events-none absolute inset-0 opacity-50 [background:radial-gradient(circle_at_88%_0%,rgba(45, 85, 245,0.3),rgba(45, 85, 245,0)_60%)]" />
+        <div className="relative overflow-hidden rounded-[24px] bg-ink p-5 text-surface">
+          <div className="pointer-events-none absolute inset-0 opacity-50 [background:radial-gradient(circle_at_88%_0%,rgba(45,85,245,0.3),rgba(45,85,245,0)_60%)]" />
           <div className="relative mb-3.5 flex items-center gap-3">
             {!isPublicGroup && (
               <UserAvatar

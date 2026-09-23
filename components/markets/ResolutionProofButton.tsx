@@ -74,7 +74,7 @@ export function ResolutionProofButton({
           onClick={open}
           disabled={loading}
           aria-label="View proof photo"
-          className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-surface text-muted shadow-sm hover:text-ink disabled:opacity-50"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-surface text-muted hover:text-ink disabled:opacity-50"
         >
           <CameraIcon className="h-3.5 w-3.5" />
         </button>

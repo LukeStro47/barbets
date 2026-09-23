@@ -262,7 +262,7 @@ export function BetslipBar({
           would silently break again if page.tsx's structure ever changes. */}
       <div
         className={cn(
-          'fixed inset-x-0 bottom-[var(--bottomnav-height)] z-30 !m-0 rounded-t-[20px] bg-gradient-to-br from-ink via-ink to-muted shadow-[0_-14px_28px_-10px_rgba(28,19,13,0.4)]',
+          'fixed inset-x-0 bottom-[var(--bottomnav-height)] z-30 !m-0 rounded-t-[20px] bg-ink shadow-[0_-1px_2px_rgba(12,16,24,0.03)]',
           idleNudge && 'animate-betslip-idle-bounce'
         )}
         onAnimationEnd={() => setIdleNudge(false)}
@@ -274,7 +274,7 @@ export function BetslipBar({
 
       <div
         className={cn(
-          'fixed inset-x-0 bottom-0 z-50 !m-0 max-h-[85dvh] overflow-y-auto rounded-t-[22px] bg-gradient-to-br from-ink via-ink to-muted pb-[calc(env(safe-area-inset-bottom)+24px)] transition-transform duration-300 ease-out',
+          'fixed inset-x-0 bottom-0 z-50 !m-0 max-h-[85dvh] overflow-y-auto rounded-t-[22px] bg-ink pb-[calc(env(safe-area-inset-bottom)+24px)] transition-transform duration-300 ease-out',
           isOpen ? 'translate-y-0' : 'translate-y-full'
         )}
         // The keyboard's height is *added* to the sheet's normal bottom padding, never swapped
@@ -523,7 +523,7 @@ function BetConfirmedOverlay({
 }) {
   return (
     <div
-      className="fixed inset-0 z-[60] flex flex-col justify-between bg-gradient-to-br from-ink via-ink to-muted"
+      className="fixed inset-0 z-[60] flex flex-col justify-between bg-ink"
       style={{
         padding: 'calc(env(safe-area-inset-top) + 56px) calc(env(safe-area-inset-right) + 24px) calc(env(safe-area-inset-bottom) + 40px) calc(env(safe-area-inset-left) + 24px)',
       }}
@@ -547,7 +547,7 @@ function BetConfirmedOverlay({
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-sm rounded-[20px] bg-surface shadow-[0_22px_44px_-18px_rgba(0,0,0,0.55)]">
+      <div className="mx-auto w-full max-w-sm rounded-[20px] bg-surface shadow-[0_1px_2px_rgba(12,16,24,0.04)]">
         <div className="px-5 pt-5 pb-4">
           <p className="text-[11px] font-extrabold tracking-[0.12em] text-faint uppercase">Your bet</p>
           <p className="mt-2 font-display text-[19px] leading-[1.25] font-extrabold text-ink text-pretty">{marketTitle}</p>

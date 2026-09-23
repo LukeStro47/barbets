@@ -30,7 +30,7 @@ export function TicketCard({
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-[22px] border-[1.5px] border-ink bg-surface shadow-[0_6px_18px_-12px_rgba(28,19,13,0.35)]',
+        'overflow-hidden rounded-[22px] border-[1.5px] border-ink bg-surface border border-hairline',
         className
       )}
     >

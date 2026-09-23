@@ -172,8 +172,8 @@ export default async function LeaderboardPage({
     : Math.max(0, (leader?.balance ?? 0) - (you?.balance ?? 0));
 
   const hero = leader && (
-    <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-ink to-muted p-[18px]">
-      <div className="pointer-events-none absolute inset-0 opacity-50 [background:radial-gradient(circle_at_90%_0%,rgba(45, 85, 245,0.3),rgba(45, 85, 245,0)_60%)]" />
+    <div className="relative overflow-hidden rounded-[24px] bg-ink p-[18px]">
+      <div className="pointer-events-none absolute inset-0 opacity-50 [background:radial-gradient(circle_at_90%_0%,rgba(45,85,245,0.3),rgba(45,85,245,0)_60%)]" />
       <Link href={`/groups/${groupId}/members/${leader.id}`} className="relative flex items-center gap-3.5">
         {/* Not even an initials placeholder in a public group — no avatar chip at all, not just no
             photo, since the empty circle still reads as "a person's picture goes here". */}
@@ -359,7 +359,7 @@ export default async function LeaderboardPage({
 
                   {r.snapshot.champion && (
                     <div className="mt-3.5 flex items-center gap-3.5 rounded-2xl bg-signal-tint px-4 py-3.5">
-                      <span className="flex h-12 w-12 shrink-0 -rotate-6 items-center justify-center rounded-full border-2 border-signal bg-ink text-2xl shadow-[0_8px_16px_-6px_rgba(45, 85, 245,0.55)]">
+                      <span className="flex h-12 w-12 shrink-0 -rotate-6 items-center justify-center rounded-full border-2 border-signal bg-ink text-2xl shadow-[0_8px_16px_-6px_rgba(45,85,245,0.55)]">
                         🏆
                       </span>
                       <div className="min-w-0">

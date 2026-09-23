@@ -106,7 +106,7 @@ export function ReactionBar({ groupId, marketId, counts, myReaction, nicknames, 
         <>
           {/* Click-outside-to-close backdrop, purely for dismissal — not part of the ticket's own visual design. */}
           <button type="button" aria-label="Close reaction picker" onClick={() => setOpen(false)} className="fixed inset-0 z-0 cursor-default" />
-          <div className="absolute top-full right-0 z-[1] mt-2 w-56 space-y-2 rounded-2xl bg-surface p-2.5 shadow-lg ring-1 ring-dash/60">
+          <div className="absolute top-full right-0 z-[1] mt-2 w-56 space-y-2 rounded-2xl bg-surface p-2.5 ring-1 ring-dash/60">
             <div className="flex items-center justify-between">
               {REACTIONS.map(({ emoji, glyph }) => (
                 <button

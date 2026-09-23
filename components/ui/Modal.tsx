@@ -48,7 +48,7 @@ export function Modal({
         // want rounded-[22px], and `cn` is a plain join with no conflict resolution, so leaving a
         // rounded-2xl in the base would make which one wins depend on stylesheet order.
         className={cn(
-          'w-full max-w-sm bg-surface shadow-xl',
+          'w-full max-w-sm bg-surface shadow-[0_1px_2px_rgba(12,16,24,0.04)]',
           padded ? 'space-y-3 rounded-2xl p-5' : 'rounded-[22px]',
           panelClassName
         )}

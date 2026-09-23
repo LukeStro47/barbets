@@ -67,7 +67,7 @@ export function RouteModal({
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-5 py-8" onClick={() => router.back()}>
       <div
-        className="flex max-h-full w-full max-w-lg flex-col overflow-hidden rounded-[22px] bg-surface shadow-xl"
+        className="flex max-h-full w-full max-w-lg flex-col overflow-hidden rounded-[22px] bg-surface shadow-[0_1px_2px_rgba(12,16,24,0.04)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-center gap-2 bg-rule px-[18px] py-[13px]">

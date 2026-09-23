@@ -14,7 +14,7 @@ function windowLabel(hours: number): string {
   return hours === 1 ? '1 hour' : `${hours} hours`;
 }
 
-const cardClasses = 'overflow-hidden rounded-2xl border border-hairline bg-surface shadow-sm shadow-ink/5';
+const cardClasses = 'overflow-hidden rounded-2xl border border-hairline bg-surface';
 const ruleTitleClasses = 'block font-display text-[15.5px] font-extrabold tracking-[-0.01em] text-ink';
 const ruleBodyClasses = 'mt-1 block text-[13.5px] leading-[1.55] text-muted';
 
@@ -144,7 +144,7 @@ export default async function HowItWorksPage({ searchParams }: { searchParams: P
             replace
             className={cn(
               'flex-1 rounded-full px-1.5 py-2 text-center text-[12.5px]',
-              tab === t.key ? 'bg-surface font-bold text-ink shadow-sm' : 'font-semibold text-faint'
+              tab === t.key ? 'bg-surface font-bold text-ink' : 'font-semibold text-faint'
             )}
           >
             {t.label}

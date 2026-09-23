@@ -101,7 +101,7 @@ export function GroupMarketSections({
               className={cn(
                 'flex-1 rounded-xl py-[7px] text-center text-[13px] transition-[background-color,box-shadow,color] duration-200',
                 filter === tab.key
-                  ? 'bg-surface font-semibold text-ink shadow-[0_1px_3px_rgba(44,31,23,0.12)]'
+                  ? 'bg-surface font-semibold text-ink border border-hairline'
                   : 'font-medium text-faint'
               )}
             >

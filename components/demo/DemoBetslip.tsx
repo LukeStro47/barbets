@@ -47,7 +47,7 @@ export function DemoBetslip({
       {isOpen && (
         <div className="animate-demo-fade fixed inset-0 z-40 flex items-end justify-center bg-ink/45" onClick={onClose}>
           <div
-            className="animate-demo-sheet-up w-full max-w-lg rounded-t-[22px] bg-gradient-to-br from-ink via-ink to-muted pb-[calc(env(safe-area-inset-bottom)+20px)]"
+            className="animate-demo-sheet-up w-full max-w-lg rounded-t-[22px] bg-ink pb-[calc(env(safe-area-inset-bottom)+20px)]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mx-auto my-2.5 h-1 w-9 rounded-full bg-white/25" />
@@ -162,7 +162,7 @@ export function DemoBetslip({
 
       {confirmed && (
         <div
-          className="animate-demo-fade fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-gradient-to-br from-ink via-ink to-muted px-8 text-center"
+          className="animate-demo-fade fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-ink px-8 text-center"
           style={{ animationDuration: '300ms' }}
         >
           <svg width="72" height="72" viewBox="0 0 76 76" fill="none" className="animate-bet-check-circle">

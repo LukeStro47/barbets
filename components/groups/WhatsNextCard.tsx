@@ -53,7 +53,7 @@ export function WhatsNextCard({
   const isIn = membershipStatus === 'active' ? !hasOptedOut : hasOptedIn;
 
   return (
-    <div className="flex flex-col gap-3.5 rounded-[24px] border border-hairline bg-surface p-[18px] shadow-sm shadow-ink/5">
+    <div className="flex flex-col gap-3.5 rounded-[24px] border border-hairline bg-surface p-[18px]">
       <h2 className="font-display text-[15px] font-bold text-ink">What happens next</h2>
       <div className="flex flex-col">
         <TimelineStep done title="Season closed today" subtitle="Every market settled, balances locked in." />

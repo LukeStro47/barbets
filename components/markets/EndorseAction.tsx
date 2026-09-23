@@ -74,7 +74,7 @@ export function EndorseActionBar({ groupId, marketId }: { groupId: string; marke
 
       <div aria-hidden="true" className="fixed inset-x-0 bottom-[var(--bottomnav-height)] z-20 !m-0 bg-ink pb-5" />
 
-      <div className="fixed inset-x-0 bottom-[var(--bottomnav-height)] z-30 !m-0 rounded-t-[20px] bg-gradient-to-br from-ink via-ink to-muted px-5 pt-3.5 pb-4 shadow-[0_-14px_28px_-10px_rgba(28,19,13,0.4)]">
+      <div className="fixed inset-x-0 bottom-[var(--bottomnav-height)] z-30 !m-0 rounded-t-[20px] bg-ink px-5 pt-3.5 pb-4 shadow-[0_-1px_2px_rgba(12,16,24,0.03)]">
         {bar}
       </div>
     </>

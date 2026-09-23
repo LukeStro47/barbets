@@ -152,7 +152,7 @@ function OptionRow({
           )}
         />
         {suggestions.length > 0 && (
-          <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-xl border border-hairline bg-surface shadow-lg">
+          <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-xl border border-hairline bg-surface">
             {suggestions.map((m) => (
               <li key={m.userId}>
                 <button

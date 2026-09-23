@@ -37,7 +37,7 @@ export function WindingDownCard({
   return (
     <div className="flex flex-col gap-3.5">
       <div className="relative overflow-hidden rounded-[24px] bg-ink px-5 py-[18px]">
-        <div className="pointer-events-none absolute inset-0 opacity-50 [background:radial-gradient(circle_at_90%_0%,rgba(45, 85, 245,0.3),rgba(45, 85, 245,0)_60%)]" />
+        <div className="pointer-events-none absolute inset-0 opacity-50 [background:radial-gradient(circle_at_90%_0%,rgba(45,85,245,0.3),rgba(45,85,245,0)_60%)]" />
         <div className="relative">
           <div className="flex items-center gap-2">
             <span className="h-[7px] w-[7px] rounded-full bg-signal" />
