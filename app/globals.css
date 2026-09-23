@@ -4,49 +4,40 @@
   --font-sans: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
 
-  /* Paper — warm off-white background, the canvas everywhere. */
-  --color-paper: #faf6ef;
-  --color-paper-dim: #f3ecdf; /* card/section contrast against paper */
-  --color-paper-white: #fffdf9; /* cards that need to pop off paper */
+  /* Ledger palette — see DESIGN.md. Canvas/surface are the near-white ground,
+     ink is the only text colour that matters, signal blue is the single
+     accent (the live/actionable thing), gain/alert are realised-gain and
+     needs-you-now respectively and never used decoratively. */
+  --color-canvas: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-rule: #eef0f4; /* subtle tinted backgrounds, section contrast against canvas */
+  --color-hairline: #e7eaef; /* the one separator: 1px borders instead of shadows */
+  --color-dash: #cfd6e2; /* dashed/empty-state borders, disabled dots */
+  --color-faint: #8a929f; /* eyebrows, timestamps, chevrons only — never body copy */
+  --color-muted: #5a6373; /* supporting sentences */
+  --color-ink: #0c1018; /* body text, headings, primary button fill */
 
-  /* Espresso — deep warm brown, text + primary buttons + a muted ramp for borders/secondary text. */
-  --color-espresso-950: #1c130d;
-  --color-espresso-900: #2c1f17;
-  --color-espresso-800: #3b2a20; /* base: body text, primary button fill */
-  --color-espresso-700: #4a3629;
-  --color-espresso-600: #5c4335;
-  --color-espresso-500: #705441;
-  --color-espresso-400: #8c6f5c;
-  --color-espresso-300: #ab9078;
-  --color-espresso-200: #cbb6a2; /* borders */
-  --color-espresso-100: #e4d8cc; /* dividers */
-  --color-espresso-50: #f2eae1; /* subtle tinted backgrounds */
+  --color-signal: #2d55f5; /* the one accent: primary CTA, live countdowns, selected tab, odds you can still take */
+  --color-signal-deep: #1f3fc4; /* pressed state */
+  --color-signal-tint: #eef2ff; /* light chip/badge backgrounds on a light ground */
+  --color-on-ink: #6b8cff; /* signal blue lifted for use on the ink background only */
 
-  /* Honey — warm golden amber accent: CTAs, odds bars, highlights. */
-  --color-honey-900: #7a4f0f;
-  --color-honey-800: #925e13;
-  --color-honey-700: #ac6f18;
-  --color-honey-600: #c7841f;
-  --color-honey-500: #e8a33d; /* base accent */
-  --color-honey-400: #edb35c;
-  --color-honey-300: #f1c480;
-  --color-honey-200: #f6d8a8;
-  --color-honey-100: #fae7cb;
-  --color-honey-50: #fdf3e6;
+  --color-gain: #0b8a5b; /* a realised gain, nothing else */
+  --color-gain-bg: #e8f6ef;
+  --color-gain-line: #cbe8da;
 
-  /* Muted warm success/danger that sit naturally in this palette. */
-  --color-success-700: #4f6b41;
-  --color-success-500: #6b8f5a;
-  --color-success-100: #e9f0e3;
-  --color-danger-700: #96392a;
-  --color-danger-500: #c1503d;
-  --color-danger-100: #f7e6e1;
+  --color-alert: #c8392c; /* something needs you, or a destructive action, nothing else */
+  --color-alert-bg: #fff6f5;
+  --color-alert-line: #f6d9d5;
+
+  --color-disabled-bg: #eef0f4;
+  --color-disabled-ink: #a8b0bd;
 }
 
 @layer base {
   body {
-    background-color: var(--color-paper);
-    color: var(--color-espresso-800);
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
   }
   :root {
     /* BottomNav's own rendered height (60px row + its bottom safe-area padding) — shared so
@@ -66,7 +57,7 @@
   }
 }
 
-/* Bet-confirmed overlay: a honey checkmark popping in, then drawing its
+/* Bet-confirmed overlay: a signal-blue checkmark popping in, then drawing its
    stroke — kept out of @theme and scoped to these two classes rather than
    a general-purpose animation utility. */
 @keyframes bet-check-pop {
@@ -94,7 +85,7 @@
   }
 }
 
-/* The splash (app/page.tsx): a honey glow breathing behind the mark, and the
+/* The splash (app/page.tsx): a signal-blue glow breathing behind the mark, and the
    logo/headline/subhead rising in together on first paint. The glow is the only
    thing on that screen that moves, so under reduced motion it holds at a middling
    opacity rather than disappearing — it's part of the composition, not decoration. */
@@ -121,13 +112,13 @@
 }
 
 /* The stat strip's "closing soon" state (ClosesInValue): the figure itself breathes
-   between its resting colour and danger. Deliberately not honey — honey is already
-   this app's one accent (money, the committing action), so reusing it here to mean
-   "hurry up" would make one colour carry two different meanings. Reduced motion
+   between its resting colour and alert. Deliberately not signal blue — signal is
+   already this app's one accent (the live/actionable thing), so reusing it here to
+   mean "hurry up" would make one colour carry two different meanings. Reduced motion
    still gets the signal, just held rather than animated. */
 @keyframes stat-urgent-breathe {
   0%, 100% { color: inherit; }
-  50% { color: var(--color-danger-500); }
+  50% { color: var(--color-alert); }
 }
 .animate-urgent-breathe {
   animation: stat-urgent-breathe 2.4s ease-in-out infinite;
@@ -135,7 +126,7 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-urgent-breathe {
     animation: none;
-    color: var(--color-danger-500);
+    color: var(--color-alert);
   }
 }
 
@@ -178,7 +169,11 @@
    hopping in place, shadow squashing on each hop, "LOADING" dots blinking in
    sequence. Four hops per 2.6s cycle, all four keyframes share the same
    0%,12% / 25%,37% / 50%,62% / 75%,87% beat so the rotate/hop/shadow stay
-   perfectly in sync. */
+   perfectly in sync.
+   TODO(ledger-redesign): replaced by the bb-settle/bb-settle-b two-bar
+   "odds settling" loader in the next commit, along with LoadingAnimation.tsx
+   itself — left in place here for one commit so this file's diff stays a
+   pure colour-token rename and nothing else changes at the same time. */
 @keyframes die-tumble {
   0%, 12% { transform: rotate(0deg); }
   25%, 37% { transform: rotate(90deg); }
@@ -301,13 +296,17 @@
 
 /* Mystery markets (a hidden subject can't see a market exists until it
    resolves): a shimmering redacted placeholder for the sealed ticket's
-   redacted question lines, on the dark ticket gradient. */
+   redacted question lines, on the dark ticket gradient. Signal-blue sweep
+   instead of the old honey one (rgba(45,85,245,.28) = --color-signal at
+   28% — kept as a literal rgba() rather than var() since background-image
+   gradients can't currently pull alpha-composited CSS custom properties in
+   this codebase's build). */
 @keyframes mystery-shimmer {
   from { background-position: 130% 0; }
   to { background-position: -30% 0; }
 }
 .animate-mystery-shimmer-dark {
-  background-image: linear-gradient(100deg, rgba(255, 253, 249, 0.09) 30%, rgba(232, 163, 61, 0.28) 50%, rgba(255, 253, 249, 0.09) 70%);
+  background-image: linear-gradient(100deg, rgba(255, 255, 255, 0.09) 30%, rgba(45, 85, 245, 0.28) 50%, rgba(255, 255, 255, 0.09) 70%);
   background-size: 220% 100%;
   animation: mystery-shimmer 3s linear infinite;
 }
@@ -321,14 +320,14 @@
 /* SealedTicketCover: the wax-seal idle glow (sealed ticket page), and the
    one-shot tear sequence (RevealTicket's first-open-since-resolution cover,
    for a subject only) — seal shudders, both cover halves fly off with a
-   honey flash at the tear, the ticket underneath pops in, then its content
-   (question/badge/detail/odds/callers) stagger-fades in. Durations/easings
-   are the finalized design spec's exact values. Reuses demo-fade-up/
+   signal-blue flash at the tear, the ticket underneath pops in, then its
+   content (question/badge/detail/odds/callers) stagger-fades in. Durations/
+   easings are the finalized design spec's exact values. Reuses demo-fade-up/
    demo-fade-left above for the plain fade-ins rather than re-declaring
    near-identical keyframes. */
 @keyframes mystery-seal-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(232, 163, 61, 0.35), 0 10px 26px -10px rgba(0, 0, 0, 0.6); }
-  50% { box-shadow: 0 0 0 12px rgba(232, 163, 61, 0), 0 10px 26px -10px rgba(0, 0, 0, 0.6); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(45, 85, 245, 0.35), 0 10px 26px -10px rgba(0, 0, 0, 0.6); }
+  50% { box-shadow: 0 0 0 12px rgba(45, 85, 245, 0), 0 10px 26px -10px rgba(0, 0, 0, 0.6); }
 }
 @keyframes mystery-seal-shake {
   0%, 100% { transform: translateX(0); }
@@ -388,7 +387,7 @@
   }
 }
 
-/* LiveRulesForm challenge-window slider: 6px track, honey fill driven by --fill, 20px thumb. */
+/* LiveRulesForm challenge-window slider: 6px track, signal-blue fill driven by --fill, 20px thumb. */
 .challenge-window-slider {
   -webkit-appearance: none;
   appearance: none;
@@ -396,10 +395,10 @@
   border-radius: 999px;
   background: linear-gradient(
     to right,
-    var(--color-honey-500) 0%,
-    var(--color-honey-500) var(--fill, 0%),
-    var(--color-espresso-100) var(--fill, 0%),
-    var(--color-espresso-100) 100%
+    var(--color-signal) 0%,
+    var(--color-signal) var(--fill, 0%),
+    var(--color-hairline) var(--fill, 0%),
+    var(--color-hairline) 100%
   );
 }
 .challenge-window-slider::-webkit-slider-thumb {
@@ -408,18 +407,18 @@
   height: 20px;
   width: 20px;
   border-radius: 999px;
-  background: var(--color-paper-white);
-  border: 1.5px solid var(--color-honey-600);
-  box-shadow: 0 1px 3px rgba(28, 19, 13, 0.3);
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-signal-deep);
+  box-shadow: 0 1px 3px rgba(12, 16, 24, 0.3);
   cursor: pointer;
 }
 .challenge-window-slider::-moz-range-thumb {
   height: 20px;
   width: 20px;
   border-radius: 999px;
-  background: var(--color-paper-white);
-  border: 1.5px solid var(--color-honey-600);
-  box-shadow: 0 1px 3px rgba(28, 19, 13, 0.3);
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-signal-deep);
+  box-shadow: 0 1px 3px rgba(12, 16, 24, 0.3);
   cursor: pointer;
 }
 .challenge-window-slider::-moz-range-track {
