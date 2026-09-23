@@ -16,9 +16,9 @@ export function StartGroupButton() {
     <button
       type="button"
       onClick={() => window.dispatchEvent(new CustomEvent(NEW_GROUP_EVENT))}
-      className="flex w-full items-center justify-center gap-2 rounded-full border-0 bg-espresso-900 py-3.5 text-[15px] font-extrabold text-paper-white"
+      className="flex w-full items-center justify-center gap-2 rounded-full border-0 bg-ink py-3.5 text-[15px] font-extrabold text-white"
     >
-      <PlusIcon className="h-4 w-4 text-honey-300" />
+      <PlusIcon className="h-4 w-4 text-on-ink" />
       Start a group
     </button>
   );

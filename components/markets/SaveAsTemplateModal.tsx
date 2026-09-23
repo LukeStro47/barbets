@@ -52,7 +52,7 @@ function buildCandidate(marketType: MarketType, draftTitle: string, options: str
   return { title: draftTitle, options: null, hasCleanPlaceholder: false, needsConfirm: false };
 }
 
-const fieldLabelClasses = 'text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase';
+const fieldLabelClasses = 'text-[10.5px] font-extrabold tracking-[0.1em] text-faint uppercase';
 
 export function SaveAsTemplateModal({
   groupId,
@@ -122,8 +122,8 @@ export function SaveAsTemplateModal({
   if (saved) {
     return (
       <Modal onClose={onClose}>
-        <p className="font-display font-bold text-espresso-900">Saved</p>
-        <p className="text-sm leading-[1.5] text-espresso-600">
+        <p className="font-display font-bold text-ink">Saved</p>
+        <p className="text-sm leading-[1.5] text-muted">
           Find it from + · Browse templates{scope === 'group' ? `, shared with ${groupName}` : ''}.
         </p>
         <Button className="w-full" onClick={onClose}>
@@ -136,26 +136,26 @@ export function SaveAsTemplateModal({
   if (step === 'confirm') {
     return (
       <Modal onClose={onClose}>
-        <p className="font-display text-lg font-extrabold text-espresso-950">Save as template</p>
-        <p className="text-[13.5px] leading-[1.5] text-espresso-600">
+        <p className="font-display text-lg font-extrabold text-ink">Save as template</p>
+        <p className="text-[13.5px] leading-[1.5] text-muted">
           You picked one person for this bet. Swap their name for a fill-in-the-blank so you can pick anyone next
           time.
         </p>
 
-        <div className="rounded-2xl border-[1.5px] border-honey-400 bg-paper-white px-3.5 py-3">
+        <div className="rounded-2xl border-[1.5px] border-signal bg-surface px-3.5 py-3">
           <p className={fieldLabelClasses}>Title</p>
           <textarea
             value={proposedTitle}
             onChange={(e) => setProposedTitle(e.target.value)}
             rows={2}
-            className="mt-1.5 block w-full resize-none border-0 bg-transparent p-0 text-[15px] font-semibold text-espresso-950 focus:outline-none"
+            className="mt-1.5 block w-full resize-none border-0 bg-transparent p-0 text-[15px] font-semibold text-ink focus:outline-none"
           />
         </div>
-        <p className="text-[12px] leading-[1.45] text-espresso-400">
+        <p className="text-[12px] leading-[1.45] text-faint">
           We swapped out {subjects[0]?.nickname}&apos;s name, edit the text above if that&apos;s not quite right.
         </p>
 
-        <button type="button" onClick={skipSwap} className="border-0 bg-transparent p-0 text-[12.5px] font-extrabold text-honey-700">
+        <button type="button" onClick={skipSwap} className="border-0 bg-transparent p-0 text-[12.5px] font-extrabold text-signal">
           Save without the swap
         </button>
 
@@ -173,17 +173,17 @@ export function SaveAsTemplateModal({
 
   return (
     <Modal onClose={onClose}>
-      <p className="font-display text-lg font-extrabold text-espresso-950">Save as template</p>
-      {error && <p className="text-sm text-danger-700">{error}</p>}
+      <p className="font-display text-lg font-extrabold text-ink">Save as template</p>
+      {error && <p className="text-sm text-alert">{error}</p>}
 
       <div>
         <p className={fieldLabelClasses}>Template name</p>
-        <div className="mt-1.5 rounded-2xl border-[1.5px] border-espresso-200 px-3.5 py-3">
+        <div className="mt-1.5 rounded-2xl border-[1.5px] border-hairline px-3.5 py-3">
           <textarea
             value={name}
             onChange={(e) => setName(e.target.value)}
             rows={2}
-            className="block w-full resize-none border-0 bg-transparent p-0 text-[14.5px] font-semibold text-espresso-950 focus:outline-none"
+            className="block w-full resize-none border-0 bg-transparent p-0 text-[14.5px] font-semibold text-ink focus:outline-none"
           />
         </div>
       </div>
@@ -196,7 +196,7 @@ export function SaveAsTemplateModal({
             onClick={() => setScope('private')}
             className={cn(
               'rounded-2xl border-[1.5px] px-3.5 py-3 text-left text-sm font-extrabold',
-              scope === 'private' ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-700'
+              scope === 'private' ? 'border-signal bg-signal-tint text-signal-deep' : 'border-hairline text-muted'
             )}
           >
             Just me
@@ -206,7 +206,7 @@ export function SaveAsTemplateModal({
             onClick={() => setScope('group')}
             className={cn(
               'rounded-2xl border-[1.5px] px-3.5 py-3 text-left text-sm font-extrabold',
-              scope === 'group' ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-700'
+              scope === 'group' ? 'border-signal bg-signal-tint text-signal-deep' : 'border-hairline text-muted'
             )}
           >
             Share with {groupName}

@@ -6,12 +6,12 @@ export function StakesCard({ prizeText, punishmentText }: { prizeText: string | 
   if (!prizeText && !punishmentText) return null;
 
   return (
-    <div className="flex flex-col gap-2.5 rounded-2xl border border-espresso-100 bg-paper-white p-4">
+    <div className="flex flex-col gap-2.5 rounded-2xl border border-hairline bg-surface p-4">
       {prizeText && (
         <div className="flex items-start gap-2.5">
           <span className="shrink-0 text-lg leading-none">🏆</span>
-          <p className="min-w-0 flex-1 text-sm text-espresso-700">
-            <span className="font-bold text-espresso-900">Prize: </span>
+          <p className="min-w-0 flex-1 text-sm text-muted">
+            <span className="font-bold text-ink">Prize: </span>
             {prizeText}
           </p>
         </div>
@@ -19,8 +19,8 @@ export function StakesCard({ prizeText, punishmentText }: { prizeText: string | 
       {punishmentText && (
         <div className="flex items-start gap-2.5">
           <span className="shrink-0 text-lg leading-none">💀</span>
-          <p className="min-w-0 flex-1 text-sm text-espresso-700">
-            <span className="font-bold text-espresso-900">Punishment: </span>
+          <p className="min-w-0 flex-1 text-sm text-muted">
+            <span className="font-bold text-ink">Punishment: </span>
             {punishmentText}
           </p>
         </div>

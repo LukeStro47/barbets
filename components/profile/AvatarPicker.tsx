@@ -103,8 +103,8 @@ export function AvatarPicker({
 
       {step === 'menu' && (
         <Modal onClose={close}>
-          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">Profile picture</p>
-          {error && <p className="text-sm text-danger-700">{error}</p>}
+          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-ink">Profile picture</p>
+          {error && <p className="text-sm text-alert">{error}</p>}
 
           <div className="flex justify-center py-1">
             <UserAvatar
@@ -113,7 +113,7 @@ export function AvatarPicker({
               avatarUpdatedAt={avatarUpdatedAt}
               avatarPresetKey={avatarPresetKey}
               className="h-20 w-20 text-2xl"
-              fallbackClassName="bg-espresso-50 text-honey-700"
+              fallbackClassName="bg-rule text-signal"
             />
           </div>
 
@@ -122,7 +122,7 @@ export function AvatarPicker({
           </Button>
 
           <div className="space-y-2">
-            <p className="text-xs font-bold text-espresso-500">Or pick an icon</p>
+            <p className="text-xs font-bold text-muted">Or pick an icon</p>
             <div className="flex flex-wrap gap-2.5">
               {GROUP_AVATARS.map((a) => (
                 <button
@@ -134,7 +134,7 @@ export function AvatarPicker({
                   title={a.label}
                   className={cn(
                     'flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-[1.5px] transition-colors',
-                    avatarPresetKey === a.key ? 'border-honey-500 bg-honey-50' : 'border-espresso-200 bg-paper-white'
+                    avatarPresetKey === a.key ? 'border-signal bg-signal-tint' : 'border-hairline bg-surface'
                   )}
                 >
                   <img src={`/avatars/${a.key}.png`} alt={a.label} className="h-full w-full object-cover" />
@@ -148,7 +148,7 @@ export function AvatarPicker({
               type="button"
               disabled={isPending}
               onClick={remove}
-              className="w-full text-center text-[12.5px] font-semibold text-danger-700 hover:underline"
+              className="w-full text-center text-[12.5px] font-semibold text-alert hover:underline"
             >
               Remove and use initials
             </button>

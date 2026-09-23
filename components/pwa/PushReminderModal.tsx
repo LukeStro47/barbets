@@ -64,11 +64,11 @@ export function PushReminderModal() {
 
   return (
     <Modal onClose={dismiss}>
-      <p className="font-display font-bold text-espresso-900">Turn on notifications?</p>
-      <p className="text-sm text-espresso-500">
+      <p className="font-display font-bold text-ink">Turn on notifications?</p>
+      <p className="text-sm text-muted">
         Get notified when a market needs you, closes, or resolves. You can turn this off any time from your profile.
       </p>
-      {error && <p className="text-sm text-danger-700">{error}</p>}
+      {error && <p className="text-sm text-alert">{error}</p>}
       <Button className="w-full" disabled={isPending} onClick={subscribe}>
         Enable notifications
       </Button>

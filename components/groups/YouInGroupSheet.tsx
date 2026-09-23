@@ -37,8 +37,8 @@ export function YouInGroupSheet({
       />
       {open && (
         <Modal onClose={() => setOpen(false)}>
-          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">You in this group</p>
-          <p className="text-xs text-espresso-400">How everyone sees you here.</p>
+          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-ink">You in this group</p>
+          <p className="text-xs text-faint">How everyone sees you here.</p>
           {nickname && <NicknameEditor groupId={groupId} nickname={nickname} />}
           {isPublic && isModerator && !isOwner && <ForfeitModeratorButton groupId={groupId} groupName={groupName} />}
           {!isOwner && <LeaveGroupButton groupId={groupId} groupName={groupName} />}

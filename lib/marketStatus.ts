@@ -10,9 +10,9 @@ export const STATUS_LABEL: Record<MarketStatus, string> = {
   voided: 'Void',
 };
 
-// One color per meaning, not per status: red = needs you now, ink = live/active
-// (money's on the line), neutral = informational/done. Honey is reserved for money
-// figures elsewhere (balances, stakes, pool totals) and never used as a status tone.
+// One color per meaning, not per status: alert = needs you now, ink = live/active
+// (money's on the line), neutral = informational/done. Signal is reserved for
+// actionable chrome and never used as a status tone wash.
 export const STATUS_TONE: Record<MarketStatus, 'neutral' | 'ink' | 'danger'> = {
   pending_sponsor: 'danger',
   open: 'ink',

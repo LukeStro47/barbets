@@ -128,30 +128,30 @@ export function MarketActions({
 
   return (
     <div className="space-y-3">
-      {error && <p className="text-sm text-danger-700">{error}</p>}
+      {error && <p className="text-[13.5px] text-alert">{error}</p>}
 
       {market.status === 'proposed' && proposal && (
         <Card className="space-y-3">
-          <p className="text-sm text-espresso-600">
+          <p className="text-[13.5px] text-muted">
             <CountdownTimer target={new Date(new Date(proposal.proposed_at).getTime() + resolutionWindowMs).toISOString()} prefix="Challenge window closes in" />
           </p>
           {iAmProposer ? (
-            <p className="text-xs text-espresso-400">You proposed this outcome, so you can't challenge it yourself.</p>
+            <p className="text-[12.5px] text-faint">You proposed this outcome, so you can&apos;t challenge it yourself.</p>
           ) : !confirmingChallenge ? (
-            <Button variant="outline" disabled={isPending} onClick={() => setConfirmingChallenge(true)} className="w-full">
+            <Button variant="outline" disabled={isPending} onClick={() => setConfirmingChallenge(true)} className="w-full border-alert text-alert hover:bg-alert-bg">
               Challenge this proposal
             </Button>
           ) : (
-            <>
-              <p className="text-xs font-semibold text-danger-700">
+            <div className="overflow-hidden rounded-[18px] border border-alert-line bg-alert-bg">
+              <p className="px-3.5 pt-3 text-[12.5px] leading-[1.45] font-semibold text-alert">
                 This moves the market to a secret ballot for everyone eligible to vote on what actually happened.
               </p>
-              <div className="flex gap-2">
+              <div className="flex gap-2 p-3">
                 <Button variant="outline" className="flex-1" onClick={() => setConfirmingChallenge(false)}>
                   Cancel
                 </Button>
                 <Button
-                  variant="danger"
+                  variant="dark"
                   className="flex-1"
                   disabled={isPending}
                   onClick={() => run(() => challengeResolution(groupId, market.id))}
@@ -159,13 +159,13 @@ export function MarketActions({
                   Confirm
                 </Button>
               </div>
-            </>
+            </div>
           )}
           {challengeWindowElapsed && (
             <button
               disabled={isPending}
               onClick={() => run(() => finalizeMarket(groupId, market.id))}
-              className="w-full text-center text-xs text-espresso-400 underline"
+              className="w-full text-center text-[12.5px] font-semibold text-faint underline"
             >
               Finalize now
             </button>
@@ -174,35 +174,35 @@ export function MarketActions({
       )}
 
       {market.status === 'disputed' && challenge && (
-        <Card className="!rounded-[22px] overflow-hidden !border-[1.5px] !border-danger-500 !p-0 shadow-[0_6px_18px_-10px_rgba(28,19,13,0.35)]">
-          <div className="flex items-center justify-between gap-2 bg-danger-100 px-[18px] py-3">
-            <p className="text-xs font-extrabold tracking-[0.06em] text-danger-700 uppercase">Your ballot</p>
+        <div className="overflow-hidden rounded-[24px] border border-alert-line bg-surface">
+          <div className="flex items-center justify-between gap-2 border-b border-alert-line bg-alert-bg px-4 py-3">
+            <p className="text-[11.5px] font-bold tracking-[0.1em] text-alert uppercase">Your ballot</p>
             {votesCast !== undefined && eligibleVoters !== undefined && (
-              <p className="text-[12.5px] font-bold text-danger-700">
+              <p className="font-mono text-[12.5px] font-semibold text-alert">
                 {votesCast} of {eligibleVoters} voted
               </p>
             )}
           </div>
 
-          <div className="space-y-3.5 p-[18px]">
+          <div className="space-y-3.5 p-4">
             {proposal && (
-              <div className="space-y-1 rounded-2xl bg-espresso-50 p-3.5">
-                <p className="text-xs text-espresso-500">
+              <div className="space-y-1 rounded-[14px] border border-hairline bg-canvas px-3.5 py-3">
+                <p className="text-[12.5px] text-muted">
                   {proposerNickname ? <Mention nickname={proposerNickname} /> : 'Someone'} proposed{' '}
-                  <strong className="font-extrabold text-espresso-900">
+                  <strong className="font-bold text-ink">
                     <OptionLabel label={(proposalChoiceLabel ?? '').toUpperCase()} />
                   </strong>
                 </p>
-                {proposal.justification && <p className="text-[13.5px] leading-[1.4] text-espresso-600">"{proposal.justification}"</p>}
+                {proposal.justification && <p className="text-[13.5px] leading-[1.45] text-muted">&ldquo;{proposal.justification}&rdquo;</p>}
                 {proposal.photo_path && <ResolutionProofButton marketId={market.id} variant="action" />}
               </div>
             )}
 
             <div className="space-y-0.5">
-              <p className="text-base font-extrabold text-espresso-950">What actually happened?</p>
-              <p className="text-[13px] leading-[1.4] text-espresso-500">
+              <p className="text-[17px] font-bold tracking-[-0.01em] text-ink">What actually happened?</p>
+              <p className="text-[13.5px] leading-[1.5] text-muted">
                 Vote on the outcome, not on whether you agree with the proposal.{' '}
-                <button type="button" onClick={() => setShowRulesModal(true)} className="font-bold text-honey-700">
+                <button type="button" onClick={() => setShowRulesModal(true)} className="font-bold text-signal">
                   How votes settle
                 </button>
               </p>
@@ -222,31 +222,35 @@ export function MarketActions({
                         setBallotExpanded(false);
                         run(() => castVote(groupId, market.id, proposalChoiceFor(c.value)));
                       }}
-                      className={`flex w-full items-center gap-2.5 rounded-2xl border-[1.5px] px-3.5 py-3 text-left text-[15px] font-extrabold uppercase ${
-                        selected ? 'border-espresso-900 bg-espresso-900 text-paper-white' : 'border-espresso-200 text-espresso-500'
+                      className={`flex w-full items-center gap-2.5 rounded-[14px] border px-3.5 py-3 text-left text-[15px] font-bold uppercase ${
+                        selected ? 'border-ink bg-ink text-white' : 'border-hairline bg-surface text-muted'
                       }`}
                     >
                       <span
                         className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 ${
-                          selected ? 'border-honey-300' : 'border-espresso-200'
+                          selected ? 'border-on-ink' : 'border-hairline'
                         }`}
                       >
-                        {selected && <span className="h-2 w-2 rounded-full bg-honey-300" />}
+                        {selected && <span className="h-2 w-2 rounded-full bg-on-ink" />}
                       </span>
                       <span className="min-w-0 flex-1 truncate">
                         <OptionLabel label={c.label} />
                       </span>
-                      {c.value === 'void' && <span className="shrink-0 text-xs font-semibold text-espresso-400 normal-case">Can't be judged</span>}
+                      {c.value === 'void' && (
+                        <span className={`shrink-0 text-[12px] font-semibold normal-case ${selected ? 'text-white/55' : 'text-faint'}`}>
+                          Can&apos;t be judged
+                        </span>
+                      )}
                     </button>
                   );
                 })}
               </div>
             ) : (
-              <div className="flex w-full items-center gap-2.5 rounded-2xl border-[1.5px] border-espresso-900 bg-espresso-900 px-3.5 py-3">
-                <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 border-honey-300">
-                  <span className="h-2 w-2 rounded-full bg-honey-300" />
+              <div className="flex w-full items-center gap-2.5 rounded-[14px] border border-ink bg-ink px-3.5 py-3">
+                <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 border-on-ink">
+                  <span className="h-2 w-2 rounded-full bg-on-ink" />
                 </span>
-                <span className="min-w-0 flex-1 truncate text-[15px] font-extrabold text-paper-white">
+                <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-white">
                   Your vote:{' '}
                   <OptionLabel label={(choiceLabels.find((c) => c.value === voteChoice)?.label ?? '').toUpperCase()} />
                 </span>
@@ -254,35 +258,35 @@ export function MarketActions({
                   type="button"
                   disabled={isPending}
                   onClick={() => setBallotExpanded(true)}
-                  className="shrink-0 text-xs font-bold text-honey-300 underline"
+                  className="shrink-0 text-[12.5px] font-bold text-on-ink underline"
                 >
                   Switch vote
                 </button>
               </div>
             )}
 
-            <p className="text-xs text-espresso-400">Secret until voting closes. Change it any time before then.</p>
+            <p className="text-[12.5px] text-faint">Secret until voting closes. Change it any time before then.</p>
 
             {voteWindowElapsed && (
               <button
                 disabled={isPending}
                 onClick={() => run(() => finalizeMarket(groupId, market.id))}
-                className="w-full text-center text-xs text-espresso-400 underline"
+                className="w-full text-center text-[12.5px] font-semibold text-faint underline"
               >
                 Finalize now
               </button>
             )}
           </div>
-        </Card>
+        </div>
       )}
 
       {showRulesModal && (
         <Modal onClose={() => setShowRulesModal(false)}>
-          <p className="font-display font-bold text-espresso-900">How votes settle</p>
-          <p className="text-sm text-espresso-600">
+          <p className="text-[17px] font-bold tracking-[-0.01em] text-ink">How votes settle</p>
+          <p className="text-[13.5px] leading-[1.5] text-muted">
             Secret ballot on what actually happened, not on whether you agree with the proposal. Vote VOID if it
-            can't be fairly judged. A tie or no votes upholds the proposal; a tie without it voids instead. Ballots
-            reveal once voting closes, early if everyone's voted. You can change your vote until then.
+            can&apos;t be fairly judged. A tie or no votes upholds the proposal; a tie without it voids instead. Ballots
+            reveal once voting closes, early if everyone&apos;s voted. You can change your vote until then.
           </p>
           <Button className="w-full" onClick={() => setShowRulesModal(false)}>
             Got it

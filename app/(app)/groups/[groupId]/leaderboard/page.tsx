@@ -13,11 +13,9 @@ import { formatTokens, formatOrdinal, numberWord } from '@/lib/formatNumber';
 import { TITLE_ORDER, type GroupTitleRow } from '@/lib/titles';
 import { cn } from '@/lib/cn';
 
-/** No medals (or a "winner") while nobody's actually bet yet — every balance still tied at the
- * seed amount makes rank 0 an artifact of query order, not a result. */
-function medal(rank: number, noBetsPlaced: boolean): string {
-  if (noBetsPlaced) return `${rank + 1}.`;
-  return rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : `${rank + 1}.`;
+/** Rank numeral — no medals; order is the information. */
+function rankLabel(rank: number): string {
+  return `${rank + 1}`;
 }
 
 /** "Aug 1, '26" — short enough to sit next to the season number without wrapping. */
@@ -172,8 +170,7 @@ export default async function LeaderboardPage({
     : Math.max(0, (leader?.balance ?? 0) - (you?.balance ?? 0));
 
   const hero = leader && (
-    <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-espresso-900 to-espresso-700 p-[18px]">
-      <div className="pointer-events-none absolute inset-0 opacity-50 [background:radial-gradient(circle_at_90%_0%,rgba(232,163,61,0.3),rgba(232,163,61,0)_60%)]" />
+    <div className="relative overflow-hidden rounded-[26px] bg-ink p-[18px]">
       <Link href={`/groups/${groupId}/members/${leader.id}`} className="relative flex items-center gap-3.5">
         {/* Not even an initials placeholder in a public group — no avatar chip at all, not just no
             photo, since the empty circle still reads as "a person's picture goes here". */}
@@ -183,37 +180,37 @@ export default async function LeaderboardPage({
             nickname={leader.nickname}
             avatarUpdatedAt={avatarByUser.get(leader.user_id)?.avatar_updated_at}
             avatarPresetKey={avatarByUser.get(leader.user_id)?.avatar_preset_key}
-            className="h-[52px] w-[52px] border-[1.5px] border-honey-300/50 text-[15px]"
-            fallbackClassName="bg-honey-500/[0.18] text-honey-300"
+            className="h-[52px] w-[52px] border border-white/15 text-[15px]"
+            fallbackClassName="bg-white/[0.08] text-on-ink"
           />
         )}
         <span className="min-w-0 flex-1">
-          <span className="block text-[10px] font-extrabold tracking-[0.1em] text-honey-300 uppercase">
+          <span className="block text-[11.5px] font-bold tracking-[0.1em] text-on-ink uppercase">
             {noBetsPlaced ? "Nobody's bet yet" : isIntermission ? 'Took the season' : 'Out in front'}
           </span>
-          <Mention nickname={leader.nickname} className="mt-0.5 block truncate text-[19px] font-extrabold tracking-[-0.015em] text-paper-white" />
-          <span className="mt-0.5 block text-xs text-paper-white/55">{formatTokens(leader.balance)} tokens</span>
+          <Mention nickname={leader.nickname} className="mt-0.5 block truncate text-[19px] font-extrabold tracking-[-0.015em] text-white" />
+          <span className="mt-0.5 block font-mono text-[12.5px] font-semibold text-white/55">{formatTokens(leader.balance)}</span>
         </span>
-        <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-paper-white/40" />
+        <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-white/40" />
       </Link>
       <div className="relative mt-[15px] flex gap-3 border-t border-white/10 pt-3.5">
         <span className="flex-1">
-          <span className="block text-xl font-extrabold tabular-nums text-paper-white">
+          <span className="block font-mono text-[20px] font-semibold tracking-tight text-white">
             {noBetsPlaced ? '—' : you ? formatOrdinal(yourRank) : '—'}
           </span>
-          <span className="mt-px block text-[10px] font-extrabold tracking-[0.07em] text-paper-white/45 uppercase">
+          <span className="mt-px block text-[11.5px] font-bold tracking-[0.1em] text-white/45 uppercase">
             {noBetsPlaced ? 'not ranked yet' : you ? `you, of ${members.length}` : `${members.length} playing`}
           </span>
         </span>
         <span className="flex-1">
-          <span className="block text-xl font-extrabold tabular-nums text-honey-300">{formatTokens(you?.balance ?? 0)}</span>
-          <span className="mt-px block text-[10px] font-extrabold tracking-[0.07em] text-paper-white/45 uppercase">
+          <span className="block font-mono text-[20px] font-semibold tracking-tight text-on-ink">{formatTokens(you?.balance ?? 0)}</span>
+          <span className="mt-px block text-[11.5px] font-bold tracking-[0.1em] text-white/45 uppercase">
             {isIntermission ? 'your final' : 'your tokens'}
           </span>
         </span>
         <span className="flex-1">
-          <span className="block text-xl font-extrabold tabular-nums text-paper-white">{noBetsPlaced ? '—' : formatTokens(gapValue)}</span>
-          <span className="mt-px block text-[10px] font-extrabold tracking-[0.07em] text-paper-white/45 uppercase">
+          <span className="block font-mono text-[20px] font-semibold tracking-tight text-white">{noBetsPlaced ? '—' : formatTokens(gapValue)}</span>
+          <span className="mt-px block text-[11.5px] font-bold tracking-[0.1em] text-white/45 uppercase">
             {noBetsPlaced ? 'no bets yet' : youLead ? 'clear of 2nd' : isIntermission ? 'off the win' : 'behind the leader'}
           </span>
         </span>
@@ -222,63 +219,66 @@ export default async function LeaderboardPage({
   );
 
   const standingsSection = (
-    <Card className="space-y-2">
-      {(() => {
-        const top = members?.[0]?.balance || 1;
-        return (members ?? []).map((m: any, i: number) => {
-          const isMe = m.user_id === user?.id;
-          const pct = Math.max(9, Math.round((m.balance / top) * 100));
-          return (
-            <div
-              key={m.user_id}
-              className={`relative h-[54px] overflow-hidden rounded-2xl bg-espresso-50 ${
-                isMe ? 'border-[1.5px] border-honey-500' : 'border-[1.5px] border-transparent'
-              }`}
-            >
-              <span
-                className={`absolute inset-y-0 left-0 ${isMe ? 'bg-honey-500' : 'bg-honey-500/30'}`}
-                style={{ width: `${pct}%` }}
+    <div className="overflow-hidden rounded-[24px] border border-hairline bg-surface">
+      {(members ?? []).map((m: any, i: number) => {
+        const isMe = m.user_id === user?.id;
+        // Optional position delta when a future data source provides it — keep RPCs unchanged.
+        const positionDelta: number | undefined = typeof m.position_delta === 'number' ? m.position_delta : undefined;
+        return (
+          <Link
+            key={m.user_id}
+            href={`/groups/${groupId}/members/${m.id}`}
+            className={cn(
+              'flex items-center gap-2.5 px-4 py-[14px]',
+              i > 0 && 'border-t border-hairline',
+              isMe && 'bg-canvas'
+            )}
+          >
+            <span className="w-6 shrink-0 font-mono text-[12.5px] font-semibold text-faint">{rankLabel(i)}</span>
+            {!group?.is_public && (
+              <UserAvatar
+                userId={m.user_id}
+                nickname={m.nickname}
+                avatarUpdatedAt={avatarByUser.get(m.user_id)?.avatar_updated_at}
+                avatarPresetKey={avatarByUser.get(m.user_id)?.avatar_preset_key}
+                className={cn('h-9 w-9 text-xs', isMe ? 'border border-ink' : 'border border-hairline')}
+                fallbackClassName="bg-surface text-muted"
               />
-              <Link href={`/groups/${groupId}/members/${m.id}`} className="absolute inset-0 flex items-center gap-2.5 px-3">
-                <span className="w-5 shrink-0 text-center text-xs font-extrabold text-espresso-500">{medal(i, noBetsPlaced)}</span>
-                {!group?.is_public && (
-                  <UserAvatar
-                    userId={m.user_id}
-                    nickname={m.nickname}
-                    avatarUpdatedAt={avatarByUser.get(m.user_id)?.avatar_updated_at}
-                    avatarPresetKey={avatarByUser.get(m.user_id)?.avatar_preset_key}
-                    className={cn('h-9 w-9 text-xs', isMe ? 'border-2 border-honey-500' : 'border-[1.5px] border-espresso-100')}
-                    fallbackClassName="bg-paper-white text-espresso-700"
-                  />
+            )}
+            <span className="min-w-0 flex-1">
+              <Mention nickname={m.nickname} className="block truncate text-[14.5px] font-bold text-ink" />
+              {(m.balance === 0 || m.status !== 'active') && (
+                <span className="block text-[11.5px] font-semibold text-faint">
+                  {m.balance === 0 && 'Broke'}
+                  {m.balance === 0 && m.status !== 'active' && ' · '}
+                  {m.status === 'dormant' && 'Sitting out'}
+                  {m.status === 'left' && 'Left'}
+                </span>
+              )}
+            </span>
+            {positionDelta !== undefined && positionDelta !== 0 && (
+              <span
+                className={cn(
+                  'shrink-0 font-mono text-[12.5px] font-semibold',
+                  positionDelta > 0 ? 'text-gain' : 'text-alert'
                 )}
-                <span className="min-w-0 flex-1">
-                  <Mention nickname={m.nickname} className="block truncate text-[13.5px] font-bold text-espresso-900" />
-                  {(m.balance === 0 || m.status !== 'active') && (
-                    <span className="block text-[10.5px] font-semibold text-espresso-400">
-                      {m.balance === 0 && 'Broke'}
-                      {m.balance === 0 && m.status !== 'active' && ' · '}
-                      {m.status === 'dormant' && 'Sitting out'}
-                      {m.status === 'left' && 'Left'}
-                    </span>
-                  )}
-                </span>
-                <span className="shrink-0 font-display text-[15px] font-extrabold tabular-nums text-espresso-900">
-                  {formatTokens(m.balance)}
-                </span>
-                <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-espresso-300" />
-              </Link>
-            </div>
-          );
-        });
-      })()}
-      <p className="pt-1 text-[11.5px] text-espresso-400">
+              >
+                {positionDelta > 0 ? `↑${positionDelta}` : `↓${Math.abs(positionDelta)}`}
+              </span>
+            )}
+            <span className="shrink-0 font-mono text-[15px] font-semibold text-ink">{formatTokens(m.balance)}</span>
+            <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-faint" />
+          </Link>
+        );
+      })}
+      <p className="border-t border-hairline px-4 py-3 text-[11.5px] text-faint">
         {noBetsPlaced
           ? "Nobody's placed a bet yet, so this order doesn't mean anything. It'll shuffle once betting starts."
           : isIntermission
             ? 'Frozen when the season ended. The next season starts everyone level.'
-            : "Bar length is share of the group's tokens. Your row is outlined."}
+            : 'Sorted by tokens. Your row is shaded.'}
       </p>
-    </Card>
+    </div>
   );
 
   let allTimeSection: React.ReactNode = null;
@@ -324,76 +324,75 @@ export default async function LeaderboardPage({
 
     allTimeSection = (
       <div className="space-y-6">
-        <Card>
-          <h2 className="mb-3 font-display font-bold text-espresso-800">Your all-time</h2>
+        <Card className="!shadow-none">
+          <h2 className="mb-3 text-[17px] font-bold tracking-[-0.01em] text-ink">Your all-time</h2>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <p className={`font-display text-2xl font-bold tabular-nums ${myNet >= 0 ? 'text-honey-600' : 'text-espresso-400'}`}>
+              <p className={`font-mono text-[26px] font-semibold tracking-tight ${myNet >= 0 ? 'text-gain' : 'text-faint'}`}>
                 {myNet >= 0 ? '+' : '−'}
                 {formatTokens(Math.abs(myNet))}
               </p>
-              <p className="mt-0.5 text-xs font-semibold text-espresso-400">Net across every season</p>
+              <p className="mt-0.5 text-[11.5px] font-semibold text-faint">Net across every season</p>
             </div>
             <div>
-              <p className="font-display text-2xl font-bold tabular-nums text-espresso-900">{myAccuracy == null ? '—' : `${myAccuracy}%`}</p>
-              <p className="mt-0.5 text-xs font-semibold text-espresso-400">Accuracy</p>
+              <p className="font-mono text-[26px] font-semibold tracking-tight text-ink">{myAccuracy == null ? '—' : `${myAccuracy}%`}</p>
+              <p className="mt-0.5 text-[11.5px] font-semibold text-faint">Accuracy</p>
             </div>
           </div>
         </Card>
 
         <div>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-espresso-400">Season history</h2>
+          <h2 className="mb-3 text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase">Season history</h2>
           {(results ?? []).length === 0 && page === 1 ? (
-            <EmptyState icon="🏆" title="No seasons in the books yet" subtitle="History shows up here once a season ends." />
+            <EmptyState icon="" title="No seasons in the books yet" subtitle="History shows up here once a season ends." />
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {(results ?? []).map((r: any, i: number) => (
-                <Card key={i}>
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-display font-bold text-espresso-800">{r.seasons?.name ?? `Season ${r.seasons?.number}`}</h3>
-                    <span className="text-xs text-espresso-400">
+                <Card key={i} className="!shadow-none">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-[15px] font-bold text-ink">{r.seasons?.name ?? `Season ${r.seasons?.number}`}</h3>
+                    <span className="shrink-0 font-mono text-[11.5px] font-semibold text-faint">
                       {r.seasons?.started_at && formatSeasonDate(r.seasons.started_at)} –{' '}
                       {r.seasons?.ended_at && formatSeasonDate(r.seasons.ended_at)}
                     </span>
                   </div>
 
                   {r.snapshot.champion && (
-                    <div className="mt-3.5 flex items-center gap-3.5 rounded-2xl bg-honey-50 px-4 py-3.5">
-                      <span className="flex h-12 w-12 shrink-0 -rotate-6 items-center justify-center rounded-full border-2 border-honey-500 bg-espresso-900 text-2xl shadow-[0_8px_16px_-6px_rgba(232,163,61,0.55)]">
-                        🏆
+                    <div className="mt-3.5 flex items-center gap-3.5 rounded-[18px] border border-hairline px-4 py-3.5">
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-ink font-mono text-[15px] font-semibold text-on-ink">
+                        1
                       </span>
                       <div className="min-w-0">
-                        <p className="text-[11px] font-bold tracking-[0.1em] text-honey-700 uppercase">Champion</p>
-                        <p className="truncate font-display text-lg font-bold text-espresso-900">
+                        <p className="text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase">Champion</p>
+                        <p className="truncate text-[15px] font-bold text-ink">
                           <Mention nickname={r.snapshot.champion.nickname} />
                         </p>
-                        <p className="text-sm font-semibold text-honey-700">{formatTokens(r.snapshot.champion.balance)} tokens</p>
+                        <p className="font-mono text-[12.5px] font-semibold text-muted">{formatTokens(r.snapshot.champion.balance)}</p>
                       </div>
                     </div>
                   )}
 
-                  {/* Perforated ticket-stub divider, same punch-hole trick RevealTicket uses between
-                      its header and odds sections. */}
-                  <div className="relative -mx-5 mt-4 border-t-2 border-dashed border-espresso-100">
-                    <span className="absolute top-1/2 -left-2.5 h-5 w-5 -translate-y-1/2 rounded-full bg-paper" />
-                    <span className="absolute top-1/2 -right-2.5 h-5 w-5 -translate-y-1/2 rounded-full bg-paper" />
+                  <div className="relative -mx-5 mt-4 border-t border-dashed border-hairline">
+                    <span className="absolute top-1/2 -left-2.5 h-5 w-5 -translate-y-1/2 rounded-full bg-canvas" />
+                    <span className="absolute top-1/2 -right-2.5 h-5 w-5 -translate-y-1/2 rounded-full bg-canvas" />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 pt-4 text-sm">
+                  <div className="grid grid-cols-2 gap-3 pt-4 text-[13.5px]">
                     {r.snapshot.biggest_single_win && (
                       <div>
-                        <p className="font-semibold text-espresso-700">Biggest win</p>
-                        <p className="text-espresso-500">
-                          <Mention nickname={r.snapshot.biggest_single_win.nickname} /> +
-                          {formatTokens(r.snapshot.biggest_single_win.amount)}
+                        <p className="text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase">Biggest win</p>
+                        <p className="mt-0.5 text-muted">
+                          <Mention nickname={r.snapshot.biggest_single_win.nickname} />{' '}
+                          <span className="font-mono font-semibold text-gain">+{formatTokens(r.snapshot.biggest_single_win.amount)}</span>
                         </p>
                       </div>
                     )}
                     {r.snapshot.worst_beat && (
                       <div>
-                        <p className="font-semibold text-espresso-700">Worst beat</p>
-                        <p className="text-espresso-500">
-                          <Mention nickname={r.snapshot.worst_beat.nickname} /> −{formatTokens(r.snapshot.worst_beat.amount)}
+                        <p className="text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase">Worst beat</p>
+                        <p className="mt-0.5 text-muted">
+                          <Mention nickname={r.snapshot.worst_beat.nickname} />{' '}
+                          <span className="font-mono font-semibold text-faint">−{formatTokens(r.snapshot.worst_beat.amount)}</span>
                         </p>
                       </div>
                     )}
@@ -404,17 +403,17 @@ export default async function LeaderboardPage({
           )}
 
           {(page > 1 || hasNextPage) && (
-            <div className="mt-4 flex items-center justify-between text-sm font-semibold">
+            <div className="mt-4 flex items-center justify-between text-[13.5px] font-semibold">
               {page > 1 ? (
-                <Link href={pageLink(page - 1)} className="text-honey-700 hover:text-honey-800">
-                  ← Newer
+                <Link href={pageLink(page - 1)} className="text-signal hover:text-signal-deep">
+                  Newer
                 </Link>
               ) : (
                 <span />
               )}
               {hasNextPage && (
-                <Link href={pageLink(page + 1)} className="text-honey-700 hover:text-honey-800">
-                  Older →
+                <Link href={pageLink(page + 1)} className="text-signal hover:text-signal-deep">
+                  Older
                 </Link>
               )}
             </div>
@@ -428,7 +427,7 @@ export default async function LeaderboardPage({
     <main className="mx-auto max-w-lg space-y-3.5 px-5 py-8">
       <PageHeader
         title="Leaderboard"
-        action={seasonLine && <span className="shrink-0 text-[11.5px] font-extrabold text-espresso-400">{seasonLine}</span>}
+        action={seasonLine && <span className="shrink-0 text-[11.5px] font-extrabold text-faint">{seasonLine}</span>}
       />
 
       {hero}
@@ -465,20 +464,20 @@ export default async function LeaderboardPage({
       {settings?.awards_enabled && (
         <Link
           href={`/groups/${groupId}/awards`}
-          className="flex items-center gap-3 rounded-[18px] border border-espresso-100 bg-paper-white px-3.5 py-3"
+          className="flex items-center gap-3 rounded-[20px] border border-hairline bg-surface px-3.5 py-3"
         >
-          <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-honey-50">
-            <AwardGlyph iconKey="target" stroke="var(--color-honey-700)" size={20} />
+          <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] border border-hairline bg-canvas">
+            <AwardGlyph iconKey="target" stroke="var(--color-ink)" size={20} />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[13.5px] font-extrabold text-espresso-950">Awards</span>
-            <span className="mt-0.5 block text-[11.5px] text-espresso-400">
+            <span className="block text-[13.5px] font-bold text-ink">Awards</span>
+            <span className="mt-0.5 block text-[11.5px] text-faint">
               {yourTitleCount > 0
                 ? `You hold ${numberWord(yourTitleCount)} of ${numberWord(TITLE_ORDER.length)} titles`
                 : 'See who holds each standing title'}
             </span>
           </span>
-          <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-espresso-300" />
+          <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-faint" />
         </Link>
       )}
     </main>

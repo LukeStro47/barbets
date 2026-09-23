@@ -1,22 +1,29 @@
 import type { HTMLAttributes } from 'react';
 import { cn } from '@/lib/cn';
 
-export type Tone = 'neutral' | 'honey' | 'success' | 'danger' | 'ink';
+export type Tone = 'neutral' | 'signal' | 'honey' | 'success' | 'danger' | 'ink' | 'gain' | 'alert';
 
-/** bg/text pairing per status tone — shared with anything that needs to tint a surface by market status (e.g. market row icon tiles), not just the pill badge below.
- * `ink` is the "live" tier of the market-status 3-tone system (see lib/marketStatus.ts): solid dark fill, reserved for "money's on the line right now" — never honey, which means money-the-figure, not money-in-play. */
+/** bg/text pairing per status tone. `ink` = live money on the line; `signal` = actionable/live chrome;
+ * `gain` = realised gain; `alert` = needs you / destructive. `honey`/`success`/`danger` kept as aliases. */
 export const TONE_CLASSES: Record<Tone, string> = {
-  neutral: 'bg-espresso-50 text-espresso-600',
-  honey: 'bg-honey-100 text-honey-800',
-  success: 'bg-success-100 text-success-700',
-  danger: 'bg-danger-100 text-danger-700',
-  ink: 'bg-espresso-800 text-paper-white',
+  neutral: 'bg-rule text-muted',
+  signal: 'bg-signal-tint text-signal',
+  honey: 'bg-signal-tint text-signal',
+  success: 'bg-gain-bg text-gain',
+  gain: 'bg-gain-bg text-gain',
+  danger: 'bg-alert-bg text-alert',
+  alert: 'bg-alert-bg text-alert',
+  ink: 'bg-ink text-white',
 };
 
 export function Badge({ tone = 'neutral', className, ...props }: HTMLAttributes<HTMLSpanElement> & { tone?: Tone }) {
   return (
     <span
-      className={cn('inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold', TONE_CLASSES[tone], className)}
+      className={cn(
+        'inline-flex shrink-0 items-center whitespace-nowrap rounded-[8px] px-2.5 py-1 text-[11.5px] font-bold',
+        TONE_CLASSES[tone],
+        className
+      )}
       {...props}
     />
   );

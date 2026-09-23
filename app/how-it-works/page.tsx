@@ -14,9 +14,9 @@ function windowLabel(hours: number): string {
   return hours === 1 ? '1 hour' : `${hours} hours`;
 }
 
-const cardClasses = 'overflow-hidden rounded-2xl border border-espresso-100 bg-paper-white shadow-sm shadow-espresso-900/5';
-const ruleTitleClasses = 'block font-display text-[15.5px] font-extrabold tracking-[-0.01em] text-espresso-950';
-const ruleBodyClasses = 'mt-1 block text-[13.5px] leading-[1.55] text-espresso-600';
+const cardClasses = 'overflow-hidden rounded-2xl border border-hairline bg-surface shadow-sm shadow-none';
+const ruleTitleClasses = 'block font-display text-[15.5px] font-extrabold tracking-[-0.01em] text-ink';
+const ruleBodyClasses = 'mt-1 block text-[13.5px] leading-[1.55] text-muted';
 
 /** A row title's paired value, read live from the group whose settings this page was opened from. */
 function ValuePill({ children, tone }: { children: React.ReactNode; tone: 'amber' | 'neutral' }) {
@@ -24,7 +24,7 @@ function ValuePill({ children, tone }: { children: React.ReactNode; tone: 'amber
     <span
       className={cn(
         'shrink-0 rounded-full px-2.5 py-0.5 text-[11.5px] font-bold',
-        tone === 'amber' ? 'border border-honey-300 bg-honey-50 text-honey-800' : 'bg-espresso-50 text-espresso-600'
+        tone === 'amber' ? 'border border-signal bg-signal-tint text-signal-deep' : 'bg-rule text-muted'
       )}
     >
       {children}
@@ -37,13 +37,13 @@ function ExplainerRow({ title, pill, children }: { title: string; pill?: React.R
     <div className="px-[18px] py-4">
       {pill ? (
         <div className="flex items-baseline justify-between gap-3">
-          <span className="font-display text-[15px] font-extrabold tracking-[-0.01em] text-espresso-950">{title}</span>
+          <span className="font-display text-[15px] font-extrabold tracking-[-0.01em] text-ink">{title}</span>
           {pill}
         </div>
       ) : (
-        <span className="font-display text-[15px] font-extrabold tracking-[-0.01em] text-espresso-950">{title}</span>
+        <span className="font-display text-[15px] font-extrabold tracking-[-0.01em] text-ink">{title}</span>
       )}
-      <p className="mt-1.5 text-[13.5px] leading-[1.55] text-espresso-600">{children}</p>
+      <p className="mt-1.5 text-[13.5px] leading-[1.55] text-muted">{children}</p>
     </div>
   );
 }
@@ -111,11 +111,11 @@ export default async function HowItWorksPage({ searchParams }: { searchParams: P
   ];
 
   const lifecycle = [
-    { dot: 'bg-espresso-900', label: 'Open', body: 'Bets are sealed. Nobody sees who bet what.' },
-    { dot: 'bg-espresso-900', label: 'Closed', body: 'Odds appear as a percentage split. Individual bets stay hidden.' },
-    { dot: 'bg-honey-500', label: 'Proposed', body: `Someone says what happened. ${window} to challenge it.` },
-    { dot: 'bg-espresso-200', label: 'Challenged', body: 'Someone disagreed. The group votes by secret ballot instead.' },
-    { dot: 'bg-success-500', label: 'Resolved', body: 'Winners split the losing pool. Every bet becomes visible.' },
+    { dot: 'bg-ink', label: 'Open', body: 'Bets are sealed. Nobody sees who bet what.' },
+    { dot: 'bg-ink', label: 'Closed', body: 'Odds appear as a percentage split. Individual bets stay hidden.' },
+    { dot: 'bg-signal', label: 'Proposed', body: `Someone says what happened. ${window} to challenge it.` },
+    { dot: 'bg-dash', label: 'Challenged', body: 'Someone disagreed. The group votes by secret ballot instead.' },
+    { dot: 'bg-gain', label: 'Resolved', body: 'Winners split the losing pool. Every bet becomes visible.' },
   ];
 
   return (
@@ -129,13 +129,13 @@ export default async function HowItWorksPage({ searchParams }: { searchParams: P
       </div>
 
       <div>
-        <h1 className="font-display text-[27px] font-extrabold tracking-[-0.025em] text-espresso-950">How Barbets works</h1>
-        <p className="mt-1.5 text-[14.5px] leading-[1.5] text-espresso-500">
+        <h1 className="font-display text-[27px] font-extrabold tracking-[-0.025em] text-ink">How Barbets works</h1>
+        <p className="mt-1.5 text-[14.5px] leading-[1.5] text-muted">
           Three minutes of house rules. Nobody is a bookmaker; the group settles its own bets.
         </p>
       </div>
 
-      <div className="flex gap-1.5 rounded-full bg-espresso-50 p-1">
+      <div className="flex gap-1.5 rounded-full bg-rule p-1">
         {tabs.map((t) => (
           <Link
             key={t.key}
@@ -144,7 +144,7 @@ export default async function HowItWorksPage({ searchParams }: { searchParams: P
             replace
             className={cn(
               'flex-1 rounded-full px-1.5 py-2 text-center text-[12.5px]',
-              tab === t.key ? 'bg-paper-white font-bold text-espresso-950 shadow-sm' : 'font-semibold text-espresso-400'
+              tab === t.key ? 'bg-surface font-bold text-ink shadow-sm' : 'font-semibold text-faint'
             )}
           >
             {t.label}
@@ -154,10 +154,10 @@ export default async function HowItWorksPage({ searchParams }: { searchParams: P
 
       {tab === 'basics' && (
         <>
-          <div className={`${cardClasses} [&>*+*]:border-t [&>*+*]:border-espresso-100`}>
+          <div className={`${cardClasses} [&>*+*]:border-t [&>*+*]:border-hairline`}>
             {basics.map((b, i) => (
               <div key={b.title} className="flex items-start gap-3.5 px-[18px] py-4">
-                <span className="w-5 shrink-0 pt-[3px] text-[11px] font-extrabold text-espresso-300">
+                <span className="w-5 shrink-0 pt-[3px] text-[11px] font-extrabold text-faint">
                   {String(i + 1).padStart(2, '0')}
                 </span>
                 <span>
@@ -169,7 +169,7 @@ export default async function HowItWorksPage({ searchParams }: { searchParams: P
           </div>
 
           <div>
-            <p className="mb-3 px-0.5 text-[10.5px] font-extrabold uppercase tracking-[0.1em] text-espresso-400">
+            <p className="mb-3 px-0.5 text-[10.5px] font-extrabold uppercase tracking-[0.1em] text-faint">
               A market&apos;s life
             </p>
             {/* A static timeline, not the old auto-advancing carousel: five stages that only make
@@ -180,11 +180,11 @@ export default async function HowItWorksPage({ searchParams }: { searchParams: P
                   <li key={s.label} className="flex gap-3.5">
                     <span className="relative flex w-[11px] shrink-0 flex-col items-center">
                       <span className={cn('relative z-10 mt-[5px] h-[11px] w-[11px] rounded-full', s.dot)} />
-                      {i < lifecycle.length - 1 && <span className="absolute top-[10px] h-full w-0.5 bg-espresso-100" />}
+                      {i < lifecycle.length - 1 && <span className="absolute top-[10px] h-full w-0.5 bg-rule" />}
                     </span>
                     <span className="min-w-0">
-                      <span className="block font-display text-[13.5px] font-extrabold text-espresso-950">{s.label}</span>
-                      <span className="mt-px block text-[12.5px] leading-[1.45] text-espresso-500">{s.body}</span>
+                      <span className="block font-display text-[13.5px] font-extrabold text-ink">{s.label}</span>
+                      <span className="mt-px block text-[12.5px] leading-[1.45] text-muted">{s.body}</span>
                     </span>
                   </li>
                 ))}
@@ -196,7 +196,7 @@ export default async function HowItWorksPage({ searchParams }: { searchParams: P
 
       {tab === 'your-group' && settings && group && (
         <>
-          <p className="px-0.5 text-[13.5px] leading-[1.55] text-espresso-600">
+          <p className="px-0.5 text-[13.5px] leading-[1.55] text-muted">
             The settings below are the ones{' '}
             {ownerMembership?.nickname ? (
               <Mention nickname={ownerMembership.nickname} className="font-bold" />
@@ -206,7 +206,7 @@ export default async function HowItWorksPage({ searchParams }: { searchParams: P
             has chosen for {group.name}. Every group answers them differently.
           </p>
 
-          <div className={`${cardClasses} [&>*+*]:border-t [&>*+*]:border-espresso-100`}>
+          <div className={`${cardClasses} [&>*+*]:border-t [&>*+*]:border-hairline`}>
             <ExplainerRow
               title="Endorsement"
               pill={<ValuePill tone={endorsementRequired ? 'amber' : 'neutral'}>{endorsementRequired ? 'Required' : 'Not needed'}</ValuePill>}
@@ -258,7 +258,7 @@ export default async function HowItWorksPage({ searchParams }: { searchParams: P
       )}
 
       {tab === 'edge-cases' && (
-        <div className={`${cardClasses} [&>*+*]:border-t [&>*+*]:border-espresso-100`}>
+        <div className={`${cardClasses} [&>*+*]:border-t [&>*+*]:border-hairline`}>
           <ExplainerRow title="Markets about you stay sealed">
             If a market @mentions you, you&apos;ll know one exists, but not what it&apos;s about, not until it resolves. Then you
             see everything, including who bet what.
@@ -284,19 +284,19 @@ export default async function HowItWorksPage({ searchParams }: { searchParams: P
       )}
 
       <div className="flex flex-col gap-2">
-        <Link href="/demo" className="text-[13.5px] font-semibold text-espresso-700">
+        <Link href="/demo" className="text-[13.5px] font-semibold text-muted">
           Prefer to see it in action? Try the interactive demo
         </Link>
         {/* A mailto rather than /feedback: this page is public, and /feedback lives behind the
             app's auth gate, so a logged-out reader would just get bounced to the login screen. */}
-        <a href={`mailto:${CONTACT_EMAIL}`} className="text-[13.5px] font-semibold text-espresso-700">
+        <a href={`mailto:${CONTACT_EMAIL}`} className="text-[13.5px] font-semibold text-muted">
           Questions? Email us
         </a>
         <div className="mt-0.5 flex gap-3.5">
-          <Link href="/terms" className="text-[12.5px] text-espresso-400">
+          <Link href="/terms" className="text-[12.5px] text-faint">
             Terms of use
           </Link>
-          <Link href="/privacy" className="text-[12.5px] text-espresso-400">
+          <Link href="/privacy" className="text-[12.5px] text-faint">
             Privacy policy
           </Link>
         </div>

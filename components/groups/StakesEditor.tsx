@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { PRIZE_MAX_LENGTH, PUNISHMENT_MAX_LENGTH } from '@/lib/limits';
 
 const inputClasses =
-  'w-full rounded-[10px] border border-espresso-200 bg-paper-white px-3.5 py-2.5 text-[15px] font-bold text-espresso-950 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
+  'w-full rounded-[10px] border border-hairline bg-surface px-3.5 py-2.5 text-[15px] font-bold text-ink focus:border-signal focus:outline-none focus:ring-2 focus:ring-signal/15';
 
 export function StakesEditor({
   groupId,
@@ -93,7 +93,7 @@ export function StakesEditor({
   }
 
   if (!canEdit) {
-    const empty = <p className="text-sm text-espresso-400">No prize or punishment set.</p>;
+    const empty = <p className="text-sm text-faint">No prize or punishment set.</p>;
     const body = settings.prize_text || settings.punishment_text ? (
       <StakesCard prizeText={settings.prize_text} punishmentText={settings.punishment_text} />
     ) : (
@@ -102,7 +102,7 @@ export function StakesEditor({
     if (chrome === 'modal') {
       return (
         <>
-          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">Prize / Punishment</p>
+          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-ink">Prize / Punishment</p>
           {body}
         </>
       );
@@ -118,10 +118,10 @@ export function StakesEditor({
   const fields = (
     <div className={chrome === 'modal' ? 'space-y-2.5' : 'space-y-3 px-4 py-3.5'}>
       <div>
-        <label className="block text-sm font-semibold text-espresso-800" htmlFor="prize-text">
+        <label className="block text-sm font-semibold text-ink" htmlFor="prize-text">
           Prize
         </label>
-        <p className="mt-0.5 mb-1.5 text-xs leading-[1.45] text-espresso-400">What first place gets. Leave blank for none.</p>
+        <p className="mt-0.5 mb-1.5 text-xs leading-[1.45] text-faint">What first place gets. Leave blank for none.</p>
         <textarea
           id="prize-text"
           value={prizeText}
@@ -134,15 +134,15 @@ export function StakesEditor({
           placeholder="Winner picks the next group outing."
           className={inputClasses}
         />
-        <span className="mt-0.5 block text-right text-[11px] text-espresso-400">
+        <span className="mt-0.5 block text-right text-[11px] text-faint">
           {prizeText.length} / {PRIZE_MAX_LENGTH}
         </span>
       </div>
       <div>
-        <label className="block text-sm font-semibold text-espresso-800" htmlFor="punishment-text">
+        <label className="block text-sm font-semibold text-ink" htmlFor="punishment-text">
           Punishment
         </label>
-        <p className="mt-0.5 mb-1.5 text-xs leading-[1.45] text-espresso-400">What last place owes. Leave blank for none.</p>
+        <p className="mt-0.5 mb-1.5 text-xs leading-[1.45] text-faint">What last place owes. Leave blank for none.</p>
         <textarea
           id="punishment-text"
           value={punishmentText}
@@ -155,7 +155,7 @@ export function StakesEditor({
           placeholder="Loser buys the first round next time."
           className={inputClasses}
         />
-        <span className="mt-0.5 block text-right text-[11px] text-espresso-400">
+        <span className="mt-0.5 block text-right text-[11px] text-faint">
           {punishmentText.length} / {PUNISHMENT_MAX_LENGTH}
         </span>
       </div>
@@ -165,14 +165,14 @@ export function StakesEditor({
   const saveControls = (
     <div className={chrome === 'modal' ? 'pt-1' : 'px-0.5'}>
       {saveState === 'error' && (
-        <p className="mb-2 text-sm text-danger-700">
+        <p className="mb-2 text-sm text-alert">
           Not saved.{' '}
           <button type="button" onClick={retry} className="font-bold underline">
             Retry
           </button>
         </p>
       )}
-      {saveState === 'saved' && !dirty && <p className="mb-2 text-sm text-honey-700">Saved.</p>}
+      {saveState === 'saved' && !dirty && <p className="mb-2 text-sm text-signal">Saved.</p>}
       <Button
         type="button"
         className="w-full"
@@ -187,7 +187,7 @@ export function StakesEditor({
   if (chrome === 'modal') {
     return (
       <>
-        <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">Prize / Punishment</p>
+        <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-ink">Prize / Punishment</p>
         {fields}
         {saveControls}
       </>

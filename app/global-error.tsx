@@ -1,14 +1,18 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Bricolage_Grotesque } from 'next/font/google';
+import { Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { reportClientError } from '@/lib/actions/errorReport';
 
 // Imported again rather than shared with the root layout: this file replaces that layout
 // outright, so anything it set up (the stylesheet, the display font's CSS variable) is simply
 // not there. A crash page that renders unstyled reads as a second, worse failure.
-const bricolage = Bricolage_Grotesque({ subsets: ['latin'], variable: '--font-bricolage' });
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  weight: ['400', '700', '800'],
+  variable: '--font-jakarta',
+});
 
 /**
  * The last-resort boundary: a render that throws anywhere the app doesn't
@@ -36,23 +40,22 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
   }, [error]);
 
   return (
-    <html lang="en" className={bricolage.variable}>
+    <html lang="en" className={jakarta.variable}>
       <body className="font-sans antialiased">
-        <main className="flex min-h-dvh flex-col items-center justify-center bg-paper px-7 py-11 pt-[calc(env(safe-area-inset-top)+2.75rem)] text-center">
-          {/* Texture, not a heading — same treatment as the 404's numerals. */}
-          <span aria-hidden className="font-display text-[120px]/none font-extrabold tracking-[-0.05em] text-espresso-100">
+        <main className="flex min-h-dvh flex-col items-center justify-center bg-canvas px-7 py-11 pt-[calc(env(safe-area-inset-top)+2.75rem)] text-center">
+          <span aria-hidden className="font-display text-[120px]/none font-extrabold tracking-[-0.05em] text-rule">
             !
           </span>
-          <h1 className="mt-6 font-display text-[30px]/[34px] font-extrabold tracking-[-0.03em] text-espresso-900">
+          <h1 className="mt-6 font-display text-[30px]/[34px] font-extrabold tracking-[-0.03em] text-ink">
             Something went wrong on our end.
           </h1>
-          <p className="mt-3 max-w-[300px] text-base/6 text-espresso-500">
-            Nothing you did caused this, and no bets or balances are affected. We've been told about it.
+          <p className="mt-3 max-w-[300px] text-base/6 text-muted">
+            Nothing you did caused this, and no bets or balances are affected. We have been told about it.
           </p>
           <button
             type="button"
             onClick={reset}
-            className="mt-9 w-full max-w-[330px] rounded-full bg-honey-500 px-6 py-4 text-[17px] font-bold whitespace-nowrap text-espresso-900 transition-colors hover:bg-honey-600"
+            className="mt-9 w-full max-w-[330px] rounded-[14px] bg-signal px-6 py-4 text-[15px] font-bold whitespace-nowrap text-white shadow-[var(--elevation-cta)] transition-colors hover:bg-signal-deep"
           >
             Try again
           </button>

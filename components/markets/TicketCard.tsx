@@ -30,17 +30,17 @@ export function TicketCard({
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-[22px] border-[1.5px] border-espresso-800 bg-paper-white shadow-[0_6px_18px_-12px_rgba(28,19,13,0.35)]',
+        'overflow-hidden rounded-[22px] border-[1.5px] border-ink bg-surface shadow-[0_6px_18px_-12px_rgba(28,19,13,0.35)]',
         className
       )}
     >
-      <div className="flex items-center justify-between gap-3 bg-espresso-50 px-[18px] py-[11px]">
-        <p className="text-xs font-extrabold tracking-[0.06em] text-espresso-800 uppercase">{label}</p>
-        {meta && <p className="shrink-0 text-xs font-semibold text-espresso-500">{meta}</p>}
+      <div className="flex items-center justify-between gap-3 bg-rule px-[18px] py-[11px]">
+        <p className="text-xs font-extrabold tracking-[0.06em] text-ink uppercase">{label}</p>
+        {meta && <p className="shrink-0 text-xs font-semibold text-muted">{meta}</p>}
       </div>
       <div className={cn('px-[18px] py-4', bodyClassName)}>{children}</div>
       {footer && (
-        <div className="border-t border-espresso-50 px-[18px] py-2.5 text-xs font-semibold text-espresso-400">{footer}</div>
+        <div className="border-t border-rule px-[18px] py-2.5 text-xs font-semibold text-faint">{footer}</div>
       )}
     </div>
   );

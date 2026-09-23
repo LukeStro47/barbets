@@ -89,11 +89,11 @@ export default async function SeasonsArchivePage({
 
           {selectedSeason && (
             <div className="flex items-center gap-2.5 px-1">
-              <h2 className="text-xs font-bold tracking-[0.08em] text-espresso-400 uppercase">
+              <h2 className="text-xs font-bold tracking-[0.08em] text-faint uppercase">
                 {selectedSeason.name ?? `Season ${selectedSeason.number}`}
               </h2>
-              <span className="h-px flex-1 bg-espresso-100" />
-              <span className="shrink-0 text-[11.5px] font-bold whitespace-nowrap text-espresso-400">
+              <span className="h-px flex-1 bg-rule" />
+              <span className="shrink-0 text-[11.5px] font-bold whitespace-nowrap text-faint">
                 {formatSeasonDate(selectedSeason.started_at)}
                 {selectedSeason.ended_at && ` – ${formatSeasonDate(selectedSeason.ended_at)}`}
               </span>
@@ -119,14 +119,14 @@ export default async function SeasonsArchivePage({
                   <Link
                     key={s.id}
                     href={`/groups/${groupId}/seasons?season=${s.number}`}
-                    className="flex items-center gap-3 rounded-[20px] bg-espresso-50/70 px-4 py-3.5"
+                    className="flex items-center gap-3 rounded-[20px] bg-rule/70 px-4 py-3.5"
                   >
-                    <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full border border-espresso-100 bg-paper-white text-[17px]">
+                    <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full border border-hairline bg-surface text-[17px]">
                       🏆
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block text-[13.5px] font-extrabold text-espresso-950">{s.name ?? `Season ${s.number}`}</span>
-                      <span className="block text-[11.5px] leading-[1.35] text-espresso-500">
+                      <span className="block text-[13.5px] font-extrabold text-ink">{s.name ?? `Season ${s.number}`}</span>
+                      <span className="block text-[11.5px] leading-[1.35] text-muted">
                         {formatSeasonDate(s.started_at)}
                         {s.ended_at && ` – ${formatSeasonDate(s.ended_at)}`} · {snap?.markets_settled ?? 0} settled
                         {snap?.champion && (
@@ -137,7 +137,7 @@ export default async function SeasonsArchivePage({
                         )}
                       </span>
                     </span>
-                    <span className="shrink-0 rounded-full border border-espresso-200 px-3 py-1.5 text-xs font-bold text-espresso-800">Open</span>
+                    <span className="shrink-0 rounded-full border border-hairline px-3 py-1.5 text-xs font-bold text-ink">Open</span>
                   </Link>
                 );
               })}

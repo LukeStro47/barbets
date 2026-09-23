@@ -68,14 +68,14 @@ export function CountdownTimer({
           e.stopPropagation();
           setShowDetails(true);
         }}
-        className="underline decoration-dotted decoration-espresso-300 underline-offset-2"
+        className="underline decoration-dotted decoration-dash underline-offset-2"
       >
         {label}
       </button>
       {showDetails && (
         <Modal onClose={() => setShowDetails(false)}>
-          <p className="font-display font-bold text-espresso-900">Betting closes</p>
-          <p className="text-sm text-espresso-600">
+          <p className="font-display font-bold text-ink">Betting closes</p>
+          <p className="text-sm text-muted">
             {new Date(target).toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'short' })}
             {deviceTimezone && ` (${friendlyTimezoneName(deviceTimezone)})`}
           </p>

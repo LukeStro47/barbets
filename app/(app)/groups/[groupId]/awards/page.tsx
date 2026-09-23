@@ -132,18 +132,18 @@ export default async function AwardsPage({ params }: { params: Promise<{ groupId
         backLabel="Leaderboard"
         backAction={
           (activeSeason || (isIntermission && endedSeason)) && (
-            <span className="shrink-0 rounded-full bg-espresso-50 px-3 py-1 text-[11.5px] font-extrabold text-espresso-700">
+            <span className="shrink-0 rounded-full bg-rule px-3 py-1 text-[11.5px] font-extrabold text-muted">
               {isIntermission ? `${endedSeason?.name ?? `Season ${endedSeason?.number ?? ''}`} · final` : (activeSeason?.name ?? `Season ${activeSeason?.number}`)}
             </span>
           )
         }
         subtitle={
-          <span className="text-[13px] text-espresso-500">
+          <span className="text-[13px] text-muted">
             {isIntermission && 'Titles as they stood when the season closed. '}
             {yourKeys.length > 0 ? (
               <>
                 You hold{' '}
-                <span className="font-extrabold text-honey-700">
+                <span className="font-extrabold text-signal">
                   {numberWord(yourKeys.length)} of {numberWord(TITLE_ORDER.length)}
                 </span>{' '}
                 titles.
@@ -177,31 +177,31 @@ export default async function AwardsPage({ params }: { params: Promise<{ groupId
       ) : (
         otherKeys.length > 0 && (
           <div className="space-y-[7px]">
-            <p className="ml-1 text-[10.5px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">Held by others</p>
+            <p className="ml-1 text-[10.5px] font-extrabold tracking-[0.09em] text-faint uppercase">Held by others</p>
             {otherKeys.map((key) => {
               const resolved = resolveTitle(key);
               const row = rowsByKey.get(key)!;
               const holderMembershipId = membershipIdByUserId.get(row.user_id!);
               const content = (
                 <>
-                  <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-honey-50">
-                    <AwardGlyph iconKey={resolved.iconKey} stroke="var(--color-honey-700)" size={20} />
+                  <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-signal-tint">
+                    <AwardGlyph iconKey={resolved.iconKey} stroke="var(--color-signal)" size={20} />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[13.5px] font-extrabold text-espresso-950">{resolved.label}</span>
-                    <span className="block text-[11px] leading-[1.4] text-espresso-400">{resolved.description}</span>
+                    <span className="block text-[13.5px] font-extrabold text-ink">{resolved.label}</span>
+                    <span className="block text-[11px] leading-[1.4] text-faint">{resolved.description}</span>
                   </span>
                   <span className="shrink-0 text-right">
                     <Mention
                       nickname={nicknameByUserId.get(row.user_id!) ?? ''}
-                      className="block text-[12.5px] font-extrabold text-espresso-950"
+                      className="block text-[12.5px] font-extrabold text-ink"
                     />
-                    <span className="block text-[11px] font-extrabold text-honey-700">{TITLE_META[key].format(row.stat_value)}</span>
+                    <span className="block text-[11px] font-extrabold text-signal">{TITLE_META[key].format(row.stat_value)}</span>
                   </span>
-                  {holderMembershipId && <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-espresso-300" />}
+                  {holderMembershipId && <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-faint" />}
                 </>
               );
-              const rowClassName = 'flex flex-1 items-center gap-[11px] rounded-2xl border border-espresso-100 bg-paper-white px-3.5 py-3';
+              const rowClassName = 'flex flex-1 items-center gap-[11px] rounded-2xl border border-hairline bg-surface px-3.5 py-3';
               // A holder is always a current, non-removed member as of the last title recompute —
               // the fallback to a plain (unlinked) row only matters for the rare window where
               // someone's left/been removed since, since titles only recompute every 3rd resolution.

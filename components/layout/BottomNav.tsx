@@ -13,6 +13,7 @@ import { useKeyboardState } from '@/lib/useKeyboardInset';
 import { cn } from '@/lib/cn';
 import { GroupAvatar } from '@/components/ui/GroupAvatar';
 import { NEW_GROUP_EVENT } from '@/components/groups/StartGroupButton';
+import { OPEN_GROUP_SWITCHER_EVENT } from '@/components/groups/OpenGroupSwitcherButton';
 
 export type NavGroup = { id: string; name: string; avatarKey: string | null; meta: string };
 
@@ -28,30 +29,23 @@ export interface GroupBettingStatus {
 }
 
 const TABS: { key: NavTab; label: string }[] = [
-  { key: 'home', label: 'Home' },
   { key: 'markets', label: 'Markets' },
-  { key: 'board', label: 'Leaderboard' },
+  { key: 'inbox', label: 'Inbox' },
+  { key: 'group', label: 'Group' },
   { key: 'you', label: 'You' },
 ];
 
 /** Five slots at 20% each; the plus button owns slot index 2. */
-const SLOT: Record<NavTab, number> = { home: 0, markets: 1, board: 3, you: 4 };
+const SLOT: Record<NavTab, number> = { markets: 0, inbox: 1, group: 3, you: 4 };
 
 const MARKET_TYPES: MarketType[] = ['yes_no', 'over_under', 'multiple_choice'];
 
 function iconButtonClass(active: boolean, basis: 'basis-1/5' | 'basis-1/3') {
-  return cn('relative flex h-full flex-none items-center justify-center border-0 bg-transparent p-0', basis, active && 'text-espresso-950');
+  return cn('relative flex h-full flex-none items-center justify-center border-0 bg-transparent p-0', basis, active && 'text-ink');
 }
 
 type GlyphProps = { className?: string; strokeWidth: number };
 
-function HomeGlyph({ className, strokeWidth }: GlyphProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M4 11.5 12 4l8 7.5M6 10v9h5v-5h2v5h5v-9" />
-    </svg>
-  );
-}
 function MarketsGlyph({ className, strokeWidth }: GlyphProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -59,7 +53,14 @@ function MarketsGlyph({ className, strokeWidth }: GlyphProps) {
     </svg>
   );
 }
-function BoardGlyph({ className, strokeWidth }: GlyphProps) {
+function InboxGlyph({ className, strokeWidth }: GlyphProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M4 6h16v12H4zM4 10l8 5 8-5" />
+    </svg>
+  );
+}
+function GroupGlyph({ className, strokeWidth }: GlyphProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="M8 20V11M14 20V4M20 20v-7M2 20h20" />
@@ -75,9 +76,9 @@ function YouGlyph({ className, strokeWidth }: GlyphProps) {
 }
 
 const TAB_GLYPH: Record<NavTab, (props: GlyphProps) => React.ReactNode> = {
-  home: HomeGlyph,
   markets: MarketsGlyph,
-  board: BoardGlyph,
+  inbox: InboxGlyph,
+  group: GroupGlyph,
   you: YouGlyph,
 };
 
@@ -99,8 +100,7 @@ export function BottomNav({
   groups: NavGroup[];
   bettingStatusByGroup: Record<string, GroupBettingStatus>;
   /** True when any of the viewer's groups has a market waiting on them (an endorsement, a
-   * vote) — surfaced as a small red dot on the Home tab, since Home is where the switcher
-   * (and from there, every group's own "N waiting on you" card) lives. */
+   * vote) — surfaced as a badge on the Inbox tab. */
   hasNeedsYou?: boolean;
 }) {
   const pathname = usePathname();
@@ -144,6 +144,17 @@ export function BottomNav({
     return () => window.removeEventListener(NEW_GROUP_EVENT, onNewGroup);
   }, []);
 
+  // Markets hub header (and any other in-page affordance) opens the same sheet the Group tab
+  // uses when there's no current group — one switcher, two entry points.
+  useEffect(() => {
+    const onOpenSwitcher = () => {
+      setCreateOpen(false);
+      setSwitcherOpen(true);
+    };
+    window.addEventListener(OPEN_GROUP_SWITCHER_EVENT, onOpenSwitcher);
+    return () => window.removeEventListener(OPEN_GROUP_SWITCHER_EVENT, onOpenSwitcher);
+  }, []);
+
   // The demo walkthrough's post-tour "Create a Group" CTA lives on /demo, outside this layout, so
   // it can't dispatch NEW_GROUP_EVENT the way StartGroupButton does — nothing would be mounted to
   // hear it yet. It instead lands here with ?startGroup=1 and this opens the same drawer once, on
@@ -173,19 +184,17 @@ export function BottomNav({
   const activeTab = getActiveNavTab(pathname);
   const groupId = getRouteGroupId(pathname);
 
-  // Profile isn't nested under /groups/[id], so on its own it'd read as "no group in scope" and
-  // collapse Markets/Board away — but arriving there from a group should still feel like you're
-  // "in" that group, just looking at your profile for a moment. Updated inline during render
-  // (not an effect) so this render already reflects it, same pattern prevPathnameRef below uses.
-  // Visiting the all-groups hub is the one deliberate "I'm not in a group right now" signal, so
-  // it clears the memory instead of leaving it stale.
+  // Profile and Inbox aren't nested under /groups/[id], so on their own they'd read as
+  // "no group in scope". Arriving there from a group should still feel like you're in that
+  // group. Visiting the all-groups hub is the one deliberate clear signal.
   const lastGroupIdRef = useRef<string | null>(null);
   if (groupId) {
     lastGroupIdRef.current = groupId;
   } else if (pathname === '/groups') {
     lastGroupIdRef.current = null;
   }
-  const effectiveGroupId = groupId ?? (pathname === '/profile' ? lastGroupIdRef.current : null);
+  const rememberGroup = pathname === '/profile' || pathname.startsWith('/profile/') || pathname === '/inbox';
+  const effectiveGroupId = groupId ?? (rememberGroup ? lastGroupIdRef.current : null);
   const currentGroup = effectiveGroupId ? groups.find((g) => g.id === effectiveGroupId) : undefined;
   const inGroup = !!currentGroup;
 
@@ -211,22 +220,21 @@ export function BottomNav({
   };
 
   function goToTab(tab: NavTab) {
-    if (tab === 'home') {
-      // With no groups yet, the switcher sheet would just show its "No groups yet." card over
-      // the same all-groups hub its own "All groups" row links to — skip straight there.
-      if (groups.length === 0) {
+    if (tab === 'inbox') {
+      router.push('/inbox');
+    } else if (tab === 'you') {
+      router.push(currentGroup ? `/profile?group=${currentGroup.id}` : '/profile');
+    } else if (tab === 'markets') {
+      router.push(currentGroup ? `/groups/${currentGroup.id}` : '/groups?all=1');
+    } else if (tab === 'group') {
+      // Group section defaults to the leaderboard (DESIGN 4f). Long-press / switcher via group bar.
+      if (currentGroup) {
+        router.push(`/groups/${currentGroup.id}/leaderboard`);
+      } else if (groups.length === 0) {
         router.push('/groups?all=1');
       } else {
         openSwitcher();
       }
-    } else if (tab === 'you') {
-      // Carries the group you're currently in along to Profile, so it opens already scoped to
-      // it instead of falling back to whichever group Profile defaults to on its own.
-      router.push(currentGroup ? `/profile?group=${currentGroup.id}` : '/profile');
-    } else if (tab === 'markets') {
-      router.push(currentGroup ? `/groups/${currentGroup.id}` : '/groups?all=1');
-    } else if (tab === 'board') {
-      router.push(currentGroup ? `/groups/${currentGroup.id}/leaderboard` : '/groups?all=1');
     }
   }
 
@@ -255,14 +263,12 @@ export function BottomNav({
     router.push(`/groups/new?${params.toString()}`);
   }
 
-  // Markets/Board only mean anything with a current group in scope — outside one (the
-  // all-groups hub, /profile, admin/feedback, ...) the bar drops to three wide slots
-  // (Home, +, You) instead of five cramped ones with two dead tabs in the middle.
-  const totalSlots = inGroup ? 5 : 3;
+  // Always five slots: Markets · Inbox · + · Group · You (DESIGN.md).
+  const totalSlots = 5;
   const slotPct = 100 / totalSlots;
-  const activeSlot = !activeTab ? null : inGroup ? SLOT[activeTab] : activeTab === 'you' ? 2 : activeTab === 'home' ? 0 : null;
+  const activeSlot = activeTab ? SLOT[activeTab] : null;
   const indicatorLeft = activeSlot !== null ? `calc(${activeSlot * slotPct}% + ${slotPct / 2}% - 11px)` : null;
-  const plusLeftPct = inGroup ? 40 : slotPct;
+  const plusLeftPct = 40;
   const bettingStatus = currentGroup ? bettingStatusByGroup[currentGroup.id] : undefined;
   const bettingOff = !!bettingStatus?.blocked;
 
@@ -270,7 +276,7 @@ export function BottomNav({
     <>
       {bettingOffOpen && (
         <Modal onClose={() => setBettingOffOpen(false)}>
-          <p className="font-display font-bold text-espresso-900">
+          <p className="font-display font-bold text-ink">
             {bettingStatus?.reason === 'season_intermission'
               ? 'Betting is closed between seasons'
               : bettingStatus?.reason === 'season_winding_down'
@@ -279,7 +285,7 @@ export function BottomNav({
                   ? 'Only moderators can start a market here'
                   : 'Betting is turned off'}
           </p>
-          <p className="text-sm text-espresso-500">
+          <p className="text-sm text-muted">
             {bettingStatus?.reason === 'season_intermission' ? (
               <>
                 This season is done and the next one hasn&apos;t started yet.
@@ -304,13 +310,13 @@ export function BottomNav({
         <>
           <div
             onClick={() => setSwitcherOpen(false)}
-            className="fixed inset-0 z-40 animate-bottomnav-scrim-in bg-espresso-950/40"
+            className="fixed inset-0 z-40 animate-bottomnav-scrim-in bg-ink/40"
           />
           <div
-            className="fixed right-3 left-3 z-40 origin-bottom-left animate-bottomnav-sheet-up rounded-3xl border border-espresso-100 bg-paper-white p-3 pt-3.5 shadow-[0_26px_46px_-22px_rgba(28,19,13,0.5)]"
+            className="fixed right-3 left-3 z-40 origin-bottom-left animate-bottomnav-sheet-up rounded-[24px] border border-hairline bg-surface p-3 pt-3.5 shadow-[var(--elevation-sheet)]"
             style={{ bottom: 'calc(var(--bottomnav-height) + 8px)' }}
           >
-            <p className="mb-2.5 ml-1.5 text-[10.5px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">Your groups</p>
+            <p className="mb-2.5 ml-1.5 text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase">Your groups</p>
             <div className="flex flex-col gap-1">
               {groups.map((g) => {
                 const current = inGroup && g.id === currentGroup!.id;
@@ -319,35 +325,35 @@ export function BottomNav({
                     key={g.id}
                     onClick={() => selectGroup(g.id)}
                     className={cn(
-                      'flex w-full items-center gap-[11px] rounded-2xl border-[1.5px] px-[11px] py-2.5 text-left',
-                      current ? 'border-honey-500 bg-honey-500/10' : 'border-transparent bg-transparent'
+                      'flex w-full items-center gap-[11px] rounded-[18px] border px-[11px] py-2.5 text-left',
+                      current ? 'border-signal bg-signal-tint' : 'border-transparent bg-transparent'
                     )}
                   >
                     <GroupAvatar
                       name={g.name}
                       avatarKey={g.avatarKey}
                       className="h-[34px] w-[34px] text-[11.5px]"
-                      fallbackClassName="bg-espresso-900 text-honey-300"
+                      fallbackClassName="bg-ink text-on-ink"
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13.5px] font-extrabold text-espresso-900">{g.name}</span>
-                      <span className="block truncate text-[11px] text-espresso-400">{g.meta}</span>
+                      <span className="block truncate text-[13.5px] font-bold text-ink">{g.name}</span>
+                      <span className="block truncate text-[11px] text-faint">{g.meta}</span>
                     </span>
-                    {current && <span className="shrink-0 text-[11px] text-honey-600">●</span>}
+                    {current && <span className="shrink-0 text-[11px] text-signal">●</span>}
                   </button>
                 );
               })}
-              {groups.length === 0 && <p className="px-1.5 py-2 text-sm text-espresso-400">No groups yet.</p>}
+              {groups.length === 0 && <p className="px-1.5 py-2 text-sm text-faint">No groups yet.</p>}
             </div>
             <button
               onClick={() => {
                 setSwitcherOpen(false);
                 router.push('/groups?all=1');
               }}
-              className="mt-2 flex w-full items-center justify-between gap-2.5 border-0 border-t border-espresso-50 bg-transparent px-[11px] pt-[11px] pb-[3px] text-left"
+              className="mt-2 flex w-full items-center justify-between gap-2.5 border-0 border-t border-hairline bg-transparent px-[11px] pt-[11px] pb-[3px] text-left"
             >
-              <span className="text-[13px] font-extrabold text-honey-700">All groups</span>
-              <ChevronRightIcon className="h-3.5 w-2 shrink-0 text-honey-600" />
+              <span className="text-[13px] font-bold text-signal">All groups</span>
+              <ChevronRightIcon className="h-3.5 w-2 shrink-0 text-signal" />
             </button>
           </div>
         </>
@@ -356,9 +362,9 @@ export function BottomNav({
       {/* ---- Plus: contextual create sheet ---- */}
       {createOpen && (
         <>
-          <div onClick={toggleCreate} className="fixed inset-0 z-40 animate-bottomnav-scrim-in bg-espresso-950/45" />
+          <div onClick={toggleCreate} className="fixed inset-0 z-40 animate-bottomnav-scrim-in bg-ink/45" />
           <div
-            className="fixed inset-x-0 bottom-0 z-40 animate-bottomnav-sheet-up rounded-t-[28px] bg-gradient-to-br from-espresso-900 via-espresso-700 to-espresso-700 px-5 pt-3.5 pb-[env(safe-area-inset-bottom)]"
+            className="fixed inset-x-0 bottom-0 z-40 animate-bottomnav-sheet-up rounded-t-[26px] border-t border-white/10 bg-ink px-[18px] pt-3.5 pb-[env(safe-area-inset-bottom)] shadow-[var(--elevation-sheet)]"
             // Once the keyboard pushes this sheet up, the browser scrolls just far enough to
             // reveal the focused input — which leaves the Continue button sitting flush against
             // the keyboard with no breathing room. Add the keyboard's height to the sheet's normal
@@ -376,8 +382,8 @@ export function BottomNav({
 
             {inGroup ? (
               <>
-                <p className="mb-0.5 font-display text-base font-extrabold tracking-[-0.01em] text-paper-white">New market</p>
-                <p className="mb-3.5 text-xs text-paper-white/50">How should it settle?</p>
+                <p className="mb-0.5 text-[15px] font-extrabold tracking-[-0.015em] text-white">New market</p>
+                <p className="mb-3.5 text-[12.5px] text-white/50">Pick how it settles.</p>
                 <div className="mb-3.5 flex flex-col gap-1.5">
                   {MARKET_TYPES.map((t) => {
                     const on = marketType === t;
@@ -386,18 +392,18 @@ export function BottomNav({
                         key={t}
                         onClick={() => setMarketType(t)}
                         className={cn(
-                          'flex w-full items-center gap-3 rounded-2xl border-[1.5px] px-3.5 py-3 text-left transition-colors',
-                          on ? 'border-honey-500 bg-honey-500' : 'border-white/15 bg-white/5'
+                          'flex w-full items-center gap-3 rounded-[20px] border px-3.5 py-3 text-left transition-colors',
+                          on ? 'border-signal bg-signal' : 'border-white/15 bg-white/5'
                         )}
                       >
-                        <span aria-hidden className={cn('text-xl', on ? 'text-espresso-900' : 'text-paper-white')}>
+                        <span aria-hidden className="text-xl text-white">
                           {MARKET_TYPE_ICON[t]}
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className={cn('block text-[13.5px] font-extrabold', on ? 'text-espresso-900' : 'text-paper-white')}>
+                          <span className="block text-[13.5px] font-bold text-white">
                             {MARKET_TYPE_LABEL[t]}
                           </span>
-                          <span className={cn('block text-[11.5px] font-semibold', on ? 'text-espresso-900/60' : 'text-paper-white/50')}>
+                          <span className={cn('block text-[11.5px]', on ? 'text-white/70' : 'text-white/50')}>
                             {MARKET_TYPE_DESCRIPTION[t]}
                           </span>
                         </span>
@@ -406,26 +412,26 @@ export function BottomNav({
                   })}
                   <button
                     onClick={browseTemplates}
-                    className="flex w-full items-center gap-3 rounded-2xl border-[1.5px] border-dashed border-white/25 bg-transparent px-3.5 py-3 text-left"
+                    className="flex w-full items-center gap-3 rounded-[20px] border border-dashed border-white/25 bg-transparent px-3.5 py-3 text-left"
                   >
-                    <svg aria-hidden className="h-5 w-5 shrink-0 text-paper-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <svg aria-hidden className="h-5 w-5 shrink-0 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4L12 3z" />
                       <path d="M19 15l0.9 2.3L22 18l-2.1 0.7L19 21l-0.9-2.3L16 18l2.1-0.7L19 15z" />
                     </svg>
                     <span className="min-w-0 flex-1">
-                      <span className="block text-[13.5px] font-extrabold text-paper-white">Browse templates</span>
-                      <span className="block text-[11.5px] font-semibold text-paper-white/50">Start from a ready-made idea</span>
+                      <span className="block text-[13.5px] font-bold text-white">Browse templates</span>
+                      <span className="block text-[11.5px] text-white/50">Start from a saved idea</span>
                     </span>
                   </button>
                 </div>
-                <div className="flex items-center gap-2.5 border-t border-white/10 pt-3.5">
+                <div className="flex items-center gap-2.5 border-t border-white/10 pt-3.5 pb-3.5">
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[10px] font-bold tracking-[0.07em] text-paper-white/40 uppercase">Posting to</span>
-                    <span className="block truncate text-[13px] font-extrabold text-paper-white">{currentGroup!.name}</span>
+                    <span className="block text-[11.5px] font-bold tracking-[0.1em] text-white/40 uppercase">Posting to</span>
+                    <span className="block truncate text-[13px] font-bold text-white">{currentGroup!.name}</span>
                   </span>
                   <button
                     onClick={continueCreateMarket}
-                    className="shrink-0 rounded-full border-0 bg-honey-500 px-[18px] py-2.5 text-[12.5px] font-extrabold text-espresso-900"
+                    className="shrink-0 rounded-[14px] border-0 bg-signal px-[18px] py-2.5 text-[13px] font-bold text-white shadow-[var(--elevation-cta)]"
                   >
                     Continue
                   </button>
@@ -433,34 +439,34 @@ export function BottomNav({
               </>
             ) : (
               <>
-                <p className="mb-0.5 font-display text-base font-extrabold tracking-[-0.01em] text-paper-white">New group</p>
-                <p className="mb-3.5 text-xs text-paper-white/50">A private table, everyone starts even.</p>
+                <p className="mb-0.5 text-[15px] font-extrabold tracking-[-0.015em] text-white">New group</p>
+                <p className="mb-3.5 text-[12.5px] text-white/50">A private table. Everyone starts even.</p>
                 <div className="mb-3.5 flex flex-col gap-2">
-                  <div className="rounded-2xl border-[1.5px] border-white/15 bg-white/5 px-[15px] py-3">
-                    <label className="block text-[10px] font-bold tracking-[0.07em] text-paper-white/40 uppercase">Group name</label>
+                  <div className="rounded-[14px] border border-white/15 bg-white/5 px-[15px] py-3">
+                    <label className="block text-[11.5px] font-bold tracking-[0.1em] text-white/40 uppercase">Group name</label>
                     <input
                       value={groupName}
                       onChange={(e) => setGroupName(e.target.value)}
                       placeholder="The Wednesday Wagers"
                       maxLength={GROUP_NAME_MAX_LENGTH}
-                      className="mt-[3px] block w-full border-0 bg-transparent p-0 text-sm font-bold text-paper-white placeholder:text-paper-white/30 focus:outline-none"
+                      className="mt-[3px] block w-full border-0 bg-transparent p-0 text-sm font-bold text-white placeholder:text-white/30 focus:outline-none"
                     />
                   </div>
-                  <div className="rounded-2xl border-[1.5px] border-white/15 bg-white/5 px-[15px] py-3">
-                    <label className="block text-[10px] font-bold tracking-[0.07em] text-paper-white/40 uppercase">Token allocation</label>
+                  <div className="rounded-[14px] border border-white/15 bg-white/5 px-[15px] py-3">
+                    <label className="block text-[11.5px] font-bold tracking-[0.1em] text-white/40 uppercase">Token allocation</label>
                     <input
                       type="text"
                       inputMode="numeric"
                       value={groupSeedAmount}
                       onChange={(e) => setGroupSeedAmount(formatTokenInputValue(e.target.value, TOKEN_ALLOCATION_MAX))}
-                      className="mt-[3px] block w-full border-0 bg-transparent p-0 text-sm font-bold text-paper-white focus:outline-none"
+                      className="mt-[3px] block w-full border-0 bg-transparent p-0 font-mono text-sm font-semibold text-white focus:outline-none"
                     />
                   </div>
                 </div>
                 <button
                   onClick={continueCreateGroup}
                   disabled={!groupName.trim()}
-                  className="w-full rounded-full border-0 bg-honey-500 py-2.5 text-[12.5px] font-extrabold text-espresso-900 disabled:opacity-40"
+                  className="mb-3.5 w-full rounded-[14px] border-0 bg-signal py-[15px] text-[15px] font-bold text-white shadow-[var(--elevation-cta)] disabled:bg-disabled-bg disabled:text-disabled-ink disabled:shadow-none"
                 >
                   Continue
                 </button>
@@ -473,73 +479,58 @@ export function BottomNav({
       {/* ---- The bar ---- */}
       {!keyboardOpen && (
       <nav
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-espresso-100 bg-paper-white pb-[max(20px,env(safe-area-inset-bottom))]"
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-hairline bg-surface/96 pb-[max(20px,env(safe-area-inset-bottom))] shadow-[var(--elevation-sheet)] backdrop-blur-[8px]"
       >
-        <div className="relative flex h-[60px] items-center">
-          {/* Sits below the icon rather than hanging off the bar's top border, so it reads as an
-              underline belonging to the tab instead of a separate rule along the top edge. The row
-              is 60px with a 23px icon centred in it, leaving ~18px underneath, so a 3px pill at
-              bottom-[9px] lands roughly midway: clearly attached to the icon, clearly clear of the
-              bar edge. Fully rounded now that it floats and no longer meets an edge. */}
+        <div className="relative mx-auto flex h-[62px] max-w-[430px] items-center">
           {indicatorLeft && (
             <span
               aria-hidden
-              className="absolute bottom-[9px] h-[3px] w-[22px] rounded-full bg-honey-600 transition-[left] duration-[460ms] ease-[cubic-bezier(0.34,1.3,0.5,1)] motion-reduce:transition-none"
+              className="absolute bottom-[8px] h-[3px] w-[22px] rounded-full bg-signal transition-[left] duration-150 ease-out motion-reduce:transition-none"
               style={{ left: indicatorLeft }}
             />
           )}
-          {inGroup ? (
-            <>
-              {TABS.slice(0, 2).map((t) => {
-                const Glyph = TAB_GLYPH[t.key];
-                const active = activeTab === t.key;
-                return (
-                  <button key={t.key} aria-label={t.label} aria-current={active ? 'page' : undefined} onClick={() => goToTab(t.key)} className={iconButtonClass(active, 'basis-1/5')}>
-                    <span className="relative">
-                      <Glyph strokeWidth={active ? 2.3 : 1.9} className={cn('h-[23px] w-[23px]', !active && 'text-espresso-300')} />
-                      {t.key === 'home' && hasNeedsYou && (
-                        <span className="absolute top-0 right-0 h-2 w-2 rounded-full border-2 border-paper-white bg-danger-500" />
-                      )}
+          {TABS.slice(0, 2).map((t) => {
+            const Glyph = TAB_GLYPH[t.key];
+            const active = activeTab === t.key;
+            return (
+              <button
+                key={t.key}
+                aria-label={t.label}
+                aria-current={active ? 'page' : undefined}
+                onClick={() => goToTab(t.key)}
+                className={iconButtonClass(active, 'basis-1/5')}
+              >
+                <span className="relative flex flex-col items-center gap-0.5">
+                  <Glyph strokeWidth={active ? 2.1 : 1.9} className={cn('h-[19px] w-[19px]', active ? 'text-signal' : 'text-faint')} />
+                  <span className={cn('text-[10px] font-bold', active ? 'text-signal' : 'text-faint font-semibold')}>{t.label}</span>
+                  {t.key === 'inbox' && hasNeedsYou && (
+                    <span className="absolute -top-[3px] right-[14px] flex h-[15px] min-w-[15px] items-center justify-center rounded-full bg-alert px-1 text-[9.5px] font-bold text-white">
+                      !
                     </span>
-                  </button>
-                );
-              })}
-              <span className="basis-1/5" />
-              {TABS.slice(2).map((t) => {
-                const Glyph = TAB_GLYPH[t.key];
-                const active = activeTab === t.key;
-                return (
-                  <button key={t.key} aria-label={t.label} aria-current={active ? 'page' : undefined} onClick={() => goToTab(t.key)} className={iconButtonClass(active, 'basis-1/5')}>
-                    <Glyph strokeWidth={active ? 2.3 : 1.9} className={cn('h-[23px] w-[23px]', !active && 'text-espresso-300')} />
-                  </button>
-                );
-              })}
-            </>
-          ) : (
-            <>
-              {(['home', null, 'you'] as const).map((key) =>
-                key === null ? (
-                  <span key="spacer" className="basis-1/3" />
-                ) : (
-                  (() => {
-                    const t = TABS.find((tab) => tab.key === key)!;
-                    const Glyph = TAB_GLYPH[key];
-                    const active = activeTab === key;
-                    return (
-                      <button key={key} aria-label={t.label} aria-current={active ? 'page' : undefined} onClick={() => goToTab(key)} className={iconButtonClass(active, 'basis-1/3')}>
-                        <span className="relative">
-                          <Glyph strokeWidth={active ? 2.3 : 1.9} className={cn('h-[23px] w-[23px]', !active && 'text-espresso-300')} />
-                          {key === 'home' && hasNeedsYou && (
-                            <span className="absolute top-0 right-0 h-2 w-2 rounded-full border-2 border-paper-white bg-danger-500" />
-                          )}
-                        </span>
-                      </button>
-                    );
-                  })()
-                )
-              )}
-            </>
-          )}
+                  )}
+                </span>
+              </button>
+            );
+          })}
+          <span className="basis-1/5" />
+          {TABS.slice(2).map((t) => {
+            const Glyph = TAB_GLYPH[t.key];
+            const active = activeTab === t.key;
+            return (
+              <button
+                key={t.key}
+                aria-label={t.label}
+                aria-current={active ? 'page' : undefined}
+                onClick={() => goToTab(t.key)}
+                className={iconButtonClass(active, 'basis-1/5')}
+              >
+                <span className="flex flex-col items-center gap-0.5">
+                  <Glyph strokeWidth={active ? 2.1 : 1.9} className={cn('h-[19px] w-[19px]', active ? 'text-signal' : 'text-faint')} />
+                  <span className={cn('text-[10px] font-bold', active ? 'text-signal' : 'text-faint font-semibold')}>{t.label}</span>
+                </span>
+              </button>
+            );
+          })}
           <button
             onClick={toggleCreate}
             aria-label={inGroup ? 'New market' : 'New group'}
@@ -549,12 +540,12 @@ export function BottomNav({
           >
             <span
               className={cn(
-                'flex h-[46px] w-[46px] items-center justify-center rounded-full bg-espresso-900 transition-transform duration-[380ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] motion-reduce:transition-none',
+                'flex h-[42px] w-[42px] items-center justify-center rounded-[14px] bg-ink transition-transform duration-150 ease-out motion-reduce:transition-none',
                 createOpen && 'rotate-45',
-                bettingOff && 'opacity-35'
+                bettingOff && inGroup && 'opacity-35'
               )}
             >
-              <PlusIcon className="h-[19px] w-[19px] text-honey-300" />
+              <PlusIcon className="h-[19px] w-[19px] text-white" />
             </span>
           </button>
         </div>

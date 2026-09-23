@@ -89,18 +89,18 @@ export function GroupIdentitySheet({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="shrink-0 rounded-full border border-espresso-200 px-3 py-1.5 text-[12.5px] font-bold text-espresso-800 transition-colors hover:bg-espresso-50"
+        className="shrink-0 rounded-full border border-hairline px-3 py-1.5 text-[12.5px] font-bold text-ink transition-colors hover:bg-rule"
       >
         Edit
       </button>
 
       {open && (
         <Modal onClose={close}>
-          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">Group details</p>
-          {error && <p className="text-sm text-danger-700">{error}</p>}
+          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-ink">Group details</p>
+          {error && <p className="text-sm text-alert">{error}</p>}
 
           <div className="space-y-1.5">
-            <label className="block text-sm font-semibold text-espresso-800" htmlFor="group-identity-name">
+            <label className="block text-sm font-semibold text-ink" htmlFor="group-identity-name">
               Name
             </label>
             <input
@@ -108,13 +108,13 @@ export function GroupIdentitySheet({
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={GROUP_NAME_MAX_LENGTH}
-              className="w-full rounded-[10px] border border-espresso-200 bg-paper-white px-3.5 py-2.5 text-[15px] font-semibold text-espresso-950 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200"
+              className="w-full rounded-[10px] border border-hairline bg-surface px-3.5 py-2.5 text-[15px] font-semibold text-ink focus:border-signal focus:outline-none focus:ring-2 focus:ring-signal/15"
             />
           </div>
 
           {activeSeason && (
             <div className="space-y-1.5">
-              <label className="block text-sm font-semibold text-espresso-800" htmlFor="group-identity-season-name">
+              <label className="block text-sm font-semibold text-ink" htmlFor="group-identity-season-name">
                 Season name
               </label>
               <input
@@ -123,14 +123,14 @@ export function GroupIdentitySheet({
                 onChange={(e) => setSeasonName(e.target.value)}
                 maxLength={SEASON_NAME_MAX_LENGTH}
                 placeholder={`Season ${activeSeason.number}`}
-                className="w-full rounded-[10px] border border-espresso-200 bg-paper-white px-3.5 py-2.5 text-[15px] font-semibold text-espresso-950 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200"
+                className="w-full rounded-[10px] border border-hairline bg-surface px-3.5 py-2.5 text-[15px] font-semibold text-ink focus:border-signal focus:outline-none focus:ring-2 focus:ring-signal/15"
               />
             </div>
           )}
 
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-espresso-800">Logo</p>
-            <p className="text-xs leading-[1.45] text-espresso-400">Pick one, or keep the initials.</p>
+            <p className="text-sm font-semibold text-ink">Logo</p>
+            <p className="text-xs leading-[1.45] text-faint">Pick one, or keep the initials.</p>
             <div className="flex flex-wrap gap-2.5">
               <button
                 type="button"
@@ -140,7 +140,7 @@ export function GroupIdentitySheet({
                 className={cn(
                   tileClasses,
                   'text-[15px] font-extrabold',
-                  selected === null ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 bg-paper-white text-espresso-400'
+                  selected === null ? 'border-signal bg-signal-tint text-signal-deep' : 'border-hairline bg-surface text-faint'
                 )}
               >
                 {initials(trimmed || groupName)}
@@ -152,7 +152,7 @@ export function GroupIdentitySheet({
                   onClick={() => setSelected(a.key)}
                   aria-pressed={selected === a.key}
                   title={a.label}
-                  className={cn(tileClasses, selected === a.key ? 'border-honey-500 bg-honey-50' : 'border-espresso-200 bg-paper-white')}
+                  className={cn(tileClasses, selected === a.key ? 'border-signal bg-signal-tint' : 'border-hairline bg-surface')}
                 >
                   <img src={`/avatars/${a.key}.png`} alt={a.label} className="h-full w-full object-cover" />
                 </button>

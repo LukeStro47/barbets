@@ -13,7 +13,7 @@ import { SeasonNameEditor } from '@/components/groups/SeasonNameEditor';
 import { Mention } from '@/components/ui/Mention';
 
 const selectClasses =
-  'w-full rounded-[10px] border border-espresso-200 bg-paper-white px-3.5 py-2.5 text-[15px] font-semibold text-espresso-950 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
+  'w-full rounded-[10px] border border-hairline bg-surface px-3.5 py-2.5 text-[15px] font-semibold text-ink focus:border-signal focus:outline-none focus:ring-2 focus:ring-signal/15';
 
 export function RemoveMemberButton({ groupId, userId, nickname }: { groupId: string; userId: string; nickname: string }) {
   const router = useRouter();
@@ -23,20 +23,20 @@ export function RemoveMemberButton({ groupId, userId, nickname }: { groupId: str
 
   return (
     <>
-      <button type="button" onClick={() => setConfirming(true)} className="text-[13px] font-semibold text-danger-700 hover:underline">
+      <button type="button" onClick={() => setConfirming(true)} className="text-[13px] font-semibold text-alert hover:underline">
         Remove
       </button>
 
       {confirming && (
         <Modal onClose={() => setConfirming(false)}>
-          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">
+          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-ink">
             Remove <Mention nickname={nickname} />?
           </p>
-          {error && <p className="text-sm text-danger-700">{error}</p>}
+          {error && <p className="text-sm text-alert">{error}</p>}
           <div className="pt-0.5">
-            <ConsequenceRow dotClassName="bg-danger-500">Their open bets are refunded and they lose access straight away.</ConsequenceRow>
-            <ConsequenceRow dotClassName="bg-espresso-800">The invite code rotates, so their copy of it stops working.</ConsequenceRow>
-            <ConsequenceRow dotClassName="bg-espresso-200" isLast>
+            <ConsequenceRow dotClassName="bg-alert">Their open bets are refunded and they lose access straight away.</ConsequenceRow>
+            <ConsequenceRow dotClassName="bg-ink">The invite code rotates, so their copy of it stops working.</ConsequenceRow>
+            <ConsequenceRow dotClassName="bg-dash" isLast>
               Being removed is permanent. They can&apos;t rejoin with a new code.
             </ConsequenceRow>
           </div>
@@ -157,24 +157,24 @@ export function EndSeasonSheet({
 
   return (
     <Modal onClose={onClose}>
-      <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">
+      <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-ink">
         End {season.name ?? `Season ${season.number}`}?
       </p>
-      {error && <p className="text-sm text-danger-700">{error}</p>}
+      {error && <p className="text-sm text-alert">{error}</p>}
       <div className="pt-0.5">
-        <ConsequenceRow dotClassName="bg-danger-500">
+        <ConsequenceRow dotClassName="bg-alert">
           Every market without a proposed result is voided and refunded.
         </ConsequenceRow>
-        <ConsequenceRow dotClassName="bg-espresso-800">
+        <ConsequenceRow dotClassName="bg-ink">
           Anything already awaiting a challenge or a vote gets up to {resolutionWindowHours} more hours to finish.
         </ConsequenceRow>
-        <ConsequenceRow dotClassName="bg-espresso-200" isLast>
+        <ConsequenceRow dotClassName="bg-dash" isLast>
           Standings archive to Awards, then intermission opens and everyone is reseeded for the next one.
         </ConsequenceRow>
       </div>
 
-      <div className="rounded-[10px] border border-espresso-100 bg-paper p-3">
-        <p className="mb-1.5 text-xs font-bold text-espresso-500">This season&apos;s name is what shows up in Awards.</p>
+      <div className="rounded-[10px] border border-hairline bg-canvas p-3">
+        <p className="mb-1.5 text-xs font-bold text-muted">This season&apos;s name is what shows up in Awards.</p>
         <SeasonNameEditor groupId={groupId} seasonId={season.id} currentName={season.name} seasonNumber={season.number} />
       </div>
 
@@ -229,7 +229,7 @@ export function TransferOwnershipSheet({
 
   return (
     <Modal onClose={onClose}>
-      <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">
+      <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-ink">
         {selectedNickname ? (
           <>
             Hand the group to <Mention nickname={selectedNickname} />?
@@ -238,11 +238,11 @@ export function TransferOwnershipSheet({
           'Hand the group to someone else?'
         )}
       </p>
-      {error && <p className="text-sm text-danger-700">{error}</p>}
+      {error && <p className="text-sm text-alert">{error}</p>}
 
       {members.length === 0 ? (
         <>
-          <p className="text-sm leading-[1.55] text-espresso-600">
+          <p className="text-sm leading-[1.55] text-muted">
             {isPublic
               ? "There's no other moderator yet. Assign one from the admin console first, then come back here to hand it off."
               : "There's nobody to hand it to yet. Only active members other than you can take it on."}
@@ -253,7 +253,7 @@ export function TransferOwnershipSheet({
         </>
       ) : (
         <>
-          <p className="text-sm leading-[1.55] text-espresso-600">
+          <p className="text-sm leading-[1.55] text-muted">
             {isPublic
               ? 'You stay on as a moderator. '
               : 'You stay in the group as a regular member. '}
@@ -306,21 +306,21 @@ function DeleteGroupSheet({ groupId, groupName, onClose }: { groupId: string; gr
 
   return (
     <Modal onClose={onClose}>
-      <span className="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-danger-100">
-        <AlertTriangleIcon className="h-5 w-5 text-danger-700" />
+      <span className="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-alert-bg">
+        <AlertTriangleIcon className="h-5 w-5 text-alert" />
       </span>
-      <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">Delete {groupName}?</p>
-      {error && <p className="text-sm text-danger-700">{error}</p>}
+      <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-ink">Delete {groupName}?</p>
+      {error && <p className="text-sm text-alert">{error}</p>}
       <div className="pt-0.5">
-        <ConsequenceRow dotClassName="bg-danger-500">Every open market is voided and refunded first.</ConsequenceRow>
-        <ConsequenceRow dotClassName="bg-espresso-800">The group disappears immediately, for everyone.</ConsequenceRow>
-        <ConsequenceRow dotClassName="bg-espresso-200" isLast>
+        <ConsequenceRow dotClassName="bg-alert">Every open market is voided and refunded first.</ConsequenceRow>
+        <ConsequenceRow dotClassName="bg-ink">The group disappears immediately, for everyone.</ConsequenceRow>
+        <ConsequenceRow dotClassName="bg-dash" isLast>
           Awards, seasons and history go with it. This can&apos;t be undone.
         </ConsequenceRow>
       </div>
 
       <div className="space-y-1.5">
-        <label className="block text-xs font-bold text-espresso-500" htmlFor="delete-confirm">
+        <label className="block text-xs font-bold text-muted" htmlFor="delete-confirm">
           Type the group name to confirm
         </label>
         <input
@@ -328,7 +328,7 @@ function DeleteGroupSheet({ groupId, groupName, onClose }: { groupId: string; gr
           value={typed}
           onChange={(e) => setTyped(e.target.value)}
           placeholder={groupName}
-          className="w-full rounded-[10px] border border-espresso-200 bg-paper-white px-3.5 py-2.5 text-sm text-espresso-950 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200"
+          className="w-full rounded-[10px] border border-hairline bg-surface px-3.5 py-2.5 text-sm text-ink focus:border-signal focus:outline-none focus:ring-2 focus:ring-signal/15"
         />
       </div>
 
@@ -339,7 +339,7 @@ function DeleteGroupSheet({ groupId, groupName, onClose }: { groupId: string; gr
         <Button
           type="button"
           variant="danger"
-          className="flex-1 disabled:bg-danger-100 disabled:text-danger-500"
+          className="flex-1 disabled:bg-alert-bg disabled:text-alert"
           disabled={isPending || typed !== groupName}
           onClick={() =>
             startTransition(async () => {

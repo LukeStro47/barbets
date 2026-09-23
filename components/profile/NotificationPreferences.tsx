@@ -27,8 +27,8 @@ const SUB_TOGGLES = [
   { key: 'notifyAdmin' as const, label: 'Group admin', summary: 'Group admin' },
 ];
 
-const cardClasses = 'rounded-[20px] border border-espresso-100 bg-paper-white';
-const eyebrowClasses = 'ml-1 text-[10.5px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase';
+const cardClasses = 'rounded-[20px] border border-hairline bg-surface';
+const eyebrowClasses = 'ml-1 text-[10.5px] font-extrabold tracking-[0.09em] text-faint uppercase';
 
 /** The collapsed row's one-line answer to "what does this group actually send me?" — the reason a
  * row can stay shut. Named categories rather than a count, since "2 of 3 on" tells you nothing
@@ -56,7 +56,7 @@ function GroupRow({
   last: boolean;
 }) {
   return (
-    <div className={cn('py-[13px]', !last && 'border-b border-espresso-100')}>
+    <div className={cn('py-[13px]', !last && 'border-b border-hairline')}>
       <div className="flex items-center gap-[11px]">
         {/* The whole left side opens the row; the switch beside it stays a switch, so muting a
             group never costs an extra tap to close what the mute just opened. */}
@@ -70,15 +70,15 @@ function GroupRow({
             name={prefs.groupName}
             avatarKey={prefs.avatarKey}
             className="h-8 w-8 text-[11px]"
-            fallbackClassName="bg-espresso-900 text-honey-300"
+            fallbackClassName="bg-ink text-on-ink"
           />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[13.5px] font-extrabold text-espresso-800">{prefs.groupName}</span>
-            <span className="block text-[11px] text-espresso-400">{stateSummary(prefs)}</span>
+            <span className="block truncate text-[13.5px] font-extrabold text-ink">{prefs.groupName}</span>
+            <span className="block text-[11px] text-faint">{stateSummary(prefs)}</span>
           </span>
           <CaretDownIcon
             className={cn(
-              'h-3.5 w-3.5 shrink-0 text-espresso-300 transition-transform duration-[240ms] motion-reduce:transition-none',
+              'h-3.5 w-3.5 shrink-0 text-faint transition-transform duration-[240ms] motion-reduce:transition-none',
               expanded && 'rotate-180'
             )}
           />
@@ -99,7 +99,7 @@ function GroupRow({
           <div className={cn('flex flex-col gap-2 pt-2.5 pl-[43px]', !prefs.notifyGroup && 'pointer-events-none opacity-40')}>
             {SUB_TOGGLES.map((t) => (
               <div key={t.key} className="flex items-center gap-2.5">
-                <span className="min-w-0 flex-1 text-[12.5px] font-bold text-espresso-700">{t.label}</span>
+                <span className="min-w-0 flex-1 text-[12.5px] font-bold text-muted">{t.label}</span>
                 <Switch
                   size="sm"
                   checked={prefs[t.key]}
@@ -140,8 +140,8 @@ function MasterPushRow() {
     <div className={cn(cardClasses, 'px-4 py-[15px]')}>
       <div className="flex items-center gap-3">
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-extrabold text-espresso-800">All notifications</span>
-          <span className="mt-0.5 block text-[11.5px] leading-[1.45] text-espresso-400">
+          <span className="block text-sm font-extrabold text-ink">All notifications</span>
+          <span className="mt-0.5 block text-[11.5px] leading-[1.45] text-faint">
             {blocked ?? 'Off means nothing reaches this phone.'}
           </span>
         </span>
@@ -151,7 +151,7 @@ function MasterPushRow() {
           onChange={() => (subscribed ? unsubscribe() : subscribe())}
         />
       </div>
-      {error && <p className="mt-2 text-[12.5px] text-danger-700">{error}</p>}
+      {error && <p className="mt-2 text-[12.5px] text-alert">{error}</p>}
     </div>
   );
 }
@@ -226,7 +226,7 @@ export function NotificationPreferences({
 
   return (
     <div className="space-y-3.5">
-      {error && <p className="text-sm text-danger-700">{error}</p>}
+      {error && <p className="text-sm text-alert">{error}</p>}
 
       <MasterPushRow />
 
@@ -234,7 +234,7 @@ export function NotificationPreferences({
         <p className={eyebrowClasses}>Your groups</p>
         <div className={cn(cardClasses, 'px-4')}>
           {groupPrefs.length === 0 ? (
-            <p className="py-[13px] text-[12.5px] text-espresso-400">Nothing to set up yet, you're not in a group.</p>
+            <p className="py-[13px] text-[12.5px] text-faint">Nothing to set up yet, you're not in a group.</p>
           ) : (
             groupPrefs.map((g, i) => (
               <GroupRow
@@ -253,10 +253,10 @@ export function NotificationPreferences({
       <div className="space-y-2">
         <p className={eyebrowClasses}>From Barbets</p>
         <div className={cn(cardClasses, 'px-4')}>
-          <div className="flex items-start gap-3 border-b border-espresso-100 py-3.5">
+          <div className="flex items-start gap-3 border-b border-hairline py-3.5">
             <span className="min-w-0 flex-1">
-              <span className="block text-[13.5px] font-extrabold text-espresso-800">Nudges to bet</span>
-              <span className="mt-0.5 block text-[11.5px] leading-[1.45] text-espresso-400">
+              <span className="block text-[13.5px] font-extrabold text-ink">Nudges to bet</span>
+              <span className="mt-0.5 block text-[11.5px] leading-[1.45] text-faint">
                 An occasional Friday prompt when a group of yours has gone quiet, and a heads up when a market is about
                 to close and you haven't had a bet in a while. Never more than one of each per group per day.
               </span>
@@ -265,17 +265,17 @@ export function NotificationPreferences({
           </div>
           <div className="flex items-start gap-3 py-3.5">
             <span className="min-w-0 flex-1">
-              <span className="block text-[13.5px] font-extrabold text-espresso-800">News from Barbets</span>
-              <span className="mt-0.5 block text-[11.5px] leading-[1.45] text-espresso-400">
+              <span className="block text-[13.5px] font-extrabold text-ink">News from Barbets</span>
+              <span className="mt-0.5 block text-[11.5px] leading-[1.45] text-faint">
                 New features, and the occasional thing we think you'd want to know about. Nothing about your groups.
               </span>
             </span>
             <Switch checked={notifyPromos} onChange={() => saveCategories(notifyNudges, !notifyPromos)} />
           </div>
-          <div className="flex items-start gap-3 border-t border-espresso-100 py-3.5">
+          <div className="flex items-start gap-3 border-t border-hairline py-3.5">
             <span className="min-w-0 flex-1">
-              <span className="block text-[13.5px] font-extrabold text-espresso-800">By email</span>
-              <span className="mt-0.5 block text-[11.5px] leading-[1.45] text-espresso-400">
+              <span className="block text-[13.5px] font-extrabold text-ink">By email</span>
+              <span className="mt-0.5 block text-[11.5px] leading-[1.45] text-faint">
                 The same kind of news from Barbets, sent to your email instead of a push. Off unless you opted in when
                 you signed up.
               </span>

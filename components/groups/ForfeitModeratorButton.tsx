@@ -23,9 +23,9 @@ export function ForfeitModeratorButton({ groupId, groupName }: { groupId: string
 
       {confirming && (
         <Modal onClose={() => setConfirming(false)}>
-          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">Stop moderating {groupName}?</p>
-          {error && <p className="text-sm text-danger-700">{error}</p>}
-          <p className="text-sm leading-[1.55] text-espresso-600">
+          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-ink">Stop moderating {groupName}?</p>
+          {error && <p className="text-sm text-alert">{error}</p>}
+          <p className="text-sm leading-[1.55] text-muted">
             You lose the ability to create markets by hand or remove members. You can be reassigned later.
           </p>
           <div className="flex gap-2 pt-1">

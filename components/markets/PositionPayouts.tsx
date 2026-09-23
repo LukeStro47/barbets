@@ -104,17 +104,17 @@ export function PositionRows({
         return (
           <div key={i} className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase">{leftLabel}</p>
-              <p className="mt-0.5 truncate text-base font-extrabold text-espresso-950">
+              <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-faint uppercase">{leftLabel}</p>
+              <p className="mt-0.5 truncate text-base font-extrabold text-ink">
                 {formatTokens(row.amount)} on <OptionLabel label={row.label} />
               </p>
             </div>
             {showProjection && (
               <div className="shrink-0 text-right">
-                <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase">
+                <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-faint uppercase">
                   {row.standsToWin === undefined ? 'If it lands' : 'If this stands'}
                 </p>
-                <p className={`mt-0.5 text-base font-extrabold ${loses ? 'text-danger-700' : 'text-honey-800'}`}>
+                <p className={`mt-0.5 text-base font-extrabold ${loses ? 'text-alert' : 'text-signal-deep'}`}>
                   {loses ? `${formatTokens(row.amount)} lost` : `→ ${formatTokens(row.projected)} back`}
                 </p>
               </div>
@@ -161,14 +161,14 @@ export function PositionPayoutRows({ positions }: { positions: Position[] }) {
       {positions.map((p, i) => (
         <div key={i} className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase">Your position</p>
-            <p className="mt-0.5 text-base font-extrabold text-espresso-950">
+            <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-faint uppercase">Your position</p>
+            <p className="mt-0.5 text-base font-extrabold text-ink">
               {formatTokens(p.amount)} on <OptionLabel label={p.label} />
             </p>
           </div>
           <div className="text-right">
-            <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase">If it lands</p>
-            <p className="mt-0.5 text-base font-extrabold text-honey-800">&rarr; {formatTokens(p.projected)} back</p>
+            <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-faint uppercase">If it lands</p>
+            <p className="mt-0.5 text-base font-extrabold text-signal-deep">&rarr; {formatTokens(p.projected)} back</p>
           </div>
         </div>
       ))}
@@ -196,7 +196,7 @@ export function YourPositionCard({
   return (
     <Card className="space-y-2.5">
       <PositionPayoutRows positions={positions} />
-      <p className="text-xs text-espresso-400">
+      <p className="text-xs text-faint">
         Based on the pool as it locked. The exact number can still change if this market ends up voided or refunded.
       </p>
     </Card>

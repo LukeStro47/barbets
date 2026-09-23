@@ -23,12 +23,12 @@ import { friendlyTimezoneName } from '@/lib/timezone';
 import { MARKET_TITLE_MAX_LENGTH, MARKET_TITLE_COUNTER_THRESHOLD, OPTION_LABEL_MAX_LENGTH } from '@/lib/limits';
 import { cn } from '@/lib/cn';
 
-const cardClasses = 'rounded-[18px] border border-espresso-100 bg-paper-white p-4';
-const focusCardClasses = 'rounded-[18px] border-[1.5px] border-honey-500 bg-paper-white p-4';
-const headingClasses = 'font-display text-[30px] leading-[1.08] font-extrabold tracking-[-0.025em] text-espresso-950';
+const cardClasses = 'rounded-[20px] border border-hairline bg-surface p-4';
+const focusCardClasses = 'rounded-[20px] border border-signal bg-surface p-4';
+const headingClasses = 'text-[26px] leading-[1.14] font-extrabold tracking-[-0.02em] text-ink';
 const footerButtonClasses =
-  'flex h-[52px] w-full items-center justify-center rounded-full border-0 bg-espresso-800 text-[15px] font-extrabold text-paper-white disabled:opacity-45';
-const eyebrowClasses = 'text-[10.5px] font-extrabold tracking-[0.1em] text-espresso-400 uppercase';
+  'flex h-[50px] w-full items-center justify-center rounded-[14px] border-0 bg-signal text-[15px] font-bold text-white shadow-[var(--elevation-cta)] disabled:bg-disabled-bg disabled:text-disabled-ink disabled:shadow-none';
+const eyebrowClasses = 'text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -88,22 +88,22 @@ function StepBar({
     // you scroll is exactly when you'd want them most. -mx-5/px-5 extends the background edge to
     // edge (canceling the page's own gutter just for this bar) so scrolled content never shows
     // through the gaps between the caret, progress pips and label.
-    <div className="sticky top-[env(safe-area-inset-top)] z-20 -mx-5 flex items-center gap-3 bg-paper px-5 py-3">
+    <div className="sticky top-[env(safe-area-inset-top)] z-20 -mx-5 flex items-center gap-3 bg-canvas px-5 py-3">
       <button
         type="button"
         onClick={onBack}
         aria-label={backLabel ?? 'Back'}
-        className="-ml-1.5 inline-flex shrink-0 items-center gap-0.5 border-0 bg-transparent p-0 text-espresso-300"
+        className="-ml-1.5 inline-flex shrink-0 items-center gap-0.5 border-0 bg-transparent p-0 text-faint"
       >
         <CaretLeftIcon className="h-[18px] w-[18px]" />
-        {backLabel && <span className="text-[12.5px] font-bold text-espresso-400">{backLabel}</span>}
+        {backLabel && <span className="text-[12.5px] font-bold text-faint">{backLabel}</span>}
       </button>
       <span className="flex flex-1 gap-[5px]">
         {[1, 2, 3].map((i) => (
-          <span key={i} className={cn('h-1 flex-1 rounded-full', i <= step ? 'bg-honey-500' : 'bg-espresso-100')} />
+          <span key={i} className={cn('h-1 flex-1 rounded-full', i <= step ? 'bg-signal' : 'bg-rule')} />
         ))}
       </span>
-      <span className="text-[11px] font-extrabold tracking-[0.06em] text-espresso-400 uppercase">{label}</span>
+      <span className="text-[11px] font-extrabold tracking-[0.06em] text-faint uppercase">{label}</span>
     </div>
   );
 }
@@ -135,7 +135,7 @@ function OptionRow({
 
   return (
     <div className="flex items-center gap-2.5">
-      <span className="w-5 shrink-0 text-center text-sm font-semibold text-espresso-400">{index + 1}</span>
+      <span className="w-5 shrink-0 text-center text-sm font-semibold text-faint">{index + 1}</span>
       <div className="relative flex-1">
         <input
           value={option.label}
@@ -145,22 +145,22 @@ function OptionRow({
           placeholder={`Option ${index + 1}, or @nickname`}
           maxLength={OPTION_LABEL_MAX_LENGTH}
           className={cn(
-            'w-full rounded-xl border px-3.5 py-2.5 text-[15px] placeholder:text-espresso-300 focus:outline-none',
+            'w-full rounded-[14px] border px-3.5 py-2.5 text-[15px] placeholder:text-faint focus:outline-none',
             isMention
-              ? 'border-honey-400 bg-paper-white font-semibold text-honey-700 italic focus:border-honey-500'
-              : 'border-espresso-200 bg-paper-white text-espresso-900 focus:border-honey-500'
+              ? 'border-signal bg-surface font-semibold text-signal italic focus:border-signal'
+              : 'border-hairline bg-surface text-ink focus:border-signal'
           )}
         />
         {suggestions.length > 0 && (
-          <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-xl border border-espresso-100 bg-paper-white shadow-lg">
+          <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-[14px] border border-hairline bg-surface shadow-[var(--elevation-card)]">
             {suggestions.map((m) => (
               <li key={m.userId}>
                 <button
                   type="button"
                   onClick={() => onChange(`@${m.nickname}`)}
-                  className="block w-full px-4 py-2 text-left text-sm text-espresso-800 hover:bg-honey-50"
+                  className="block w-full px-4 py-2 text-left text-sm text-ink hover:bg-signal-tint"
                 >
-                  <Mention nickname={m.nickname} className="text-honey-700" />
+                  <Mention nickname={m.nickname} className="text-signal" />
                 </button>
               </li>
             ))}
@@ -172,7 +172,7 @@ function OptionRow({
           type="button"
           onClick={onRemove}
           aria-label="Remove option"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg text-espresso-400 hover:bg-espresso-50 hover:text-danger-700"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-lg text-faint hover:bg-rule hover:text-alert"
         >
           ×
         </button>
@@ -223,8 +223,8 @@ function SubjectChips({
               className={cn(
                 'rounded-full px-3.5 py-2 text-[13px] disabled:opacity-40',
                 on
-                  ? 'border-[1.5px] border-honey-500 bg-honey-50 font-extrabold text-honey-800'
-                  : 'border border-espresso-200 bg-transparent font-bold text-espresso-600'
+                  ? 'border-[1.5px] border-signal bg-signal-tint font-extrabold text-signal-deep'
+                  : 'border border-hairline bg-transparent font-bold text-muted'
               )}
             >
               <Mention nickname={m.nickname} />
@@ -237,8 +237,8 @@ function SubjectChips({
           className={cn(
             'rounded-full px-3.5 py-2 text-[13px]',
             nobody
-              ? 'border-[1.5px] border-honey-500 bg-honey-50 font-extrabold text-honey-800'
-              : 'border border-espresso-200 bg-transparent font-bold text-espresso-600'
+              ? 'border-[1.5px] border-signal bg-signal-tint font-extrabold text-signal-deep'
+              : 'border border-hairline bg-transparent font-bold text-muted'
           )}
         >
           Nobody
@@ -249,7 +249,7 @@ function SubjectChips({
         <button
           type="button"
           onClick={() => setVisibleCount((c) => c + SUBJECT_PAGE_SIZE)}
-          className="mt-2.5 border-0 bg-transparent p-0 text-[12.5px] font-extrabold text-honey-700"
+          className="mt-2.5 border-0 bg-transparent p-0 text-[12.5px] font-extrabold text-signal"
         >
           Show {Math.min(remaining, SUBJECT_PAGE_SIZE)} more
         </button>
@@ -258,7 +258,7 @@ function SubjectChips({
         <button
           type="button"
           onClick={() => setVisibleCount(SUBJECT_PAGE_SIZE)}
-          className="mt-2.5 border-0 bg-transparent p-0 text-[12.5px] font-extrabold text-honey-700"
+          className="mt-2.5 border-0 bg-transparent p-0 text-[12.5px] font-extrabold text-signal"
         >
           Show fewer
         </button>
@@ -419,12 +419,12 @@ export function CreateMarketForm({
       onClick={() => setUnitPickerOpen((v) => !v)}
       aria-expanded={unitPickerOpen}
       className={cn(
-        'flex shrink-0 items-center gap-1.5 rounded-[14px] border-[1.5px] px-3.5 py-3 text-sm font-extrabold',
-        hasUnit ? 'border-espresso-200 bg-espresso-50 text-espresso-700' : 'border-dashed border-espresso-200 bg-transparent text-espresso-500'
+        'flex shrink-0 items-center gap-1.5 rounded-[14px] border px-3.5 py-3 text-sm font-bold',
+        hasUnit ? 'border-hairline bg-rule text-muted' : 'border-dashed border-hairline bg-transparent text-muted'
       )}
     >
       {lineFormat === 'date' ? 'A date' : lineFormat === 'time' ? 'A time' : unit.trim() || 'Add unit'}
-      <CaretDownIcon className={cn('h-3.5 w-3.5 text-espresso-400 transition-transform', unitPickerOpen && 'rotate-180')} />
+      <CaretDownIcon className={cn('h-3.5 w-3.5 text-faint transition-transform', unitPickerOpen && 'rotate-180')} />
     </button>
   );
 
@@ -433,8 +433,8 @@ export function CreateMarketForm({
    * bottom, which is exactly where you are looking when you press Next. */
   const errorAlert = error && (
     <Modal onClose={() => setError(null)}>
-      <p className="font-display font-bold text-espresso-900">Not quite there</p>
-      <p className="text-sm leading-[1.5] text-espresso-600">{error}</p>
+      <p className="font-display font-bold text-ink">Not quite there</p>
+      <p className="text-sm leading-[1.5] text-muted">{error}</p>
       <Button className="w-full" onClick={() => setError(null)}>
         Got it
       </Button>
@@ -448,7 +448,7 @@ export function CreateMarketForm({
         {errorAlert}
 
         <div>
-          <p className="text-[11px] font-extrabold tracking-[0.1em] text-honey-700 uppercase">
+          <p className="text-[11px] font-extrabold tracking-[0.1em] text-signal uppercase">
             {MARKET_TYPE_LABEL[marketType]} · {groupName}
           </p>
           <h1 className={cn(headingClasses, 'mt-2')}>What&apos;s the question?</h1>
@@ -475,10 +475,10 @@ export function CreateMarketForm({
             onKeyDown={(e) => {
               if (e.key === 'Enter') e.preventDefault();
             }}
-            className="block w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-[19px] leading-[1.3] font-bold text-espresso-950 placeholder:text-espresso-200 focus:outline-none"
+            className="block w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-[19px] leading-[1.3] font-bold text-ink placeholder:text-dash focus:outline-none"
           />
           {title.length >= MARKET_TITLE_COUNTER_THRESHOLD && (
-            <p className={cn('mt-2.5 text-right text-[11px]', title.length >= MARKET_TITLE_MAX_LENGTH ? 'text-danger-700' : 'text-espresso-300')}>
+            <p className={cn('mt-2.5 text-right text-[11px]', title.length >= MARKET_TITLE_MAX_LENGTH ? 'text-alert' : 'text-faint')}>
               {title.length} / {MARKET_TITLE_MAX_LENGTH}
             </p>
           )}
@@ -486,7 +486,7 @@ export function CreateMarketForm({
 
         {isOverUnder && (
           <div className={cardClasses}>
-            <p className="text-[13px] font-extrabold text-espresso-800">The line</p>
+            <p className="text-[13px] font-bold text-ink">The line</p>
             <div className="mt-2.5 flex items-center gap-2.5">
               {/* Currencies read before the number everywhere else in the app (formatLine's
                   PREFIXED_UNITS), so the field you fill in is laid out the way the line will
@@ -500,21 +500,21 @@ export function CreateMarketForm({
                   step="0.5"
                   inputMode="decimal"
                   placeholder="5.5"
-                  className="min-w-0 flex-1 rounded-[14px] border-[1.5px] border-espresso-200 bg-paper-white px-3.5 py-3 text-xl font-extrabold text-espresso-950 placeholder:text-espresso-200 focus:border-honey-500 focus:outline-none"
+                  className="min-w-0 flex-1 rounded-[14px] border border-hairline bg-surface px-3.5 py-3 font-mono text-xl font-semibold text-ink placeholder:text-dash focus:border-signal focus:outline-none"
                 />
               ) : (
                 <input
                   value={line}
                   onChange={(e) => setLine(e.target.value)}
                   type={lineFormat === 'date' ? 'date' : 'time'}
-                  className="min-w-0 flex-1 rounded-[14px] border-[1.5px] border-espresso-200 bg-paper-white px-3.5 py-3 text-base font-extrabold text-espresso-950 focus:border-honey-500 focus:outline-none"
+                  className="min-w-0 flex-1 rounded-[14px] border border-hairline bg-surface px-3.5 py-3 text-base font-bold text-ink focus:border-signal focus:outline-none"
                 />
               )}
               {!(isPrefixedUnit(unit) && lineFormat === 'number') && unitButton}
             </div>
 
             {unitPickerOpen && (
-              <div className="mt-3 flex flex-wrap gap-2 border-t border-espresso-50 pt-3">
+              <div className="mt-3 flex flex-wrap gap-2 border-t border-rule pt-3">
                 {/* First, and always available: the way back out of a unit you didn't want. */}
                 <button
                   type="button"
@@ -526,8 +526,8 @@ export function CreateMarketForm({
                   className={cn(
                     'rounded-full border px-3 py-1 text-sm font-semibold',
                     lineFormat === 'number' && !unit.trim() && !customUnit
-                      ? 'border-honey-500 bg-honey-50 text-honey-800'
-                      : 'border-espresso-200 text-espresso-600'
+                      ? 'border-signal bg-signal-tint text-signal-deep'
+                      : 'border-hairline text-muted'
                   )}
                 >
                   No unit
@@ -547,8 +547,8 @@ export function CreateMarketForm({
                     className={cn(
                       'rounded-full border px-3 py-1 text-sm font-semibold',
                       lineFormat === 'number' && unit === preset && !customUnit
-                        ? 'border-honey-500 bg-honey-50 text-honey-800'
-                        : 'border-espresso-200 text-espresso-600'
+                        ? 'border-signal bg-signal-tint text-signal-deep'
+                        : 'border-hairline text-muted'
                     )}
                   >
                     {preset}
@@ -567,8 +567,8 @@ export function CreateMarketForm({
                       className={cn(
                         'rounded-full border px-3 py-1 text-sm font-semibold',
                         lineFormat === 'number' && unit === alt && !customUnit
-                          ? 'border-honey-500 bg-honey-50 text-honey-800'
-                          : 'border-espresso-200 text-espresso-600'
+                          ? 'border-signal bg-signal-tint text-signal-deep'
+                          : 'border-hairline text-muted'
                       )}
                     >
                       {alt}
@@ -585,7 +585,7 @@ export function CreateMarketForm({
                     }}
                     className={cn(
                       'rounded-full border px-3 py-1 text-sm font-semibold',
-                      lineFormat === f ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-600'
+                      lineFormat === f ? 'border-signal bg-signal-tint text-signal-deep' : 'border-hairline text-muted'
                     )}
                   >
                     {f === 'date' ? 'a date' : 'a time'}
@@ -600,7 +600,7 @@ export function CreateMarketForm({
                   }}
                   className={cn(
                     'rounded-full border px-3 py-1 text-sm font-semibold',
-                    customUnit ? 'border-honey-500 bg-honey-50 text-honey-800' : 'border-espresso-200 text-espresso-600'
+                    customUnit ? 'border-signal bg-signal-tint text-signal-deep' : 'border-hairline text-muted'
                   )}
                 >
                   Custom
@@ -612,24 +612,24 @@ export function CreateMarketForm({
                     onChange={(e) => setUnit(e.target.value)}
                     maxLength={OVER_UNDER_UNIT_MAX_LENGTH}
                     placeholder="e.g. laps, pints, minutes"
-                    className="w-full rounded-xl border border-espresso-200 bg-paper-white px-3.5 py-2.5 text-sm text-espresso-900 placeholder:text-espresso-300 focus:border-honey-500 focus:outline-none"
+                    className="w-full rounded-[14px] border border-hairline bg-surface px-3.5 py-2.5 text-sm text-ink placeholder:text-faint focus:border-signal focus:outline-none"
                   />
                 )}
                 {!showCurrencyAlternates && !customUnit && (
-                  <p className="w-full text-[11.5px] text-espresso-400">Hold $ for other currencies.</p>
+                  <p className="w-full text-[11.5px] text-faint">Hold $ for other currencies.</p>
                 )}
               </div>
             )}
 
             {lineFormat !== 'number' && (
-              <p className="mt-2.5 text-[11.5px] text-espresso-400">Bets settle either side of this exact point.</p>
+              <p className="mt-2.5 text-[11.5px] text-faint">Bets settle either side of this exact point.</p>
             )}
           </div>
         )}
 
         {marketType === 'multiple_choice' && (
           <div className={cardClasses}>
-            <p className="text-[13px] font-extrabold text-espresso-800">The options</p>
+            <p className="text-[13px] font-bold text-ink">The options</p>
             <div className="mt-3 space-y-2.5">
               {options.map((option, i) => (
                 <OptionRow
@@ -646,14 +646,14 @@ export function CreateMarketForm({
                 <button
                   type="button"
                   onClick={() => setOptions([...options, newOption()])}
-                  className="w-full rounded-xl border border-dashed border-espresso-200 bg-transparent py-2.5 text-sm font-semibold text-espresso-500"
+                  className="w-full rounded-[14px] border border-dashed border-hairline bg-transparent py-2.5 text-sm font-semibold text-muted"
                 >
                   + Add option
                 </button>
               )}
             </div>
             {!isPublic && (
-              <p className="mt-2.5 text-[11.5px] leading-[1.45] text-espresso-400">
+              <p className="mt-2.5 text-[11.5px] leading-[1.45] text-faint">
                 Type @ and pick a member to make an option about them. That hides the whole market from them until it
                 resolves.
               </p>
@@ -663,14 +663,14 @@ export function CreateMarketForm({
 
         {!hasOptionSubject && !isPublic && (
           <div className={cardClasses}>
-            <p className="text-[13px] font-extrabold text-espresso-800">About someone?</p>
+            <p className="text-[13px] font-bold text-ink">About someone?</p>
             <SubjectChips
               members={members}
               selected={subjects}
               onChange={setSubjects}
               maxSubjects={Math.max(0, totalMemberCount - 2)}
             />
-            <p className="mt-2.5 text-[11.5px] leading-[1.45] text-espresso-400">
+            <p className="mt-2.5 text-[11.5px] leading-[1.45] text-faint">
               {subjects.length === 0 ? (
                 'Anyone you pick here stays in the dark until this market resolves.'
               ) : (
@@ -713,32 +713,32 @@ export function CreateMarketForm({
               el.style.height = 'auto';
               el.style.height = `${el.scrollHeight}px`;
             }}
-            className="mt-2 block w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-[15px] leading-[1.45] text-espresso-950 placeholder:text-espresso-300 focus:outline-none"
+            className="mt-2 block w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-[15px] leading-[1.45] text-ink placeholder:text-faint focus:outline-none"
           />
         </div>
 
         <div className={cardClasses}>
-          <p className="text-[13px] font-extrabold text-espresso-800">Betting closes</p>
-          <div className="relative mt-2.5 flex items-center gap-2.5 rounded-[14px] border-[1.5px] border-honey-500 px-3.5 py-3">
-            <CalendarIcon className="h-[17px] w-[17px] shrink-0 text-honey-700" />
+          <p className="text-[13px] font-bold text-ink">Betting closes</p>
+          <div className="relative mt-2.5 flex items-center gap-2.5 rounded-[14px] border border-signal px-3.5 py-3">
+            <CalendarIcon className="h-[17px] w-[17px] shrink-0 text-signal" />
             <input
               type="datetime-local"
               min={minCloseTime}
               value={closesAt}
               onChange={(e) => setClosesAt(e.target.value)}
-              className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[15px] font-extrabold text-espresso-950 focus:outline-none"
+              className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[15px] font-bold text-ink focus:outline-none"
             />
           </div>
-          <p className="mt-2.5 text-[11.5px] leading-[1.45] text-espresso-400">
+          <p className="mt-2.5 text-[11.5px] leading-[1.45] text-faint">
             Group time, {friendlyTimezoneName(timezone).replace(/ time$/, '')}. Set it to the earliest the outcome could
             be known.
           </p>
         </div>
 
         {requireEndorsement && (
-          <div className="flex items-start gap-2.5 rounded-2xl bg-honey-50 px-4 py-3.5">
-            <InfoIcon className="mt-px h-[17px] w-[17px] shrink-0 text-honey-800" />
-            <p className="text-[12.5px] leading-[1.45] text-honey-900">
+          <div className="flex items-start gap-2.5 rounded-[20px] border border-hairline bg-signal-tint px-4 py-3.5">
+            <InfoIcon className="mt-px h-[17px] w-[17px] shrink-0 text-signal-deep" />
+            <p className="text-[12.5px] leading-[1.45] text-signal-deep">
               One other member endorses this before betting opens. Nobody in 24 hours and it expires.
             </p>
           </div>
@@ -805,7 +805,7 @@ export function CreateMarketForm({
  * criteria paragraph can't visually merge with the close time under it. */
 function ReviewRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="border-t border-espresso-50 px-[18px] py-[13px]">
+    <div className="border-t border-hairline px-[18px] py-[13px]">
       <p className={eyebrowClasses}>{label}</p>
       {children}
     </div>
@@ -853,27 +853,27 @@ function ReviewTicket({
     marketType === 'yes_no' ? 'Yes / No' : marketType === 'over_under' ? 'Over / Under' : `One of ${options.length} options`;
 
   return (
-    <div className="overflow-hidden rounded-[20px] border-[1.5px] border-espresso-800 bg-paper-white">
-      <div className="flex items-center justify-between gap-3 bg-espresso-50 px-[18px] py-[11px]">
-        <p className="text-xs font-extrabold tracking-[0.06em] text-espresso-800 uppercase">Review your market</p>
-        <p className="shrink-0 text-xs font-semibold text-espresso-500">{kindLabel}</p>
+    <div className="overflow-hidden rounded-[24px] border border-hairline bg-surface">
+      <div className="flex items-center justify-between gap-3 border-b border-hairline bg-canvas px-[18px] py-[11px]">
+        <p className="text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase">Review your market</p>
+        <p className="shrink-0 text-xs font-semibold text-muted">{kindLabel}</p>
       </div>
 
       <div className="px-[18px] pt-4 pb-1">
-        <p className="font-display text-[21px] leading-[1.2] font-extrabold tracking-[-0.01em] text-espresso-950 text-pretty">
+        <p className="text-[21px] leading-[1.2] font-extrabold tracking-[-0.01em] text-ink text-pretty">
           {title}
         </p>
       </div>
 
       <ReviewRow label="How it settles">
-        <p className="mt-1 text-sm leading-[1.45] text-espresso-700 text-pretty">{description}</p>
+        <p className="mt-1 text-sm leading-[1.45] text-muted text-pretty">{description}</p>
       </ReviewRow>
 
       {marketType === 'over_under' && (
         <ReviewRow label="The line">
-          <p className="mt-1 text-[15px] font-extrabold text-espresso-950">{formatLine(line, displayUnit)}</p>
+          <p className="mt-1 font-mono text-[15px] font-semibold text-ink">{formatLine(line, displayUnit)}</p>
           {lineIsWholeNumber && (
-            <p className="mt-1.5 rounded-lg bg-honey-50 px-2.5 py-1.5 text-xs text-honey-800">
+            <p className="mt-1.5 rounded-[8px] bg-signal-tint px-2.5 py-1.5 text-xs text-signal-deep">
               A whole number can land on an exact tie, which the group would have to resolve as VOID.
             </p>
           )}
@@ -881,10 +881,10 @@ function ReviewTicket({
       )}
 
       <ReviewRow label="Betting closes">
-        <p className="mt-1 text-[15px] font-extrabold text-espresso-950">
+        <p className="mt-1 text-[15px] font-bold text-ink">
           {closesAtDate.toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
         </p>
-        <p className="mt-1 text-xs text-espresso-400">Group time, {friendlyTimezoneName(timezone).replace(/ time$/, '')}.</p>
+        <p className="mt-1 text-xs text-faint">Group time, {friendlyTimezoneName(timezone).replace(/ time$/, '')}.</p>
       </ReviewRow>
 
       {marketType === 'multiple_choice' && (
@@ -893,7 +893,7 @@ function ReviewTicket({
             {options.map((o) => (
               <span
                 key={o.key}
-                className="inline-flex items-center rounded-full bg-espresso-50 px-[11px] py-[5px] text-[13px] font-semibold text-espresso-800"
+                className="inline-flex items-center rounded-full bg-rule px-[11px] py-[5px] text-[13px] font-semibold text-ink"
               >
                 <OptionLabel label={o.label.trim()} />
               </span>
@@ -904,17 +904,17 @@ function ReviewTicket({
 
       <ReviewRow label="Hidden from">
         {hasOptionSubject ? (
-          <p className="mt-1 text-sm text-espresso-700">Every member an option names, until this resolves.</p>
+          <p className="mt-1 text-sm text-muted">Every member an option names, until this resolves.</p>
         ) : subjects.length === 0 ? (
-          <p className="mt-1 text-sm text-espresso-700">Nobody, this market is not about anyone in particular.</p>
+          <p className="mt-1 text-sm text-muted">Nobody, this market is not about anyone in particular.</p>
         ) : (
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             {subjects.map((s) => (
-              <span key={s.userId} className="inline-flex items-center rounded-full bg-espresso-50 px-[11px] py-[5px] text-[13px] font-semibold">
+              <span key={s.userId} className="inline-flex items-center rounded-full bg-rule px-[11px] py-[5px] text-[13px] font-semibold">
                 <Mention nickname={s.nickname} />
               </span>
             ))}
-            <span className="text-[12.5px] text-espresso-400">won&apos;t see this market until it resolves</span>
+            <span className="text-[12.5px] text-faint">won&apos;t see this market until it resolves</span>
           </div>
         )}
       </ReviewRow>
@@ -924,9 +924,9 @@ function ReviewTicket({
           highlighted callout to say "nothing unusual happens next" is a rule where there isn't
           one. */}
       {requireEndorsement && (
-        <div className="flex items-start gap-2.5 border-t border-espresso-50 bg-honey-50 px-[18px] py-[13px]">
-          <InfoIcon className="mt-px h-[17px] w-[17px] shrink-0 text-honey-800" />
-          <p className="text-[13px] leading-[1.45] text-honey-900">
+        <div className="flex items-start gap-2.5 border-t border-hairline bg-signal-tint px-[18px] py-[13px]">
+          <InfoIcon className="mt-px h-[17px] w-[17px] shrink-0 text-signal-deep" />
+          <p className="text-[13px] leading-[1.45] text-signal-deep">
             One other member has to endorse this before betting opens. If nobody does within 24 hours, it expires.
           </p>
         </div>

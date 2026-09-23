@@ -11,7 +11,7 @@ export function ForgotPasswordForm() {
 
   if (state?.success) {
     return (
-      <p className="mt-9 text-base/6 text-espresso-500">
+      <p className="mt-9 text-base/6 text-muted">
         If that email has an account, we sent a link to reset your password.
       </p>
     );
@@ -19,7 +19,7 @@ export function ForgotPasswordForm() {
 
   return (
     <form action={formAction} className="mt-9">
-      {state?.error && <p className="mb-4 text-sm text-danger-700">{state.error}</p>}
+      {state?.error && <p className="mb-4 text-sm text-alert">{state.error}</p>}
       <Field label="Email" name="email" type="email" autoComplete="email" autoFocus required />
       <TurnstileField resetKey={state} />
       <Button type="submit" variant="accent" size="xl" disabled={isPending} className="mt-8 w-full">

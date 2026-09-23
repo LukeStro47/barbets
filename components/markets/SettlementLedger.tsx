@@ -82,17 +82,17 @@ function Row({
   divided?: boolean;
 }) {
   return (
-    <div className={`flex items-baseline justify-between gap-3 ${divided ? 'border-t border-espresso-50 pt-2' : ''}`}>
-      <span className={tone === 'total' ? 'text-[13.5px] font-bold text-espresso-900' : 'text-[13.5px] text-espresso-500'}>
+    <div className={`flex items-baseline justify-between gap-3 ${divided ? 'border-t border-hairline pt-2' : ''}`}>
+      <span className={tone === 'total' ? 'text-[13.5px] font-bold text-ink' : 'text-[13.5px] text-muted'}>
         {label}
       </span>
       <span
         className={
           tone === 'total'
-            ? 'text-base font-extrabold text-espresso-950 tabular-nums'
+            ? 'font-mono text-[15px] font-semibold text-ink'
             : tone === 'bonus'
-              ? 'text-sm font-extrabold text-honey-700 tabular-nums'
-              : 'text-sm font-extrabold text-espresso-900 tabular-nums'
+              ? 'font-mono text-[12.5px] font-semibold text-signal'
+              : 'font-mono text-[12.5px] font-semibold text-ink'
         }
       >
         {value}
@@ -102,7 +102,7 @@ function Row({
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <p className="text-[11.5px] font-extrabold tracking-[0.08em] text-espresso-400 uppercase">{children}</p>;
+  return <p className="text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase">{children}</p>;
 }
 
 /**
@@ -153,20 +153,20 @@ export function SettlementLedger({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex w-full items-center justify-between gap-3 rounded-[20px] border border-espresso-100 bg-paper-white px-4 py-3.5 text-left transition-colors hover:bg-espresso-50"
+        className="flex w-full items-center justify-between gap-3 rounded-[20px] border border-hairline bg-surface px-4 py-3.5 text-left transition-colors hover:bg-rule"
       >
         <span className="min-w-0">
-          <span className="block text-[14.5px] font-bold text-espresso-800">Full ledger</span>
-          <span className="block truncate text-[12.5px] text-espresso-400">{summary}</span>
+          <span className="block text-[14.5px] font-bold text-ink">Full ledger</span>
+          <span className="block truncate text-[12.5px] text-faint">{summary}</span>
         </span>
-        <ChevronRightIcon className="h-4 w-4 shrink-0 text-espresso-300" />
+        <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-faint" />
       </button>
 
       {open && (
         <Modal onClose={() => setOpen(false)} padded={false} panelClassName="overflow-hidden">
-          <div className="flex items-center justify-between gap-3 bg-espresso-50 px-[18px] py-[13px]">
-            <p className="text-xs font-extrabold tracking-[0.06em] text-espresso-800 uppercase">Full ledger</p>
-            <p className="shrink-0 text-xs font-semibold text-espresso-500">
+          <div className="flex items-center justify-between gap-3 border-b border-hairline bg-surface px-4 py-3">
+            <p className="text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase">Full ledger</p>
+            <p className="shrink-0 font-mono text-[12.5px] font-semibold text-muted">
               {bets.length} bet{bets.length === 1 ? '' : 's'}
             </p>
           </div>
@@ -179,12 +179,12 @@ export function SettlementLedger({
               {bets.length === 0 && (
                 <div className="flex flex-col gap-2">
                   <SectionLabel>How it settled</SectionLabel>
-                  <p className="text-[13.5px] leading-[1.5] text-espresso-700">
+                  <p className="text-[13.5px] leading-[1.5] text-muted">
                     Nobody put a token down before this market {voided ? 'was voided' : 'resolved'}, so there was no
                     pool and nothing to settle.
                   </p>
                   {!!carriedBonusPool && carriedBonusPool > 0 && (
-                    <p className="text-[13.5px] leading-[1.5] text-espresso-700">
+                    <p className="text-[13.5px] leading-[1.5] text-muted">
                       The {formatTokens(carriedBonusPool)} bonus tokens this market carried moved on to the group's
                       other open markets, or are being held for the next one if there were none. Bonus money only
                       ever moves forward.
@@ -205,7 +205,7 @@ export function SettlementLedger({
                   divided
                 />
                 {bonusIn > 0 && (
-                  <p className="text-[12.5px] leading-[1.45] text-espresso-400">
+                  <p className="text-[12.5px] leading-[1.45] text-faint">
                     The bonus is money an earlier market ended up with no winners for. It rides into this pool
                     untaxed and pays out with the rest of it.
                   </p>
@@ -214,17 +214,17 @@ export function SettlementLedger({
               )}
 
               {bets.length > 0 && (
-              <div className="flex flex-col gap-2 border-t border-espresso-50 pt-3.5">
+              <div className="flex flex-col gap-2 border-t border-hairline pt-3.5">
                 <SectionLabel>How it settled</SectionLabel>
 
                 {mode === 'paid' && (
                   <>
-                    <p className="text-[13.5px] leading-[1.5] text-espresso-700">
+                    <p className="text-[13.5px] leading-[1.5] text-muted">
                       {formatTokens(winningPool)} of the {formatTokens(staked)} staked was on the outcome that
                       happened, so the whole pool was split across those bets in proportion to their stake.
                       {perWinningToken !== null && ` Every winning token returned ${perWinningToken.toFixed(2)}.`}
                     </p>
-                    <p className="text-[13.5px] leading-[1.5] text-espresso-700">
+                    <p className="text-[13.5px] leading-[1.5] text-muted">
                       Each payout is rounded down to a whole token.{' '}
                       {dust > 0 ? (
                         <>
@@ -247,13 +247,13 @@ export function SettlementLedger({
 
                 {mode === 'refunded' && (
                   <>
-                    <p className="text-[13.5px] leading-[1.5] text-espresso-700">
+                    <p className="text-[13.5px] leading-[1.5] text-muted">
                       {voided
                         ? 'A voided market pays nobody. Every stake was refunded in full, so there was nothing to divide, nothing to round, and no remainder.'
                         : 'Nobody backed the outcome that happened, so there was no winning side to pay. Every stake was refunded in full instead, with nothing to divide and no remainder.'}
                     </p>
                     {!!carriedBonusPool && carriedBonusPool > 0 && (
-                      <p className="text-[13.5px] leading-[1.5] text-espresso-700">
+                      <p className="text-[13.5px] leading-[1.5] text-muted">
                         The {formatTokens(carriedBonusPool)} bonus tokens this market carried were not refunded to
                         anyone. Bonus money only ever moves forward, so it went on to the group's other open
                         markets, or is being held for the next one if there were none.
@@ -264,7 +264,7 @@ export function SettlementLedger({
 
                 {mode === 'split' && payoutBreakdown && (
                   <>
-                    <p className="text-[13.5px] leading-[1.5] text-espresso-700">
+                    <p className="text-[13.5px] leading-[1.5] text-muted">
                       Nobody backed the outcome that happened, and this group shares that pool out rather than
                       refunding it. No stake came back.
                     </p>
@@ -291,7 +291,7 @@ export function SettlementLedger({
                         <Row label="Held for the group's next market" value={formatTokens(payoutBreakdown.held_in_group_pool)} />
                       )}
                     </div>
-                    <p className="text-[13.5px] leading-[1.5] text-espresso-700">
+                    <p className="text-[13.5px] leading-[1.5] text-muted">
                       The creator's share is rounded down to a whole token, and everything left over goes on to
                       the group's other open markets, split evenly between them with the rounding remainder
                       landing on the oldest. If there were no open markets to receive it, the whole remainder is
@@ -303,10 +303,10 @@ export function SettlementLedger({
               )}
 
               {bets.length > 0 && (
-              <div className="flex flex-col gap-2 border-t border-espresso-50 pt-3.5">
+              <div className="flex flex-col gap-2 border-t border-hairline pt-3.5">
                 <SectionLabel>Every bet</SectionLabel>
                 {sorted.length > 0 && (
-                  <ul className="overflow-hidden rounded-[16px] border border-espresso-100">
+                  <ul className="overflow-hidden rounded-[18px] border border-hairline">
                     {sorted.map((b, i) => {
                       const won = !refundish && b.isWinner;
                       const lost = !refundish && !b.isWinner;
@@ -315,24 +315,25 @@ export function SettlementLedger({
                       return (
                         <li
                           key={i}
-                          className={`flex items-center justify-between gap-2.5 px-3.5 py-2.5 ${i > 0 ? 'border-t border-espresso-100' : ''}`}
+                          className={`flex items-center justify-between gap-2.5 px-3.5 py-2.5 ${i > 0 ? 'border-t border-hairline' : ''}`}
                         >
                           <div className="flex min-w-0 items-center gap-2.5">
-                            <span className={`h-2 w-2 shrink-0 rounded-full ${won ? 'bg-success-500' : 'bg-espresso-200'}`} />
+                            <span className={`h-2 w-2 shrink-0 rounded-full ${won ? 'bg-gain' : 'bg-dash'}`} />
                             <div className="min-w-0">
-                              <Mention nickname={b.nickname} className="text-[14px] font-bold text-espresso-800" />
-                              <p className="truncate text-[12px] text-espresso-400">
-                                Bet {formatTokens(b.amount)} on <OptionLabel label={b.choiceLabel.toUpperCase()} />
+                              <Mention nickname={b.nickname} className="text-[14px] font-bold text-ink" />
+                              <p className="truncate text-[12px] text-faint">
+                                Bet <span className="font-mono font-semibold">{formatTokens(b.amount)}</span> on{' '}
+                                <OptionLabel label={b.choiceLabel.toUpperCase()} />
                               </p>
                             </div>
                           </div>
-                          <div className="shrink-0 text-right text-[14px] font-extrabold">
+                          <div className="shrink-0 text-right font-mono text-[12.5px] font-semibold">
                             {refundish && (
-                              <span className="text-espresso-500">
+                              <span className="text-muted">
                                 {b.payout === b.amount
-                                  ? `↩ refunded ${formatTokens(b.payout)}`
+                                  ? `refunded ${formatTokens(b.payout)}`
                                   : b.payout && b.payout > 0
-                                    ? `↩ ${formatTokens(b.payout)} back`
+                                    ? `${formatTokens(b.payout)} back`
                                     : '0 back'}
                               </span>
                             )}
@@ -342,20 +343,20 @@ export function SettlementLedger({
                                 right and the money simply comes back untouched. */}
                             {won && winnings === 0 && (
                               <>
-                                <p className="text-success-700">Won</p>
-                                <p className="text-[11px] font-semibold text-espresso-400">{formatTokens(b.payout ?? 0)} returned</p>
+                                <p className="font-sans text-[13.5px] font-bold text-gain">Won</p>
+                                <p className="text-[11px] font-semibold text-faint">{formatTokens(b.payout ?? 0)} returned</p>
                               </>
                             )}
                             {won && winnings > 0 && (
                               <>
-                                <p className="text-success-700">+{formatTokens(winnings)} won</p>
-                                <p className="text-[11px] font-semibold text-espresso-400">
-                                  {formatTokens(b.payout ?? 0)} back total
+                                <p className="text-gain">+{formatTokens(winnings)}</p>
+                                <p className="text-[11px] font-semibold text-faint">
+                                  {formatTokens(b.payout ?? 0)} back
                                   {dust > 0 && dustBet === b ? `, incl. ${formatTokens(dust)} rounding` : ''}
                                 </p>
                               </>
                             )}
-                            {lost && <span className="font-bold text-espresso-300">−{formatTokens(b.amount)} lost</span>}
+                            {lost && <span className="text-faint">−{formatTokens(b.amount)}</span>}
                           </div>
                         </li>
                       );
@@ -367,7 +368,7 @@ export function SettlementLedger({
             </div>
           </div>
 
-          <div className="border-t border-espresso-50 px-[18px] py-[14px]">
+          <div className="border-t border-hairline px-4 py-3.5">
             <Button className="w-full" onClick={() => setOpen(false)}>
               Done
             </Button>

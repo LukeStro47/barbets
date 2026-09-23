@@ -5,7 +5,7 @@ import { sendAdminBroadcast } from '@/lib/actions/admin';
 import { Button } from '@/components/ui/Button';
 
 const inputClasses =
-  'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-espresso-900 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
+  'w-full rounded-xl border border-hairline bg-surface px-4 py-2.5 text-ink focus:border-signal focus:outline-none focus:ring-2 focus:ring-signal/15';
 
 interface GroupOption {
   id: string;
@@ -101,7 +101,7 @@ export function AdminBroadcastForm({ groups }: { groups: GroupOption[] }) {
   }, [templateIndex]);
 
   if (groups.length === 0) {
-    return <p className="text-sm text-espresso-400">No groups to broadcast to yet.</p>;
+    return <p className="text-sm text-faint">No groups to broadcast to yet.</p>;
   }
 
   const placeholders = isCustom ? [] : extractPlaceholders(template.body);
@@ -127,11 +127,11 @@ export function AdminBroadcastForm({ groups }: { groups: GroupOption[] }) {
 
   return (
     <div className="space-y-3">
-      {error && <p className="text-sm text-danger-700">{error}</p>}
-      {sent && <p className="text-sm font-semibold text-success-700">Queued — lands within a minute.</p>}
+      {error && <p className="text-sm text-alert">{error}</p>}
+      {sent && <p className="text-sm font-semibold text-gain">Queued — lands within a minute.</p>}
 
       <div className="space-y-1.5">
-        <label className="block text-xs font-semibold uppercase tracking-wide text-espresso-500">Group</label>
+        <label className="block text-xs font-semibold uppercase tracking-wide text-muted">Group</label>
         <select value={groupId} onChange={(e) => setGroupId(e.target.value)} className={inputClasses}>
           {groups.map((g) => (
             <option key={g.id} value={g.id}>
@@ -142,7 +142,7 @@ export function AdminBroadcastForm({ groups }: { groups: GroupOption[] }) {
       </div>
 
       <div className="space-y-1.5">
-        <label className="block text-xs font-semibold uppercase tracking-wide text-espresso-500">Send to</label>
+        <label className="block text-xs font-semibold uppercase tracking-wide text-muted">Send to</label>
         <select value={recipient} onChange={(e) => setRecipient(e.target.value)} className={inputClasses}>
           <option value="">Everyone in the group</option>
           {(group?.members ?? []).map((m) => (
@@ -154,7 +154,7 @@ export function AdminBroadcastForm({ groups }: { groups: GroupOption[] }) {
       </div>
 
       <div className="space-y-1.5">
-        <label className="block text-xs font-semibold uppercase tracking-wide text-espresso-500">Template</label>
+        <label className="block text-xs font-semibold uppercase tracking-wide text-muted">Template</label>
         <select value={templateIndex} onChange={(e) => setTemplateIndex(Number(e.target.value))} className={inputClasses}>
           {TEMPLATES.map((t, i) => (
             <option key={t.label} value={i}>
@@ -165,13 +165,13 @@ export function AdminBroadcastForm({ groups }: { groups: GroupOption[] }) {
       </div>
 
       <div className="space-y-1.5">
-        <label className="block text-xs font-semibold uppercase tracking-wide text-espresso-500">Title</label>
+        <label className="block text-xs font-semibold uppercase tracking-wide text-muted">Title</label>
         <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={100} className={inputClasses} />
       </div>
 
       {isCustom ? (
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold uppercase tracking-wide text-espresso-500">Body</label>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-muted">Body</label>
           <textarea
             value={customBody}
             onChange={(e) => setCustomBody(e.target.value)}
@@ -187,7 +187,7 @@ export function AdminBroadcastForm({ groups }: { groups: GroupOption[] }) {
             <div className="grid grid-cols-2 gap-2">
               {placeholders.map((p) => (
                 <label key={p} className="space-y-1">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-espresso-500">{PLACEHOLDER_LABELS[p] ?? p}</span>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted">{PLACEHOLDER_LABELS[p] ?? p}</span>
                   <input
                     value={fillins[p] ?? ''}
                     onChange={(e) => setFillins((prev) => ({ ...prev, [p]: e.target.value }))}
@@ -198,8 +198,8 @@ export function AdminBroadcastForm({ groups }: { groups: GroupOption[] }) {
             </div>
           )}
           <div className="space-y-1">
-            <span className="text-xs font-semibold uppercase tracking-wide text-espresso-500">Preview</span>
-            <p className="rounded-xl bg-espresso-50 px-4 py-3 text-sm text-espresso-700">{assembledBody}</p>
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted">Preview</span>
+            <p className="rounded-xl bg-rule px-4 py-3 text-sm text-muted">{assembledBody}</p>
           </div>
         </>
       )}

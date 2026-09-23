@@ -8,11 +8,12 @@ import { QrCodeIcon } from '@/components/ui/icons';
 import { inviteQrUrl } from '@/lib/inviteLink';
 
 /**
- * The balance card's second pill, next to InvitePill: puts the invite link on screen as a QR code,
- * full-bleed and white, so a friend across the table points their camera at it and lands on
- * /join/[code] with no typing and nothing sent. The URL it encodes is inviteQrUrl(): the real
- * app.mybarbets.com join link tagged `?src=qr`, which is how join_group later records that this
- * join came from a scan rather than a typed code.
+ * Full-screen QR for an invite link. InviteQrButton is the pill-shaped trigger; InviteQrIconButton
+ * is the icon-only control reused from Manage group's InviteHeroCard. The screen is full-bleed and
+ * white, so a friend across the table points their camera at it and lands on /join/[code] with no
+ * typing and nothing sent. The URL it encodes is inviteQrUrl(): the real app.mybarbets.com join
+ * link tagged `?src=qr`, which is how join_group later records that this join came from a scan
+ * rather than a typed code.
  *
  * Rendered client-side from the `qrcode` package into a data URL, so nothing about the code
  * leaves the device to make the picture. Not a Modal: the point is maximum contrast and size,
@@ -28,7 +29,7 @@ export function InviteQrButton({ inviteCode, groupName }: { inviteCode: string; 
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/[0.09] px-[11px] py-[5px] text-xs font-bold text-honey-200"
+        className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/[0.09] px-[11px] py-[5px] text-xs font-bold text-on-ink"
       >
         <QrCodeIcon className="h-3 w-3" />
         Show QR
@@ -114,8 +115,8 @@ export function InviteQrScreen({ inviteCode, groupName, onClose }: { inviteCode:
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex flex-col items-center bg-white px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-[calc(env(safe-area-inset-bottom)+1.5rem)] text-center">
-      <p className="text-xs font-bold tracking-[2px] text-espresso-500 uppercase">Scan to join</p>
-      <p className="mt-1.5 max-w-full truncate font-display text-xl font-extrabold tracking-[-0.02em] text-espresso-950">{groupName}</p>
+      <p className="text-xs font-bold tracking-[2px] text-muted uppercase">Scan to join</p>
+      <p className="mt-1.5 max-w-full truncate font-display text-xl font-extrabold tracking-[-0.02em] text-ink">{groupName}</p>
 
       <div className="flex min-h-0 flex-1 items-center justify-center py-5">
         <div className="aspect-square w-[min(100vw-3rem,60vh)] max-w-[420px]">
@@ -125,17 +126,17 @@ export function InviteQrScreen({ inviteCode, groupName, onClose }: { inviteCode:
             // eslint-disable-next-line @next/next/no-img-element
             <img src={dataUrl} alt={`QR code for invite ${inviteCode}`} className="h-full w-full" draggable={false} />
           ) : failed ? (
-            <p className="flex h-full items-center justify-center text-sm text-espresso-500">
+            <p className="flex h-full items-center justify-center text-sm text-muted">
               Couldn&apos;t draw the code. Share the invite code below instead.
             </p>
           ) : (
-            <div className="h-full w-full animate-pulse rounded-2xl bg-espresso-50" />
+            <div className="h-full w-full animate-pulse rounded-2xl bg-rule" />
           )}
         </div>
       </div>
 
-      <p className="text-[13px] text-espresso-500">Point a phone camera at it. Or type the code:</p>
-      <p className="mt-1 font-display text-3xl font-extrabold tracking-[0.2em] text-espresso-950">{inviteCode}</p>
+      <p className="text-[13px] text-muted">Point a phone camera at it. Or type the code:</p>
+      <p className="mt-1 font-display text-3xl font-extrabold tracking-[0.2em] text-ink">{inviteCode}</p>
 
       <Button variant="outline" size="lg" className="mt-6 w-full max-w-[300px]" onClick={onClose}>
         Done

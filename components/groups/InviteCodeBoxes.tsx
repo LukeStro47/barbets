@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { INVITE_CODE_LENGTH, normalizeInviteCode } from '@/lib/inviteCode';
 import { inviteCodeFromText, inviteJoinPath } from '@/lib/inviteLink';
+import { cn } from '@/lib/cn';
 
 const CODE_LENGTH = INVITE_CODE_LENGTH;
 
@@ -12,25 +13,27 @@ const CODE_LENGTH = INVITE_CODE_LENGTH;
  *  place rather than being forked into a near-identical paper component. */
 const TONE = {
   dark: {
-    box: 'border-white/[0.16] bg-white/[0.06] text-paper-white focus:border-honey-300/70 focus:bg-white/[0.09]',
-    paste: 'border-white/20 text-honey-200',
-    submit: 'bg-honey-500 text-espresso-950 disabled:opacity-45',
+    box: 'border-white/20 bg-white/[0.06] text-white',
+    boxActive: 'border-on-ink shadow-[0_0_0_3px_rgba(107,140,255,0.25)]',
+    paste: 'border-white/20 text-on-ink',
+    submit: 'bg-signal text-white disabled:bg-white/10 disabled:text-white/40',
   },
   paper: {
-    box: 'border-espresso-200 bg-paper-white text-espresso-900 focus:border-honey-500 focus:bg-honey-50',
-    paste: 'border-espresso-200 text-espresso-700',
-    submit: 'bg-honey-500 text-espresso-900 disabled:bg-espresso-100 disabled:text-espresso-400',
+    box: 'border-hairline bg-surface text-ink',
+    boxActive: 'border-signal shadow-[0_0_0_3px_rgba(45,85,245,0.18)]',
+    paste: 'border-hairline text-muted',
+    submit: 'bg-signal text-white shadow-[var(--elevation-cta)] disabled:bg-disabled-bg disabled:text-disabled-ink disabled:shadow-none',
   },
 } as const;
 
-/** Four boxes, not the mock's six — the real invite code (supabase/migrations'
- * _generate_invite_code) is exactly 4 characters, so this matches the actual format rather than
- * the mock's generic box count. A pasted code that still carries the retired "BB-" prefix is
- * normalized away by normalizeInviteCode rather than filling the boxes with "BB-X". */
+/** Four mono uppercase boxes (DESIGN). The real invite code is exactly 4 characters
+ *  (_generate_invite_code), so this matches the format rather than a generic six-box OTP.
+ *  A pasted code that still carries the retired "BB-" prefix is normalized away. */
 export function InviteCodeBoxes({ tone = 'dark' }: { tone?: keyof typeof TONE }) {
   const toneClasses = TONE[tone];
   const router = useRouter();
   const [chars, setChars] = useState<string[]>(Array(CODE_LENGTH).fill(''));
+  const [focused, setFocused] = useState<number | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const code = chars.join('');
   const ready = code.length === CODE_LENGTH;
@@ -74,7 +77,7 @@ export function InviteCodeBoxes({ tone = 'dark' }: { tone?: keyof typeof TONE })
 
   return (
     <div className="space-y-2.5">
-      <div className="flex gap-1.5">
+      <div className="flex gap-2">
         {chars.map((c, i) => (
           <input
             key={i}
@@ -84,10 +87,17 @@ export function InviteCodeBoxes({ tone = 'dark' }: { tone?: keyof typeof TONE })
             value={c}
             onChange={(e) => setChar(i, e.target.value)}
             onKeyDown={(e) => handleKeyDown(i, e)}
+            onFocus={() => setFocused(i)}
+            onBlur={() => setFocused(null)}
             inputMode="text"
             autoCapitalize="characters"
             maxLength={1}
-            className={`h-[46px] w-0 min-w-0 flex-1 rounded-xl border-[1.5px] text-center font-display text-lg font-extrabold focus:outline-none ${toneClasses.box}`}
+            aria-label={`Character ${i + 1} of invite code`}
+            className={cn(
+              'h-[48px] w-0 min-w-0 flex-1 rounded-[14px] border-[1.5px] text-center font-mono text-[18px] font-semibold uppercase tracking-[0.04em] outline-none',
+              toneClasses.box,
+              focused === i && toneClasses.boxActive
+            )}
           />
         ))}
       </div>
@@ -95,7 +105,10 @@ export function InviteCodeBoxes({ tone = 'dark' }: { tone?: keyof typeof TONE })
         <button
           type="button"
           onClick={handlePaste}
-          className={`shrink-0 rounded-full border-[1.5px] px-4 py-[9px] text-[13px] font-bold ${toneClasses.paste}`}
+          className={cn(
+            'shrink-0 rounded-[14px] border-[1.5px] px-4 py-[11px] text-[13px] font-bold',
+            toneClasses.paste
+          )}
         >
           Paste
         </button>
@@ -103,9 +116,12 @@ export function InviteCodeBoxes({ tone = 'dark' }: { tone?: keyof typeof TONE })
           type="button"
           onClick={join}
           disabled={!ready}
-          className={`flex-1 rounded-full py-2.5 text-center text-sm font-extrabold ${toneClasses.submit}`}
+          className={cn(
+            'flex-1 rounded-[14px] py-[11px] text-center text-[15px] font-bold',
+            toneClasses.submit
+          )}
         >
-          Join Group
+          Join group
         </button>
       </div>
     </div>

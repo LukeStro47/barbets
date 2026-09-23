@@ -40,7 +40,7 @@ export function Modal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-espresso-950/40 px-5"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-5"
       onClick={onClose}
     >
       <div
@@ -48,7 +48,7 @@ export function Modal({
         // want rounded-[22px], and `cn` is a plain join with no conflict resolution, so leaving a
         // rounded-2xl in the base would make which one wins depend on stylesheet order.
         className={cn(
-          'w-full max-w-sm bg-paper-white shadow-xl',
+          'w-full max-w-sm bg-surface shadow-xl',
           padded ? 'space-y-3 rounded-2xl p-5' : 'rounded-[22px]',
           panelClassName
         )}

@@ -62,23 +62,23 @@ export function ProposedOutcomeTicket({
     >
       <div className="space-y-3.5">
         <div className="flex items-baseline justify-between gap-3">
-          <p className="min-w-0 truncate font-display text-[34px] leading-none font-extrabold tracking-[-0.02em] text-espresso-950">
+          <p className="min-w-0 truncate font-display text-[34px] leading-none font-extrabold tracking-[-0.02em] text-ink">
             <OptionLabel label={outcomeLabel} />
           </p>
           {hasPhoto && <ResolutionProofButton marketId={marketId} variant="chip" />}
         </div>
 
-        {justification && <p className="text-[14.5px] leading-[1.45] text-espresso-700 text-pretty">&ldquo;{justification}&rdquo;</p>}
+        {justification && <p className="text-[14.5px] leading-[1.45] text-muted text-pretty">&ldquo;{justification}&rdquo;</p>}
 
         {positionRows.length > 0 && (
-          <div className="border-t border-espresso-50 pt-3.5">
+          <div className="border-t border-rule pt-3.5">
             <PositionRows rows={positionRows} leftLabel="Your position" />
           </div>
         )}
 
         {hasSplit && (
-          <div className="border-t border-espresso-50 pt-3.5">
-            <p className="mb-2 text-[11.5px] font-extrabold tracking-[0.08em] text-espresso-400 uppercase">Where the money sat</p>
+          <div className="border-t border-rule pt-3.5">
+            <p className="mb-2 text-[11.5px] font-extrabold tracking-[0.08em] text-faint uppercase">Where the money sat</p>
             {sideOdds && sideOdds.length === 2 ? (
               <NeutralOddsBar
                 left={{ label: sideOdds[0].side.toUpperCase(), percent: sideOdds[0].pool_percent }}

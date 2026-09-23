@@ -26,21 +26,21 @@ export function SeasonStakesBand({
   if (!prizeText && !punishmentText && !canEdit) return null;
 
   const editHref = `/groups/${groupId}/settings/stakes`;
-  const hoverClasses = canEdit ? 'transition-colors hover:bg-espresso-50/60' : '';
+  const hoverClasses = canEdit ? 'transition-colors hover:bg-rule/60' : '';
 
   if (!prizeText && !punishmentText) {
     return (
       <Link
         href={editHref}
-        className={`flex items-center gap-3 rounded-[16px] border border-espresso-100 bg-paper-white px-3.5 py-3 ${hoverClasses}`}
+        className={`flex items-center gap-3 rounded-[16px] border border-hairline bg-surface px-3.5 py-3 ${hoverClasses}`}
       >
         <span className="min-w-0 flex-1">
-          <span className="block text-[10px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">Prize / Punishment</span>
-          <span className="mt-1 block text-[12.5px] leading-[1.35] font-semibold text-espresso-800">
+          <span className="block text-[10px] font-extrabold tracking-[0.09em] text-faint uppercase">Prize / Punishment</span>
+          <span className="mt-1 block text-[12.5px] leading-[1.35] font-semibold text-ink">
             Add a prize and a punishment in Settings
           </span>
         </span>
-        <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-espresso-300" />
+        <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-faint" />
       </Link>
     );
   }
@@ -48,15 +48,15 @@ export function SeasonStakesBand({
   const columns = (
     <>
       {prizeText && (
-        <div className={`w-full flex-1 rounded-[16px] border border-honey-300 bg-honey-50 px-3.5 py-3 ${hoverClasses}`}>
-          <p className="text-[10px] font-extrabold tracking-[0.09em] text-honey-800 uppercase">First place</p>
-          <p className="mt-1 text-[12.5px] leading-[1.35] font-semibold text-espresso-950">{prizeText}</p>
+        <div className={`w-full flex-1 rounded-[16px] border border-signal bg-signal-tint px-3.5 py-3 ${hoverClasses}`}>
+          <p className="text-[10px] font-extrabold tracking-[0.09em] text-signal-deep uppercase">First place</p>
+          <p className="mt-1 text-[12.5px] leading-[1.35] font-semibold text-ink">{prizeText}</p>
         </div>
       )}
       {punishmentText && (
-        <div className={`w-full flex-1 rounded-[16px] border border-espresso-100 bg-paper-white px-3.5 py-3 ${hoverClasses}`}>
-          <p className="text-[10px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">Last place</p>
-          <p className="mt-1 text-[12.5px] leading-[1.35] font-semibold text-espresso-800">{punishmentText}</p>
+        <div className={`w-full flex-1 rounded-[16px] border border-hairline bg-surface px-3.5 py-3 ${hoverClasses}`}>
+          <p className="text-[10px] font-extrabold tracking-[0.09em] text-faint uppercase">Last place</p>
+          <p className="mt-1 text-[12.5px] leading-[1.35] font-semibold text-ink">{punishmentText}</p>
         </div>
       )}
     </>

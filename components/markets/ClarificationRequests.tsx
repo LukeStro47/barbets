@@ -9,7 +9,7 @@ import { Mention } from '@/components/ui/Mention';
 import type { Market } from '@/lib/actions/markets';
 
 const inputClasses =
-  'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-espresso-900 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
+  'w-full rounded-xl border border-hairline bg-surface px-4 py-2.5 text-ink focus:border-signal focus:outline-none focus:ring-2 focus:ring-signal/15';
 
 export interface Clarification {
   id: string;
@@ -103,8 +103,8 @@ export function ClarificationRequests({
 
   const askModal = asking && (
     <Modal onClose={() => setAsking(false)}>
-      <p className="font-display font-bold text-espresso-900">Ask for clarification</p>
-      <p className="text-sm text-espresso-500">
+      <p className="font-display font-bold text-ink">Ask for clarification</p>
+      <p className="text-sm text-muted">
         Flag anything unclear about how this resolves. Your question is visible to the group, and the creator gets
         notified. Updating the criteria clears every open question at once.
       </p>
@@ -120,7 +120,7 @@ export function ClarificationRequests({
         rows={3}
         className={inputClasses}
       />
-      {error && <p className="text-sm text-danger-700">{error}</p>}
+      {error && <p className="text-sm text-alert">{error}</p>}
       <div className="flex gap-2">
         <Button variant="outline" className="flex-1" onClick={() => setAsking(false)}>
           Cancel
@@ -136,14 +136,14 @@ export function ClarificationRequests({
     return (
       <>
         {canAct && !isCreator && (
-          <div className="space-y-3 rounded-[20px] border border-dashed border-espresso-200 bg-paper-white px-[18px] py-4">
+          <div className="space-y-3 rounded-[20px] border border-dashed border-hairline bg-surface px-[18px] py-4">
             <div className="flex items-start gap-2.5">
-              <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] bg-espresso-50 text-[15px] font-extrabold text-espresso-600">
+              <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] bg-rule text-[15px] font-extrabold text-muted">
                 ?
               </span>
               <div className="flex-1">
-                <p className="text-[15.5px] font-extrabold text-espresso-950">Something ambiguous?</p>
-                <p className="mt-0.5 text-[13.5px] leading-[1.45] text-espresso-500">
+                <p className="text-[15.5px] font-extrabold text-ink">Something ambiguous?</p>
+                <p className="mt-0.5 text-[13.5px] leading-[1.45] text-muted">
                   Ask {creatorNickname ? <Mention nickname={creatorNickname} /> : 'the creator'} to tighten the criteria
                   before you put your name on it.
                 </p>
@@ -152,7 +152,7 @@ export function ClarificationRequests({
             <button
               type="button"
               onClick={() => setAsking(true)}
-              className="w-full rounded-full border border-espresso-200 px-4 py-2.5 text-sm font-semibold text-espresso-800 transition-colors hover:bg-espresso-50"
+              className="w-full rounded-full border border-hairline px-4 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-rule"
             >
               Ask for a clarification
             </button>
@@ -183,7 +183,7 @@ export function ClarificationRequests({
             type="button"
             onClick={() => setAsking(true)}
             aria-label="Ask for clarification"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-espresso-50 text-sm font-bold text-espresso-500 ring-1 ring-espresso-100 hover:bg-espresso-100"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-rule text-sm font-bold text-muted ring-1 ring-hairline hover:bg-rule"
           >
             ?
           </button>
@@ -193,7 +193,7 @@ export function ClarificationRequests({
       )}
 
       {hasPending && (
-        <div className="space-y-2.5 border-t border-espresso-100 pt-3">
+        <div className="space-y-2.5 border-t border-hairline pt-3">
           <PendingList clarifications={clarifications} />
           {canAct && isCreator && (
             <CriteriaEditor
@@ -216,11 +216,11 @@ function PendingList({ clarifications }: { clarifications: Clarification[] }) {
   return (
     <ul className="space-y-1.5">
       {clarifications.map((c) => (
-        <li key={c.id} className="rounded-xl bg-espresso-50 px-3 py-2 text-sm">
-          <p className="text-espresso-600">
+        <li key={c.id} className="rounded-xl bg-rule px-3 py-2 text-sm">
+          <p className="text-muted">
             <Mention nickname={c.nickname} /> asked: {c.question}
           </p>
-          <span className="mt-1 inline-flex items-center rounded-full bg-danger-100 px-2 py-0.5 text-[11px] font-semibold text-danger-700">
+          <span className="mt-1 inline-flex items-center rounded-full bg-alert-bg px-2 py-0.5 text-[11px] font-semibold text-alert">
             Needs clarification
           </span>
         </li>
@@ -250,7 +250,7 @@ function CriteriaEditor({
     <div className="space-y-2">
       {!editing ? (
         <>
-          <p className="text-xs text-espresso-500">
+          <p className="text-xs text-muted">
             Updating the criteria answers every question above at once, and everyone in the group gets notified.
           </p>
           <Button variant="outline" className="w-full" onClick={() => setEditing(true)}>
@@ -260,7 +260,7 @@ function CriteriaEditor({
       ) : (
         <>
           <textarea value={draftDescription} onChange={(e) => setDraftDescription(e.target.value)} rows={3} className={inputClasses} />
-          {error && <p className="text-xs text-danger-700">{error}</p>}
+          {error && <p className="text-xs text-alert">{error}</p>}
           <div className="flex gap-2">
             <Button variant="outline" className="flex-1" onClick={() => setEditing(false)}>
               Cancel

@@ -18,19 +18,19 @@ export function OfflineGroupBalances() {
   if (snapshots.length === 0) return null;
 
   return (
-    <div className="mt-7 w-full max-w-[330px] rounded-[20px] border border-espresso-100 bg-paper-white px-5 py-4 text-left">
-      <p className="text-[11px] font-bold tracking-[1.6px] text-espresso-500 uppercase">Last known balances</p>
+    <div className="mt-7 w-full max-w-[330px] rounded-[20px] border border-hairline bg-surface px-5 py-4 text-left">
+      <p className="text-[11px] font-bold tracking-[1.6px] text-muted uppercase">Last known balances</p>
       <ul className="mt-2.5 flex flex-col gap-2.5">
         {snapshots.map((s) => (
           <li key={s.groupId} className="flex items-baseline justify-between gap-3 text-[15px]">
-            <span className="min-w-0 truncate text-espresso-900">{s.groupName}</span>
-            <span className="shrink-0 font-bold text-honey-700">{formatTokens(s.balance)}</span>
+            <span className="min-w-0 truncate text-ink">{s.groupName}</span>
+            <span className="shrink-0 font-bold text-signal">{formatTokens(s.balance)}</span>
           </li>
         ))}
       </ul>
       {/* One caption for the whole box rather than a per-row age: every figure here is stale by
           definition, and the exact minute count isn't what anyone reads it for. */}
-      <p className="mt-3 text-[11px] text-espresso-400">
+      <p className="mt-3 text-[11px] text-faint">
         Saved before you went offline, so these may be out of date.
       </p>
     </div>

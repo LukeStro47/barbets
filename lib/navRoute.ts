@@ -1,4 +1,4 @@
-export type NavTab = 'home' | 'markets' | 'board' | 'you';
+export type NavTab = 'markets' | 'inbox' | 'group' | 'you';
 
 /** Pure, framework-free pathname parsing shared by BottomNav (the fixed bar) and
  * BottomNavSpacer (the bottom scroll padding) — kept in one place so the two can't
@@ -28,11 +28,11 @@ export function shouldDisablePullToRefresh(pathname: string): boolean {
 }
 
 /** The groupId a route is scoped to, or null when the route isn't under a specific group
- * (the all-groups hub, /groups/new, /profile, admin/feedback, ...). */
+ * (the all-groups hub, /groups/new, /profile, /inbox, admin/feedback, ...). */
 export function getRouteGroupId(pathname: string): string | null {
   const match = pathname.match(/^\/groups\/([^/]+)(?:\/|$)/);
   if (!match) return null;
-  return match[1] === 'new' ? null : match[1];
+  return match[1] === 'new' || match[1] === 'discover' ? null : match[1];
 }
 
 /** The one route `@modal` intercepts (see `app/(app)/@modal/(.)groups/[groupId]/members/
@@ -44,17 +44,30 @@ export function isMemberProfileModalRoute(pathname: string): boolean {
   return /^\/groups\/[^/]+\/members\/[^/]+\/?$/.test(pathname);
 }
 
+/**
+ * Bottom nav tabs (DESIGN.md): Markets · Inbox · + · Group · You.
+ * Group's default landing is the leaderboard; Markets is the group feed.
+ * /groups (all-groups hub) is reached via the group switcher, not a chrome tab.
+ */
 export function getActiveNavTab(pathname: string): NavTab | null {
-  if (pathname === '/profile') return 'you';
-  if (pathname === '/groups') return 'home';
+  if (pathname === '/profile' || pathname.startsWith('/profile/')) return 'you';
+  if (pathname === '/inbox') return 'inbox';
+  if (pathname === '/groups' || pathname === '/groups/discover') return null;
 
   const groupId = getRouteGroupId(pathname);
   if (!groupId) return null;
 
   const rest = pathname.slice(`/groups/${groupId}`.length);
-  // Member records (and their head-to-head comparison) are only ever reached from the
-  // leaderboard/awards pages, never from a market — so the bar should stay on Board rather
-  // than falling through to the generic Markets default.
-  if (rest.startsWith('/leaderboard') || rest.startsWith('/awards') || rest.startsWith('/members')) return 'board';
+  // Group section: leaderboard, awards, members, settings
+  if (
+    rest.startsWith('/leaderboard') ||
+    rest.startsWith('/awards') ||
+    rest.startsWith('/members') ||
+    rest.startsWith('/settings') ||
+    rest.startsWith('/seasons')
+  ) {
+    return 'group';
+  }
+  // Markets section: group hub, market detail, bets, templates
   return 'markets';
 }

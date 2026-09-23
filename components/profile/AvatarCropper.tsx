@@ -66,7 +66,7 @@ export function AvatarCropper({
   if (error) {
     return (
       <div className="space-y-3">
-        <p className="text-sm text-danger-700">{error}</p>
+        <p className="text-sm text-alert">{error}</p>
         <Button type="button" variant="outline" className="w-full" onClick={onCancel}>
           Close
         </Button>
@@ -133,10 +133,10 @@ export function AvatarCropper({
 
   return (
     <div className="space-y-4">
-      <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">Position your photo</p>
+      <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-ink">Position your photo</p>
 
       <div
-        className="relative mx-auto touch-none overflow-hidden rounded-full bg-espresso-50 select-none"
+        className="relative mx-auto touch-none overflow-hidden rounded-full bg-rule select-none"
         style={{ width: VIEWPORT, height: VIEWPORT }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -163,7 +163,7 @@ export function AvatarCropper({
       </div>
 
       <div className="flex items-center gap-2.5 px-1">
-        <span className="text-xs font-bold text-espresso-400">Zoom</span>
+        <span className="text-xs font-bold text-faint">Zoom</span>
         <input
           type="range"
           min={1}
@@ -172,7 +172,7 @@ export function AvatarCropper({
           value={zoom}
           onChange={(e) => updateZoom(Number(e.target.value))}
           disabled={!naturalSize || busy}
-          className="flex-1 accent-honey-500"
+          className="flex-1 accent-signal"
         />
       </div>
 

@@ -22,42 +22,42 @@ export function SeasonMarketsArchiveCard({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <h2 className="ml-1 text-xs font-bold tracking-[0.08em] text-espresso-400 uppercase">View markets</h2>
-      <div className="overflow-hidden rounded-[22px] border border-espresso-100 bg-paper-white">
+      <h2 className="ml-1 text-xs font-bold tracking-[0.08em] text-faint uppercase">View markets</h2>
+      <div className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
         <Link
           href={`/groups/${groupId}/seasons?season=${seasonNumber}`}
-          className="flex items-center gap-3 border-b border-espresso-50 px-4 py-[14px] transition-colors hover:bg-espresso-50/25"
+          className="flex items-center gap-3 border-b border-rule px-4 py-[14px] transition-colors hover:bg-rule/25"
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-espresso-50 text-espresso-600">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-rule text-muted">
             <TicketIcon className="h-4 w-4" />
           </span>
           <span className="min-w-0 flex-1">
-            <p className="font-display text-[15px] leading-[1.25] font-bold text-espresso-950">
+            <p className="font-display text-[15px] leading-[1.25] font-bold text-ink">
               All {marketsSettled} from this season
             </p>
-            <p className="mt-0.5 text-xs leading-[1.35] text-espresso-400">
+            <p className="mt-0.5 text-xs leading-[1.35] text-faint">
               Settled and paid out.{viewerBetCount != null && ` You were on ${viewerBetCount} of them.`}
             </p>
           </span>
-          <ChevronRightIcon className="h-[13px] w-[7px] shrink-0 text-espresso-200" />
+          <ChevronRightIcon className="h-[13px] w-[7px] shrink-0 text-dash" />
         </Link>
         {hasEarlierSeasons && (
           <Link
             href={`/groups/${groupId}/seasons`}
-            className="flex items-center gap-3 px-4 py-[14px] transition-colors hover:bg-espresso-50/25"
+            className="flex items-center gap-3 px-4 py-[14px] transition-colors hover:bg-rule/25"
           >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-espresso-50 text-espresso-600">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-rule text-muted">
               <CalendarIcon className="h-4 w-4" />
             </span>
             <span className="min-w-0 flex-1">
-              <p className="font-display text-[15px] leading-[1.25] font-bold text-espresso-950">Earlier seasons</p>
-              <p className="mt-0.5 text-xs leading-[1.35] text-espresso-400">See how past seasons played out</p>
+              <p className="font-display text-[15px] leading-[1.25] font-bold text-ink">Earlier seasons</p>
+              <p className="mt-0.5 text-xs leading-[1.35] text-faint">See how past seasons played out</p>
             </span>
-            <ChevronRightIcon className="h-[13px] w-[7px] shrink-0 text-espresso-200" />
+            <ChevronRightIcon className="h-[13px] w-[7px] shrink-0 text-dash" />
           </Link>
         )}
       </div>
-      <p className="px-1 text-[11.5px] leading-[1.4] text-espresso-400">
+      <p className="px-1 text-[11.5px] leading-[1.4] text-faint">
         Nothing is open or pending, so the three tabs collapse into {hasEarlierSeasons ? 'these two rows' : 'this row'} until the next season
         starts.
       </p>

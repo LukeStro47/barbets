@@ -39,7 +39,7 @@ export function LineTicket({ lineLabel }: { lineLabel: string }) {
     <TicketCard label="The line" meta="Over / Under" bodyClassName="px-[18px] py-4">
       <div className="flex items-center justify-between gap-3">
         <p
-          className={`min-w-0 truncate font-display ${lineSizeClass(lineLabel)} leading-none font-extrabold tracking-[-0.02em] text-espresso-950 tabular-nums`}
+          className={`min-w-0 truncate font-display ${lineSizeClass(lineLabel)} leading-none font-extrabold tracking-[-0.02em] text-ink tabular-nums`}
         >
           {lineLabel}
         </p>
@@ -47,7 +47,7 @@ export function LineTicket({ lineLabel }: { lineLabel: string }) {
           type="button"
           onClick={() => betslip?.open({})}
           disabled={!betslip}
-          className="shrink-0 rounded-full border border-espresso-200 bg-transparent px-3 py-[7px] text-[12.5px] font-bold whitespace-nowrap text-espresso-600 transition-colors hover:border-espresso-800 hover:bg-espresso-50 disabled:hover:border-espresso-200 disabled:hover:bg-transparent"
+          className="shrink-0 rounded-full border border-hairline bg-transparent px-3 py-[7px] text-[12.5px] font-bold whitespace-nowrap text-muted transition-colors hover:border-ink hover:bg-rule disabled:hover:border-hairline disabled:hover:bg-transparent"
         >
           Pick a side
         </button>
@@ -79,12 +79,12 @@ export function OptionsTicket({ options }: { options: MarketOption[] }) {
             key={o.id}
             type="button"
             onClick={() => betslip?.open({ optionId: o.id })}
-            className="flex w-full items-center justify-between gap-2.5 rounded-[14px] border-[1.5px] border-espresso-100 bg-paper px-3.5 py-3 text-left text-sm font-bold text-espresso-600 transition-colors hover:border-espresso-800 hover:bg-espresso-50"
+            className="flex w-full items-center justify-between gap-2.5 rounded-[14px] border-[1.5px] border-hairline bg-canvas px-3.5 py-3 text-left text-sm font-bold text-muted transition-colors hover:border-ink hover:bg-rule"
           >
             <span className="min-w-0 truncate">
               <OptionLabel label={o.label} />
             </span>
-            <span className="shrink-0 text-xs font-bold text-espresso-400">Back this</span>
+            <span className="shrink-0 text-xs font-bold text-faint">Back this</span>
           </button>
         ))}
       </div>

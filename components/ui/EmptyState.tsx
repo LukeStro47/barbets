@@ -1,3 +1,5 @@
+import { cn } from '@/lib/cn';
+
 export function EmptyState({
   icon = '🍻',
   title,
@@ -11,10 +13,10 @@ export function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-dashed border-espresso-200 px-6 py-10 text-center">
-      <div className="text-3xl">{icon}</div>
-      <p className="mt-2 font-semibold text-espresso-700">{title}</p>
-      {subtitle && <p className="mt-1 text-sm text-espresso-400">{subtitle}</p>}
+    <div className="rounded-2xl border border-dashed border-hairline px-6 py-10 text-center">
+      {icon ? <div className="text-3xl">{icon}</div> : null}
+      <p className={cn(icon ? 'mt-2' : undefined, 'font-semibold text-muted')}>{title}</p>
+      {subtitle && <p className="mt-1 text-sm text-faint">{subtitle}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   );

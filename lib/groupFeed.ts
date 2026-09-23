@@ -149,17 +149,23 @@ export async function getActiveMarkets(supabase: Supabase, groupId: string, user
   const bettingClosedIds = rows.filter((m) => BETTING_CLOSED_STATUSES.includes(m.status)).map((m) => m.id);
   const proposalMarketIds = rows.filter((m) => m.status === 'proposed' || m.status === 'disputed').map((m) => m.id);
 
-  const [{ data: proposalRows }, openCountEntries, oddsEntries] = await Promise.all([
+  const [{ data: proposalRows }, openCountEntries, openVolumeEntries, oddsEntries] = await Promise.all([
     proposalMarketIds.length > 0
       ? supabase.from('resolution_proposals').select('market_id, proposed_outcome, proposed_option_id').in('market_id', proposalMarketIds)
       : { data: [] as { market_id: string; proposed_outcome: string | null; proposed_option_id: string | null }[] },
-    // These two are still one round trip per market: get_open_bet_count and get_closed_odds
-    // only take a single market id, and giving them array-valued siblings is a migration. What
-    // changed is that they all go out at once instead of one-at-a-time inside the card loop, so
-    // the wait is the slowest call rather than the sum of every call.
+    // These three are still one round trip per market: get_open_bet_count, get_open_bet_volume,
+    // and get_closed_odds only take a single market id, and giving them array-valued siblings is
+    // a migration. What changed is that they all go out at once instead of one-at-a-time inside
+    // the card loop, so the wait is the slowest call rather than the sum of every call.
     Promise.all(
       openIds.map(async (id) => {
         const { data } = await supabase.rpc('get_open_bet_count', { p_market_id: id });
+        return [id, (data as number | null) ?? 0] as const;
+      })
+    ),
+    Promise.all(
+      openIds.map(async (id) => {
+        const { data } = await supabase.rpc('get_open_bet_volume', { p_market_id: id });
         return [id, (data as number | null) ?? 0] as const;
       })
     ),
@@ -185,6 +191,7 @@ export async function getActiveMarkets(supabase: Supabase, groupId: string, user
   const optionLabelById = new Map((optionRows ?? []).map((o) => [o.id, o.label]));
   const proposalByMarket = new Map((proposalRows ?? []).map((p) => [p.market_id, p]));
   const openCountByMarket = new Map(openCountEntries);
+  const openVolumeByMarket = new Map(openVolumeEntries);
   const oddsByMarket = new Map(oddsEntries);
   const needsClarificationIds = new Set((needsClarificationRows ?? []).map((m: { id: string }) => m.id));
   const myOpenBetsByMarket = groupBy((openBetRows ?? []) as BetRow[], (b) => b.market_id);
@@ -214,6 +221,7 @@ export async function getActiveMarkets(supabase: Supabase, groupId: string, user
       buckets.open.push({
         ...base,
         openBetCount: openCountByMarket.get(m.id) ?? 0,
+        poolTotal: openVolumeByMarket.get(m.id) ?? 0,
         needsAttention: needsClarificationIds.has(m.id),
         myBets,
       });

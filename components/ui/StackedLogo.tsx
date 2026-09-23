@@ -1,18 +1,14 @@
-import Image from 'next/image';
 import { cn } from '@/lib/cn';
+import { Logo, Mark } from '@/components/ui/Logo';
 
-/** Coin over wordmark, stacked vertically — for a big centered hero mark (landing page), as opposed to <Logo />'s horizontal nav lockup. */
+/** Centred mark over wordmark for hero placements (cold open, entry). */
 export function StackedLogo({ height = 140, className }: { height?: number; className?: string }) {
-  const width = Math.round(height * (1527 / 1911));
+  const markSize = Math.round(height * 0.48);
+  const wordHeight = Math.round(height * 0.28);
   return (
-    <Image
-      src="/barbets-stacked.png"
-      alt="Barbets"
-      width={width}
-      height={height}
-      priority
-      className={cn('mx-auto', className)}
-      style={{ height, width: 'auto' }}
-    />
+    <div className={cn('mx-auto flex flex-col items-center gap-3', className)} style={{ height }}>
+      <Mark size={markSize} />
+      <Logo height={wordHeight} />
+    </div>
   );
 }

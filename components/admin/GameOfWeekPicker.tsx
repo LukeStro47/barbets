@@ -40,22 +40,22 @@ function CandidateRow({
   disabled: boolean;
 }) {
   return (
-    <div className="flex items-center gap-3 border-b border-espresso-50 px-4 py-[13px] last:border-b-0">
-      <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px] bg-espresso-50 text-espresso-500">
+    <div className="flex items-center gap-3 border-b border-rule px-4 py-[13px] last:border-b-0">
+      <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px] bg-rule text-muted">
         <ClockIcon className="h-[15px] w-[15px]" />
       </span>
       <span className="min-w-0 flex-1">
-        <p className="font-display text-[14.5px] font-bold leading-[1.3] text-espresso-950">
+        <p className="font-display text-[14.5px] font-bold leading-[1.3] text-ink">
           {candidate.home} vs. {candidate.away}
         </p>
-        <p className="mt-0.5 text-[11.5px] text-espresso-400">{formatKickoff(candidate.commence_time)}</p>
-        {isFallback && <p className="mt-0.5 text-[10px] font-bold text-honey-700">★ Latest kickoff · auto-pick fallback</p>}
+        <p className="mt-0.5 text-[11.5px] text-faint">{formatKickoff(candidate.commence_time)}</p>
+        {isFallback && <p className="mt-0.5 text-[10px] font-bold text-signal">★ Latest kickoff · auto-pick fallback</p>}
       </span>
       <button
         type="button"
         disabled={disabled}
         onClick={onPick}
-        className="shrink-0 rounded-full border border-espresso-200 px-[13px] py-1.5 text-[11.5px] font-bold text-espresso-800 disabled:opacity-50"
+        className="shrink-0 rounded-full border border-hairline px-[13px] py-1.5 text-[11.5px] font-bold text-ink disabled:opacity-50"
       >
         Pick
       </button>
@@ -87,39 +87,39 @@ function LeagueSection({ pick }: { pick: GameOfWeekPick | undefined; league: Gam
   return (
     <div className="flex flex-col gap-2">
       <div className="ml-0.5 flex items-center justify-between">
-        <span className="font-display text-base font-extrabold text-espresso-950">{LEAGUE_LABEL[pick.league]}</span>
+        <span className="font-display text-base font-extrabold text-ink">{LEAGUE_LABEL[pick.league]}</span>
         {pick.status === 'awaiting_pick' && (
-          <span className="rounded-full bg-honey-100 px-2.5 py-[3px] text-[11px] font-bold text-honey-800">Awaiting your pick</span>
+          <span className="rounded-full bg-signal-tint px-2.5 py-[3px] text-[11px] font-bold text-signal-deep">Awaiting your pick</span>
         )}
         {pick.status === 'picked' && (
-          <span className="flex items-center gap-1 rounded-full bg-success-100 px-2.5 py-[3px] text-[11px] font-bold text-success-700">
+          <span className="flex items-center gap-1 rounded-full bg-gain-bg px-2.5 py-[3px] text-[11px] font-bold text-gain">
             <CheckCircleIcon className="h-[11px] w-[11px]" /> Picked
           </span>
         )}
         {pick.status === 'published' && (
-          <span className="rounded-full bg-espresso-800 px-2.5 py-[3px] text-[11px] font-bold text-paper-white">Live</span>
+          <span className="rounded-full bg-ink px-2.5 py-[3px] text-[11px] font-bold text-white">Live</span>
         )}
-        {pick.status === 'skipped' && <span className="rounded-full bg-espresso-100 px-2.5 py-[3px] text-[11px] font-bold text-espresso-500">Bye week</span>}
+        {pick.status === 'skipped' && <span className="rounded-full bg-rule px-2.5 py-[3px] text-[11px] font-bold text-muted">Bye week</span>}
       </div>
 
-      {error && <p className="text-sm text-danger-700">{error}</p>}
+      {error && <p className="text-sm text-alert">{error}</p>}
 
-      {pick.status === 'skipped' && <p className="rounded-2xl border border-dashed border-espresso-200 px-4 py-6 text-center text-sm text-espresso-400">No games in this week&apos;s window.</p>}
+      {pick.status === 'skipped' && <p className="rounded-2xl border border-dashed border-hairline px-4 py-6 text-center text-sm text-faint">No games in this week&apos;s window.</p>}
 
       {(pick.status === 'picked' || pick.status === 'published') && !showCandidateList && (
-        <div className="rounded-2xl border border-espresso-100 bg-paper-white p-4">
+        <div className="rounded-2xl border border-hairline bg-surface p-4">
           <div className="flex items-center gap-3">
             <span
               className={cn(
                 'flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[11px]',
-                pick.status === 'published' ? 'bg-espresso-800 text-paper-white' : 'bg-success-100 text-success-700'
+                pick.status === 'published' ? 'bg-ink text-white' : 'bg-gain-bg text-gain'
               )}
             >
               <CheckCircleIcon className="h-[17px] w-[17px]" />
             </span>
             <span className="min-w-0 flex-1">
-              <p className="font-display text-base font-bold text-espresso-950">{matchupLabel(pick.candidates, pick.chosen_event_id)}</p>
-              <p className="mt-0.5 text-[12.5px] text-espresso-400">
+              <p className="font-display text-base font-bold text-ink">{matchupLabel(pick.candidates, pick.chosen_event_id)}</p>
+              <p className="mt-0.5 text-[12.5px] text-faint">
                 {pick.status === 'published'
                   ? 'Live in the group now'
                   : pick.chosen_by
@@ -129,15 +129,15 @@ function LeagueSection({ pick }: { pick: GameOfWeekPick | undefined; league: Gam
             </span>
           </div>
           {pick.status === 'published' && pick.market_id && (
-            <div className="mt-3 border-t border-espresso-50 pt-3">
-              <Link href={`/groups/${pick.group_id}/markets/${pick.market_id}`} className="text-[12.5px] font-bold text-honey-700">
+            <div className="mt-3 border-t border-rule pt-3">
+              <Link href={`/groups/${pick.group_id}/markets/${pick.market_id}`} className="text-[12.5px] font-bold text-signal">
                 View market
               </Link>
             </div>
           )}
           {pick.status === 'picked' && (
-            <div className="mt-3 border-t border-espresso-50 pt-3">
-              <button type="button" onClick={() => setChanging(true)} className="rounded-full border border-espresso-200 px-3.5 py-1.5 text-[12.5px] font-bold text-espresso-700">
+            <div className="mt-3 border-t border-rule pt-3">
+              <button type="button" onClick={() => setChanging(true)} className="rounded-full border border-hairline px-3.5 py-1.5 text-[12.5px] font-bold text-muted">
                 Change pick
               </button>
             </div>
@@ -146,9 +146,9 @@ function LeagueSection({ pick }: { pick: GameOfWeekPick | undefined; league: Gam
       )}
 
       {showCandidateList && (
-        <div className="max-h-[280px] overflow-y-auto overflow-x-hidden rounded-[18px] border border-espresso-100 bg-paper-white">
+        <div className="max-h-[280px] overflow-y-auto overflow-x-hidden rounded-[18px] border border-hairline bg-surface">
           {pick.candidates.length === 0 ? (
-            <p className="px-4 py-6 text-center text-sm text-espresso-400">No candidates this week.</p>
+            <p className="px-4 py-6 text-center text-sm text-faint">No candidates this week.</p>
           ) : (
             pick.candidates.map((c, i) => (
               <CandidateRow
@@ -170,15 +170,15 @@ function PastPicksHistory({ picks }: { picks: GameOfWeekPick[] }) {
   if (picks.length === 0) return null;
   return (
     <div className="flex flex-col gap-2">
-      <h2 className="ml-0.5 text-xs font-bold uppercase tracking-[0.08em] text-espresso-400">Past weeks</h2>
-      <div className="overflow-hidden rounded-[18px] border border-espresso-100 bg-paper-white">
+      <h2 className="ml-0.5 text-xs font-bold uppercase tracking-[0.08em] text-faint">Past weeks</h2>
+      <div className="overflow-hidden rounded-[18px] border border-hairline bg-surface">
         {picks.map((p, i) => (
-          <div key={p.id} className={cn('flex items-center gap-3 px-4 py-[13px]', i !== picks.length - 1 && 'border-b border-espresso-50')}>
-            <span className="w-9 shrink-0 text-[10.5px] font-bold uppercase tracking-wide text-espresso-400">{LEAGUE_LABEL[p.league]}</span>
-            <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-espresso-800">
+          <div key={p.id} className={cn('flex items-center gap-3 px-4 py-[13px]', i !== picks.length - 1 && 'border-b border-rule')}>
+            <span className="w-9 shrink-0 text-[10.5px] font-bold uppercase tracking-wide text-faint">{LEAGUE_LABEL[p.league]}</span>
+            <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-ink">
               {p.status === 'skipped' ? 'Bye week' : matchupLabel(p.candidates, p.chosen_event_id)}
             </span>
-            <span className="shrink-0 text-[11.5px] text-espresso-400">{p.week_key}</span>
+            <span className="shrink-0 text-[11.5px] text-faint">{p.week_key}</span>
           </div>
         ))}
       </div>
@@ -199,10 +199,10 @@ export function GameOfWeekPicker({ picks }: { picks: GameOfWeekPick[] }) {
 
   if (current.size === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-espresso-200 px-6 py-10 text-center">
+      <div className="rounded-2xl border border-dashed border-hairline px-6 py-10 text-center">
         <div className="text-3xl">🏈</div>
-        <p className="mt-2 font-semibold text-espresso-700">Nothing to pick yet</p>
-        <p className="mt-1 text-sm text-espresso-400">
+        <p className="mt-2 font-semibold text-muted">Nothing to pick yet</p>
+        <p className="mt-1 text-sm text-faint">
           Check back Monday morning, once this week&apos;s candidates are in.
         </p>
       </div>
@@ -215,8 +215,8 @@ export function GameOfWeekPicker({ picks }: { picks: GameOfWeekPick[] }) {
         <LeagueSection key={league} league={league} pick={current.get(league)} />
       ))}
       <PastPicksHistory picks={history} />
-      <div className="rounded-[13px] bg-paper-dim px-4 py-3">
-        <p className="text-[12.5px] leading-[1.5] text-espresso-500">
+      <div className="rounded-[13px] bg-rule px-4 py-3">
+        <p className="text-[12.5px] leading-[1.5] text-muted">
           Nobody picks in time? The system auto-selects the latest-kickoff game so the group never goes dark.
         </p>
       </div>

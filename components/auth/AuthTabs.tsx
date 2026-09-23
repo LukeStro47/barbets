@@ -29,28 +29,36 @@ export function AuthTabs({
   if (mode === 'signin') {
     return (
       <AuthScreen title="Welcome back." subtitle="Your markets are still running.">
-        {bannerError && <p className="mt-6 text-sm text-danger-700">{bannerError}</p>}
-        <SignInForm next={next} />
-        <p className="mt-auto pt-8 text-center text-[15px] text-espresso-400">
-          No account yet?{' '}
-          <button type="button" onClick={() => switchMode('signup')} className="font-bold text-honey-700">
-            Make one
-          </button>
-        </p>
+        {bannerError && <p className="mt-6 text-sm text-alert">{bannerError}</p>}
+        <SignInForm
+          next={next}
+          alternate={
+            <>
+              No account yet?{' '}
+              <button type="button" onClick={() => switchMode('signup')} className="font-bold text-signal">
+                Make one
+              </button>
+            </>
+          }
+        />
       </AuthScreen>
     );
   }
 
   return (
-    <AuthScreen title="Get a seat at the table." subtitle="Two fields, then you're in.">
-      {bannerError && <p className="mt-6 text-sm text-danger-700">{bannerError}</p>}
-      <SignUpForm next={next} />
-      <p className="mt-auto pt-8 text-center text-[15px] text-espresso-400">
-        Already have one?{' '}
-        <button type="button" onClick={() => switchMode('signin')} className="font-bold text-honey-700">
-          Sign in
-        </button>
-      </p>
+    <AuthScreen title="Get a seat at the table." subtitle="Email, a password, then you're in.">
+      {bannerError && <p className="mt-6 text-sm text-alert">{bannerError}</p>}
+      <SignUpForm
+        next={next}
+        alternate={
+          <>
+            Already have one?{' '}
+            <button type="button" onClick={() => switchMode('signin')} className="font-bold text-signal">
+              Sign in
+            </button>
+          </>
+        }
+      />
     </AuthScreen>
   );
 }

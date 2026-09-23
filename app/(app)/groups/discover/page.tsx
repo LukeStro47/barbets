@@ -40,17 +40,17 @@ export default async function DiscoverGroupsPage({ searchParams }: { searchParam
       <div className="flex items-center pt-[22px]">
         <Link
           href={all ? '/groups?all=1' : '/groups'}
-          className="-ml-1 inline-flex items-center gap-0.5 text-[12.5px] font-bold text-espresso-400 hover:text-espresso-600"
+          className="-ml-1 inline-flex items-center gap-0.5 text-[12.5px] font-bold text-faint hover:text-muted"
         >
-          <CaretLeftIcon className="h-4 w-4 text-espresso-300" />
+          <CaretLeftIcon className="h-4 w-4 text-faint" />
           Back
         </Link>
       </div>
 
       <div className="flex flex-col gap-[18px] py-[14px] pb-8">
         <div>
-          <h1 className="font-display text-[26px] font-extrabold tracking-[-0.02em] text-espresso-950">Public groups</h1>
-          <p className="mt-[3px] text-[13px] text-espresso-500">
+          <h1 className="font-display text-[26px] font-extrabold tracking-[-0.02em] text-ink">Public groups</h1>
+          <p className="mt-[3px] text-[13px] text-muted">
             {groups.length === 0
               ? 'Nothing open right now.'
               : `${numberWordCapitalized(groups.length)} ${groups.length === 1 ? 'table' : 'tables'} open to anyone. Join instantly, no invite needed.`}

@@ -15,8 +15,8 @@ import { AwardIconPicker } from '@/components/groups/AwardIconPicker';
 import { ChevronRightIcon } from '@/components/ui/icons';
 
 const inputClasses =
-  'w-full rounded-[10px] border border-espresso-200 bg-paper-white px-3.5 py-2.5 text-[15px] font-semibold text-espresso-950 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
-const rowClassName = 'flex items-center gap-[11px] rounded-2xl border border-espresso-100 bg-paper-white px-3.5 py-3';
+  'w-full rounded-[10px] border border-hairline bg-surface px-3.5 py-2.5 text-[15px] font-semibold text-ink focus:border-signal focus:outline-none focus:ring-2 focus:ring-signal/15';
+const rowClassName = 'flex items-center gap-[11px] rounded-2xl border border-hairline bg-surface px-3.5 py-3';
 
 /**
  * The awards page's second section, group-configured rather than app-defined — the "Propose an
@@ -92,10 +92,10 @@ export function CustomAwardsSection({
 
   return (
     <div className="space-y-[7px]">
-      <p className="ml-1 text-[10.5px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">Custom awards</p>
+      <p className="ml-1 text-[10.5px] font-extrabold tracking-[0.09em] text-faint uppercase">Custom awards</p>
 
       {held.length === 0 && vacant.length === 0 && (
-        <p className="rounded-2xl border border-dashed border-espresso-200 px-3.5 py-3 text-[12.5px] text-espresso-400">
+        <p className="rounded-2xl border border-dashed border-hairline px-3.5 py-3 text-[12.5px] text-faint">
           {isOwner ? "You haven't configured any yet." : "The owner hasn't configured any yet."}
         </p>
       )}
@@ -108,24 +108,24 @@ export function CustomAwardsSection({
         const isYours = holder.user_id === currentUserId;
         const content = (
           <>
-            <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-honey-50">
-              <AwardGlyph iconKey={t.icon_key} stroke="var(--color-honey-700)" />
+            <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-signal-tint">
+              <AwardGlyph iconKey={t.icon_key} stroke="var(--color-signal)" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[13.5px] font-extrabold text-espresso-950">{t.label}</span>
-              <span className="block text-[11px] leading-[1.4] text-espresso-400">{shape?.description}</span>
+              <span className="block text-[13.5px] font-extrabold text-ink">{t.label}</span>
+              <span className="block text-[11px] leading-[1.4] text-faint">{shape?.description}</span>
             </span>
             <span className="shrink-0 text-right">
-              <Mention nickname={nickname} className="block text-[12.5px] font-extrabold text-espresso-950" />
-              <span className="block text-[11px] font-extrabold text-honey-700">{shape?.format(holder.stat_value) ?? ''}</span>
+              <Mention nickname={nickname} className="block text-[12.5px] font-extrabold text-ink" />
+              <span className="block text-[11px] font-extrabold text-signal">{shape?.format(holder.stat_value) ?? ''}</span>
             </span>
-            {membershipId && <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-espresso-300" />}
+            {membershipId && <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-faint" />}
           </>
         );
         return (
           <div key={t.id} className="flex items-center gap-2">
             {membershipId ? (
-              <Link href={`/groups/${groupId}/members/${membershipId}`} className={`flex-1 ${rowClassName} ${isYours ? 'border-honey-300 bg-honey-50/40' : ''}`}>
+              <Link href={`/groups/${groupId}/members/${membershipId}`} className={`flex-1 ${rowClassName} ${isYours ? 'border-signal bg-signal-tint/40' : ''}`}>
                 {content}
               </Link>
             ) : (
@@ -136,7 +136,7 @@ export function CustomAwardsSection({
                 type="button"
                 disabled={isPending}
                 onClick={() => remove(t.id)}
-                className="shrink-0 text-[11.5px] font-semibold text-danger-700 hover:underline"
+                className="shrink-0 text-[11.5px] font-semibold text-alert hover:underline"
               >
                 Remove
               </button>
@@ -152,12 +152,12 @@ export function CustomAwardsSection({
             return (
               <div key={t.id} className="flex items-center gap-2">
                 <div className={`flex-1 ${rowClassName} border-dashed`}>
-                  <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-espresso-50 opacity-60">
-                    <AwardGlyph iconKey={t.icon_key} stroke="var(--color-espresso-400)" />
+                  <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-rule opacity-60">
+                    <AwardGlyph iconKey={t.icon_key} stroke="var(--color-faint)" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[13.5px] font-extrabold text-espresso-400">{t.label}</span>
-                    <span className="block text-[11px] leading-[1.4] text-espresso-400">Nobody qualifies yet.</span>
+                    <span className="block text-[13.5px] font-extrabold text-faint">{t.label}</span>
+                    <span className="block text-[11px] leading-[1.4] text-faint">Nobody qualifies yet.</span>
                   </span>
                 </div>
                 {isOwner && (
@@ -165,7 +165,7 @@ export function CustomAwardsSection({
                     type="button"
                     disabled={isPending}
                     onClick={() => remove(t.id)}
-                    className="shrink-0 text-[11.5px] font-semibold text-danger-700 hover:underline"
+                    className="shrink-0 text-[11.5px] font-semibold text-alert hover:underline"
                   >
                     Remove
                   </button>
@@ -180,7 +180,7 @@ export function CustomAwardsSection({
         <button
           type="button"
           onClick={() => setCreating(true)}
-          className="w-full rounded-2xl border border-dashed border-espresso-200 px-3.5 py-3 text-center text-[12.5px] font-bold text-espresso-500 hover:bg-espresso-50"
+          className="w-full rounded-2xl border border-dashed border-hairline px-3.5 py-3 text-center text-[12.5px] font-bold text-muted hover:bg-rule"
         >
           + Create an award
         </button>
@@ -193,11 +193,11 @@ export function CustomAwardsSection({
             resetForm();
           }}
         >
-          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">Create an award</p>
-          {error && <p className="text-sm text-danger-700">{error}</p>}
+          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-ink">Create an award</p>
+          {error && <p className="text-sm text-alert">{error}</p>}
 
           <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-espresso-500" htmlFor="award-shape">
+            <label className="block text-xs font-bold text-muted" htmlFor="award-shape">
               What it measures
             </label>
             <select id="award-shape" value={shapeKey} onChange={(e) => setShapeKey(e.target.value)} className={inputClasses}>
@@ -207,11 +207,11 @@ export function CustomAwardsSection({
                 </option>
               ))}
             </select>
-            <p className="text-[11.5px] text-espresso-400">{AVAILABLE_CUSTOM_AWARD_SHAPES.find((s) => s.key === shapeKey)?.description}</p>
+            <p className="text-[11.5px] text-faint">{AVAILABLE_CUSTOM_AWARD_SHAPES.find((s) => s.key === shapeKey)?.description}</p>
           </div>
 
           <label className="block space-y-1.5">
-            <span className="block text-xs font-bold text-espresso-500">Name</span>
+            <span className="block text-xs font-bold text-muted">Name</span>
             <input
               value={label}
               onChange={(e) => setLabel(e.target.value)}
@@ -222,7 +222,7 @@ export function CustomAwardsSection({
           </label>
 
           <div className="space-y-1.5">
-            <span className="block text-xs font-bold text-espresso-500">Symbol</span>
+            <span className="block text-xs font-bold text-muted">Symbol</span>
             <AwardIconPicker value={iconKey} onChange={setIconKey} />
           </div>
 

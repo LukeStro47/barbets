@@ -16,12 +16,12 @@ function TimelineStep({
   return (
     <div className="flex items-stretch gap-3">
       <span className="flex w-[18px] shrink-0 flex-col items-center">
-        <span className={`h-2.5 w-2.5 rounded-full ${done ? 'bg-honey-500' : 'border-2 border-espresso-200 bg-paper-white'}`} />
-        {!isLast && <span className="w-[2px] flex-1 bg-espresso-100" />}
+        <span className={`h-2.5 w-2.5 rounded-full ${done ? 'bg-signal' : 'border-2 border-hairline bg-surface'}`} />
+        {!isLast && <span className="w-[2px] flex-1 bg-rule" />}
       </span>
       <span className={`block leading-[1.35] ${!isLast ? 'pb-3.5' : ''}`}>
-        <span className="block text-[13.5px] leading-[1.3] font-bold text-espresso-950">{title}</span>
-        <span className="block text-[11.5px] leading-[1.35] text-espresso-400">{subtitle}</span>
+        <span className="block text-[13.5px] leading-[1.3] font-bold text-ink">{title}</span>
+        <span className="block text-[11.5px] leading-[1.35] text-faint">{subtitle}</span>
       </span>
     </div>
   );
@@ -53,8 +53,8 @@ export function WhatsNextCard({
   const isIn = membershipStatus === 'active' ? !hasOptedOut : hasOptedIn;
 
   return (
-    <div className="flex flex-col gap-3.5 rounded-[24px] border border-espresso-100 bg-paper-white p-[18px] shadow-sm shadow-espresso-900/5">
-      <h2 className="font-display text-[15px] font-bold text-espresso-800">What happens next</h2>
+    <div className="flex flex-col gap-3.5 rounded-[24px] border border-hairline bg-surface p-[18px] shadow-sm shadow-none">
+      <h2 className="font-display text-[15px] font-bold text-ink">What happens next</h2>
       <div className="flex flex-col">
         <TimelineStep done title="Season closed today" subtitle="Every market settled, balances locked in." />
         <TimelineStep
@@ -68,12 +68,12 @@ export function WhatsNextCard({
         />
         <TimelineStep done={false} title="Betting opens" subtitle="First markets can go up. Nothing to do until then." isLast />
       </div>
-      <div className="flex items-center gap-3 border-t border-espresso-50 pt-3.5">
+      <div className="flex items-center gap-3 border-t border-rule pt-3.5">
         <span className="min-w-0 flex-1">
-          <span className="block text-[13.5px] leading-[1.3] font-bold text-espresso-950">
+          <span className="block text-[13.5px] leading-[1.3] font-bold text-ink">
             {isIn ? "You're opted-in to the next season by default" : "You're sitting this one out"}
           </span>
-          <span className="block text-[11.5px] leading-[1.35] text-espresso-400">
+          <span className="block text-[11.5px] leading-[1.35] text-faint">
             {playingCount} in{sittingOutNicknames.length > 0 && `, ${sittingOutNicknames.map((n) => `@${n}`).join(', ')} sitting out`}
           </span>
         </span>

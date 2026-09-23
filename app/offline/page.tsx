@@ -9,7 +9,7 @@ import { OfflineHeadline } from '@/components/pwa/OfflineHeadline';
 // asset instead, same reasoning RevealTicket.tsx uses for the reveal-ticket logo.
 export default function OfflinePage() {
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center bg-paper px-7 py-11 pt-[calc(env(safe-area-inset-top)+2.75rem)] text-center">
+    <main className="flex min-h-dvh flex-col items-center justify-center bg-canvas px-7 py-11 pt-[calc(env(safe-area-inset-top)+2.75rem)] text-center">
       <img src="/barbets-coin.png" alt="" className="h-24 w-auto opacity-50 grayscale" />
       <OfflineHeadline />
       <OfflineGroupBalances />

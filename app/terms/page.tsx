@@ -196,7 +196,7 @@ const sections: Section[] = [
 function renderBlock(block: Block, i: number) {
   if ('ul' in block) {
     return (
-      <ul key={i} className="mt-2 list-disc space-y-1 pl-5 text-espresso-600">
+      <ul key={i} className="mt-2 list-disc space-y-1 pl-5 text-muted">
         {block.ul.map((item, j) => (
           <li key={j}>{item}</li>
         ))}
@@ -204,8 +204,8 @@ function renderBlock(block: Block, i: number) {
     );
   }
   return (
-    <p key={i} className="mt-2 text-espresso-600 first:mt-0">
-      {block.lead && <strong className="font-semibold text-espresso-800">{block.lead} </strong>}
+    <p key={i} className="mt-2 text-muted first:mt-0">
+      {block.lead && <strong className="font-semibold text-ink">{block.lead} </strong>}
       {block.p}
     </p>
   );
@@ -225,9 +225,9 @@ export default async function TermsPage() {
       </div>
 
       <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight text-espresso-900">Terms of use</h1>
-        <p className="mt-1 text-espresso-500">Last updated: August 28, 2026</p>
-        <p className="mt-3 text-espresso-600">
+        <h1 className="font-display text-2xl font-bold tracking-tight text-ink">Terms of use</h1>
+        <p className="mt-1 text-muted">Last updated: August 28, 2026</p>
+        <p className="mt-3 text-muted">
           These Terms of Service ("Terms") are an agreement between you and My Barbets LLC, doing business as Barbets
           ("Barbets," "we," "us," or "our") governing your use of the Barbets application and websites, including
           app.mybarbets.com, mybarbets.com, and the Barbets mobile apps (together, the "Service"). You accept these
@@ -239,15 +239,15 @@ export default async function TermsPage() {
       <div className="space-y-4">
         {sections.map((s) => (
           <Card key={s.title}>
-            <h2 className="font-display font-bold text-espresso-800">{s.title}</h2>
+            <h2 className="font-display font-bold text-ink">{s.title}</h2>
             {s.blocks.map(renderBlock)}
           </Card>
         ))}
       </div>
 
-      <p className="text-sm text-espresso-500">
+      <p className="text-sm text-muted">
         Questions about these terms? Reach out at{' '}
-        <a href={`mailto:${CONTACT_EMAIL}`} className="font-medium text-espresso-700 underline">
+        <a href={`mailto:${CONTACT_EMAIL}`} className="font-medium text-muted underline">
           {CONTACT_EMAIL}
         </a>
         .

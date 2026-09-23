@@ -28,73 +28,73 @@ export function MemberProfileCard({ data }: { data: MemberProfileData }) {
               avatarUpdatedAt={avatarUpdatedAt}
               avatarPresetKey={avatarPresetKey}
               className="h-14 w-14 text-lg"
-              fallbackClassName="bg-espresso-50 text-honey-700"
+              fallbackClassName="bg-rule text-signal"
               enlargeOnTap
             />
           )}
           <div className="min-w-0 flex-1">
-            <Mention nickname={stats.nickname} className="block truncate font-display text-lg font-extrabold text-espresso-950" />
-            <p className="mt-0.5 truncate text-xs text-espresso-400">{groupName}</p>
-            <p className="mt-0.5 truncate text-xs text-espresso-400">Here since {sinceLabel}</p>
+            <Mention nickname={stats.nickname} className="block truncate font-display text-lg font-extrabold text-ink" />
+            <p className="mt-0.5 truncate text-xs text-faint">{groupName}</p>
+            <p className="mt-0.5 truncate text-xs text-faint">Here since {sinceLabel}</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 border-t border-espresso-100 pt-4">
+        <div className="grid grid-cols-2 gap-3 border-t border-hairline pt-4">
           <div>
-            <p className="font-display text-2xl font-extrabold tabular-nums text-espresso-950">{formatTokens(stats.balance)}</p>
-            <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-espresso-400 uppercase">Tokens</p>
+            <p className="font-display text-2xl font-extrabold tabular-nums text-ink">{formatTokens(stats.balance)}</p>
+            <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-faint uppercase">Tokens</p>
           </div>
           <div>
-            <p className="font-display text-2xl font-extrabold tabular-nums text-espresso-950">{standing}</p>
-            <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-espresso-400 uppercase">Standing</p>
+            <p className="font-display text-2xl font-extrabold tabular-nums text-ink">{standing}</p>
+            <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-faint uppercase">Standing</p>
           </div>
           {hidesPipelineStats ? (
             <div className="col-span-2">
-              <p className={`font-display text-2xl font-extrabold tabular-nums ${net >= 0 ? 'text-honey-600' : 'text-espresso-400'}`}>
+              <p className={`font-display text-2xl font-extrabold tabular-nums ${net >= 0 ? 'text-signal' : 'text-faint'}`}>
                 {formatSignedTokens(net)}
               </p>
-              <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-espresso-400 uppercase">All-time net</p>
+              <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-faint uppercase">All-time net</p>
             </div>
           ) : (
             <>
               <div>
-                <p className="font-display text-2xl font-extrabold tabular-nums text-espresso-950">
+                <p className="font-display text-2xl font-extrabold tabular-nums text-ink">
                   {stats.accuracy_pct == null ? '—' : `${stats.accuracy_pct}%`}
                 </p>
-                <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-espresso-400 uppercase">Accuracy</p>
+                <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-faint uppercase">Accuracy</p>
               </div>
               <div>
-                <p className={`font-display text-2xl font-extrabold tabular-nums ${net >= 0 ? 'text-honey-600' : 'text-espresso-400'}`}>
+                <p className={`font-display text-2xl font-extrabold tabular-nums ${net >= 0 ? 'text-signal' : 'text-faint'}`}>
                   {formatSignedTokens(net)}
                 </p>
-                <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-espresso-400 uppercase">All-time net</p>
+                <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-faint uppercase">All-time net</p>
               </div>
             </>
           )}
         </div>
 
         {!hidesPipelineStats && (
-          <div className="grid grid-cols-2 gap-3 border-t border-espresso-100 pt-4 text-sm">
+          <div className="grid grid-cols-2 gap-3 border-t border-hairline pt-4 text-sm">
             <div>
-              <p className="font-semibold text-espresso-700">Tokens wagered</p>
-              <p className="text-espresso-500">{formatTokens(Number(stats.tokens_wagered))} lifetime</p>
+              <p className="font-semibold text-muted">Tokens wagered</p>
+              <p className="text-muted">{formatTokens(Number(stats.tokens_wagered))} lifetime</p>
             </div>
             <div>
-              <p className="font-semibold text-espresso-700">Settled bets</p>
-              <p className="text-espresso-500">{stats.settled_bet_count}</p>
+              <p className="font-semibold text-muted">Settled bets</p>
+              <p className="text-muted">{stats.settled_bet_count}</p>
             </div>
           </div>
         )}
 
         {!hidesPipelineStats && (
-          <div className="border-t border-espresso-100 pt-4">
-            <p className="text-[10.5px] font-bold tracking-[0.07em] text-espresso-400 uppercase">Best call</p>
+          <div className="border-t border-hairline pt-4">
+            <p className="text-[10.5px] font-bold tracking-[0.07em] text-faint uppercase">Best call</p>
             {stats.best_call_multiple ? (
-              <p className="mt-1 text-sm font-bold text-espresso-900">
+              <p className="mt-1 text-sm font-bold text-ink">
                 {stats.best_call_multiple.toFixed(1)}&times; on &ldquo;{stats.best_call_title}&rdquo;
               </p>
             ) : (
-              <p className="mt-1 text-sm text-espresso-400">Nothing settled yet.</p>
+              <p className="mt-1 text-sm text-faint">Nothing settled yet.</p>
             )}
           </div>
         )}
@@ -102,19 +102,19 @@ export function MemberProfileCard({ data }: { data: MemberProfileData }) {
 
       {awards.length > 0 && (
         <div className="space-y-[7px]">
-          <p className="ml-1 text-[10.5px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">
+          <p className="ml-1 text-[10.5px] font-extrabold tracking-[0.09em] text-faint uppercase">
             {isYou ? 'Your awards' : 'Awards held'}
           </p>
           {awards.map((award) => (
-            <div key={`${award.kind}-${award.key}`} className="flex items-center gap-[11px] rounded-2xl border border-espresso-100 bg-paper-white px-3.5 py-3">
-              <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-honey-50">
-                <AwardGlyph iconKey={award.iconKey} stroke="var(--color-honey-700)" size={20} />
+            <div key={`${award.kind}-${award.key}`} className="flex items-center gap-[11px] rounded-2xl border border-hairline bg-surface px-3.5 py-3">
+              <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-signal-tint">
+                <AwardGlyph iconKey={award.iconKey} stroke="var(--color-signal)" size={20} />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[13.5px] font-extrabold text-espresso-950">{award.label}</span>
-                <span className="block text-[11px] leading-[1.4] text-espresso-400">{award.description}</span>
+                <span className="block text-[13.5px] font-extrabold text-ink">{award.label}</span>
+                <span className="block text-[11px] leading-[1.4] text-faint">{award.description}</span>
               </span>
-              <span className="shrink-0 text-[11px] font-extrabold text-honey-700">{award.stat}</span>
+              <span className="shrink-0 text-[11px] font-extrabold text-signal">{award.stat}</span>
             </div>
           ))}
         </div>

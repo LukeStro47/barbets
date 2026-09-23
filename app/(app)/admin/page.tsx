@@ -14,8 +14,8 @@ import type { PipelineHealth, PipelineSetting, QrScanTotal } from '@/lib/actions
 function StatTile({ label, value }: { label: string; value: number }) {
   return (
     <Card className="text-center">
-      <p className="font-display text-3xl font-bold text-espresso-900">{formatTokens(value)}</p>
-      <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-espresso-400">{label}</p>
+      <p className="font-display text-3xl font-bold text-ink">{formatTokens(value)}</p>
+      <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-faint">{label}</p>
     </Card>
   );
 }
@@ -72,8 +72,8 @@ export default async function AdminPage() {
 
       <Card className="space-y-3">
         <div>
-          <h2 className="font-semibold text-espresso-800">Send a test notification</h2>
-          <p className="text-sm text-espresso-500">
+          <h2 className="font-semibold text-ink">Send a test notification</h2>
+          <p className="text-sm text-muted">
             Pushes a title/body to everyone in a group, or just one person — start from a real notification
             template or write your own, for trying out ad/marketing copy on real devices.
           </p>
@@ -90,8 +90,8 @@ export default async function AdminPage() {
 
       <Card className="space-y-3">
         <div>
-          <h2 className="font-semibold text-espresso-800">New public group</h2>
-          <p className="text-sm text-espresso-500">
+          <h2 className="font-semibold text-ink">New public group</h2>
+          <p className="text-sm text-muted">
             Always-on, browse-and-join from the directory. You become its owner and first member.
           </p>
         </div>
@@ -100,13 +100,13 @@ export default async function AdminPage() {
 
       <Card className="space-y-3">
         <div>
-          <h2 className="font-semibold text-espresso-800">Public groups &amp; moderators</h2>
-          <p className="text-sm text-espresso-500">
+          <h2 className="font-semibold text-ink">Public groups &amp; moderators</h2>
+          <p className="text-sm text-muted">
             A moderator can hand-create a market and void a bad one, without full owner access.
           </p>
         </div>
         {(publicGroups ?? []).length === 0 ? (
-          <p className="text-sm text-espresso-400">No public groups yet.</p>
+          <p className="text-sm text-faint">No public groups yet.</p>
         ) : (
           <div className="space-y-2">
             {(publicGroups ?? []).map((g) => (
@@ -118,8 +118,8 @@ export default async function AdminPage() {
 
       <Card className="space-y-3">
         <div>
-          <h2 className="font-semibold text-espresso-800">Auto-generated market pipelines</h2>
-          <p className="text-sm text-espresso-500">
+          <h2 className="font-semibold text-ink">Auto-generated market pipelines</h2>
+          <p className="text-sm text-muted">
             Each pipeline has one on/off switch that covers both its jobs: creating new markets on
             schedule and resolving ones that have finished. Off means every scheduled run for that
             pipeline no-ops immediately, nothing is created and nothing is resolved. It does not touch
@@ -135,17 +135,17 @@ export default async function AdminPage() {
       <Link href="/admin/game-of-the-week" className="block">
         <Card className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="font-semibold text-espresso-800">Game of the Week</h2>
-            <p className="text-sm text-espresso-500">Pick this week&apos;s NFL and CFB matchup, or see past weeks.</p>
+            <h2 className="font-semibold text-ink">Game of the Week</h2>
+            <p className="text-sm text-muted">Pick this week&apos;s NFL and CFB matchup, or see past weeks.</p>
           </div>
-          <ChevronRightIcon className="h-4 w-2.5 shrink-0 text-espresso-300" />
+          <ChevronRightIcon className="h-4 w-2.5 shrink-0 text-faint" />
         </Card>
       </Link>
 
       <Card className="space-y-3">
         <div>
-          <h2 className="font-semibold text-espresso-800">QR scan totals</h2>
-          <p className="text-sm text-espresso-500">
+          <h2 className="font-semibold text-ink">QR scan totals</h2>
+          <p className="text-sm text-muted">
             Printed cards all scan as <span className="font-mono">card</span>; location-specific NFC tags get their
             own batch (e.g. <span className="font-mono">rutgers</span>). Logged before install, so this counts scans, not signups.
           </p>

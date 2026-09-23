@@ -8,7 +8,7 @@ function Wordmark() {
   return (
     <div className="flex items-center gap-[7px]">
       <img src="/barbets-mono-white.png" alt="" width={18} height={18} className="block" />
-      <span className="text-xs font-extrabold tracking-[0.08em] text-honey-300 uppercase">Barbets</span>
+      <span className="text-xs font-extrabold tracking-[0.08em] text-on-ink uppercase">Barbets</span>
     </div>
   );
 }
@@ -22,7 +22,7 @@ function RedactedLines() {
   );
 }
 
-const HATCH = 'opacity-[0.14] bg-[repeating-linear-gradient(-45deg,#e8a33d_0_2px,transparent_2px_13px)]';
+const HATCH = 'opacity-[0.14] bg-[repeating-linear-gradient(-45deg,#2d55f5_0_2px,transparent_2px_13px)]';
 
 /** The perforation line + punch holes + wax seal, all centered on the exact boundary between the
  * two cover halves. An explicit z-index (rather than DOM order) is what keeps it painting above
@@ -42,14 +42,14 @@ function Seam({ mode, tearing, onOpen }: { mode: 'static' | 'overlay'; tearing?:
     !tearing && 'animate-mystery-seal-glow',
     clickable && 'cursor-pointer transition-transform duration-150 hover:scale-[1.04] active:scale-95'
   );
-  const sealStyle = { background: 'radial-gradient(circle at 34% 28%, #f1c480, #e8a33d 46%, #ac6f18)' };
+  const sealStyle = { background: 'radial-gradient(circle at 34% 28%, #6b8cff, #2d55f5 46%, #1f3fc4)' };
   const sealInner = (
     <>
       <span className="absolute inset-[9px] rounded-full border-[1.5px] border-dashed border-[rgba(28,19,13,0.28)]" />
       {mode === 'static' ? (
-        <LockIcon className="h-[42px] w-[42px] text-espresso-900" />
+        <LockIcon className="h-[42px] w-[42px] text-ink" />
       ) : (
-        <UnlockIcon className="h-[42px] w-[42px] text-espresso-900" />
+        <UnlockIcon className="h-[42px] w-[42px] text-ink" />
       )}
     </>
   );
@@ -57,8 +57,8 @@ function Seam({ mode, tearing, onOpen }: { mode: 'static' | 'overlay'; tearing?:
   return (
     <div className={cn('z-10', mode === 'overlay' ? 'absolute inset-x-0 top-[53%]' : 'relative', !clickable && 'pointer-events-none')}>
       <div className="relative border-t-2 border-dashed border-[rgba(241,196,128,0.45)]">
-        <span className="absolute top-0 -left-2.5 h-5 w-5 -translate-y-1/2 rounded-full bg-paper" />
-        <span className="absolute top-0 -right-2.5 h-5 w-5 -translate-y-1/2 rounded-full bg-paper" />
+        <span className="absolute top-0 -left-2.5 h-5 w-5 -translate-y-1/2 rounded-full bg-canvas" />
+        <span className="absolute top-0 -right-2.5 h-5 w-5 -translate-y-1/2 rounded-full bg-canvas" />
       </div>
       {clickable ? (
         <button
@@ -99,7 +99,7 @@ export function SealedTicketCover({ groupLabel, stats, mode, tearing, onOpen, on
     <div className={cn('overflow-hidden', mode === 'static' ? 'relative rounded-t-[28px]' : 'absolute inset-x-0 top-0 h-[53%] rounded-t-[28px]')}>
       <div
         className={cn(mode === 'overlay' ? 'absolute inset-0' : 'relative', tearing && 'animate-mystery-cover-top')}
-        style={{ background: 'linear-gradient(150deg,#1c130d,#2c1f17 60%,#3b2a20)' }}
+        style={{ background: 'linear-gradient(150deg,#0c1018,#121821 60%,#1a2230)' }}
         onAnimationEnd={
           tearing
             ? (e) => {
@@ -114,13 +114,13 @@ export function SealedTicketCover({ groupLabel, stats, mode, tearing, onOpen, on
         <div className="relative px-6 pt-6 pb-[78px]">
           <div className="mb-5 flex items-center justify-between">
             <Wordmark />
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-honey-500/[0.16] px-2.5 py-1 text-[10.5px] font-extrabold tracking-[0.09em] text-honey-300 uppercase">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-signal/[0.16] px-2.5 py-1 text-[10.5px] font-extrabold tracking-[0.09em] text-on-ink uppercase">
               {mode === 'static' ? 'Sealed' : 'Tap to open'}
             </span>
           </div>
-          <p className="mb-3.5 text-[11.5px] font-bold tracking-[0.1em] text-honey-400 uppercase">{groupLabel}</p>
+          <p className="mb-3.5 text-[11.5px] font-bold tracking-[0.1em] text-signal uppercase">{groupLabel}</p>
           <RedactedLines />
-          <p className="text-[13.5px] leading-[1.5] text-paper-white/[0.62]">{mode === 'static' ? CAPTION_STATIC : CAPTION_OVERLAY}</p>
+          <p className="text-[13.5px] leading-[1.5] text-white/[0.62]">{mode === 'static' ? CAPTION_STATIC : CAPTION_OVERLAY}</p>
         </div>
       </div>
     </div>
@@ -130,21 +130,21 @@ export function SealedTicketCover({ groupLabel, stats, mode, tearing, onOpen, on
     <div className={cn('overflow-hidden', mode === 'static' ? 'relative rounded-b-[28px]' : 'absolute inset-x-0 bottom-0 top-[53%] rounded-b-[28px]')}>
       <div
         className={cn(mode === 'overlay' ? 'absolute inset-0' : 'relative', tearing && 'animate-mystery-cover-bottom')}
-        style={{ background: 'linear-gradient(150deg,#3b2a20,#2c1f17 70%,#1c130d)' }}
+        style={{ background: 'linear-gradient(150deg,#1a2230,#121821 70%,#0c1018)' }}
       >
         <div className={cn('absolute inset-0', HATCH)} />
         {stats && stats.length > 0 && (
           <div className="relative px-6 pt-[78px] pb-5">
-            <p className="mb-2.5 text-[11px] font-bold tracking-[0.1em] text-honey-400 uppercase">About the Market</p>
+            <p className="mb-2.5 text-[11px] font-bold tracking-[0.1em] text-signal uppercase">About the Market</p>
             <div className="mb-4 grid grid-cols-3 gap-2">
               {stats.map((s) => (
                 <div key={s.label} className="rounded-[14px] bg-white/[0.07] px-3 py-2.5">
-                  <p className="text-[10.5px] font-bold tracking-[0.07em] text-paper-white/45 uppercase">{s.label}</p>
-                  <p className="mt-0.5 text-[17px] font-extrabold text-paper-white">{s.value}</p>
+                  <p className="text-[10.5px] font-bold tracking-[0.07em] text-white/45 uppercase">{s.label}</p>
+                  <p className="mt-0.5 text-[17px] font-extrabold text-white">{s.value}</p>
                 </div>
               ))}
             </div>
-            <p className="flex items-center gap-1.5 text-xs font-bold text-paper-white/50">
+            <p className="flex items-center gap-1.5 text-xs font-bold text-white/50">
               <ClockIcon className="h-[13px] w-[13px] shrink-0" />
               Tap to open once it resolves.
             </p>
@@ -157,7 +157,7 @@ export function SealedTicketCover({ groupLabel, stats, mode, tearing, onOpen, on
 
   if (mode === 'static') {
     return (
-      <div className="relative overflow-visible rounded-[28px] bg-gradient-to-br from-espresso-900 via-espresso-800 to-espresso-700 text-paper-white shadow-lg shadow-espresso-950/25">
+      <div className="relative overflow-visible rounded-[28px] bg-gradient-to-br from-ink via-ink to-ink text-white shadow-lg shadow-ink/25">
         {topHalf}
         <Seam mode="static" />
         {bottomHalf}

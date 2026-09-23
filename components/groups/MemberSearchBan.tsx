@@ -38,19 +38,19 @@ export function MemberSearchBan({
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search by nickname…"
-        className="w-full rounded-[10px] border border-espresso-200 bg-paper-white px-3.5 py-2.5 text-[15px] font-semibold text-espresso-950 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200"
+        className="w-full rounded-[10px] border border-hairline bg-surface px-3.5 py-2.5 text-[15px] font-semibold text-ink focus:border-signal focus:outline-none focus:ring-2 focus:ring-signal/15"
       />
       {query.trim() && (
-        <div className="divide-y divide-espresso-50 rounded-[14px] border border-espresso-100 bg-paper-white">
+        <div className="divide-y divide-rule rounded-[14px] border border-hairline bg-surface">
           {results.length === 0 ? (
-            <p className="px-4 py-3 text-sm text-espresso-400">No match.</p>
+            <p className="px-4 py-3 text-sm text-faint">No match.</p>
           ) : (
             results.map((m) => (
               <div key={m.userId} className="flex items-center justify-between gap-3 px-4 py-3">
-                <span className="min-w-0 truncate text-sm text-espresso-800">
+                <span className="min-w-0 truncate text-sm text-ink">
                   <Mention nickname={m.nickname} className="font-semibold" />
-                  {m.isOwner && <span className="ml-1.5 text-[11.5px] font-bold text-honey-700">owner</span>}
-                  {m.isModerator && !m.isOwner && <span className="ml-1.5 text-[11.5px] font-bold text-espresso-500">mod</span>}
+                  {m.isOwner && <span className="ml-1.5 text-[11.5px] font-bold text-signal">owner</span>}
+                  {m.isModerator && !m.isOwner && <span className="ml-1.5 text-[11.5px] font-bold text-muted">mod</span>}
                 </span>
                 {canBan && !m.isOwner ? (
                   <RemoveMemberButton groupId={groupId} userId={m.userId} nickname={m.nickname} />

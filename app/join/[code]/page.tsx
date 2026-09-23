@@ -47,7 +47,7 @@ export default async function JoinPage({
     // Postgres error copy never carries a trailing period (it usually renders inline under a form
     // field). This one is a modal headline, so it gets one.
     return (
-      <main className="flex min-h-dvh items-center justify-center bg-paper px-5 py-12 pt-[calc(env(safe-area-inset-top)+3rem)]">
+      <main className="flex min-h-dvh items-center justify-center bg-canvas px-5 py-12 pt-[calc(env(safe-area-inset-top)+3rem)]">
         <InvalidInviteModal
           title={`${friendlyMessage(actionError)}.`}
           body="Codes are limited to a few tries at a time, so nobody can guess their way into a group."
@@ -58,7 +58,7 @@ export default async function JoinPage({
 
   if (!group) {
     return (
-      <main className="flex min-h-dvh items-center justify-center bg-paper px-5 py-12 pt-[calc(env(safe-area-inset-top)+3rem)]">
+      <main className="flex min-h-dvh items-center justify-center bg-canvas px-5 py-12 pt-[calc(env(safe-area-inset-top)+3rem)]">
         <InvalidInviteModal />
       </main>
     );
@@ -71,7 +71,7 @@ export default async function JoinPage({
   // step centers on the group, the nickname step is a top-aligned form screen), so each owns
   // its own gutters and safe-area inset.
   return (
-    <main className="flex min-h-dvh flex-col bg-paper">
+    <main className="flex min-h-dvh flex-col bg-canvas">
       <JoinFlow
         inviteCode={code}
         joinSource={joinSource}

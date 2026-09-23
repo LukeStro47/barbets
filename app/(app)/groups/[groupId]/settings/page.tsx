@@ -21,9 +21,9 @@ import { loadGroupManageContext } from '@/lib/groupManageLoad';
 import type { GroupSettings } from '@/lib/actions/groups';
 
 const STACK_COLORS = [
-  'bg-espresso-900 text-honey-300',
-  'bg-espresso-600 text-honey-200',
-  'bg-espresso-400 text-paper-white',
+  'bg-ink text-on-ink',
+  'bg-muted text-on-ink',
+  'bg-faint text-white',
 ];
 
 function MemberStack({ nicknames }: { nicknames: string[] }) {
@@ -34,7 +34,7 @@ function MemberStack({ nicknames }: { nicknames: string[] }) {
         <span
           key={`${name}-${i}`}
           className={cn(
-            'flex h-6 w-6 items-center justify-center rounded-full border-[1.5px] border-paper-white text-[9.5px] font-extrabold',
+            'flex h-6 w-6 items-center justify-center rounded-full border-[1.5px] border-surface text-[9.5px] font-extrabold',
             STACK_COLORS[i],
             i > 0 && '-ml-[7px]'
           )}
@@ -50,13 +50,13 @@ function HowItWorksBanner({ groupId }: { groupId: string }) {
   return (
     <Link
       href={`/how-it-works?group=${groupId}`}
-      className="flex items-center gap-3 rounded-[14px] border border-honey-300 bg-honey-50 px-4 py-[13px] transition-colors hover:bg-honey-100"
+      className="flex items-center gap-3 rounded-[14px] border border-signal bg-signal-tint px-4 py-[13px] transition-colors hover:bg-signal-tint"
     >
-      <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-honey-500 text-espresso-900">
+      <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-signal text-ink">
         <InfoIcon className="h-[17px] w-[17px]" />
       </span>
-      <span className="flex-1 text-[13.5px] font-bold text-espresso-900">How it works</span>
-      <ChevronRightIcon className="h-[15px] w-[11px] shrink-0 text-espresso-400" />
+      <span className="flex-1 text-[13.5px] font-bold text-ink">How it works</span>
+      <ChevronRightIcon className="h-[15px] w-[11px] shrink-0 text-faint" />
     </Link>
   );
 }

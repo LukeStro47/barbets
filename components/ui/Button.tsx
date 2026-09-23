@@ -1,27 +1,30 @@
 import type { ButtonHTMLAttributes } from 'react';
 import { cn } from '@/lib/cn';
 
-type Variant = 'primary' | 'accent' | 'outline' | 'ghost' | 'danger' | 'muted';
+type Variant = 'primary' | 'secondary' | 'dark' | 'outline' | 'ghost' | 'danger' | 'muted' | 'accent';
 type Size = 'sm' | 'md' | 'lg' | 'xl';
 
 const variantClasses: Record<Variant, string> = {
-  primary: 'bg-espresso-800 text-paper-white hover:bg-espresso-900 disabled:bg-espresso-300',
-  accent: 'bg-honey-500 text-espresso-900 hover:bg-honey-600 disabled:bg-honey-200',
-  outline: 'border border-espresso-200 text-espresso-800 hover:bg-espresso-50 disabled:text-espresso-300',
-  ghost: 'text-espresso-700 hover:bg-espresso-50 disabled:text-espresso-300',
-  danger: 'bg-danger-500 text-paper-white hover:bg-danger-700 disabled:bg-danger-100',
-  /** Looks disabled (greyed out) while staying clickable, for controls that need to explain why they're off rather than silently doing nothing. */
-  muted: 'bg-espresso-100 text-espresso-400 hover:bg-espresso-100',
+  primary:
+    'bg-signal text-white shadow-[var(--elevation-cta)] hover:bg-signal-deep disabled:bg-disabled-bg disabled:text-disabled-ink disabled:shadow-none',
+  /** Alias kept for call sites that used the old honey accent CTA. */
+  accent:
+    'bg-signal text-white shadow-[var(--elevation-cta)] hover:bg-signal-deep disabled:bg-disabled-bg disabled:text-disabled-ink disabled:shadow-none',
+  secondary: 'bg-surface border border-hairline text-ink hover:bg-rule disabled:text-disabled-ink',
+  dark: 'bg-ink text-white hover:bg-ink/90 disabled:bg-disabled-bg disabled:text-disabled-ink',
+  outline: 'border border-hairline bg-surface text-ink hover:bg-rule disabled:text-disabled-ink',
+  ghost: 'text-muted hover:bg-rule disabled:text-disabled-ink',
+  danger: 'bg-alert text-white hover:bg-alert/90 disabled:bg-alert-bg disabled:text-disabled-ink',
+  /** Looks disabled while staying clickable, for controls that need to explain why they're off. */
+  muted: 'bg-disabled-bg text-disabled-ink hover:bg-disabled-bg',
 };
 
-/** Font weight lives here rather than in the shared base, so `xl` can be heavier without two
- *  conflicting `font-*` utilities landing on the same element (cn() is a plain join, not a merge). */
 const sizeClasses: Record<Size, string> = {
-  sm: 'px-3 py-1.5 text-sm font-semibold rounded-full',
-  md: 'px-4 py-2.5 text-sm font-semibold rounded-full',
-  lg: 'px-6 py-3 text-base font-semibold rounded-full',
-  /** The one CTA on a full-bleed screen (splash, auth, invite, 404, offline). */
-  xl: 'px-6 py-4 text-[17px] font-bold rounded-full',
+  sm: 'px-3 py-1.5 text-[13px] font-bold rounded-[14px]',
+  md: 'px-4 py-2.5 text-[15px] font-bold rounded-[14px]',
+  lg: 'px-6 py-[15px] text-[15px] font-bold rounded-[14px]',
+  /** Full-bleed screen CTA (splash, auth, invite). */
+  xl: 'px-6 py-4 text-[15px] font-bold rounded-[14px]',
 };
 
 export function Button({
@@ -33,7 +36,7 @@ export function Button({
   return (
     <button
       className={cn(
-        'whitespace-nowrap transition-colors disabled:cursor-not-allowed',
+        'inline-flex items-center justify-center whitespace-nowrap transition-colors duration-150 ease-out disabled:cursor-not-allowed',
         variantClasses[variant],
         sizeClasses[size],
         className

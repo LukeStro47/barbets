@@ -4,6 +4,10 @@
 
 `ARCHITECTURE.md` at the repo root is the canonical description of how this app works — data model, the privacy choke point, every Postgres function, money rules, notifications, PWA/push, deployment, and a "notable design decisions" section explaining *why* the non-obvious choices were made. Read it before any non-trivial change. It is actively maintained and is more current than any summary of it.
 
+## Read DESIGN.md before any UI change
+
+`DESIGN.md` at the repo root is the canonical visual design system — colours, type, radii, spacing, motion, voice, and the five product rules (one blue; hairlines not shadows; sans to read / mono to compare; say the state; nothing explained twice). Read it before writing or restyling UI. Keep it current the same way as ARCHITECTURE: if a change makes the token set, shell chrome, or design rules wrong, update `DESIGN.md` in the same change. `.cursor/rules/design.mdc` points agents at it on every session.
+
 ## Keep ARCHITECTURE.md current — this is part of the change, not a chore
 
 **If your change makes anything in ARCHITECTURE.md wrong, incomplete, or silent, update the doc in the same change.** Don't defer it, don't ask whether the user wants it, don't leave it as a suggested follow-up. Say in your summary that you updated it.

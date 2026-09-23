@@ -118,18 +118,18 @@ export function SeasonSetupEditSheet({
 
   return (
     <Modal onClose={onClose} padded={false} panelClassName="max-h-[85dvh] overflow-x-hidden overflow-y-auto">
-      <div className="flex items-center justify-between gap-3 bg-espresso-50 px-[18px] py-[13px]">
-        <p className="text-xs font-extrabold tracking-[0.06em] text-espresso-800 uppercase">Season {seasonNumber} setup</p>
+      <div className="flex items-center justify-between gap-3 bg-rule px-[18px] py-[13px]">
+        <p className="text-xs font-extrabold tracking-[0.06em] text-ink uppercase">Season {seasonNumber} setup</p>
       </div>
 
       <div className="flex flex-col gap-4 p-[18px]">
         <div className="space-y-1.5">
-          <p className="text-xs font-bold text-espresso-500">Name</p>
+          <p className="text-xs font-bold text-muted">Name</p>
           <SeasonNameEditor groupId={groupId} seasonId={seasonId} currentName={seasonName} seasonNumber={seasonNumber} />
         </div>
 
         <div className="space-y-2">
-          <p className="text-xs font-bold text-espresso-500">Length</p>
+          <p className="text-xs font-bold text-muted">Length</p>
           <div className="flex flex-wrap gap-1.5">
             {LENGTH_OPTIONS.map((len) => (
               <button
@@ -139,8 +139,8 @@ export function SeasonSetupEditSheet({
                 className={cn(
                   'rounded-full px-3 py-1.5 text-[12.5px] font-bold transition-colors',
                   seasonLength === len
-                    ? 'bg-espresso-900 text-paper-white'
-                    : 'border border-espresso-200 text-espresso-700 hover:bg-espresso-50'
+                    ? 'bg-ink text-white'
+                    : 'border border-hairline text-muted hover:bg-rule'
                 )}
               >
                 {SEASON_LENGTH_SHORT_LABEL[len]}
@@ -152,13 +152,13 @@ export function SeasonSetupEditSheet({
               type="datetime-local"
               value={seasonCustomEndsAt}
               onChange={(e) => setSeasonCustomEndsAt(e.target.value)}
-              className="w-full rounded-[10px] border border-espresso-200 bg-paper-white px-3 py-2 text-sm font-semibold text-espresso-950 focus:border-honey-500 focus:ring-2 focus:ring-honey-200 focus:outline-none"
+              className="w-full rounded-[10px] border border-hairline bg-surface px-3 py-2 text-sm font-semibold text-ink focus:border-signal focus:ring-2 focus:ring-signal/15 focus:outline-none"
             />
           )}
         </div>
 
         <div className="space-y-1.5">
-          <label className="block text-xs font-bold text-espresso-500" htmlFor="setup-seed-amount">
+          <label className="block text-xs font-bold text-muted" htmlFor="setup-seed-amount">
             Reseed each member with
           </label>
           <input
@@ -167,44 +167,44 @@ export function SeasonSetupEditSheet({
             inputMode="numeric"
             value={seedAmount}
             onChange={(e) => setSeedAmount(formatTokenInputValue(e.target.value, TOKEN_ALLOCATION_MAX))}
-            className="w-full rounded-[10px] border border-espresso-200 bg-paper-white px-3 py-2 text-sm font-bold text-espresso-950 focus:border-honey-500 focus:ring-2 focus:ring-honey-200 focus:outline-none"
+            className="w-full rounded-[10px] border border-hairline bg-surface px-3 py-2 text-sm font-bold text-ink focus:border-signal focus:ring-2 focus:ring-signal/15 focus:outline-none"
           />
         </div>
 
-        {error && <p className="text-sm text-danger-700">{error}</p>}
+        {error && <p className="text-sm text-alert">{error}</p>}
       </div>
 
-      <div className="border-t border-espresso-50 px-[18px] py-[14px]">
+      <div className="border-t border-rule px-[18px] py-[14px]">
         <Button type="button" size="lg" className="w-full" disabled={isPending} onClick={continueToSeason}>
           {isPending ? 'Starting…' : `Continue (${playingCount} playing)`}
         </Button>
-        <p className="mt-2 text-center text-[11.5px] text-espresso-400">Betting starts paused until you open it.</p>
+        <p className="mt-2 text-center text-[11.5px] text-faint">Betting starts paused until you open it.</p>
       </div>
 
-      <div className="border-t border-espresso-50 p-[18px]">
-        <p className="text-xs font-bold text-espresso-500">Roster</p>
-        <p className="mt-1 text-[11.5px] leading-[1.4] text-espresso-400">
+      <div className="border-t border-rule p-[18px]">
+        <p className="text-xs font-bold text-muted">Roster</p>
+        <p className="mt-1 text-[11.5px] leading-[1.4] text-faint">
           Removing someone here removes them from the group entirely, not just the next season. They can&apos;t rejoin.
         </p>
-        <div className="mt-2.5 divide-y divide-espresso-50 rounded-[14px] border border-espresso-100">
+        <div className="mt-2.5 divide-y divide-rule rounded-[14px] border border-hairline">
           {removableMembers.map((m) => (
             <div key={m.userId} className="flex items-center justify-between gap-3 px-3.5 py-2.5">
-              <span className="min-w-0 truncate text-sm text-espresso-800">
+              <span className="min-w-0 truncate text-sm text-ink">
                 <Mention nickname={m.nickname} className="font-semibold" />
-                {m.status === 'dormant' && <span className="ml-1.5 text-[11.5px] text-espresso-400">dormant</span>}
+                {m.status === 'dormant' && <span className="ml-1.5 text-[11.5px] text-faint">dormant</span>}
               </span>
               <RemoveMemberButton groupId={groupId} userId={m.userId} nickname={m.nickname} />
             </div>
           ))}
-          {removableMembers.length === 0 && <p className="px-3.5 py-2.5 text-sm text-espresso-400">Nobody else in the group yet.</p>}
+          {removableMembers.length === 0 && <p className="px-3.5 py-2.5 text-sm text-faint">Nobody else in the group yet.</p>}
         </div>
         <button
           type="button"
           onClick={() => setTransferOpen(true)}
-          className="mt-2.5 w-full rounded-[14px] border border-espresso-200 px-3.5 py-2.5 text-left text-sm font-semibold text-espresso-800 hover:bg-espresso-50"
+          className="mt-2.5 w-full rounded-[14px] border border-hairline px-3.5 py-2.5 text-left text-sm font-semibold text-ink hover:bg-rule"
         >
           Transfer ownership
-          <span className="mt-0.5 block text-[11.5px] font-normal text-espresso-400">You stay in the group as a regular member.</span>
+          <span className="mt-0.5 block text-[11.5px] font-normal text-faint">You stay in the group as a regular member.</span>
         </button>
       </div>
 

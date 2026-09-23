@@ -13,9 +13,9 @@ export const MARKET_TYPE_ICON: Record<MarketType, string> = {
   multiple_choice: '☰',
 };
 
-/** One-line explanation, used on the create-market page's type picker — the one place this is a decision being made, not just a label on something that already exists. */
+/** One-line explanation, used on the create-market sheet's type picker. */
 export const MARKET_TYPE_DESCRIPTION: Record<MarketType, string> = {
-  yes_no: 'A straightforward two-sided question.',
-  over_under: 'Bet against a number: over or under a line.',
-  multiple_choice: '2 to 10 named options, one shared pool.',
+  yes_no: 'Two sides. One question.',
+  over_under: 'Over or under a line.',
+  multiple_choice: 'Two to ten named options.',
 };

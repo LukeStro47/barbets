@@ -1,74 +1,118 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 
-  /* Paper — warm off-white background, the canvas everywhere. */
-  --color-paper: #faf6ef;
-  --color-paper-dim: #f3ecdf; /* card/section contrast against paper */
-  --color-paper-white: #fffdf9; /* cards that need to pop off paper */
+  /* Ledger neutrals — DESIGN.md */
+  --color-canvas: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-hairline: #e7eaef;
+  --color-rule: #eef0f4;
+  --color-ink: #0c1018;
+  --color-muted: #5a6373;
+  --color-faint: #8a929f;
+  --color-dash: #cfd6e2;
 
-  /* Espresso — deep warm brown, text + primary buttons + a muted ramp for borders/secondary text. */
-  --color-espresso-950: #1c130d;
-  --color-espresso-900: #2c1f17;
-  --color-espresso-800: #3b2a20; /* base: body text, primary button fill */
-  --color-espresso-700: #4a3629;
-  --color-espresso-600: #5c4335;
-  --color-espresso-500: #705441;
-  --color-espresso-400: #8c6f5c;
-  --color-espresso-300: #ab9078;
-  --color-espresso-200: #cbb6a2; /* borders */
-  --color-espresso-100: #e4d8cc; /* dividers */
-  --color-espresso-50: #f2eae1; /* subtle tinted backgrounds */
+  /* Signal blue — the one accent */
+  --color-signal: #2d55f5;
+  --color-signal-deep: #1f3fc4;
+  --color-signal-tint: #eef2ff;
+  --color-on-ink: #6b8cff;
 
-  /* Honey — warm golden amber accent: CTAs, odds bars, highlights. */
-  --color-honey-900: #7a4f0f;
-  --color-honey-800: #925e13;
-  --color-honey-700: #ac6f18;
-  --color-honey-600: #c7841f;
-  --color-honey-500: #e8a33d; /* base accent */
-  --color-honey-400: #edb35c;
-  --color-honey-300: #f1c480;
-  --color-honey-200: #f6d8a8;
-  --color-honey-100: #fae7cb;
-  --color-honey-50: #fdf3e6;
+  /* Semantics */
+  --color-gain: #0b8a5b;
+  --color-gain-bg: #e8f6ef;
+  --color-gain-line: #cbe8da;
+  --color-alert: #c8392c;
+  --color-alert-bg: #fff6f5;
+  --color-alert-line: #f6d9d5;
+  --color-disabled-bg: #eef0f4;
+  --color-disabled-ink: #a8b0bd;
 
-  /* Muted warm success/danger that sit naturally in this palette. */
-  --color-success-700: #4f6b41;
-  --color-success-500: #6b8f5a;
-  --color-success-100: #e9f0e3;
-  --color-danger-700: #96392a;
-  --color-danger-500: #c1503d;
-  --color-danger-100: #f7e6e1;
+  /* Radius ladder */
+  --radius-chip: 8px;
+  --radius-icon-tile: 10px;
+  --radius-avatar: 11px;
+  --radius-field: 14px;
+  --radius-button: 14px;
+  --radius-row: 18px;
+  --radius-row-lg: 20px;
+  --radius-card: 24px;
+  --radius-card-lg: 26px;
+  --radius-device: 30px;
+  --radius-pill: 999px;
 }
 
 @layer base {
   body {
-    background-color: var(--color-paper);
-    color: var(--color-espresso-800);
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
   }
   :root {
-    /* BottomNav's own rendered height (60px row + its bottom safe-area padding) — shared so
-       any page-specific bottom bar (currently just BetslipBar) can stack itself flush above
-       the nav instead of underneath it, rather than duplicating this as a guessed magic number
-       in more than one component. */
-    --bottomnav-height: calc(60px + max(20px, env(safe-area-inset-bottom)));
+    /* BottomNav: 62px row + safe-area padding. Shared so BetslipBar and sticky
+       footers can stack flush above the nav. */
+    --bottomnav-height: calc(62px + max(20px, env(safe-area-inset-bottom)));
 
-    /* The height a full-screen flow (the two create wizards) can fill without pushing the page
-       into a scroll. The layout already spends env(safe-area-inset-top) as in-flow padding above
-       the page, so a child sized to a plain 100dvh overflows the viewport by exactly that much —
-       which is why these screens used to arrive scrolled a notch down, below their own step bar.
-       Lives here rather than as a Tailwind arbitrary value because `calc(100dvh -
-       env(safe-area-inset-top))` can't be written as one safely: the hyphens inside the env()
-       keyword are indistinguishable from the subtraction operator to an arbitrary-value parser. */
+    /* Sticky footer CTA band (padding 12+28 + ~50px button) for scroller clearance. */
+    --sticky-footer-offset: 116px;
+
+    /* Fixed header content start (status inset + pad + title row). */
+    --header-offset: 104px;
+
+    /* Full-screen flow height under the in-flow safe-area top padding. */
     --flow-height: calc(100dvh - env(safe-area-inset-top));
+
+    --elevation-card: 0 1px 2px rgba(12, 16, 24, 0.04);
+    --elevation-cta: 0 10px 20px -10px rgba(45, 85, 245, 0.7);
+    --elevation-sheet: 0 -1px 2px rgba(12, 16, 24, 0.03);
   }
 }
 
-/* Bet-confirmed overlay: a honey checkmark popping in, then drawing its
-   stroke — kept out of @theme and scoped to these two classes rather than
-   a general-purpose animation utility. */
+/* Design motion: settle / shimmer / pulse / fade */
+@keyframes bb-settle {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(2px); }
+}
+@keyframes bb-settle-b {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-2px); }
+}
+@keyframes bb-shimmer {
+  from { background-position: 180% 0; }
+  to { background-position: -80% 0; }
+}
+@keyframes bb-pulse {
+  0%, 80%, 100% { opacity: 0.25; transform: scale(0.9); }
+  40% { opacity: 1; transform: scale(1); }
+}
+@keyframes bb-fade {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.animate-bb-settle { animation: bb-settle 2.8s ease-in-out infinite; }
+.animate-bb-settle-b { animation: bb-settle-b 2.8s ease-in-out infinite; }
+.animate-bb-shimmer {
+  background-image: linear-gradient(100deg, #eef0f4 30%, #f6f7f9 50%, #eef0f4 70%);
+  background-size: 180% 100%;
+  animation: bb-shimmer 1.4s linear infinite;
+}
+.animate-bb-pulse { animation: bb-pulse 1.2s ease-in-out infinite; }
+.animate-bb-fade { animation: bb-fade 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-bb-settle,
+  .animate-bb-settle-b,
+  .animate-bb-shimmer,
+  .animate-bb-pulse,
+  .animate-bb-fade {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Bet-confirmed overlay checkmark */
 @keyframes bet-check-pop {
   0% { transform: scale(0.4); opacity: 0; }
   65% { transform: scale(1.08); opacity: 1; }
@@ -94,25 +138,12 @@
   }
 }
 
-/* The splash (app/page.tsx): a honey glow breathing behind the mark, and the
-   logo/headline/subhead rising in together on first paint. The glow is the only
-   thing on that screen that moves, so under reduced motion it holds at a middling
-   opacity rather than disappearing — it's part of the composition, not decoration. */
-@keyframes splash-glow {
-  0%, 100% { opacity: 0.55; transform: scale(1); }
-  50% { opacity: 0.85; transform: scale(1.06); }
-}
 @keyframes splash-rise {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: none; }
 }
-.animate-splash-glow { animation: splash-glow 6s ease-in-out infinite; }
 .animate-splash-rise { animation: splash-rise 0.6s ease both; }
 @media (prefers-reduced-motion: reduce) {
-  .animate-splash-glow {
-    animation: none;
-    opacity: 0.7;
-  }
   .animate-splash-rise {
     animation: none;
     opacity: 1;
@@ -120,14 +151,9 @@
   }
 }
 
-/* The stat strip's "closing soon" state (ClosesInValue): the figure itself breathes
-   between its resting colour and danger. Deliberately not honey — honey is already
-   this app's one accent (money, the committing action), so reusing it here to mean
-   "hurry up" would make one colour carry two different meanings. Reduced motion
-   still gets the signal, just held rather than animated. */
 @keyframes stat-urgent-breathe {
   0%, 100% { color: inherit; }
-  50% { color: var(--color-danger-500); }
+  50% { color: var(--color-alert); }
 }
 .animate-urgent-breathe {
   animation: stat-urgent-breathe 2.4s ease-in-out infinite;
@@ -135,13 +161,10 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-urgent-breathe {
     animation: none;
-    color: var(--color-danger-500);
+    color: var(--color-alert);
   }
 }
 
-/* BetslipBar's idle nudge: a small one-off bounce after 10s of no page
-   interaction, just enough to catch a peripheral glance toward the bottom
-   of the screen — not a repeating attention-grabber. */
 @keyframes betslip-idle-bounce {
   0%, 100% { transform: translateY(0); }
   30% { transform: translateY(-10px); }
@@ -153,8 +176,6 @@
   .animate-betslip-idle-bounce { animation: none; }
 }
 
-/* BottomNav's Home/+ sheets: a scrim fade plus a sheet that eases up from the bar it opened
-   from, rather than an abrupt appear. */
 @keyframes bottomnav-scrim-in {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -164,7 +185,7 @@
   to { opacity: 1; transform: none; }
 }
 .animate-bottomnav-scrim-in { animation: bottomnav-scrim-in 200ms ease both; }
-.animate-bottomnav-sheet-up { animation: bottomnav-sheet-up 340ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-bottomnav-sheet-up { animation: bottomnav-sheet-up 280ms ease-out both; }
 @media (prefers-reduced-motion: reduce) {
   .animate-bottomnav-scrim-in,
   .animate-bottomnav-sheet-up {
@@ -174,65 +195,15 @@
   }
 }
 
-/* LoadingAnimation (splash + route loading states): a die/coin tumbling and
-   hopping in place, shadow squashing on each hop, "LOADING" dots blinking in
-   sequence. Four hops per 2.6s cycle, all four keyframes share the same
-   0%,12% / 25%,37% / 50%,62% / 75%,87% beat so the rotate/hop/shadow stay
-   perfectly in sync. */
-@keyframes die-tumble {
-  0%, 12% { transform: rotate(0deg); }
-  25%, 37% { transform: rotate(90deg); }
-  50%, 62% { transform: rotate(180deg); }
-  75%, 87% { transform: rotate(270deg); }
-  100% { transform: rotate(360deg); }
-}
-@keyframes die-hop {
-  0%, 12% { transform: translateY(0); }
-  18.5% { transform: translateY(-18px); }
-  25%, 37% { transform: translateY(0); }
-  43.5% { transform: translateY(-18px); }
-  50%, 62% { transform: translateY(0); }
-  68.5% { transform: translateY(-18px); }
-  75%, 87% { transform: translateY(0); }
-  93.5% { transform: translateY(-18px); }
-  100% { transform: translateY(0); }
-}
-@keyframes die-shadow {
-  0%, 12% { transform: scaleX(1); opacity: 0.22; }
-  18.5% { transform: scaleX(0.55); opacity: 0.1; }
-  25%, 37% { transform: scaleX(1); opacity: 0.22; }
-  43.5% { transform: scaleX(0.55); opacity: 0.1; }
-  50%, 62% { transform: scaleX(1); opacity: 0.22; }
-  68.5% { transform: scaleX(0.55); opacity: 0.1; }
-  75%, 87% { transform: scaleX(1); opacity: 0.22; }
-  93.5% { transform: scaleX(0.55); opacity: 0.1; }
-  100% { transform: scaleX(1); opacity: 0.22; }
-}
 @keyframes dot-blink {
   0%, 60%, 100% { opacity: 0.25; }
   30% { opacity: 1; }
 }
-.animate-die-tumble { animation: die-tumble 2.6s cubic-bezier(0.45, -0.1, 0.3, 1.15) infinite; }
-.animate-die-hop { animation: die-hop 2.6s cubic-bezier(0.35, 0.05, 0.3, 1) infinite; }
-.animate-die-shadow { animation: die-shadow 2.6s cubic-bezier(0.35, 0.05, 0.3, 1) infinite; }
 .animate-dot-blink { animation: dot-blink 1.3s infinite; }
 @media (prefers-reduced-motion: reduce) {
-  .animate-die-tumble,
-  .animate-die-hop { animation: none; }
-  .animate-die-shadow { animation: none; opacity: 0.22; }
   .animate-dot-blink { animation: none; opacity: 1; }
 }
 
-/* PageTransition: a subtle directional slide-in on route change, so back/forward
-   navigation reads closer to a native push/pop instead of an abrupt content swap.
-   Only the incoming content animates (the outgoing page is already gone by the time
-   React re-renders), so this is a settle-in nudge rather than a full two-pane slide.
-   Deliberately no "both"/"forwards" fill mode: holding the final transform (even the
-   identity translateX(0) the "to" keyframe ends on) makes this div a new containing
-   block for every position:fixed descendant instead of the real viewport, which broke
-   BetslipBar's fixed sheet and every centered <Modal> on the page. Without a fill mode,
-   the browser drops the animation's effect the instant it ends and the div reverts to
-   its own (transform-free) styling — no JS cleanup required, and none relied upon. */
 @keyframes page-in-from-right {
   from { transform: translateX(28px); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
@@ -241,21 +212,13 @@
   from { transform: translateX(-28px); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
-.animate-page-in-from-right { animation: page-in-from-right 0.22s cubic-bezier(0.22, 1, 0.36, 1); }
-.animate-page-in-from-left { animation: page-in-from-left 0.22s cubic-bezier(0.22, 1, 0.36, 1); }
+.animate-page-in-from-right { animation: page-in-from-right 0.22s ease-out; }
+.animate-page-in-from-left { animation: page-in-from-left 0.22s ease-out; }
 @media (prefers-reduced-motion: reduce) {
   .animate-page-in-from-right,
   .animate-page-in-from-left { animation: none; }
 }
 
-/* /demo walkthrough (DemoWalkthrough/DemoBetslip/DemoRevealCard): step
-   content and CTAs fade/slide in on every step change, "who called it" rows
-   stagger in, the betslip sheet slides up and its backdrop/the bet-confirmed
-   overlay fade in. Fill-mode `both` is safe here (see the page-in-from-right
-   note above for why that's usually risky) because none of these wrappers
-   ever contain a position:fixed descendant — DemoWalkthrough renders the
-   betslip sheet and confirmed overlay as top-level siblings, never nested
-   inside an animated per-step wrapper. */
 @keyframes demo-fade-up {
   from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
@@ -280,11 +243,11 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
-.animate-demo-fade-up { animation: demo-fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
-.animate-demo-fade-up-scale { animation: demo-fade-up-scale 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both; }
-.animate-demo-fade-up-btn { animation: demo-fade-up-btn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-demo-fade-up { animation: demo-fade-up 0.45s ease-out both; }
+.animate-demo-fade-up-scale { animation: demo-fade-up-scale 0.5s ease-out 0.08s both; }
+.animate-demo-fade-up-btn { animation: demo-fade-up-btn 0.4s ease-out both; }
 .animate-demo-fade-left { animation: demo-fade-left 0.4s ease both; }
-.animate-demo-sheet-up { animation: demo-sheet-up 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-demo-sheet-up { animation: demo-sheet-up 0.28s ease-out both; }
 .animate-demo-fade { animation: demo-fade 0.25s ease both; }
 @media (prefers-reduced-motion: reduce) {
   .animate-demo-fade-up,
@@ -299,15 +262,12 @@
   }
 }
 
-/* Mystery markets (a hidden subject can't see a market exists until it
-   resolves): a shimmering redacted placeholder for the sealed ticket's
-   redacted question lines, on the dark ticket gradient. */
 @keyframes mystery-shimmer {
   from { background-position: 130% 0; }
   to { background-position: -30% 0; }
 }
 .animate-mystery-shimmer-dark {
-  background-image: linear-gradient(100deg, rgba(255, 253, 249, 0.09) 30%, rgba(232, 163, 61, 0.28) 50%, rgba(255, 253, 249, 0.09) 70%);
+  background-image: linear-gradient(100deg, rgba(255, 255, 255, 0.09) 30%, rgba(107, 140, 255, 0.28) 50%, rgba(255, 255, 255, 0.09) 70%);
   background-size: 220% 100%;
   animation: mystery-shimmer 3s linear infinite;
 }
@@ -318,17 +278,9 @@
   }
 }
 
-/* SealedTicketCover: the wax-seal idle glow (sealed ticket page), and the
-   one-shot tear sequence (RevealTicket's first-open-since-resolution cover,
-   for a subject only) — seal shudders, both cover halves fly off with a
-   honey flash at the tear, the ticket underneath pops in, then its content
-   (question/badge/detail/odds/callers) stagger-fades in. Durations/easings
-   are the finalized design spec's exact values. Reuses demo-fade-up/
-   demo-fade-left above for the plain fade-ins rather than re-declaring
-   near-identical keyframes. */
 @keyframes mystery-seal-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(232, 163, 61, 0.35), 0 10px 26px -10px rgba(0, 0, 0, 0.6); }
-  50% { box-shadow: 0 0 0 12px rgba(232, 163, 61, 0), 0 10px 26px -10px rgba(0, 0, 0, 0.6); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(45, 85, 245, 0.35), 0 10px 26px -10px rgba(0, 0, 0, 0.6); }
+  50% { box-shadow: 0 0 0 12px rgba(45, 85, 245, 0), 0 10px 26px -10px rgba(0, 0, 0, 0.6); }
 }
 @keyframes mystery-seal-shake {
   0%, 100% { transform: translateX(0); }
@@ -388,7 +340,7 @@
   }
 }
 
-/* LiveRulesForm challenge-window slider: 6px track, honey fill driven by --fill, 20px thumb. */
+/* LiveRulesForm challenge-window slider */
 .challenge-window-slider {
   -webkit-appearance: none;
   appearance: none;
@@ -396,10 +348,10 @@
   border-radius: 999px;
   background: linear-gradient(
     to right,
-    var(--color-honey-500) 0%,
-    var(--color-honey-500) var(--fill, 0%),
-    var(--color-espresso-100) var(--fill, 0%),
-    var(--color-espresso-100) 100%
+    var(--color-signal) 0%,
+    var(--color-signal) var(--fill, 0%),
+    var(--color-rule) var(--fill, 0%),
+    var(--color-rule) 100%
   );
 }
 .challenge-window-slider::-webkit-slider-thumb {
@@ -408,18 +360,18 @@
   height: 20px;
   width: 20px;
   border-radius: 999px;
-  background: var(--color-paper-white);
-  border: 1.5px solid var(--color-honey-600);
-  box-shadow: 0 1px 3px rgba(28, 19, 13, 0.3);
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-signal);
+  box-shadow: 0 1px 3px rgba(12, 16, 24, 0.15);
   cursor: pointer;
 }
 .challenge-window-slider::-moz-range-thumb {
   height: 20px;
   width: 20px;
   border-radius: 999px;
-  background: var(--color-paper-white);
-  border: 1.5px solid var(--color-honey-600);
-  box-shadow: 0 1px 3px rgba(28, 19, 13, 0.3);
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-signal);
+  box-shadow: 0 1px 3px rgba(12, 16, 24, 0.15);
   cursor: pointer;
 }
 .challenge-window-slider::-moz-range-track {

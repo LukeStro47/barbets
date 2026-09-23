@@ -62,8 +62,8 @@ export function OpenAppPrompt({
     <div className="flex flex-1 flex-col items-center justify-center gap-7 px-6 py-11 pt-[calc(env(safe-area-inset-top)+2.75rem)] text-center">
       <StackedLogo height={110} />
       <div>
-        <h1 className="font-display text-2xl font-extrabold tracking-[-0.02em] text-espresso-950">You're in {groupName}</h1>
-        <p className="mt-2.5 max-w-[300px] text-[15px] leading-[1.5] text-espresso-500">
+        <h1 className="font-display text-2xl font-extrabold tracking-[-0.02em] text-ink">You're in {groupName}</h1>
+        <p className="mt-2.5 max-w-[300px] text-[15px] leading-[1.5] text-muted">
           Barbets works best in the app, push notifications when a bet closes, faster loads. Get it free, your group carries
           over automatically.
         </p>
@@ -80,21 +80,21 @@ export function OpenAppPrompt({
           </Button>
         </a>
       </div>
-      <div className="w-full max-w-[300px] space-y-3 rounded-2xl border border-espresso-100 bg-paper-white px-4 py-3.5">
+      <div className="w-full max-w-[300px] space-y-3 rounded-2xl border border-hairline bg-surface px-4 py-3.5">
         <div className="flex items-center justify-between gap-3">
-          <span className="min-w-0 truncate text-[13px] text-espresso-500">{link}</span>
-          <button type="button" onClick={() => copy('link', link)} className="shrink-0 text-[13px] font-bold text-honey-700">
+          <span className="min-w-0 truncate text-[13px] text-muted">{link}</span>
+          <button type="button" onClick={() => copy('link', link)} className="shrink-0 text-[13px] font-bold text-signal">
             {copied === 'link' ? 'Copied' : 'Copy link'}
           </button>
         </div>
-        <div className="flex items-center justify-between gap-3 border-t border-espresso-100 pt-3">
-          <span className="font-display text-lg font-extrabold tracking-[0.2em] text-espresso-900">{inviteCode}</span>
-          <button type="button" onClick={() => copy('code', inviteCode)} className="shrink-0 text-[13px] font-bold text-honey-700">
+        <div className="flex items-center justify-between gap-3 border-t border-hairline pt-3">
+          <span className="font-display text-lg font-extrabold tracking-[0.2em] text-ink">{inviteCode}</span>
+          <button type="button" onClick={() => copy('code', inviteCode)} className="shrink-0 text-[13px] font-bold text-signal">
             {copied === 'code' ? 'Copied' : 'Copy code'}
           </button>
         </div>
       </div>
-      <button type="button" onClick={onContinueInBrowser} className="text-sm text-espresso-500 hover:text-espresso-800">
+      <button type="button" onClick={onContinueInBrowser} className="text-sm text-muted hover:text-ink">
         Continue in browser instead →
       </button>
     </div>

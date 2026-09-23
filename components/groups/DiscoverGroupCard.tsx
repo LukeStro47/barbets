@@ -68,90 +68,100 @@ export function DiscoverGroupCard({
     <Link
       href={`/groups/${groupId}`}
       className={cn(
-        'shrink-0 rounded-full border border-espresso-200 font-semibold text-espresso-600',
-        variant === 'expanded' ? 'px-5 py-[9px] text-sm' : 'px-3 py-1.5 text-sm'
+        'shrink-0 rounded-[14px] border border-hairline bg-surface font-bold text-muted',
+        variant === 'expanded' ? 'px-5 py-[9px] text-[13.5px]' : 'px-3 py-1.5 text-[13px]'
       )}
     >
       Joined
     </Link>
   ) : (
     <Button
-      variant="accent"
+      variant="primary"
       size={variant === 'expanded' ? 'md' : 'sm'}
       onClick={() => setJoining(true)}
-      className={cn('shrink-0', variant === 'expanded' && 'px-5 py-[9px] font-extrabold')}
+      className="shrink-0"
     >
       Join
     </Button>
   );
 
   const openCopy =
-    openMarketCount === 0 ? 'Nothing open right now' : `${openMarketCount} open`;
+    openMarketCount === 0 ? (
+      'Nothing open right now'
+    ) : (
+      <>
+        <span className="font-mono text-[12.5px] font-semibold text-ink">{openMarketCount}</span> open
+      </>
+    );
 
   return (
     <>
       {variant === 'compact' ? (
-        <div className="rounded-[20px] border border-espresso-100 bg-paper-white p-[15px]">
-          <div className="flex items-center gap-[11px]">
-            <GroupAvatar name={name} avatarKey={avatarKey} className="h-[42px] w-[42px] text-[13px]" fallbackClassName="bg-espresso-50 text-espresso-500" />
+        <div className="rounded-[20px] border border-hairline bg-surface px-4 py-[14px]">
+          <div className="flex items-center gap-3">
+            <GroupAvatar name={name} avatarKey={avatarKey} className="h-11 w-11 text-[13px]" fallbackClassName="bg-rule text-muted" />
             <span className="min-w-0 flex-1">
               <span className="flex items-center gap-1.5">
-                <p className="truncate font-display text-[15.5px] font-extrabold tracking-[-0.01em] text-espresso-950">{name}</p>
-                <span className="shrink-0 rounded-full bg-honey-100 px-1.5 py-[1px] text-[9.5px] font-extrabold tracking-[0.04em] text-honey-700 uppercase">
+                <p className="truncate text-[14.5px] font-bold text-ink">{name}</p>
+                <span className="shrink-0 rounded-[8px] bg-signal-tint px-1.5 py-[1px] text-[9.5px] font-extrabold tracking-[0.04em] text-signal uppercase">
                   Public
                 </span>
               </span>
-              <p className="mt-[3px] flex items-center gap-1.5 text-xs text-espresso-500">
+              <p className="mt-[3px] flex items-center gap-1.5 text-[12.5px] text-muted">
                 <span>{openCopy}</span>
-                <span className="text-espresso-200">·</span>
-                <span>{memberCount} playing</span>
+                <span className="text-dash">·</span>
+                <span>
+                  <span className="font-mono text-[12.5px] font-semibold text-ink">{memberCount}</span> playing
+                </span>
               </p>
             </span>
             {joinButton}
           </div>
           {featuredMarketTitle && (
-            <div className="mt-3 flex items-center gap-[9px] rounded-[13px] bg-paper-dim px-3 py-2.5">
-              <p className="min-w-0 flex-1 truncate text-xs font-semibold text-espresso-600">&ldquo;{featuredMarketTitle}&rdquo;</p>
+            <div className="mt-3 flex items-center gap-2 rounded-[14px] border border-hairline bg-canvas px-3 py-2.5">
+              <p className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-muted">&ldquo;{featuredMarketTitle}&rdquo;</p>
               {!!featuredMarketBetCount && (
-                <span className="shrink-0 text-[11px] font-bold text-espresso-400">{featuredMarketBetCount} bets</span>
+                <span className="shrink-0 font-mono text-[11px] font-semibold text-faint">{featuredMarketBetCount} bets</span>
               )}
             </div>
           )}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-[24px] border border-espresso-100 bg-paper-white">
+        <div className="overflow-hidden rounded-[24px] border border-hairline bg-surface">
           <div className="px-[18px] pt-[18px] pb-4">
-            <div className="flex items-start gap-[11px]">
-              <GroupAvatar name={name} avatarKey={avatarKey} className="h-[46px] w-[46px] text-[13px]" fallbackClassName="bg-espresso-50 text-espresso-500" />
+            <div className="flex items-start gap-3">
+              <GroupAvatar name={name} avatarKey={avatarKey} className="h-11 w-11 text-[13px]" fallbackClassName="bg-rule text-muted" />
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-1.5">
-                  <p className="truncate font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">{name}</p>
-                  <span className="shrink-0 rounded-full bg-honey-100 px-1.5 py-[1px] text-[9.5px] font-extrabold tracking-[0.04em] text-honey-700 uppercase">
+                  <p className="truncate text-[17px] font-bold tracking-[-0.01em] text-ink">{name}</p>
+                  <span className="shrink-0 rounded-[8px] bg-signal-tint px-1.5 py-[1px] text-[9.5px] font-extrabold tracking-[0.04em] text-signal uppercase">
                     Public
                   </span>
                 </span>
-                <p className="mt-1 text-[12.5px] text-espresso-500">
-                  {memberCount} playing{settlesCopy ? ` · ${settlesCopy}` : ''}
+                <p className="mt-1 text-[12.5px] text-muted">
+                  <span className="font-mono font-semibold text-ink">{memberCount}</span> playing
+                  {settlesCopy ? ` · ${settlesCopy}` : ''}
                 </p>
               </span>
             </div>
 
             {openMarketCount > 0 && (
-              <p className="mt-4 text-[10.5px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">
-                {openMarketCount} {openMarketCount === 1 ? 'market' : 'markets'} open
+              <p className="mt-4 text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase">
+                <span className="font-mono">{openMarketCount}</span>{' '}
+                {openMarketCount === 1 ? 'market' : 'markets'} open
               </p>
             )}
             {featuredMarketTitle && (
-              <div className="mt-[9px] flex items-center gap-[10px] rounded-[13px] bg-paper-dim px-[13px] py-[11px]">
-                <p className="min-w-0 flex-1 text-[13.5px] font-bold text-espresso-800">{featuredMarketTitle}</p>
+              <div className="mt-[9px] flex items-center gap-2.5 rounded-[14px] border border-hairline bg-canvas px-[13px] py-[11px]">
+                <p className="min-w-0 flex-1 text-[13.5px] font-bold text-ink">{featuredMarketTitle}</p>
                 {!!featuredMarketBetCount && (
-                  <span className="shrink-0 text-[12.5px] font-extrabold tabular-nums text-espresso-500">{featuredMarketBetCount} bets</span>
+                  <span className="shrink-0 font-mono text-[12.5px] font-semibold text-muted">{featuredMarketBetCount} bets</span>
                 )}
               </div>
             )}
           </div>
-          <div className="flex items-center gap-[10px] border-t border-espresso-50 px-[18px] py-[13px]">
-            <p className="min-w-0 flex-1 text-[11.5px] text-espresso-400">{openCopy}</p>
+          <div className="flex items-center gap-2.5 border-t border-hairline px-[18px] py-[13px]">
+            <p className="min-w-0 flex-1 text-[11.5px] text-faint">{openCopy}</p>
             {joinButton}
           </div>
         </div>
@@ -159,24 +169,24 @@ export function DiscoverGroupCard({
 
       {joining && (
         <Modal onClose={() => setJoining(false)}>
-          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">Join {name}</p>
-          {error && <p className="text-sm text-danger-700">{error}</p>}
+          <p className="text-[17px] font-bold tracking-[-0.01em] text-ink">Join {name}</p>
+          {error && <p className="text-sm text-alert">{error}</p>}
 
-          <div className="flex items-baseline gap-1 border-b-2 border-honey-500 pb-2">
-            <span className="font-display text-xl font-extrabold text-espresso-400">@</span>
+          <div className="flex items-center gap-1 rounded-[14px] border border-hairline bg-surface px-4 py-3 focus-within:border-signal focus-within:shadow-[0_0_0_3px_rgba(45,85,245,0.15)]">
+            <span className="text-xl font-extrabold text-faint">@</span>
             <input
               value={nickname}
               onChange={(e) => setNickname(e.target.value.toLowerCase())}
               maxLength={NICKNAME_MAX_LENGTH}
               autoFocus
               aria-label="Nickname"
-              className="w-full min-w-0 bg-transparent font-display text-xl font-extrabold text-espresso-900 caret-honey-500 focus:outline-none"
+              className="w-full min-w-0 bg-transparent text-xl font-extrabold text-ink caret-signal focus:outline-none"
             />
           </div>
-          <p className="text-xs text-espresso-500">One word, letters, numbers and underscores.</p>
+          <p className="text-[12.5px] text-muted">One word, letters, numbers and underscores.</p>
 
           <div className="flex gap-2 pt-1">
-            <Button type="button" variant="outline" className="flex-1" onClick={() => setJoining(false)}>
+            <Button type="button" variant="secondary" className="flex-1" onClick={() => setJoining(false)}>
               Cancel
             </Button>
             <Button type="button" className="flex-1" disabled={isPending || nickname.trim() === ''} onClick={submitJoin}>

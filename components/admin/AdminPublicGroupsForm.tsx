@@ -12,7 +12,7 @@ function capitalize(s: string): string {
 }
 
 const inputClasses =
-  'w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-espresso-900 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200';
+  'w-full rounded-xl border border-hairline bg-surface px-4 py-2.5 text-ink focus:border-signal focus:outline-none focus:ring-2 focus:ring-signal/15';
 
 export interface PublicGroupRow {
   id: string;
@@ -70,28 +70,28 @@ export function CreatePublicGroupForm() {
 
   return (
     <div className="space-y-3">
-      {error && <p className="text-sm text-danger-700">{error}</p>}
+      {error && <p className="text-sm text-alert">{error}</p>}
       {unresolvedEmails && (
-        <p className="text-sm text-danger-700">
+        <p className="text-sm text-alert">
           Created, but no account matches: {unresolvedEmails.join(', ')}. They&apos;ll need to sign up first.
         </p>
       )}
 
       <div className="space-y-1.5">
-        <label className="block text-xs font-semibold uppercase tracking-wide text-espresso-500">Group name</label>
+        <label className="block text-xs font-semibold uppercase tracking-wide text-muted">Group name</label>
         <input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} className={inputClasses} placeholder="WVU" />
       </div>
 
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold uppercase tracking-wide text-espresso-500">Category</label>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-muted">Category</label>
           <select value={category} onChange={(e) => setCategory(e.target.value as 'generic' | 'campus')} className={inputClasses}>
             <option value="generic">Generic</option>
             <option value="campus">Campus</option>
           </select>
         </div>
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold uppercase tracking-wide text-espresso-500">Token allocation</label>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-muted">Token allocation</label>
           <input
             type="text"
             inputMode="numeric"
@@ -103,7 +103,7 @@ export function CreatePublicGroupForm() {
       </div>
 
       <div className="space-y-1.5">
-        <label className="block text-xs font-semibold uppercase tracking-wide text-espresso-500">Time zone</label>
+        <label className="block text-xs font-semibold uppercase tracking-wide text-muted">Time zone</label>
         <select value={timezone} onChange={(e) => setTimezone(e.target.value)} className={inputClasses}>
           {COMMON_TIMEZONES.map((tz) => (
             <option key={tz} value={tz}>
@@ -114,7 +114,7 @@ export function CreatePublicGroupForm() {
       </div>
 
       <div className="space-y-1.5">
-        <label className="block text-xs font-semibold uppercase tracking-wide text-espresso-500">
+        <label className="block text-xs font-semibold uppercase tracking-wide text-muted">
           Moderator emails (assigned instantly, no invite needed)
         </label>
         <textarea
@@ -124,24 +124,24 @@ export function CreatePublicGroupForm() {
           placeholder="one@wvu.edu, another@wvu.edu"
           className={inputClasses}
         />
-        <p className="text-xs text-espresso-400">
+        <p className="text-xs text-faint">
           Each has to already have a Barbets account. They&apos;re added as an active member with a moderator
           role right away and get a push about it — no join step.
         </p>
       </div>
 
-      <label className="flex items-center gap-2 text-sm text-espresso-700">
+      <label className="flex items-center gap-2 text-sm text-muted">
         <input
           type="checkbox"
           checked={selfModerate}
           onChange={(e) => setSelfModerate(e.target.checked)}
-          className="h-4 w-4 shrink-0 rounded border-espresso-300 text-honey-600 focus:ring-honey-400"
+          className="h-4 w-4 shrink-0 rounded border-dash text-signal focus:ring-signal"
         />
         I&apos;ll moderate this group too
       </label>
       {selfModerate && (
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold uppercase tracking-wide text-espresso-500">Your nickname here</label>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-muted">Your nickname here</label>
           <input value={nickname} onChange={(e) => setNickname(e.target.value.toLowerCase())} maxLength={20} className={inputClasses} />
         </div>
       )}
@@ -170,15 +170,15 @@ export function ManageModeratorsPanel({ group }: { group: PublicGroupRow }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex w-full items-center justify-between gap-2 rounded-xl border border-espresso-100 p-3 text-left"
+        className="flex w-full items-center justify-between gap-2 rounded-xl border border-hairline p-3 text-left"
       >
         <span>
-          <span className="block text-sm font-semibold text-espresso-800">{group.name}</span>
-          <span className="block text-xs text-espresso-400">
+          <span className="block text-sm font-semibold text-ink">{group.name}</span>
+          <span className="block text-xs text-faint">
             {capitalize(group.category)} · {group.memberCount} member{group.memberCount === 1 ? '' : 's'}
           </span>
         </span>
-        <span className="shrink-0 text-xs font-semibold text-honey-700">Manage</span>
+        <span className="shrink-0 text-xs font-semibold text-signal">Manage</span>
       </button>
 
       {open && <ManageModeratorsModal group={group} onClose={() => setOpen(false)} />}
@@ -226,28 +226,28 @@ function ManageModeratorsModal({ group, onClose }: { group: PublicGroupRow; onCl
 
   return (
     <Modal onClose={onClose}>
-      <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">{group.name}</p>
-      <p className="text-sm text-espresso-500">
+      <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-ink">{group.name}</p>
+      <p className="text-sm text-muted">
         {group.memberCount} user{group.memberCount === 1 ? '' : 's'} · {capitalize(group.category)}
       </p>
-      {error && <p className="text-sm text-danger-700">{error}</p>}
+      {error && <p className="text-sm text-alert">{error}</p>}
 
       <div className="space-y-1.5">
-        <label className="block text-xs font-semibold uppercase tracking-wide text-espresso-500">Moderators</label>
+        <label className="block text-xs font-semibold uppercase tracking-wide text-muted">Moderators</label>
         {candidates === null ? (
-          <p className="text-sm text-espresso-400">Loading…</p>
+          <p className="text-sm text-faint">Loading…</p>
         ) : moderators.length === 0 ? (
-          <p className="text-sm text-espresso-400">Nobody yet — add one below.</p>
+          <p className="text-sm text-faint">Nobody yet — add one below.</p>
         ) : (
-          <div className="divide-y divide-espresso-50 rounded-xl border border-espresso-100">
+          <div className="divide-y divide-rule rounded-xl border border-hairline">
             {moderators.map((m) => (
               <div key={m.user_id} className="flex items-center justify-between gap-2 px-3 py-2">
-                <span className="text-sm font-semibold text-espresso-800">@{m.nickname}</span>
+                <span className="text-sm font-semibold text-ink">@{m.nickname}</span>
                 <button
                   type="button"
                   disabled={isPending}
                   onClick={() => setModerator(m.user_id, false)}
-                  className="rounded-full border border-espresso-200 px-3 py-1 text-xs font-semibold text-espresso-600"
+                  className="rounded-full border border-hairline px-3 py-1 text-xs font-semibold text-muted"
                 >
                   Remove moderator
                 </button>
@@ -258,26 +258,26 @@ function ManageModeratorsModal({ group, onClose }: { group: PublicGroupRow; onCl
       </div>
 
       <div className="space-y-1.5">
-        <label className="block text-xs font-semibold uppercase tracking-wide text-espresso-500">Add a moderator</label>
+        <label className="block text-xs font-semibold uppercase tracking-wide text-muted">Add a moderator</label>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by nickname…"
-          className="w-full rounded-xl border border-espresso-200 bg-paper-white px-4 py-2.5 text-espresso-900 focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-200"
+          className="w-full rounded-xl border border-hairline bg-surface px-4 py-2.5 text-ink focus:border-signal focus:outline-none focus:ring-2 focus:ring-signal/15"
         />
         {query.trim() && (
-          <div className="divide-y divide-espresso-50 rounded-xl border border-espresso-100">
+          <div className="divide-y divide-rule rounded-xl border border-hairline">
             {searchResults.length === 0 ? (
-              <p className="px-3 py-2 text-sm text-espresso-400">No match.</p>
+              <p className="px-3 py-2 text-sm text-faint">No match.</p>
             ) : (
               searchResults.map((c) => (
                 <div key={c.user_id} className="flex items-center justify-between gap-2 px-3 py-2">
-                  <span className="text-sm text-espresso-800">@{c.nickname}</span>
+                  <span className="text-sm text-ink">@{c.nickname}</span>
                   <button
                     type="button"
                     disabled={isPending}
                     onClick={() => setModerator(c.user_id, true)}
-                    className="rounded-full bg-honey-500 px-3 py-1 text-xs font-bold text-espresso-900"
+                    className="rounded-full bg-signal px-3 py-1 text-xs font-bold text-ink"
                   >
                     Make moderator
                   </button>

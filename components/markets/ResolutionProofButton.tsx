@@ -63,7 +63,7 @@ export function ResolutionProofButton({
           type="button"
           onClick={open}
           disabled={loading}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-espresso-50 px-[13px] py-[7px] text-[12.5px] font-bold whitespace-nowrap text-espresso-600 transition-colors hover:bg-espresso-100 disabled:opacity-50"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-rule px-[13px] py-[7px] text-[12.5px] font-bold whitespace-nowrap text-muted transition-colors hover:bg-rule disabled:opacity-50"
         >
           <ImageIcon className="h-3.5 w-3.5" />
           {loading ? 'Loading…' : 'See the proof'}
@@ -74,7 +74,7 @@ export function ResolutionProofButton({
           onClick={open}
           disabled={loading}
           aria-label="View proof photo"
-          className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-paper-white text-espresso-500 shadow-sm hover:text-espresso-800 disabled:opacity-50"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-surface text-muted shadow-sm hover:text-ink disabled:opacity-50"
         >
           <CameraIcon className="h-3.5 w-3.5" />
         </button>
@@ -84,13 +84,13 @@ export function ResolutionProofButton({
         <Modal onClose={close}>
           {url ? (
             <>
-              <p className="font-display font-bold text-espresso-900">Proof photo</p>
+              <p className="font-display font-bold text-ink">Proof photo</p>
               <img src={url} alt="Resolution proof" className="max-h-[70vh] w-full rounded-xl object-contain" />
             </>
           ) : (
             <>
-              <p className="font-display font-bold text-espresso-900">Couldn't load photo</p>
-              <p className="text-sm text-espresso-500">{error}</p>
+              <p className="font-display font-bold text-ink">Couldn't load photo</p>
+              <p className="text-sm text-muted">{error}</p>
             </>
           )}
           <Button className="w-full" onClick={close}>
