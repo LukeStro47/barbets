@@ -527,6 +527,18 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
     }
     case 'criteria_updated':
       return { title: group.name, body: `The resolution criteria for "${market.title}" just got clearer, take a look.`, url };
+    case 'market_comment_mention': {
+      const { data: commenter } = event.actor_id
+        ? await admin.from('memberships').select('nickname').eq('group_id', event.group_id).eq('user_id', event.actor_id).maybeSingle()
+        : { data: null };
+      return {
+        title: group.name,
+        body: commenter
+          ? `@${commenter.nickname} mentioned someone in the comments on "${market.title}".`
+          : `You were mentioned in the comments on "${market.title}".`,
+        url,
+      };
+    }
     case 'impressive_bet': {
       const { data: bet } = await admin
         .from('bets')
