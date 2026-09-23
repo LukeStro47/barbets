@@ -1,11 +1,11 @@
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Badge, TONE_CLASSES } from '@/components/ui/Badge';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { OddsBar, OddsBarMulti } from '@/components/markets/OddsBar';
 import { OptionLabel } from '@/components/markets/OptionLabel';
-import { ChevronRightIcon, FlagIcon, TargetIcon, ClockIcon, AlertTriangleIcon, CheckCircleIcon } from '@/components/ui/icons';
+import { ChevronRightIcon, FlagIcon, TargetIcon, ClockIcon, AlertTriangleIcon, CheckCircleIcon, LockIcon } from '@/components/ui/icons';
 import { STATUS_LABEL, STATUS_TONE, type MarketStatus } from '@/lib/marketStatus';
 import { formatLine } from '@/lib/units';
 import { formatTokens } from '@/lib/formatNumber';
@@ -46,6 +46,8 @@ export interface MarketCardData {
   myNet?: number;
   /** open only: every bet the viewer has placed on this market so far (more than one entry means a hedge across sides/options). Undefined/empty when they haven't bet on it yet. */
   myBets?: { label: string; amount: number }[];
+  /** open only: sealed total stake on the market (get_open_bet_volume). Used by the feed card's Pool cell. */
+  poolTotal?: number;
   /** True for a market the viewer is a hidden subject of — title is always the literal string "???" (no title/description ever reaches the client for these), and every status-specific rendering below is skipped in favor of a bare bet-count/closes-in line. Sourced from get_subject_market_pulse_for_group, never from visible_markets. */
   mystery?: boolean;
 }
@@ -345,3 +347,108 @@ export function MarketRowList({ markets }: { markets: MarketCardData[] }) {
     </div>
   );
 }
+
+/**
+ * Markets hub open-tab card: title, Pool / Bets / Closes cluster, then either the viewer's
+ * position or a Place a bet affordance. Mystery (hidden-subject) markets keep the same skeleton
+ * with a lock + "A market about you" so the sealed pulse still reads as a card, not a row.
+ */
+export function MarketFeedCard({ market }: { market: MarketCardData }) {
+  const isRevealed = market.status === 'resolved' || market.status === 'voided';
+  const href = `/groups/${market.groupId}/markets/${market.id}${isRevealed ? '/reveal' : ''}`;
+  const betCount = market.openBetCount ?? market.closedBetCount ?? 0;
+  const singleBet = market.myBets?.length === 1 ? market.myBets[0] : null;
+  const hasPosition = (market.myBets?.length ?? 0) > 0;
+  const canPlace = market.status === 'open' && !market.mystery;
+
+  return (
+    <Link
+      href={href}
+      className="block overflow-hidden rounded-[20px] border border-hairline bg-surface shadow-[var(--elevation-card)] transition-colors hover:border-dash"
+    >
+      <div className="px-4 pt-4 pb-3.5">
+        {market.mystery ? (
+          <p className="flex items-center gap-2 text-[13.5px] font-bold text-muted">
+            <LockIcon className="h-3.5 w-3.5 shrink-0 text-faint" />
+            A market about you
+          </p>
+        ) : (
+          <p className="text-[17px] font-bold leading-snug tracking-[-0.01em] text-ink">{market.title}</p>
+        )}
+
+        <div className="mt-3.5 grid grid-cols-3 gap-2">
+          <FeedStat label="Pool" value={formatTokens(market.poolTotal ?? 0)} />
+          <FeedStat label="Bets" value={betCount} divider />
+          <FeedStat
+            label="Closes"
+            value={<CountdownTimer target={market.closesAt} prefix="" />}
+            divider
+            accent
+          />
+        </div>
+      </div>
+
+      {canPlace && (
+        <div
+          className={cn(
+            'flex items-center justify-between gap-3 border-t px-4 py-3',
+            hasPosition ? 'border-signal/15 bg-signal-tint' : 'border-hairline bg-surface'
+          )}
+        >
+          {hasPosition ? (
+            <>
+              <span className="text-[12.5px] font-bold text-muted">Your bet</span>
+              <span className="truncate font-mono text-[13.5px] font-semibold text-signal-deep">
+                {singleBet
+                  ? `${formatTokens(singleBet.amount)} on ${singleBet.label}`
+                  : market.myBets!.map((b) => `${formatTokens(b.amount)} ${b.label}`).join(' · ')}
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="text-[13.5px] font-bold text-ink">Place a bet</span>
+              <ChevronRightIcon className="h-3.5 w-2 shrink-0 text-faint" />
+            </>
+          )}
+        </div>
+      )}
+    </Link>
+  );
+}
+
+function FeedStat({
+  label,
+  value,
+  divider = false,
+  accent = false,
+}: {
+  label: string;
+  value: ReactNode;
+  divider?: boolean;
+  accent?: boolean;
+}) {
+  return (
+    <div className={cn('min-w-0', divider && 'border-l border-rule pl-3')}>
+      <p className="text-[11px] font-bold tracking-[0.08em] text-faint uppercase">{label}</p>
+      <p
+        className={cn(
+          'mt-0.5 truncate font-mono text-[15px] font-semibold tracking-tight',
+          accent ? 'text-signal' : 'text-ink'
+        )}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+export function MarketFeedList({ markets }: { markets: MarketCardData[] }) {
+  return (
+    <div className="flex flex-col gap-[13px]">
+      {markets.map((m) => (
+        <MarketFeedCard key={m.id} market={m} />
+      ))}
+    </div>
+  );
+}
+

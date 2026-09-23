@@ -262,7 +262,9 @@ components/
                  ConfirmCodeBoxes (box-per-digit entry, the same shape as the invite
                  code's InviteCodeBoxes in components/groups/), ForgotPasswordForm,
                  ResetPasswordForm, TurnstileField (see "Signup abuse protection" below)
-  markets/     — MarketCard, MarketActions, MarketForms (the 3-step create wizard, plus
+  markets/     — MarketCard (+ MarketRowList for pending/settled rows, MarketFeedCard /
+                 MarketFeedList for the open-tab Pool/Bets/Closes cards), MarketActions,
+                 MarketForms (the 3-step create wizard, plus
                  SaveAsTemplateModal off its review step), TemplateGallery (the template
                  browser, at markets/templates/), OddsBar, ReactionBar, ...
                  the market-page template (see "The market page template" below):
@@ -279,11 +281,12 @@ components/
                    VouchingTicket, EndorseAction     — the endorsement screen
                    ProposedOutcomeTicket, ChallengeAction — the proposed-outcome screen
   groups/      — CreateGroupForm (the 2-step create wizard + its advanced view), StartGroupButton
-                 (opens BottomNav's drawer, see the create-flow note below), InvitePill and
-                 InviteQrButton (the balance card's two invite pills: the code and a copyable
-                 invite link in a modal, and the invite link as a full-screen white QR code, see
-                 the "QR invite" design decision; InviteQrIconButton reuses the same full-screen
-                 QR from Manage group's invite card), JoinFlow (the two-step /join/[code] confirm +
+                 (opens BottomNav's drawer, see the create-flow note below), OpenGroupSwitcherButton
+                 (Markets hub header tile; fires OPEN_GROUP_SWITCHER_EVENT so BottomNav opens the
+                 same group sheet), BalanceHeroCard (white free-to-bet surface with gain chip and
+                 in-play / standing / accuracy meta), InvitePill and InviteQrButton (invite code /
+                 QR surfaces still used from Manage group's InviteHeroCard path; InviteQrIconButton
+                 reuses the same full-screen QR), JoinFlow (the two-step /join/[code] confirm +
                  nickname flow; on a mobile browser tab, a successful join shows OpenAppPrompt —
                  "you're in, continue in the app" with store links and a copyable invite
                  link/code — before landing in the group, since there is no mobile-browser gate
@@ -861,7 +864,7 @@ Why not Sentry or similar: the deliverable is "a Slack message when something br
 
 Two filters keep the channel honest, and both matter more here than in a typical app: **Next's control-flow throws** (`NEXT_NOT_FOUND`, `NEXT_REDIRECT`, ...) are skipped, because the 404-never-403 rule means `notFound()` is thrown on every hidden-market read and is completely routine; and **an `ActionError` with a known business-rule code** (`not_found`/`forbidden`/`invalid_operation`/`insufficient_balance`) is skipped, because those are the database saying no on purpose. Only an `unknown` code is a real fault. The check is duck-typed on `.code` rather than `instanceof ActionError`, since `instrumentation.ts` is its own module graph. Note that Server Actions barely feature here by design: they *return* business-rule errors rather than throwing them, so anything that does throw out of one is genuinely unexpected. Reporting is gated to `VERCEL_ENV === 'production'` (falling back to `NODE_ENV` when there's no `VERCEL_ENV`), because preview deploys also run with `NODE_ENV=production` and would otherwise page you for every branch. `console.error` still fires in every environment regardless — the console is the record that always exists, Slack is the one that pages you.
 
-**"Waiting on you" tasks (`lib/tasks.ts`) power the Inbox tab.** `getGroupTasks()` returns the two market states genuinely blocked on *this specific viewer* — endorse a `pending_sponsor` market they didn't create, vote on a `disputed` market where they're neither a hidden subject nor already a voter — mirroring `sponsor_market`/`cast_vote`'s own eligibility exactly, so the UI never offers a task the RPC would reject. It feeds four surfaces: `/inbox` (cross-group list, day-grouped), the group hub's `WaitingOnYouCard`, the all-groups page's per-row count, and an alert badge on BottomNav's Inbox tab (batched via `getGroupTaskCounts()`). `WaitingOnYouCard`'s dismissal is keyed to a *signature* of the current task set rather than a plain seen/unseen flag, so a new task automatically un-dismisses the card instead of it staying hidden forever after one dismissal.
+**"Waiting on you" tasks (`lib/tasks.ts`) power the Inbox tab.** `getGroupTasks()` returns the two market states genuinely blocked on *this specific viewer* — endorse a `pending_sponsor` market they didn't create, vote on a `disputed` market where they're neither a hidden subject nor already a voter — mirroring `sponsor_market`/`cast_vote`'s own eligibility exactly, so the UI never offers a task the RPC would reject. It feeds four surfaces: `/inbox` (cross-group list, day-grouped), the group hub's compact `WaitingOnYouCard` (alert strip that links into Inbox rather than listing tasks inline), the all-groups page's per-row count, and an alert badge on BottomNav's Inbox tab (batched via `getGroupTaskCounts()`). The Markets hub header's group-switcher tile also carries a red waiting-on-you dot when this group's task set is non-empty.
 
 **The beta gate is a single flag, currently off.** `lib/betaGate.ts` exports `BETA_GATE_ENABLED` (`false` today), a shared code, and a cookie name; when on, `proxy.ts` bounces an uncookied `/login` to `/under-construction`, and `checkBetaCode()` sets a 30-day httpOnly cookie on a correct code. It's built to be deleted — turning the flag off is enough, and nothing else in the app depends on it. Its `safeNext()` only ever redirects to a relative in-app path, never an absolute URL from form input; `app/auth/confirm/route.ts` applies the identical guard to its own `next` param.
 
@@ -1052,7 +1055,7 @@ In its place, `components/groups/OpenAppPrompt.tsx` is a one-time nudge shown by
 
 Once App Links/Universal Links actually ship in a store release, this nudge mostly stops mattering for anyone on an up-to-date install: the OS intercepts the invite link and opens the app directly, before the browser (and this prompt) ever get a chance to render. It still matters for anyone on an old install without that support, or anyone without the app at all — both groups now finish in the browser instead of dead-ending.
 
-`InvitePill` (the balance card's compact invite modal) and `InviteHeroCard` (Manage group's invite hero) both used to show only the bare code, reasoning that a shared `/join/[code]` link mostly just hit the gate. That reasoning is gone with the gate — the pill still offers a copyable invite link alongside the code, and the hero's primary action is native share of that same link (`src=link`).
+`InvitePill` and `InviteHeroCard` (Manage group's invite hero) both used to show only the bare code, reasoning that a shared `/join/[code]` link mostly just hit the gate. That reasoning is gone with the gate — the pill still offers a copyable invite link alongside the code, and the hero's primary action is native share of that same link (`src=link`). The Markets hub itself no longer hosts invite pills; invite lives on Manage group so the hub can stay a ledger surface (balance + markets).
 
 - **Both store buttons render, not just the detected one.** `isIOSUA()` still picks which leads (accent, on top) versus trails (outline, below), since a matching first button is the shorter path for most visitors — but a single button meant a false negative in platform detection, or a device the regex doesn't recognize, had no way to reach the store it actually needed. Showing both costs one extra tap for everyone else.
 - **No custom-scheme/`intent://` probe to detect an already-installed old build.** The one gap this leaves: someone with an app install that predates the App Links rollout still lands in the browser nudge instead of being bounced to the app, because there's no reliable client-side way to detect that without a fragile scheme-probe-with-timeout, which was deliberately not built (same reasoning the old gate's own comments already gave for not attempting one). They just finish the join in the browser, which is an acceptable outcome now that there's no gate forcing the app.

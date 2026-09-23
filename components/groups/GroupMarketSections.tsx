@@ -3,19 +3,13 @@
 import { useMemo, useState } from 'react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/Button';
-import { MarketRowList, type MarketCardData } from '@/components/markets/MarketCard';
+import { MarketFeedList, MarketRowList, type MarketCardData } from '@/components/markets/MarketCard';
 import { loadMoreSettledMarkets } from '@/lib/actions/feed';
 import { STATUS_LABEL } from '@/lib/marketStatus';
 import type { SettledCursor } from '@/lib/groupFeed';
 import { cn } from '@/lib/cn';
 
 type Filter = 'open' | 'pending' | 'settled';
-
-const TABS: { key: Filter; label: string }[] = [
-  { key: 'open', label: 'Open' },
-  { key: 'pending', label: 'Pending' },
-  { key: 'settled', label: 'Settled' },
-];
 
 export function GroupMarketSections({
   groupId,
@@ -38,8 +32,13 @@ export function GroupMarketSections({
   /** Scopes "Load more" to the same season the first page was fetched with — omitted for a seasons-off group, which pages the all-time feed. */
   seasonId?: string;
 }) {
-  const openEmpty = open.length === 0;
-  const pendingEmpty = pendingSponsor.length === 0 && awaitingResolution.length === 0 && challenged.length === 0;
+  const openSorted = useMemo(
+    () => [...open].sort((a, b) => new Date(a.closesAt).getTime() - new Date(b.closesAt).getTime()),
+    [open]
+  );
+  const pendingCount = pendingSponsor.length + awaitingResolution.length + challenged.length;
+  const openEmpty = openSorted.length === 0;
+  const pendingEmpty = pendingCount === 0;
   const nothingActive = openEmpty && pendingEmpty;
 
   // Default to the first tab, in open -> pending -> settled order, that actually has something
@@ -89,30 +88,43 @@ export function GroupMarketSections({
   const allEmpty = openEmpty && pendingEmpty && settled.length === 0;
   const effectiveFilter: Filter = allEmpty ? 'open' : filter;
 
+  const tabs: { key: Filter; label: string; count?: number; alert?: boolean }[] = [
+    { key: 'open', label: 'Open', count: openSorted.length },
+    { key: 'pending', label: 'Pending', count: pendingCount, alert: pendingCount > 0 },
+    { key: 'settled', label: 'Settled' },
+  ];
+
   return (
     <div className="flex flex-col gap-[22px]">
       {!allEmpty && (
-        <div className="flex flex-wrap gap-2">
-          {TABS.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setFilter(tab.key)}
-              className={cn(
-                'rounded-full px-3.5 py-[7px] text-[13px] font-bold transition-colors duration-150',
-                filter === tab.key
-                  ? 'bg-ink text-white'
-                  : 'border border-hairline bg-surface text-muted'
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="flex rounded-[14px] bg-rule p-1">
+          {tabs.map((tab) => {
+            const on = filter === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setFilter(tab.key)}
+                className={cn(
+                  'relative flex flex-1 items-center justify-center gap-1 rounded-[11px] px-2 py-2 text-[13px] font-bold transition-colors duration-150',
+                  on ? 'bg-surface text-ink shadow-[var(--elevation-card)]' : 'bg-transparent text-muted'
+                )}
+              >
+                <span>
+                  {tab.label}
+                  {tab.count != null && tab.count > 0 ? ` ${tab.count}` : ''}
+                </span>
+                {!on && tab.alert && (
+                  <span className="absolute top-1.5 right-2 h-1.5 w-1.5 rounded-full bg-alert" aria-hidden />
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
 
       {effectiveFilter === 'open' && (
-        <Section label="Betting open">
+        <Section label="Closing soonest">
           {openEmpty ? (
             allEmpty ? (
               <EmptyState icon="" title="Nothing open right now" subtitle="Tap the + below to start one." />
@@ -140,7 +152,7 @@ export function GroupMarketSections({
               />
             )
           ) : (
-            <MarketRowList markets={open} />
+            <MarketFeedList markets={openSorted} />
           )}
         </Section>
       )}

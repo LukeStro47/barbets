@@ -8,11 +8,12 @@ import { QrCodeIcon } from '@/components/ui/icons';
 import { inviteQrUrl } from '@/lib/inviteLink';
 
 /**
- * The balance card's second pill, next to InvitePill: puts the invite link on screen as a QR code,
- * full-bleed and white, so a friend across the table points their camera at it and lands on
- * /join/[code] with no typing and nothing sent. The URL it encodes is inviteQrUrl(): the real
- * app.mybarbets.com join link tagged `?src=qr`, which is how join_group later records that this
- * join came from a scan rather than a typed code.
+ * Full-screen QR for an invite link. InviteQrButton is the pill-shaped trigger; InviteQrIconButton
+ * is the icon-only control reused from Manage group's InviteHeroCard. The screen is full-bleed and
+ * white, so a friend across the table points their camera at it and lands on /join/[code] with no
+ * typing and nothing sent. The URL it encodes is inviteQrUrl(): the real app.mybarbets.com join
+ * link tagged `?src=qr`, which is how join_group later records that this join came from a scan
+ * rather than a typed code.
  *
  * Rendered client-side from the `qrcode` package into a data URL, so nothing about the code
  * leaves the device to make the picture. Not a Modal: the point is maximum contrast and size,

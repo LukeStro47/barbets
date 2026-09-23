@@ -13,6 +13,7 @@ import { useKeyboardState } from '@/lib/useKeyboardInset';
 import { cn } from '@/lib/cn';
 import { GroupAvatar } from '@/components/ui/GroupAvatar';
 import { NEW_GROUP_EVENT } from '@/components/groups/StartGroupButton';
+import { OPEN_GROUP_SWITCHER_EVENT } from '@/components/groups/OpenGroupSwitcherButton';
 
 export type NavGroup = { id: string; name: string; avatarKey: string | null; meta: string };
 
@@ -141,6 +142,17 @@ export function BottomNav({
     };
     window.addEventListener(NEW_GROUP_EVENT, onNewGroup);
     return () => window.removeEventListener(NEW_GROUP_EVENT, onNewGroup);
+  }, []);
+
+  // Markets hub header (and any other in-page affordance) opens the same sheet the Group tab
+  // uses when there's no current group — one switcher, two entry points.
+  useEffect(() => {
+    const onOpenSwitcher = () => {
+      setCreateOpen(false);
+      setSwitcherOpen(true);
+    };
+    window.addEventListener(OPEN_GROUP_SWITCHER_EVENT, onOpenSwitcher);
+    return () => window.removeEventListener(OPEN_GROUP_SWITCHER_EVENT, onOpenSwitcher);
   }, []);
 
   // The demo walkthrough's post-tour "Create a Group" CTA lives on /demo, outside this layout, so
