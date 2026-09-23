@@ -34,7 +34,7 @@ export function FinalOddsCard({
   const positions = computePositions(myBets, sideOdds, optionOdds);
 
   return (
-    <Card className="!overflow-hidden !rounded-[22px] !border-[1.5px] !border-ink !p-0 border border-hairline">
+    <Card className="!overflow-hidden !rounded-[22px] !border-[1.5px] !border-ink !p-0">
       <div className="flex items-center justify-between bg-rule px-[18px] py-[11px]">
         <p className="text-xs font-extrabold tracking-[0.06em] text-ink uppercase">Final odds</p>
         <p className="text-xs font-semibold text-muted">Locked</p>

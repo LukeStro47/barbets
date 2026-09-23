@@ -324,7 +324,7 @@ export function DemoWalkthrough({ isLoggedIn }: { isLoggedIn: boolean }) {
         )}
 
         {step === 3 && side && (
-          <div className="animate-demo-fade-up-scale overflow-hidden rounded-[22px] border-[1.5px] border-alert bg-surface ">
+          <div className="animate-demo-fade-up-scale overflow-hidden rounded-[22px] border-[1.5px] border-alert bg-surface">
             <div className="flex items-center justify-between gap-2 bg-alert-bg px-[18px] py-3">
               <p className="text-xs font-extrabold tracking-[0.06em] text-alert uppercase">Your ballot</p>
               <p className="text-[12.5px] font-bold text-alert">{vote === null ? 3 : 4} of 6 voted</p>

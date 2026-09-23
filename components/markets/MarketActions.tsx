@@ -174,7 +174,7 @@ export function MarketActions({
       )}
 
       {market.status === 'disputed' && challenge && (
-        <Card className="!rounded-[22px] overflow-hidden !border-[1.5px] !border-alert !p-0 ">
+        <Card className="!rounded-[22px] overflow-hidden !border-[1.5px] !border-alert !p-0">
           <div className="flex items-center justify-between gap-2 bg-alert-bg px-[18px] py-3">
             <p className="text-xs font-extrabold tracking-[0.06em] text-alert uppercase">Your ballot</p>
             {votesCast !== undefined && eligibleVoters !== undefined && (
