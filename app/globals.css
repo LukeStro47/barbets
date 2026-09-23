@@ -1,8 +1,12 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  /* Plus Jakarta Sans for anything you read, IBM Plex Mono for anything you
+     compare (balances, odds, countdowns, invite codes) — see DESIGN.md.
+     Mono must never leak into prose and sans must never carry a figure. */
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, 'SFMono-Regular', monospace;
 
   /* Ledger palette — see DESIGN.md. Canvas/surface are the near-white ground,
      ink is the only text colour that matters, signal blue is the single
