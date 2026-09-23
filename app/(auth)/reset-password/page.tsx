@@ -1,4 +1,4 @@
-import Link from 'next/link';
+﻿import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { AuthScreen } from '@/components/auth/AuthScreen';
 import { ResetPasswordForm } from '@/components/auth/ResetPasswordForm';
@@ -15,7 +15,7 @@ export default async function ResetPasswordPage() {
       <AuthScreen title="This link is invalid or has expired.">
         <Link
           href="/forgot-password"
-          className="mt-9 block text-base font-bold text-honey-700 underline underline-offset-4"
+          className="mt-9 block text-base font-bold text-signal-deep underline underline-offset-4"
         >
           Request a new one
         </Link>

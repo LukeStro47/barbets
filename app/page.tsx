@@ -1,4 +1,4 @@
-import Link from 'next/link';
+﻿import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { StackedLogo } from '@/components/ui/StackedLogo';
@@ -22,26 +22,26 @@ export default async function LandingPage() {
   if (user) redirect('/groups');
 
   return (
-    <main className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-paper px-6 py-11 pt-[calc(env(safe-area-inset-top)+2.75rem)] text-center">
+    <main className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-canvas px-6 py-11 pt-[calc(env(safe-area-inset-top)+2.75rem)] text-center">
       <div
         aria-hidden
-        className="animate-splash-glow pointer-events-none absolute top-[120px] left-1/2 -ml-[210px] h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,rgba(232,163,61,0.35)_0%,rgba(232,163,61,0)_68%)]"
+        className="animate-splash-glow pointer-events-none absolute top-[120px] left-1/2 -ml-[210px] h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,rgba(45, 85, 245,0.35)_0%,rgba(45, 85, 245,0)_68%)]"
       />
 
       <Link
         href="/how-it-works"
-        className="absolute top-[calc(env(safe-area-inset-top)+1.5rem)] right-5 inline-flex items-center gap-1.5 rounded-full border border-espresso-100 bg-paper-white py-2 pr-3.5 pl-3 text-[13px] font-semibold whitespace-nowrap text-espresso-700"
+        className="absolute top-[calc(env(safe-area-inset-top)+1.5rem)] right-5 inline-flex items-center gap-1.5 rounded-full border border-hairline bg-surface py-2 pr-3.5 pl-3 text-[13px] font-semibold whitespace-nowrap text-muted"
       >
-        <InfoIcon className="h-[15px] w-[15px] text-honey-700" />
+        <InfoIcon className="h-[15px] w-[15px] text-signal-deep" />
         How it works
       </Link>
 
       <div className="animate-splash-rise relative flex flex-col items-center">
         <StackedLogo height={190} />
-        <h1 className="mt-[26px] max-w-[320px] font-display text-[26px]/[30px] font-extrabold tracking-[-0.02em] text-pretty text-espresso-900">
+        <h1 className="mt-[26px] max-w-[320px] font-display text-[26px]/[30px] font-extrabold tracking-[-0.02em] text-pretty text-ink">
           Bet on your friends, and everything else.
         </h1>
-        <p className="mt-3.5 max-w-[290px] text-base/[23px] text-espresso-500">
+        <p className="mt-3.5 max-w-[290px] text-base/[23px] text-muted">
           Private prediction markets about anything. Play money, real odds.
         </p>
       </div>
@@ -58,21 +58,21 @@ export default async function LandingPage() {
         </Link>
         <Link
           href="/join"
-          className="w-full rounded-full border border-espresso-200 px-6 py-[15px] text-base font-semibold text-espresso-900"
+          className="w-full rounded-full border border-dash px-6 py-[15px] text-base font-semibold text-ink"
         >
           I have an invite code
         </Link>
       </div>
 
       <div className="relative mt-[26px] flex w-full max-w-[330px] items-center gap-2.5">
-        <span className="h-px flex-1 bg-espresso-100" />
-        <span className="text-base text-espresso-500">
+        <span className="h-px flex-1 bg-hairline" />
+        <span className="text-base text-muted">
           Been here before?{' '}
-          <Link href="/login" className="font-bold text-espresso-900 underline underline-offset-4">
+          <Link href="/login" className="font-bold text-ink underline underline-offset-4">
             Sign in
           </Link>
         </span>
-        <span className="h-px flex-1 bg-espresso-100" />
+        <span className="h-px flex-1 bg-hairline" />
       </div>
     </main>
   );

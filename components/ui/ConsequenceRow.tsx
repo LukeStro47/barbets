@@ -1,4 +1,4 @@
-import { cn } from '@/lib/cn';
+﻿import { cn } from '@/lib/cn';
 
 /**
  * One beat in a "what this does" list inside a confirmation modal: a coloured dot, the copy, and
@@ -24,9 +24,9 @@ export function ConsequenceRow({
     <div className="flex gap-2.5">
       <div className="flex flex-col items-center pt-[5px]">
         <span className={cn('h-[7px] w-[7px] shrink-0 rounded-full', dotClassName)} />
-        {!isLast && <span className="w-[1.5px] flex-1 bg-espresso-100" />}
+        {!isLast && <span className="w-[1.5px] flex-1 bg-hairline" />}
       </div>
-      <p className={cn('text-[13.5px] leading-[1.4] text-espresso-700', !isLast && 'mb-2.5')}>{children}</p>
+      <p className={cn('text-[13.5px] leading-[1.4] text-muted', !isLast && 'mb-2.5')}>{children}</p>
     </div>
   );
 }

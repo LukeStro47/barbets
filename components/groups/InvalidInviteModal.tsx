@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useRouter } from 'next/navigation';
 import { Modal } from '@/components/ui/Modal';
@@ -22,8 +22,8 @@ export function InvalidInviteModal({
 
   return (
     <Modal onClose={dismiss}>
-      <p className="font-display font-bold text-espresso-900">{title}</p>
-      <p className="text-sm text-espresso-500">{body}</p>
+      <p className="font-display font-bold text-ink">{title}</p>
+      <p className="text-sm text-muted">{body}</p>
       <Button className="w-full" onClick={dismiss}>
         Got it
       </Button>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -8,18 +8,18 @@ import { inviteCodeFromText, inviteJoinPath } from '@/lib/inviteLink';
 const CODE_LENGTH = INVITE_CODE_LENGTH;
 
 /** The two grounds this sits on: the groups hub's dark invite card, and the pre-auth /join
- *  entry point on paper. Only colours differ, so the 4-char/paste/advance logic stays in one
- *  place rather than being forked into a near-identical paper component. */
+ *  entry point on canvas. Only colours differ, so the 4-char/paste/advance logic stays in one
+ *  place rather than being forked into a near-identical light component. */
 const TONE = {
   dark: {
-    box: 'border-white/[0.16] bg-white/[0.06] text-paper-white focus:border-honey-300/70 focus:bg-white/[0.09]',
-    paste: 'border-white/20 text-honey-200',
-    submit: 'bg-honey-500 text-espresso-950 disabled:opacity-45',
+    box: 'border-white/[0.16] bg-white/[0.06] text-surface focus:border-signal-tint/70 focus:bg-white/[0.09]',
+    paste: 'border-white/20 text-signal-tint',
+    submit: 'bg-signal text-ink disabled:opacity-45',
   },
-  paper: {
-    box: 'border-espresso-200 bg-paper-white text-espresso-900 focus:border-honey-500 focus:bg-honey-50',
-    paste: 'border-espresso-200 text-espresso-700',
-    submit: 'bg-honey-500 text-espresso-900 disabled:bg-espresso-100 disabled:text-espresso-400',
+  light: {
+    box: 'border-dash bg-surface text-ink focus:border-signal focus:bg-signal-tint',
+    paste: 'border-dash text-muted',
+    submit: 'bg-signal text-ink disabled:bg-hairline disabled:text-faint',
   },
 } as const;
 

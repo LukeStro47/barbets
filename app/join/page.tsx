@@ -15,7 +15,7 @@ export default function JoinCodePage() {
       subtitle="Four characters, from whoever invited you. We'll take you straight to their group."
     >
       <div className="mt-10">
-        <InviteCodeBoxes tone="paper" />
+        <InviteCodeBoxes tone="light" />
       </div>
     </AuthScreen>
   );
