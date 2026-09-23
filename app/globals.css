@@ -169,57 +169,53 @@
   }
 }
 
-/* LoadingAnimation (splash + route loading states): a die/coin tumbling and
-   hopping in place, shadow squashing on each hop, "LOADING" dots blinking in
-   sequence. Four hops per 2.6s cycle, all four keyframes share the same
-   0%,12% / 25%,37% / 50%,62% / 75%,87% beat so the rotate/hop/shadow stay
-   perfectly in sync.
-   TODO(ledger-redesign): replaced by the bb-settle/bb-settle-b two-bar
-   "odds settling" loader in the next commit, along with LoadingAnimation.tsx
-   itself — left in place here for one commit so this file's diff stays a
-   pure colour-token rename and nothing else changes at the same time. */
-@keyframes die-tumble {
-  0%, 12% { transform: rotate(0deg); }
-  25%, 37% { transform: rotate(90deg); }
-  50%, 62% { transform: rotate(180deg); }
-  75%, 87% { transform: rotate(270deg); }
-  100% { transform: rotate(360deg); }
+/* LoadingAnimation (splash + route loading states) and any other "waiting"
+   surface: two bars pushing against each other on one track, the split never
+   quite resting — no spinner anywhere in the app, waiting always looks like
+   a market finding its price. bb-settle/bb-settle-b share one duration and
+   easing so the seam between them always moves together; bb-fade is the
+   loader's caption and the live-market dot; bb-pulse is for a stacked-dot
+   "still working" indicator if one's ever needed; bb-shimmer is the skeleton-
+   row sweep. Values are the finalized design spec's exact curve. */
+@keyframes bb-settle {
+  0%, 100% { transform: scaleX(0.34); }
+  30% { transform: scaleX(0.74); }
+  56% { transform: scaleX(0.44); }
+  80% { transform: scaleX(0.62); }
 }
-@keyframes die-hop {
-  0%, 12% { transform: translateY(0); }
-  18.5% { transform: translateY(-18px); }
-  25%, 37% { transform: translateY(0); }
-  43.5% { transform: translateY(-18px); }
-  50%, 62% { transform: translateY(0); }
-  68.5% { transform: translateY(-18px); }
-  75%, 87% { transform: translateY(0); }
-  93.5% { transform: translateY(-18px); }
-  100% { transform: translateY(0); }
+@keyframes bb-settle-b {
+  0%, 100% { transform: scaleX(0.66); }
+  30% { transform: scaleX(0.26); }
+  56% { transform: scaleX(0.56); }
+  80% { transform: scaleX(0.38); }
 }
-@keyframes die-shadow {
-  0%, 12% { transform: scaleX(1); opacity: 0.22; }
-  18.5% { transform: scaleX(0.55); opacity: 0.1; }
-  25%, 37% { transform: scaleX(1); opacity: 0.22; }
-  43.5% { transform: scaleX(0.55); opacity: 0.1; }
-  50%, 62% { transform: scaleX(1); opacity: 0.22; }
-  68.5% { transform: scaleX(0.55); opacity: 0.1; }
-  75%, 87% { transform: scaleX(1); opacity: 0.22; }
-  93.5% { transform: scaleX(0.55); opacity: 0.1; }
-  100% { transform: scaleX(1); opacity: 0.22; }
+@keyframes bb-fade {
+  0%, 100% { opacity: 0.62; }
+  50% { opacity: 1; }
 }
-@keyframes dot-blink {
-  0%, 60%, 100% { opacity: 0.25; }
-  30% { opacity: 1; }
+@keyframes bb-pulse {
+  0%, 100% { opacity: 0.22; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-3px); }
 }
-.animate-die-tumble { animation: die-tumble 2.6s cubic-bezier(0.45, -0.1, 0.3, 1.15) infinite; }
-.animate-die-hop { animation: die-hop 2.6s cubic-bezier(0.35, 0.05, 0.3, 1) infinite; }
-.animate-die-shadow { animation: die-shadow 2.6s cubic-bezier(0.35, 0.05, 0.3, 1) infinite; }
-.animate-dot-blink { animation: dot-blink 1.3s infinite; }
+@keyframes bb-shimmer {
+  from { background-position: 180% 0; }
+  to { background-position: -180% 0; }
+}
+.animate-bb-settle { animation: bb-settle 2.4s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
+.animate-bb-settle-b { animation: bb-settle-b 2.4s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
+.animate-bb-fade { animation: bb-fade 2.4s ease-in-out infinite; }
+.animate-bb-pulse { animation: bb-pulse 1.1s ease-in-out infinite; }
+.animate-bb-shimmer {
+  background-image: linear-gradient(90deg, transparent 0%, currentcolor 50%, transparent 100%);
+  background-size: 180% 100%;
+  animation: bb-shimmer 1.5s linear infinite;
+}
 @media (prefers-reduced-motion: reduce) {
-  .animate-die-tumble,
-  .animate-die-hop { animation: none; }
-  .animate-die-shadow { animation: none; opacity: 0.22; }
-  .animate-dot-blink { animation: none; opacity: 1; }
+  .animate-bb-settle,
+  .animate-bb-settle-b { animation: none; transform: scaleX(0.5); }
+  .animate-bb-fade,
+  .animate-bb-pulse { animation: none; opacity: 1; transform: none; }
+  .animate-bb-shimmer { animation: none; background-image: none; }
 }
 
 /* PageTransition: a subtle directional slide-in on route change, so back/forward

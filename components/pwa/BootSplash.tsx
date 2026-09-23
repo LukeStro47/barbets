@@ -55,11 +55,11 @@ export function BootSplash() {
   return (
     <div
       aria-hidden="true"
-      className={`fixed inset-0 z-50 flex items-center justify-center bg-[#EDE9E0] transition-opacity duration-300 ${
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-ink transition-opacity duration-300 ${
         exiting ? 'pointer-events-none opacity-0' : 'opacity-100'
       }`}
     >
-      <LoadingAnimation />
+      <LoadingAnimation dark label="Settling the book" />
     </div>
   );
 }
