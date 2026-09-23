@@ -1,5 +1,7 @@
 ﻿import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { createClient, requireUser } from '@/lib/supabase/server';
+import { cn } from '@/lib/cn';
 import { notFoundIfEmpty } from '@/lib/errors';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Badge } from '@/components/ui/Badge';
@@ -31,10 +33,13 @@ import { LineTicket, OptionsTicket } from '@/components/markets/MarketExplainer'
 import { VouchingTicket } from '@/components/markets/VouchingTicket';
 import { ProposedOutcomeTicket } from '@/components/markets/ProposedOutcomeTicket';
 import { SubjectMarketPulse, type SubjectMarketPulseData } from '@/components/markets/SubjectMarketPulse';
+import { CommentThread } from '@/components/markets/CommentThread';
+import type { CommentRowData } from '@/components/markets/CommentRow';
 import { STATUS_LABEL, STATUS_TONE } from '@/lib/marketStatus';
 import { formatTokens } from '@/lib/formatNumber';
 import { formatLine } from '@/lib/units';
 import type { Market, MarketOption } from '@/lib/actions/markets';
+import type { ReactionEmoji } from '@/lib/actions/reactions';
 
 /** An unendorsed market dies at the earlier of its own close time and 24h after creation — the
  * same pair expire_stale() sweeps on, surfaced as one deadline so an endorser sees the real one. */
@@ -46,10 +51,14 @@ function endorseDeadline(market: Market): string {
 
 export default async function MarketDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ groupId: string; marketId: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { groupId, marketId } = await params;
+  const { tab } = await searchParams;
+  const activeTab = tab === 'comments' ? 'comments' : 'market';
   const supabase = await createClient();
 
   const { data: market } = await supabase.from('visible_markets').select('*').eq('id', marketId).single();
@@ -88,6 +97,7 @@ export default async function MarketDetailPage({
     { data: clarificationRows },
     { data: groupSettings },
     { count: tableSize },
+    { count: commentCount },
   ] = await Promise.all([
     supabase.from('memberships').select('balance, role').eq('group_id', groupId).eq('user_id', user.id).single(),
     supabase.from('market_subjects').select('user_id').eq('market_id', marketId),
@@ -106,6 +116,7 @@ export default async function MarketDetailPage({
     isPendingSponsor
       ? supabase.from('memberships').select('user_id', { count: 'exact', head: true }).eq('group_id', groupId).eq('status', 'active')
       : Promise.resolve({ count: null }),
+    supabase.from('market_comments').select('id', { count: 'exact', head: true }).eq('market_id', marketId).is('deleted_at', null),
   ]);
   const isOwner = group?.owner_id === user?.id;
   const groupName = group?.name ?? 'Group';
@@ -271,26 +282,120 @@ export default async function MarketDetailPage({
   );
 
   const header = (
-    <PageHeader
-      title={marketRow.title}
-      backHref={`/groups/${groupId}`}
-      backLabel={groupName}
-      backAction={
-        <div className="flex items-center gap-1.5">
-          {isCreator && clarificationList.length > 0 && (
-            <span
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-alert-bg text-sm font-bold text-alert"
-              title="Needs clarification"
-            >
-              !
-            </span>
+    <>
+      <PageHeader
+        title={marketRow.title}
+        backHref={`/groups/${groupId}`}
+        backLabel={groupName}
+        backAction={
+          <div className="flex items-center gap-1.5">
+            {isCreator && clarificationList.length > 0 && (
+              <span
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-alert-bg text-sm font-bold text-alert"
+                title="Needs clarification"
+              >
+                !
+              </span>
+            )}
+            <Badge tone={STATUS_TONE[marketRow.status]}>{STATUS_LABEL[marketRow.status]}</Badge>
+            {overflowMenu}
+          </div>
+        }
+      />
+      <div className="flex gap-[22px] border-b border-hairline">
+        <Link
+          href={`/groups/${groupId}/markets/${marketId}`}
+          className={cn(
+            'pb-2.5 text-[13.5px] font-bold',
+            activeTab === 'market' ? 'text-ink shadow-[inset_0_-2px_0_#0c1018]' : 'text-faint'
           )}
-          <Badge tone={STATUS_TONE[marketRow.status]}>{STATUS_LABEL[marketRow.status]}</Badge>
-          {overflowMenu}
-        </div>
-      }
-    />
+        >
+          Market
+        </Link>
+        <Link
+          href={`/groups/${groupId}/markets/${marketId}?tab=comments`}
+          className={cn(
+            'inline-flex items-center gap-1.5 pb-2.5 text-[13.5px] font-bold',
+            activeTab === 'comments' ? 'text-ink shadow-[inset_0_-2px_0_#0c1018]' : 'text-faint'
+          )}
+        >
+          Comments <span className="font-mono text-xs text-faint">{commentCount ?? 0}</span>
+        </Link>
+      </div>
+    </>
   );
+
+  if (activeTab === 'comments') {
+    const { data: commentRows } = await supabase
+      .from('market_comments')
+      .select('id, user_id, body, revealed_side, revealed_option_id, revealed_amount, created_at')
+      .eq('market_id', marketId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true });
+
+    const comments = commentRows ?? [];
+    const commenterIds = [...new Set(comments.map((c) => c.user_id))];
+    const { data: commenterRows } =
+      commenterIds.length > 0
+        ? await supabase.from('memberships').select('user_id, nickname').eq('group_id', groupId).in('user_id', commenterIds)
+        : { data: [] };
+    const commenterNickname = new Map((commenterRows ?? []).map((m) => [m.user_id, m.nickname]));
+
+    const commentIds = comments.map((c) => c.id);
+    const { data: reactionRows } =
+      commentIds.length > 0
+        ? await supabase.from('comment_reactions').select('comment_id, user_id, emoji').in('comment_id', commentIds)
+        : { data: [] };
+    const reactionsByComment = new Map<string, { emoji: ReactionEmoji; userId: string }[]>();
+    for (const r of reactionRows ?? []) {
+      const list = reactionsByComment.get(r.comment_id) ?? [];
+      list.push({ emoji: r.emoji as ReactionEmoji, userId: r.user_id });
+      reactionsByComment.set(r.comment_id, list);
+    }
+
+    const revealedOptionLabel = (optionId: string | null) =>
+      optionId ? (marketOptions?.find((o) => o.id === optionId)?.label ?? null) : null;
+    const sideLabel = (side: string | null) => (side ? side.charAt(0).toUpperCase() + side.slice(1) : null);
+
+    const rows: CommentRowData[] = comments.map((c) => {
+      const reactions = reactionsByComment.get(c.id) ?? [];
+      const counts: Partial<Record<ReactionEmoji, number>> = {};
+      let myReaction: ReactionEmoji | null = null;
+      for (const r of reactions) {
+        counts[r.emoji] = (counts[r.emoji] ?? 0) + 1;
+        if (r.userId === user.id) myReaction = r.emoji;
+      }
+      return {
+        id: c.id,
+        nickname: commenterNickname.get(c.user_id) ?? '?',
+        body: c.body,
+        createdAt: c.created_at,
+        isMine: c.user_id === user.id,
+        revealedLabel: sideLabel(c.revealed_side) ?? revealedOptionLabel(c.revealed_option_id),
+        revealedAmount: c.revealed_amount,
+        counts,
+        myReaction,
+      };
+    });
+
+    // A revealed bet is only offered once — if the viewer already has a reveal-comment on this
+    // market, there's nothing left to reveal a second time.
+    const alreadyRevealed = comments.some((c) => c.user_id === user.id && c.revealed_amount != null);
+    const myBet = !alreadyRevealed ? myBets[0] : undefined;
+    const revealable = myBet
+      ? {
+          label: sideLabel(myBet.side) ?? revealedOptionLabel(myBet.option_id) ?? '?',
+          amount: myBet.amount,
+        }
+      : null;
+
+    return (
+      <main className="mx-auto max-w-lg space-y-4 px-5 py-8">
+        {header}
+        <CommentThread groupId={groupId} marketId={marketId} comments={rows} revealable={revealable} />
+      </main>
+    );
+  }
 
   // Says who can actually void *this* market, not the general rule. The creator-fallback only
   // exists when the owner is themself a subject here (void_market_by_owner is unreachable for
