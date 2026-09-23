@@ -2,14 +2,14 @@ import type { InputHTMLAttributes } from 'react';
 import { cn } from '@/lib/cn';
 
 /**
- * The underlined text field used by every pre-group form (sign in, sign up, forgot password,
- * reset password). Replaces the boxed `inputClasses` string that used to be copy-pasted into
- * AuthForms, ForgotPasswordForm and JoinFlow independently.
+ * The bordered field used by every pre-group form (sign in, sign up, forgot password, reset
+ * password, join-with-code). Structurally different from the field this replaced: that one was
+ * underlined with a floating label reacting to focus via `peer-focus:`; the Ledger designs (5b,
+ * 5c, 5f, 5l...) show a bordered 14px-radius box with the label as a plain uppercase caption
+ * above it, so the label no longer needs to be a focus-reactive peer at all.
  *
- * The label sits above the input but comes *after* it in the DOM (`flex-col-reverse`), which is
- * what lets it react to focus with a plain `peer-focus:` variant instead of making this a client
- * component just to hold an isFocused boolean. The focus state thickens the rule from 1px to 2px
- * and takes a matching 1px off the bottom padding, so nothing below the field shifts.
+ * Border goes from 1px hairline to 2px signal blue plus a soft glow on focus; padding shifts by
+ * 1px in step so nothing below the field moves.
  */
 export function Field({
   label,
@@ -17,18 +17,17 @@ export function Field({
   ...props
 }: { label: string } & InputHTMLAttributes<HTMLInputElement>) {
   return (
-    <label className="flex flex-col-reverse gap-2">
+    <label className="flex flex-col gap-2">
+      <span className="text-[10.5px] font-bold tracking-[1.4px] text-faint uppercase">{label}</span>
       <input
         className={cn(
-          'peer w-full border-b border-espresso-200 bg-transparent px-0.5 pt-1.5 pb-3 text-lg text-espresso-900',
-          'placeholder:text-espresso-500 focus:border-b-2 focus:border-honey-500 focus:pb-[11px] focus:outline-none',
+          'w-full rounded-[14px] border border-hairline bg-surface px-4 py-3.5 text-lg text-ink',
+          'placeholder:text-faint focus:border-2 focus:border-signal focus:px-[15px] focus:py-[13px]',
+          'focus:shadow-[0_0_0_4px_rgba(45,85,245,0.08)] focus:outline-none',
           className
         )}
         {...props}
       />
-      <span className="text-xs font-bold tracking-[1.4px] text-espresso-400 uppercase peer-focus:text-honey-700">
-        {label}
-      </span>
     </label>
   );
 }

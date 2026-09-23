@@ -24,8 +24,8 @@ export function PageHeader({
           {/* -ml-1 pulls the caret glyph's own padding back out, so the label still starts on the
               page's left margin instead of sitting indented under the title. */}
           {backHref ? (
-            <Link href={backHref} className="-ml-1 inline-flex items-center gap-0.5 text-[12.5px] font-bold text-espresso-400 hover:text-espresso-600">
-              <CaretLeftIcon className="h-4 w-4 text-espresso-300" />
+            <Link href={backHref} className="-ml-1 inline-flex items-center gap-0.5 text-[12.5px] font-bold text-faint hover:text-muted">
+              <CaretLeftIcon className="h-4 w-4 text-faint" />
               {backLabel ?? 'Back'}
             </Link>
           ) : (
@@ -38,10 +38,10 @@ export function PageHeader({
           leaderboard's season/day), and top-aligning small text against a 26px display size
           leaves it floating above the word it belongs to. */}
       <div className="flex items-baseline justify-between gap-4">
-        <h1 className="min-w-0 font-display text-[26px] leading-[1.15] font-extrabold tracking-[-0.02em] text-espresso-950">{title}</h1>
+        <h1 className="min-w-0 font-display text-[26px] leading-[1.15] font-extrabold tracking-[-0.02em] text-ink">{title}</h1>
         {action}
       </div>
-      {subtitle && <p className="text-[13px] leading-[1.4] text-espresso-400">{subtitle}</p>}
+      {subtitle && <p className="text-[13px] leading-[1.4] text-faint">{subtitle}</p>}
     </div>
   );
 }
