@@ -19,7 +19,11 @@ const jakarta = Plus_Jakarta_Sans({
 
 const plexMono = IBM_Plex_Mono({
   subsets: ['latin'],
-  weight: ['400', '500', '600'],
+  // 700 (bold) is imported too even though DESIGN.md's own type scale only calls out 400/500/600:
+  // several figure treatments in this app pair a heavy weight with tabular-nums (font-bold/
+  // font-extrabold balances, stakes), and IBM Plex Mono doesn't go past 700 at all, so this is the
+  // closest a "bold" figure can get to a real weight rather than a synthetic one.
+  weight: ['400', '500', '600', '700'],
   variable: '--font-plex-mono',
 });
 

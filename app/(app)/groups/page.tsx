@@ -213,7 +213,7 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
                       {g.deletion_scheduled_at && <p className="mt-0.5 text-xs font-semibold text-alert">Being deleted</p>}
                     </span>
                     <span className="shrink-0 text-right">
-                      <span className={cn('block text-[15px] font-extrabold tabular-nums', myNet >= 0 ? 'text-gain' : 'text-alert')}>
+                      <span className={cn('block text-[15px] font-extrabold font-mono tabular-nums', myNet >= 0 ? 'text-gain' : 'text-alert')}>
                         {formatSignedTokens(myNet)}
                       </span>
                       <span className="mt-0.5 block text-[11px] text-faint">

@@ -224,7 +224,7 @@ export function BetslipBar({
           <div className="flex items-center gap-2.5">
             <SideButton label={sides[0]} onClick={() => betslip?.open({ side: sides[0] })} />
             {lineLabel && (
-              <span className="shrink-0 rounded-full bg-white/10 px-[13px] py-2 text-[13.5px] font-extrabold whitespace-nowrap text-surface tabular-nums">
+              <span className="shrink-0 rounded-full bg-white/10 px-[13px] py-2 text-[13.5px] font-extrabold whitespace-nowrap text-surface font-mono tabular-nums">
                 {lineLabel}
               </span>
             )}
@@ -342,7 +342,7 @@ export function BetslipBar({
                 value={betAmount}
                 onChange={(e) => setBetAmount(e.target.value)}
                 onFocus={(e) => e.target.select()}
-                className="w-full rounded-2xl border-[1.5px] border-white/22 bg-white/6 py-3 pr-[86px] pl-4 font-display text-[30px] leading-none font-extrabold tracking-[-0.02em] text-surface tabular-nums placeholder:text-surface/25 focus:border-signal focus:outline-none"
+                className="w-full rounded-2xl border-[1.5px] border-white/22 bg-white/6 py-3 pr-[86px] pl-4 font-mono text-[30px] leading-none font-extrabold tracking-[-0.02em] text-surface tabular-nums placeholder:text-surface/25 focus:border-signal focus:outline-none"
               />
               <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-xs font-semibold text-surface/50">
                 tokens
@@ -474,7 +474,7 @@ function QuickAmount({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'flex-1 rounded-xl border-[1.5px] py-[11px] text-sm font-extrabold tabular-nums',
+        'flex-1 rounded-xl border-[1.5px] py-[11px] text-sm font-extrabold font-mono tabular-nums',
         selected ? 'border-signal bg-signal text-ink' : 'border-white/22 bg-white/6 text-surface',
         disabled && 'opacity-40'
       )}
@@ -554,7 +554,7 @@ function BetConfirmedOverlay({
           <div className="mt-4 flex items-end justify-between gap-3">
             <div className="min-w-0 shrink-0">
               <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-faint uppercase">Staked</p>
-              <p className="mt-1 font-display text-[38px] leading-none font-extrabold tracking-[-0.02em] text-ink tabular-nums">
+              <p className="mt-1 font-mono text-[38px] leading-none font-extrabold tracking-[-0.02em] text-ink tabular-nums">
                 {formatTokens(amount)}
               </p>
             </div>
@@ -581,13 +581,13 @@ function BetConfirmedOverlay({
         <div className="flex px-5 pb-5">
           <div className="flex-1">
             <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-faint uppercase">Closes in</p>
-            <p className="mt-[3px] text-base font-extrabold text-ink tabular-nums">
+            <p className="mt-[3px] text-base font-extrabold text-ink font-mono tabular-nums">
               <CountdownTimer target={closesAt} prefix="" />
             </p>
           </div>
           <div className="flex-1 text-right">
             <p className="text-[10.5px] font-extrabold tracking-[0.1em] text-faint uppercase">Balance after</p>
-            <p className="mt-[3px] text-base font-extrabold text-ink tabular-nums">{formatTokens(balanceAfter)}</p>
+            <p className="mt-[3px] text-base font-extrabold text-ink font-mono tabular-nums">{formatTokens(balanceAfter)}</p>
           </div>
         </div>
       </div>

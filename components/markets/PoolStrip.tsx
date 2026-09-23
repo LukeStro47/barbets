@@ -49,7 +49,7 @@ export function PoolStrip({ cells, className }: { cells: PoolStripCell[]; classN
             </p>
             <p
               className={cn(
-                'mt-0.5 truncate font-display text-[21px] leading-none font-extrabold tracking-[-0.02em] tabular-nums',
+                'mt-0.5 truncate font-mono text-[21px] leading-none font-extrabold tracking-[-0.02em] tabular-nums',
                 cell.tone === 'signal' || i === 0 ? 'text-surface' : 'text-signal-tint'
               )}
             >

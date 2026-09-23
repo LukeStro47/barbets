@@ -198,7 +198,7 @@ export default async function LeaderboardPage({
       </Link>
       <div className="relative mt-[15px] flex gap-3 border-t border-white/10 pt-3.5">
         <span className="flex-1">
-          <span className="block text-xl font-extrabold tabular-nums text-surface">
+          <span className="block text-xl font-extrabold font-mono tabular-nums text-surface">
             {noBetsPlaced ? '—' : you ? formatOrdinal(yourRank) : '—'}
           </span>
           <span className="mt-px block text-[10px] font-extrabold tracking-[0.07em] text-surface/45 uppercase">
@@ -206,13 +206,13 @@ export default async function LeaderboardPage({
           </span>
         </span>
         <span className="flex-1">
-          <span className="block text-xl font-extrabold tabular-nums text-on-ink">{formatTokens(you?.balance ?? 0)}</span>
+          <span className="block text-xl font-extrabold font-mono tabular-nums text-on-ink">{formatTokens(you?.balance ?? 0)}</span>
           <span className="mt-px block text-[10px] font-extrabold tracking-[0.07em] text-surface/45 uppercase">
             {isIntermission ? 'your final' : 'your tokens'}
           </span>
         </span>
         <span className="flex-1">
-          <span className="block text-xl font-extrabold tabular-nums text-surface">{noBetsPlaced ? '—' : formatTokens(gapValue)}</span>
+          <span className="block text-xl font-extrabold font-mono tabular-nums text-surface">{noBetsPlaced ? '—' : formatTokens(gapValue)}</span>
           <span className="mt-px block text-[10px] font-extrabold tracking-[0.07em] text-surface/45 uppercase">
             {noBetsPlaced ? 'no bets yet' : youLead ? 'clear of 2nd' : isIntermission ? 'off the win' : 'behind the leader'}
           </span>
@@ -262,7 +262,7 @@ export default async function LeaderboardPage({
                     </span>
                   )}
                 </span>
-                <span className="shrink-0 font-display text-[15px] font-extrabold tabular-nums text-ink">
+                <span className="shrink-0 font-mono text-[15px] font-extrabold tabular-nums text-ink">
                   {formatTokens(m.balance)}
                 </span>
                 <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-faint" />
@@ -328,14 +328,14 @@ export default async function LeaderboardPage({
           <h2 className="mb-3 font-display font-bold text-ink">Your all-time</h2>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <p className={`font-display text-2xl font-bold tabular-nums ${myNet >= 0 ? 'text-signal-deep' : 'text-faint'}`}>
+              <p className={`font-mono text-2xl font-bold tabular-nums ${myNet >= 0 ? 'text-signal-deep' : 'text-faint'}`}>
                 {myNet >= 0 ? '+' : '−'}
                 {formatTokens(Math.abs(myNet))}
               </p>
               <p className="mt-0.5 text-xs font-semibold text-faint">Net across every season</p>
             </div>
             <div>
-              <p className="font-display text-2xl font-bold tabular-nums text-ink">{myAccuracy == null ? '—' : `${myAccuracy}%`}</p>
+              <p className="font-mono text-2xl font-bold tabular-nums text-ink">{myAccuracy == null ? '—' : `${myAccuracy}%`}</p>
               <p className="mt-0.5 text-xs font-semibold text-faint">Accuracy</p>
             </div>
           </div>

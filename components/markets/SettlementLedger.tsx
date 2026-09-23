@@ -89,10 +89,10 @@ function Row({
       <span
         className={
           tone === 'total'
-            ? 'text-base font-extrabold text-ink tabular-nums'
+            ? 'text-base font-extrabold text-ink font-mono tabular-nums'
             : tone === 'bonus'
-              ? 'text-sm font-extrabold text-signal-deep tabular-nums'
-              : 'text-sm font-extrabold text-ink tabular-nums'
+              ? 'text-sm font-extrabold text-signal-deep font-mono tabular-nums'
+              : 'text-sm font-extrabold text-ink font-mono tabular-nums'
         }
       >
         {value}

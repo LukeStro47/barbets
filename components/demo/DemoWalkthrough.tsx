@@ -76,10 +76,10 @@ function AnimatedOddsBar({
     <div>
       <div className="mb-1.5 flex items-baseline justify-between gap-2 text-[15px] font-extrabold text-ink">
         <span className="whitespace-nowrap">
-          {leftLabel} <span className="tabular-nums">{leftPercent}%</span>
+          {leftLabel} <span className="font-mono tabular-nums">{leftPercent}%</span>
         </span>
         <span className="whitespace-nowrap">
-          {rightLabel} <span className="tabular-nums">{rightPercent}%</span>
+          {rightLabel} <span className="font-mono tabular-nums">{rightPercent}%</span>
         </span>
       </div>
       <div className="flex h-3 gap-0.5 overflow-hidden rounded-full">

@@ -382,7 +382,7 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
         <div className={cardClasses}>
           <div className="flex items-baseline justify-between gap-3">
             <span className="text-[13.5px] font-extrabold text-ink">Time to challenge a result</span>
-            <span className="shrink-0 text-sm font-extrabold tabular-nums text-signal-deep">
+            <span className="shrink-0 text-sm font-extrabold font-mono tabular-nums text-signal-deep">
               {resolutionWindowHours} {resolutionWindowHours === 1 ? 'hour' : 'hours'}
             </span>
           </div>

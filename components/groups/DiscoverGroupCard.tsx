@@ -145,7 +145,7 @@ export function DiscoverGroupCard({
               <div className="mt-[9px] flex items-center gap-[10px] rounded-[13px] bg-rule px-[13px] py-[11px]">
                 <p className="min-w-0 flex-1 text-[13.5px] font-bold text-ink">{featuredMarketTitle}</p>
                 {!!featuredMarketBetCount && (
-                  <span className="shrink-0 text-[12.5px] font-extrabold tabular-nums text-muted">{featuredMarketBetCount} bets</span>
+                  <span className="shrink-0 text-[12.5px] font-extrabold font-mono tabular-nums text-muted">{featuredMarketBetCount} bets</span>
                 )}
               </div>
             )}

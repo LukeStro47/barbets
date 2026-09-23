@@ -39,7 +39,7 @@ export function LineTicket({ lineLabel }: { lineLabel: string }) {
     <TicketCard label="The line" meta="Over / Under" bodyClassName="px-[18px] py-4">
       <div className="flex items-center justify-between gap-3">
         <p
-          className={`min-w-0 truncate font-display ${lineSizeClass(lineLabel)} leading-none font-extrabold tracking-[-0.02em] text-ink tabular-nums`}
+          className={`min-w-0 truncate font-mono ${lineSizeClass(lineLabel)} leading-none font-extrabold tracking-[-0.02em] text-ink tabular-nums`}
         >
           {lineLabel}
         </p>

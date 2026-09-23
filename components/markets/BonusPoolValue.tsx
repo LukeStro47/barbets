@@ -45,15 +45,15 @@ export function BonusPoolValue({ bonusPool, staked }: { bonusPool: number; stake
             <div className="flex flex-col gap-2 border-t border-rule pt-3">
               <div className="flex items-baseline justify-between gap-3">
                 <span className="text-[13.5px] text-muted">Staked so far</span>
-                <span className="text-sm font-extrabold text-ink tabular-nums">{formatTokens(staked)}</span>
+                <span className="text-sm font-extrabold text-ink font-mono tabular-nums">{formatTokens(staked)}</span>
               </div>
               <div className="flex items-baseline justify-between gap-3">
                 <span className="text-[13.5px] text-muted">Bonus carried in</span>
-                <span className="text-sm font-extrabold text-signal-deep tabular-nums">+{formatTokens(bonusPool)}</span>
+                <span className="text-sm font-extrabold text-signal-deep font-mono tabular-nums">+{formatTokens(bonusPool)}</span>
               </div>
               <div className="flex items-baseline justify-between gap-3 border-t border-rule pt-2">
                 <span className="text-[13.5px] font-bold text-ink">Pays out</span>
-                <span className="text-base font-extrabold text-ink tabular-nums">{formatTokens(staked + bonusPool)}</span>
+                <span className="text-base font-extrabold text-ink font-mono tabular-nums">{formatTokens(staked + bonusPool)}</span>
               </div>
             </div>
 

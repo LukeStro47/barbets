@@ -41,16 +41,16 @@ export function MemberProfileCard({ data }: { data: MemberProfileData }) {
 
         <div className="grid grid-cols-2 gap-3 border-t border-hairline pt-4">
           <div>
-            <p className="font-display text-2xl font-extrabold tabular-nums text-ink">{formatTokens(stats.balance)}</p>
+            <p className="font-mono text-2xl font-extrabold tabular-nums text-ink">{formatTokens(stats.balance)}</p>
             <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-faint uppercase">Tokens</p>
           </div>
           <div>
-            <p className="font-display text-2xl font-extrabold tabular-nums text-ink">{standing}</p>
+            <p className="font-mono text-2xl font-extrabold tabular-nums text-ink">{standing}</p>
             <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-faint uppercase">Standing</p>
           </div>
           {hidesPipelineStats ? (
             <div className="col-span-2">
-              <p className={`font-display text-2xl font-extrabold tabular-nums ${net >= 0 ? 'text-signal-deep' : 'text-faint'}`}>
+              <p className={`font-mono text-2xl font-extrabold tabular-nums ${net >= 0 ? 'text-signal-deep' : 'text-faint'}`}>
                 {formatSignedTokens(net)}
               </p>
               <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-faint uppercase">All-time net</p>
@@ -58,13 +58,13 @@ export function MemberProfileCard({ data }: { data: MemberProfileData }) {
           ) : (
             <>
               <div>
-                <p className="font-display text-2xl font-extrabold tabular-nums text-ink">
+                <p className="font-mono text-2xl font-extrabold tabular-nums text-ink">
                   {stats.accuracy_pct == null ? '—' : `${stats.accuracy_pct}%`}
                 </p>
                 <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-faint uppercase">Accuracy</p>
               </div>
               <div>
-                <p className={`font-display text-2xl font-extrabold tabular-nums ${net >= 0 ? 'text-signal-deep' : 'text-faint'}`}>
+                <p className={`font-mono text-2xl font-extrabold tabular-nums ${net >= 0 ? 'text-signal-deep' : 'text-faint'}`}>
                   {formatSignedTokens(net)}
                 </p>
                 <p className="mt-0.5 text-[10.5px] font-bold tracking-[0.07em] text-faint uppercase">All-time net</p>

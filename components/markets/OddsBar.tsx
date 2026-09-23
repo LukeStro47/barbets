@@ -63,13 +63,13 @@ export function NeutralOddsBar({
     <div className={cn('space-y-1.5', className)}>
       <div className={cn('flex items-baseline justify-between gap-2 font-extrabold text-ink', size === 'lg' ? 'text-[15px]' : 'text-sm')}>
         <span className="whitespace-nowrap">
-          {left.label} <span className="tabular-nums">{left.percent}%</span>
+          {left.label} <span className="font-mono tabular-nums">{left.percent}%</span>
         </span>
         {center !== undefined && (
           <span className="shrink-0 rounded-full bg-hairline px-2.5 py-0.5 text-xs font-bold whitespace-nowrap text-muted">{center}</span>
         )}
         <span className="whitespace-nowrap">
-          {right.label} <span className="tabular-nums">{right.percent}%</span>
+          {right.label} <span className="font-mono tabular-nums">{right.percent}%</span>
         </span>
       </div>
       <div className={cn('flex gap-0.5 overflow-hidden rounded-full', size === 'lg' ? 'h-3' : 'h-2.5')}>

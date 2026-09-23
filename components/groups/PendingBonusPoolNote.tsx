@@ -45,7 +45,7 @@ export function PendingBonusPoolNote({ amount }: { amount: number }) {
             <div className="flex flex-col gap-2 border-t border-rule pt-3">
               <div className="flex items-baseline justify-between gap-3">
                 <span className="text-[13.5px] text-muted">Held for this group</span>
-                <span className="text-sm font-extrabold text-signal-deep tabular-nums">{formatTokens(amount)}</span>
+                <span className="text-sm font-extrabold text-signal-deep font-mono tabular-nums">{formatTokens(amount)}</span>
               </div>
               <div className="flex items-baseline justify-between gap-3">
                 <span className="text-[13.5px] text-muted">Goes to</span>

@@ -102,7 +102,7 @@ export function DemoBetslip({
                       disabled={amt > balance}
                       onClick={() => setAmount(String(amt))}
                       className={cn(
-                        'flex-1 rounded-xl border py-2 text-sm font-extrabold tabular-nums transition-colors',
+                        'flex-1 rounded-xl border py-2 text-sm font-extrabold font-mono tabular-nums transition-colors',
                         amountNum === amt ? 'border-signal bg-signal text-ink' : 'border-white/15 bg-white/5 text-white/75',
                         amt > balance && 'opacity-40'
                       )}

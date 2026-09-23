@@ -35,7 +35,7 @@ export function SeasonNumbersCard({
           const formatted = formatTokens(t.value);
           return (
             <div key={t.label} className="min-w-0 flex-1 rounded-[18px] border border-hairline bg-surface px-2.5 py-3.5">
-              <p className={cn('font-display font-extrabold whitespace-nowrap text-ink tabular-nums', valueSizeClass(formatted))}>
+              <p className={cn('font-mono font-extrabold whitespace-nowrap text-ink tabular-nums', valueSizeClass(formatted))}>
                 {formatted}
               </p>
               <p className="mt-0.5 text-[10.5px] font-extrabold tracking-[0.06em] text-faint uppercase">{t.label}</p>

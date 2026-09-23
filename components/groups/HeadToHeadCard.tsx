@@ -26,19 +26,19 @@ function StatColumn({ stats, isPublicGroup }: { stats: HeadToHeadMemberStats; is
       <div className="space-y-2 text-sm">
         <div className="flex items-baseline justify-between">
           <span className="text-faint">Tokens</span>
-          <span className="font-bold tabular-nums text-ink">{formatTokens(stats.balance)}</span>
+          <span className="font-bold font-mono tabular-nums text-ink">{formatTokens(stats.balance)}</span>
         </div>
         <div className="flex items-baseline justify-between">
           <span className="text-faint">Accuracy</span>
-          <span className="font-bold tabular-nums text-ink">{stats.accuracy_pct == null ? '—' : `${stats.accuracy_pct}%`}</span>
+          <span className="font-bold font-mono tabular-nums text-ink">{stats.accuracy_pct == null ? '—' : `${stats.accuracy_pct}%`}</span>
         </div>
         <div className="flex items-baseline justify-between">
           <span className="text-faint">Net</span>
-          <span className={`font-bold tabular-nums ${net >= 0 ? 'text-signal-deep' : 'text-faint'}`}>{formatSignedTokens(net)}</span>
+          <span className={`font-bold font-mono tabular-nums ${net >= 0 ? 'text-signal-deep' : 'text-faint'}`}>{formatSignedTokens(net)}</span>
         </div>
         <div className="flex items-baseline justify-between">
           <span className="text-faint">Wagered</span>
-          <span className="font-bold tabular-nums text-ink">{formatTokens(Number(stats.tokens_wagered))}</span>
+          <span className="font-bold font-mono tabular-nums text-ink">{formatTokens(Number(stats.tokens_wagered))}</span>
         </div>
       </div>
     </div>
@@ -79,14 +79,14 @@ export function HeadToHeadCard({ data }: { data: HeadToHeadData }) {
                   <div className="flex gap-4 text-[13px]">
                     <div className="flex-1 space-y-0.5">
                       <p className="truncate text-muted">{m.a_choice}</p>
-                      <p className={`font-bold tabular-nums ${aWon ? 'text-signal-deep' : 'text-faint'}`}>
+                      <p className={`font-bold font-mono tabular-nums ${aWon ? 'text-signal-deep' : 'text-faint'}`}>
                         {formatSignedTokens(Number(m.a_payout) - Number(m.a_amount))}
                       </p>
                     </div>
                     <div className="w-px shrink-0 bg-hairline" />
                     <div className="flex-1 space-y-0.5">
                       <p className="truncate text-muted">{m.b_choice}</p>
-                      <p className={`font-bold tabular-nums ${bWon ? 'text-signal-deep' : 'text-faint'}`}>
+                      <p className={`font-bold font-mono tabular-nums ${bWon ? 'text-signal-deep' : 'text-faint'}`}>
                         {formatSignedTokens(Number(m.b_payout) - Number(m.b_amount))}
                       </p>
                     </div>
