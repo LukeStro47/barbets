@@ -40,7 +40,7 @@ const SLOT: Record<NavTab, number> = { home: 0, markets: 1, board: 3, you: 4 };
 const MARKET_TYPES: MarketType[] = ['yes_no', 'over_under', 'multiple_choice'];
 
 function iconButtonClass(active: boolean, basis: 'basis-1/5' | 'basis-1/3') {
-  return cn('relative flex h-full flex-none items-center justify-center border-0 bg-transparent p-0', basis, active && 'text-espresso-950');
+  return cn('relative flex h-full flex-none items-center justify-center border-0 bg-transparent p-0', basis, active && 'text-signal');
 }
 
 type GlyphProps = { className?: string; strokeWidth: number };
@@ -270,7 +270,7 @@ export function BottomNav({
     <>
       {bettingOffOpen && (
         <Modal onClose={() => setBettingOffOpen(false)}>
-          <p className="font-display font-bold text-espresso-900">
+          <p className="font-display font-bold text-ink">
             {bettingStatus?.reason === 'season_intermission'
               ? 'Betting is closed between seasons'
               : bettingStatus?.reason === 'season_winding_down'
@@ -279,7 +279,7 @@ export function BottomNav({
                   ? 'Only moderators can start a market here'
                   : 'Betting is turned off'}
           </p>
-          <p className="text-sm text-espresso-500">
+          <p className="text-sm text-muted">
             {bettingStatus?.reason === 'season_intermission' ? (
               <>
                 This season is done and the next one hasn&apos;t started yet.
@@ -304,13 +304,13 @@ export function BottomNav({
         <>
           <div
             onClick={() => setSwitcherOpen(false)}
-            className="fixed inset-0 z-40 animate-bottomnav-scrim-in bg-espresso-950/40"
+            className="fixed inset-0 z-40 animate-bottomnav-scrim-in bg-ink/40"
           />
           <div
-            className="fixed right-3 left-3 z-40 origin-bottom-left animate-bottomnav-sheet-up rounded-3xl border border-espresso-100 bg-paper-white p-3 pt-3.5 shadow-[0_26px_46px_-22px_rgba(28,19,13,0.5)]"
+            className="fixed right-3 left-3 z-40 origin-bottom-left animate-bottomnav-sheet-up rounded-3xl border border-hairline bg-surface p-3 pt-3.5"
             style={{ bottom: 'calc(var(--bottomnav-height) + 8px)' }}
           >
-            <p className="mb-2.5 ml-1.5 text-[10.5px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">Your groups</p>
+            <p className="mb-2.5 ml-1.5 text-[10.5px] font-extrabold tracking-[0.09em] text-faint uppercase">Your groups</p>
             <div className="flex flex-col gap-1">
               {groups.map((g) => {
                 const current = inGroup && g.id === currentGroup!.id;
@@ -320,34 +320,34 @@ export function BottomNav({
                     onClick={() => selectGroup(g.id)}
                     className={cn(
                       'flex w-full items-center gap-[11px] rounded-2xl border-[1.5px] px-[11px] py-2.5 text-left',
-                      current ? 'border-honey-500 bg-honey-500/10' : 'border-transparent bg-transparent'
+                      current ? 'border-signal bg-signal-tint' : 'border-transparent bg-transparent'
                     )}
                   >
                     <GroupAvatar
                       name={g.name}
                       avatarKey={g.avatarKey}
                       className="h-[34px] w-[34px] text-[11.5px]"
-                      fallbackClassName="bg-espresso-900 text-honey-300"
+                      fallbackClassName="bg-ink text-on-ink"
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13.5px] font-extrabold text-espresso-900">{g.name}</span>
-                      <span className="block truncate text-[11px] text-espresso-400">{g.meta}</span>
+                      <span className="block truncate text-[13.5px] font-extrabold text-ink">{g.name}</span>
+                      <span className="block truncate text-[11px] text-faint">{g.meta}</span>
                     </span>
-                    {current && <span className="shrink-0 text-[11px] text-honey-600">●</span>}
+                    {current && <span className="shrink-0 text-[11px] text-signal-deep">●</span>}
                   </button>
                 );
               })}
-              {groups.length === 0 && <p className="px-1.5 py-2 text-sm text-espresso-400">No groups yet.</p>}
+              {groups.length === 0 && <p className="px-1.5 py-2 text-sm text-faint">No groups yet.</p>}
             </div>
             <button
               onClick={() => {
                 setSwitcherOpen(false);
                 router.push('/groups?all=1');
               }}
-              className="mt-2 flex w-full items-center justify-between gap-2.5 border-0 border-t border-espresso-50 bg-transparent px-[11px] pt-[11px] pb-[3px] text-left"
+              className="mt-2 flex w-full items-center justify-between gap-2.5 border-0 border-t border-hairline bg-transparent px-[11px] pt-[11px] pb-[3px] text-left"
             >
-              <span className="text-[13px] font-extrabold text-honey-700">All groups</span>
-              <ChevronRightIcon className="h-3.5 w-2 shrink-0 text-honey-600" />
+              <span className="text-[13px] font-extrabold text-signal-deep">All groups</span>
+              <ChevronRightIcon className="h-3.5 w-2 shrink-0 text-signal-deep" />
             </button>
           </div>
         </>
@@ -356,9 +356,9 @@ export function BottomNav({
       {/* ---- Plus: contextual create sheet ---- */}
       {createOpen && (
         <>
-          <div onClick={toggleCreate} className="fixed inset-0 z-40 animate-bottomnav-scrim-in bg-espresso-950/45" />
+          <div onClick={toggleCreate} className="fixed inset-0 z-40 animate-bottomnav-scrim-in bg-ink/45" />
           <div
-            className="fixed inset-x-0 bottom-0 z-40 animate-bottomnav-sheet-up rounded-t-[28px] bg-gradient-to-br from-espresso-900 via-espresso-700 to-espresso-700 px-5 pt-3.5 pb-[env(safe-area-inset-bottom)]"
+            className="fixed inset-x-0 bottom-0 z-40 animate-bottomnav-sheet-up rounded-t-[28px] bg-ink px-5 pt-3.5 pb-[env(safe-area-inset-bottom)]"
             // Once the keyboard pushes this sheet up, the browser scrolls just far enough to
             // reveal the focused input — which leaves the Continue button sitting flush against
             // the keyboard with no breathing room. Add the keyboard's height to the sheet's normal
@@ -376,8 +376,8 @@ export function BottomNav({
 
             {inGroup ? (
               <>
-                <p className="mb-0.5 font-display text-base font-extrabold tracking-[-0.01em] text-paper-white">New market</p>
-                <p className="mb-3.5 text-xs text-paper-white/50">How should it settle?</p>
+                <p className="mb-0.5 font-display text-base font-extrabold tracking-[-0.01em] text-surface">New market</p>
+                <p className="mb-3.5 text-xs text-surface/50">How should it settle?</p>
                 <div className="mb-3.5 flex flex-col gap-1.5">
                   {MARKET_TYPES.map((t) => {
                     const on = marketType === t;
@@ -387,19 +387,15 @@ export function BottomNav({
                         onClick={() => setMarketType(t)}
                         className={cn(
                           'flex w-full items-center gap-3 rounded-2xl border-[1.5px] px-3.5 py-3 text-left transition-colors',
-                          on ? 'border-honey-500 bg-honey-500' : 'border-white/15 bg-white/5'
+                          on ? 'border-signal bg-signal' : 'border-white/15 bg-white/5'
                         )}
                       >
-                        <span aria-hidden className={cn('text-xl', on ? 'text-espresso-900' : 'text-paper-white')}>
+                        <span aria-hidden className="text-xl text-surface">
                           {MARKET_TYPE_ICON[t]}
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className={cn('block text-[13.5px] font-extrabold', on ? 'text-espresso-900' : 'text-paper-white')}>
-                            {MARKET_TYPE_LABEL[t]}
-                          </span>
-                          <span className={cn('block text-[11.5px] font-semibold', on ? 'text-espresso-900/60' : 'text-paper-white/50')}>
-                            {MARKET_TYPE_DESCRIPTION[t]}
-                          </span>
+                          <span className="block text-[13.5px] font-extrabold text-surface">{MARKET_TYPE_LABEL[t]}</span>
+                          <span className="block text-[11.5px] font-semibold text-surface/60">{MARKET_TYPE_DESCRIPTION[t]}</span>
                         </span>
                       </button>
                     );
@@ -408,24 +404,24 @@ export function BottomNav({
                     onClick={browseTemplates}
                     className="flex w-full items-center gap-3 rounded-2xl border-[1.5px] border-dashed border-white/25 bg-transparent px-3.5 py-3 text-left"
                   >
-                    <svg aria-hidden className="h-5 w-5 shrink-0 text-paper-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <svg aria-hidden className="h-5 w-5 shrink-0 text-surface" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4L12 3z" />
                       <path d="M19 15l0.9 2.3L22 18l-2.1 0.7L19 21l-0.9-2.3L16 18l2.1-0.7L19 15z" />
                     </svg>
                     <span className="min-w-0 flex-1">
-                      <span className="block text-[13.5px] font-extrabold text-paper-white">Browse templates</span>
-                      <span className="block text-[11.5px] font-semibold text-paper-white/50">Start from a ready-made idea</span>
+                      <span className="block text-[13.5px] font-extrabold text-surface">Browse templates</span>
+                      <span className="block text-[11.5px] font-semibold text-surface/50">Start from a ready-made idea</span>
                     </span>
                   </button>
                 </div>
                 <div className="flex items-center gap-2.5 border-t border-white/10 pt-3.5">
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[10px] font-bold tracking-[0.07em] text-paper-white/40 uppercase">Posting to</span>
-                    <span className="block truncate text-[13px] font-extrabold text-paper-white">{currentGroup!.name}</span>
+                    <span className="block text-[10px] font-bold tracking-[0.07em] text-surface/40 uppercase">Posting to</span>
+                    <span className="block truncate text-[13px] font-extrabold text-surface">{currentGroup!.name}</span>
                   </span>
                   <button
                     onClick={continueCreateMarket}
-                    className="shrink-0 rounded-full border-0 bg-honey-500 px-[18px] py-2.5 text-[12.5px] font-extrabold text-espresso-900"
+                    className="shrink-0 rounded-[14px] border-0 bg-signal px-[18px] py-2.5 text-[12.5px] font-extrabold text-surface"
                   >
                     Continue
                   </button>
@@ -433,34 +429,34 @@ export function BottomNav({
               </>
             ) : (
               <>
-                <p className="mb-0.5 font-display text-base font-extrabold tracking-[-0.01em] text-paper-white">New group</p>
-                <p className="mb-3.5 text-xs text-paper-white/50">A private table, everyone starts even.</p>
+                <p className="mb-0.5 font-display text-base font-extrabold tracking-[-0.01em] text-surface">New group</p>
+                <p className="mb-3.5 text-xs text-surface/50">A private table, everyone starts even.</p>
                 <div className="mb-3.5 flex flex-col gap-2">
                   <div className="rounded-2xl border-[1.5px] border-white/15 bg-white/5 px-[15px] py-3">
-                    <label className="block text-[10px] font-bold tracking-[0.07em] text-paper-white/40 uppercase">Group name</label>
+                    <label className="block text-[10px] font-bold tracking-[0.07em] text-surface/40 uppercase">Group name</label>
                     <input
                       value={groupName}
                       onChange={(e) => setGroupName(e.target.value)}
                       placeholder="The Wednesday Wagers"
                       maxLength={GROUP_NAME_MAX_LENGTH}
-                      className="mt-[3px] block w-full border-0 bg-transparent p-0 text-sm font-bold text-paper-white placeholder:text-paper-white/30 focus:outline-none"
+                      className="mt-[3px] block w-full border-0 bg-transparent p-0 text-sm font-bold text-surface placeholder:text-surface/30 focus:outline-none"
                     />
                   </div>
                   <div className="rounded-2xl border-[1.5px] border-white/15 bg-white/5 px-[15px] py-3">
-                    <label className="block text-[10px] font-bold tracking-[0.07em] text-paper-white/40 uppercase">Token allocation</label>
+                    <label className="block text-[10px] font-bold tracking-[0.07em] text-surface/40 uppercase">Token allocation</label>
                     <input
                       type="text"
                       inputMode="numeric"
                       value={groupSeedAmount}
                       onChange={(e) => setGroupSeedAmount(formatTokenInputValue(e.target.value, TOKEN_ALLOCATION_MAX))}
-                      className="mt-[3px] block w-full border-0 bg-transparent p-0 text-sm font-bold text-paper-white focus:outline-none"
+                      className="mt-[3px] block w-full border-0 bg-transparent p-0 font-mono text-sm font-bold text-surface focus:outline-none"
                     />
                   </div>
                 </div>
                 <button
                   onClick={continueCreateGroup}
                   disabled={!groupName.trim()}
-                  className="w-full rounded-full border-0 bg-honey-500 py-2.5 text-[12.5px] font-extrabold text-espresso-900 disabled:opacity-40"
+                  className="w-full rounded-[14px] border-0 bg-signal py-2.5 text-[12.5px] font-extrabold text-surface disabled:opacity-40"
                 >
                   Continue
                 </button>
@@ -473,7 +469,7 @@ export function BottomNav({
       {/* ---- The bar ---- */}
       {!keyboardOpen && (
       <nav
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-espresso-100 bg-paper-white pb-[max(20px,env(safe-area-inset-bottom))]"
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-hairline bg-surface pb-[max(20px,env(safe-area-inset-bottom))]"
       >
         <div className="relative flex h-[60px] items-center">
           {/* Sits below the icon rather than hanging off the bar's top border, so it reads as an
@@ -484,7 +480,7 @@ export function BottomNav({
           {indicatorLeft && (
             <span
               aria-hidden
-              className="absolute bottom-[9px] h-[3px] w-[22px] rounded-full bg-honey-600 transition-[left] duration-[460ms] ease-[cubic-bezier(0.34,1.3,0.5,1)] motion-reduce:transition-none"
+              className="absolute bottom-[9px] h-[3px] w-[22px] rounded-full bg-signal transition-[left] duration-[460ms] ease-[cubic-bezier(0.34,1.3,0.5,1)] motion-reduce:transition-none"
               style={{ left: indicatorLeft }}
             />
           )}
@@ -496,9 +492,9 @@ export function BottomNav({
                 return (
                   <button key={t.key} aria-label={t.label} aria-current={active ? 'page' : undefined} onClick={() => goToTab(t.key)} className={iconButtonClass(active, 'basis-1/5')}>
                     <span className="relative">
-                      <Glyph strokeWidth={active ? 2.3 : 1.9} className={cn('h-[23px] w-[23px]', !active && 'text-espresso-300')} />
+                      <Glyph strokeWidth={active ? 2.3 : 1.9} className={cn('h-[23px] w-[23px]', !active && 'text-faint')} />
                       {t.key === 'home' && hasNeedsYou && (
-                        <span className="absolute top-0 right-0 h-2 w-2 rounded-full border-2 border-paper-white bg-danger-500" />
+                        <span className="absolute top-0 right-0 h-2 w-2 rounded-full border-2 border-surface bg-alert" />
                       )}
                     </span>
                   </button>
@@ -510,7 +506,7 @@ export function BottomNav({
                 const active = activeTab === t.key;
                 return (
                   <button key={t.key} aria-label={t.label} aria-current={active ? 'page' : undefined} onClick={() => goToTab(t.key)} className={iconButtonClass(active, 'basis-1/5')}>
-                    <Glyph strokeWidth={active ? 2.3 : 1.9} className={cn('h-[23px] w-[23px]', !active && 'text-espresso-300')} />
+                    <Glyph strokeWidth={active ? 2.3 : 1.9} className={cn('h-[23px] w-[23px]', !active && 'text-faint')} />
                   </button>
                 );
               })}
@@ -528,9 +524,9 @@ export function BottomNav({
                     return (
                       <button key={key} aria-label={t.label} aria-current={active ? 'page' : undefined} onClick={() => goToTab(key)} className={iconButtonClass(active, 'basis-1/3')}>
                         <span className="relative">
-                          <Glyph strokeWidth={active ? 2.3 : 1.9} className={cn('h-[23px] w-[23px]', !active && 'text-espresso-300')} />
+                          <Glyph strokeWidth={active ? 2.3 : 1.9} className={cn('h-[23px] w-[23px]', !active && 'text-faint')} />
                           {key === 'home' && hasNeedsYou && (
-                            <span className="absolute top-0 right-0 h-2 w-2 rounded-full border-2 border-paper-white bg-danger-500" />
+                            <span className="absolute top-0 right-0 h-2 w-2 rounded-full border-2 border-surface bg-alert" />
                           )}
                         </span>
                       </button>
@@ -549,12 +545,12 @@ export function BottomNav({
           >
             <span
               className={cn(
-                'flex h-[46px] w-[46px] items-center justify-center rounded-full bg-espresso-900 transition-transform duration-[380ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] motion-reduce:transition-none',
+                'flex h-[46px] w-[46px] items-center justify-center rounded-[14px] bg-ink transition-transform duration-[380ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] motion-reduce:transition-none',
                 createOpen && 'rotate-45',
                 bettingOff && 'opacity-35'
               )}
             >
-              <PlusIcon className="h-[19px] w-[19px] text-honey-300" />
+              <PlusIcon className="h-[19px] w-[19px] text-on-ink" />
             </span>
           </button>
         </div>
