@@ -55,9 +55,18 @@ export default async function AppLayout({ children, modal }: { children: React.R
     if (!prev || s.number > prev.number) latestSeasonByGroup.set(s.group_id, s);
   }
 
+  const taskCounts = await getGroupTaskCounts(supabase, groupIds, user.id);
+  const hasNeedsYou = [...taskCounts.values()].some((count) => count > 0);
+
   const groups: NavGroup[] = (groupRows ?? []).map((g) => {
     const memberCount = (g.memberships ?? []).filter((m: { status: string }) => m.status === 'active' || m.status === 'dormant').length;
-    return { id: g.id, name: g.name, avatarKey: g.avatar_key, meta: `${memberCount} member${memberCount === 1 ? '' : 's'}` };
+    return {
+      id: g.id,
+      name: g.name,
+      avatarKey: g.avatar_key,
+      meta: `${memberCount} member${memberCount === 1 ? '' : 's'}`,
+      needsYou: (taskCounts.get(g.id) ?? 0) > 0,
+    };
   });
 
   const bettingStatusByGroup: Record<string, GroupBettingStatus> = {};
@@ -96,9 +105,6 @@ export default async function AppLayout({ children, modal }: { children: React.R
       bettingStatusByGroup[g.id] = { blocked: true, reason: 'not_moderator' };
     }
   }
-
-  const taskCounts = await getGroupTaskCounts(supabase, groupIds, user.id);
-  const hasNeedsYou = [...taskCounts.values()].some((count) => count > 0);
 
   return (
     // pt-[env(safe-area-inset-top)] used to live on AppHeader itself (now removed) so its own

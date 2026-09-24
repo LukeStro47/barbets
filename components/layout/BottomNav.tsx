@@ -14,7 +14,13 @@ import { cn } from '@/lib/cn';
 import { GroupAvatar } from '@/components/ui/GroupAvatar';
 import { NEW_GROUP_EVENT } from '@/components/groups/StartGroupButton';
 
-export type NavGroup = { id: string; name: string; avatarKey: string | null; meta: string };
+export type NavGroup = { id: string; name: string; avatarKey: string | null; meta: string; needsYou?: boolean };
+
+/** Dispatched by GroupBar (the persistent in-group header) to open the same switcher sheet
+ * BottomNav already owns, rather than each in-group page carrying its own copy of the sheet's
+ * open/close state and group list — same event-bridge shape as StartGroupButton's
+ * NEW_GROUP_EVENT just below. */
+export const OPEN_GROUP_SWITCHER_EVENT = 'barbets:open-group-switcher';
 
 /** Why the "+" create-market button is blocked for a group, if it is — distinct reasons because
  * they need distinct copy: an owner-off group can be turned on any time by the owner, a
@@ -28,14 +34,16 @@ export interface GroupBettingStatus {
 }
 
 const TABS: { key: NavTab; label: string }[] = [
-  { key: 'home', label: 'Home' },
   { key: 'markets', label: 'Markets' },
-  { key: 'board', label: 'Leaderboard' },
+  { key: 'inbox', label: 'Inbox' },
+  { key: 'group', label: 'Group' },
   { key: 'you', label: 'You' },
 ];
 
+const TAB_LABEL: Record<NavTab, string> = { home: 'Home', markets: 'Markets', inbox: 'Inbox', group: 'Group', you: 'You' };
+
 /** Five slots at 20% each; the plus button owns slot index 2. */
-const SLOT: Record<NavTab, number> = { home: 0, markets: 1, board: 3, you: 4 };
+const SLOT: Record<NavTab, number> = { home: 0, markets: 0, inbox: 1, group: 3, you: 4 };
 
 const MARKET_TYPES: MarketType[] = ['yes_no', 'over_under', 'multiple_choice'];
 
@@ -59,10 +67,18 @@ function MarketsGlyph({ className, strokeWidth }: GlyphProps) {
     </svg>
   );
 }
-function BoardGlyph({ className, strokeWidth }: GlyphProps) {
+function GroupGlyph({ className, strokeWidth }: GlyphProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="M8 20V11M14 20V4M20 20v-7M2 20h20" />
+    </svg>
+  );
+}
+function InboxGlyph({ className, strokeWidth }: GlyphProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M12 4a5 5 0 0 0-5 5v4l-2 3h14l-2-3V9a5 5 0 0 0-5-5z" />
+      <path d="M10 19a2 2 0 0 0 4 0" />
     </svg>
   );
 }
@@ -77,7 +93,8 @@ function YouGlyph({ className, strokeWidth }: GlyphProps) {
 const TAB_GLYPH: Record<NavTab, (props: GlyphProps) => React.ReactNode> = {
   home: HomeGlyph,
   markets: MarketsGlyph,
-  board: BoardGlyph,
+  inbox: InboxGlyph,
+  group: GroupGlyph,
   you: YouGlyph,
 };
 
@@ -99,8 +116,8 @@ export function BottomNav({
   groups: NavGroup[];
   bettingStatusByGroup: Record<string, GroupBettingStatus>;
   /** True when any of the viewer's groups has a market waiting on them (an endorsement, a
-   * vote) — surfaced as a small red dot on the Home tab, since Home is where the switcher
-   * (and from there, every group's own "N waiting on you" card) lives. */
+   * vote) — surfaced as a small red dot on the Inbox tab (matching the design's badge
+   * placement), plus per-group in the switcher sheet via NavGroup.needsYou. */
   hasNeedsYou?: boolean;
 }) {
   const pathname = usePathname();
@@ -142,6 +159,17 @@ export function BottomNav({
     };
     window.addEventListener(NEW_GROUP_EVENT, onNewGroup);
     return () => window.removeEventListener(NEW_GROUP_EVENT, onNewGroup);
+  }, []);
+
+  // GroupBar (the persistent in-group header) is the only way to open the switcher now that the
+  // in-group bottom nav no longer carries a Home slot — see OPEN_GROUP_SWITCHER_EVENT above.
+  useEffect(() => {
+    const onOpenSwitcher = () => {
+      setCreateOpen(false);
+      setSwitcherOpen(true);
+    };
+    window.addEventListener(OPEN_GROUP_SWITCHER_EVENT, onOpenSwitcher);
+    return () => window.removeEventListener(OPEN_GROUP_SWITCHER_EVENT, onOpenSwitcher);
   }, []);
 
   // The demo walkthrough's post-tour "Create a Group" CTA lives on /demo, outside this layout, so
@@ -212,20 +240,18 @@ export function BottomNav({
 
   function goToTab(tab: NavTab) {
     if (tab === 'home') {
-      // With no groups yet, the switcher sheet would just show its "No groups yet." card over
-      // the same all-groups hub its own "All groups" row links to — skip straight there.
-      if (groups.length === 0) {
-        router.push('/groups?all=1');
-      } else {
-        openSwitcher();
-      }
+      // Home is only ever shown out-of-group now (the group switcher lives on the persistent
+      // GroupBar instead) — plain navigation to the all-groups hub, no sheet to open.
+      router.push('/groups');
+    } else if (tab === 'inbox') {
+      router.push('/inbox');
     } else if (tab === 'you') {
       // Carries the group you're currently in along to Profile, so it opens already scoped to
       // it instead of falling back to whichever group Profile defaults to on its own.
       router.push(currentGroup ? `/profile?group=${currentGroup.id}` : '/profile');
     } else if (tab === 'markets') {
       router.push(currentGroup ? `/groups/${currentGroup.id}` : '/groups?all=1');
-    } else if (tab === 'board') {
+    } else if (tab === 'group') {
       router.push(currentGroup ? `/groups/${currentGroup.id}/leaderboard` : '/groups?all=1');
     }
   }
@@ -258,11 +284,23 @@ export function BottomNav({
   // Markets/Board only mean anything with a current group in scope — outside one (the
   // all-groups hub, /profile, admin/feedback, ...) the bar drops to three wide slots
   // (Home, +, You) instead of five cramped ones with two dead tabs in the middle.
+  // Out-of-group has no create button any more (design: Home / Inbox / You, three even slots —
+  // starting a group happens from a button on the all-groups hub itself, not this bar).
   const totalSlots = inGroup ? 5 : 3;
   const slotPct = 100 / totalSlots;
-  const activeSlot = !activeTab ? null : inGroup ? SLOT[activeTab] : activeTab === 'you' ? 2 : activeTab === 'home' ? 0 : null;
+  const activeSlot = !activeTab
+    ? null
+    : inGroup
+      ? SLOT[activeTab]
+      : activeTab === 'home'
+        ? 0
+        : activeTab === 'inbox'
+          ? 1
+          : activeTab === 'you'
+            ? 2
+            : null;
   const indicatorLeft = activeSlot !== null ? `calc(${activeSlot * slotPct}% + ${slotPct / 2}% - 11px)` : null;
-  const plusLeftPct = inGroup ? 40 : slotPct;
+  const plusLeftPct = 40;
   const bettingStatus = currentGroup ? bettingStatusByGroup[currentGroup.id] : undefined;
   const bettingOff = !!bettingStatus?.blocked;
 
@@ -330,7 +368,10 @@ export function BottomNav({
                       fallbackClassName="bg-ink text-on-ink"
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13.5px] font-extrabold text-ink">{g.name}</span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="block truncate text-[13.5px] font-extrabold text-ink">{g.name}</span>
+                        {g.needsYou && <span aria-label="Needs you" className="h-[7px] w-[7px] shrink-0 rounded-full bg-alert" />}
+                      </span>
                       <span className="block truncate text-[11px] text-faint">{g.meta}</span>
                     </span>
                     {current && <span className="shrink-0 text-[11px] text-signal-deep">●</span>}
@@ -493,7 +534,7 @@ export function BottomNav({
                   <button key={t.key} aria-label={t.label} aria-current={active ? 'page' : undefined} onClick={() => goToTab(t.key)} className={iconButtonClass(active, 'basis-1/5')}>
                     <span className="relative">
                       <Glyph strokeWidth={active ? 2.3 : 1.9} className={cn('h-[23px] w-[23px]', !active && 'text-faint')} />
-                      {t.key === 'home' && hasNeedsYou && (
+                      {t.key === 'inbox' && hasNeedsYou && (
                         <span className="absolute top-0 right-0 h-2 w-2 rounded-full border-2 border-surface bg-alert" />
                       )}
                     </span>
@@ -510,49 +551,42 @@ export function BottomNav({
                   </button>
                 );
               })}
+              <button
+                onClick={toggleCreate}
+                aria-label="New market"
+                aria-expanded={createOpen}
+                className="absolute top-0 flex h-full items-center justify-center border-0 bg-transparent p-0"
+                style={{ left: `${plusLeftPct}%`, width: `${slotPct}%` }}
+              >
+                <span
+                  className={cn(
+                    'flex h-[46px] w-[46px] items-center justify-center rounded-[14px] bg-ink transition-transform duration-[380ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] motion-reduce:transition-none',
+                    createOpen && 'rotate-45',
+                    bettingOff && 'opacity-35'
+                  )}
+                >
+                  <PlusIcon className="h-[19px] w-[19px] text-on-ink" />
+                </span>
+              </button>
             </>
           ) : (
             <>
-              {(['home', null, 'you'] as const).map((key) =>
-                key === null ? (
-                  <span key="spacer" className="basis-1/3" />
-                ) : (
-                  (() => {
-                    const t = TABS.find((tab) => tab.key === key)!;
-                    const Glyph = TAB_GLYPH[key];
-                    const active = activeTab === key;
-                    return (
-                      <button key={key} aria-label={t.label} aria-current={active ? 'page' : undefined} onClick={() => goToTab(key)} className={iconButtonClass(active, 'basis-1/3')}>
-                        <span className="relative">
-                          <Glyph strokeWidth={active ? 2.3 : 1.9} className={cn('h-[23px] w-[23px]', !active && 'text-faint')} />
-                          {key === 'home' && hasNeedsYou && (
-                            <span className="absolute top-0 right-0 h-2 w-2 rounded-full border-2 border-surface bg-alert" />
-                          )}
-                        </span>
-                      </button>
-                    );
-                  })()
-                )
-              )}
+              {(['home', 'inbox', 'you'] as const).map((key) => {
+                const Glyph = TAB_GLYPH[key];
+                const active = activeTab === key;
+                return (
+                  <button key={key} aria-label={TAB_LABEL[key]} aria-current={active ? 'page' : undefined} onClick={() => goToTab(key)} className={iconButtonClass(active, 'basis-1/3')}>
+                    <span className="relative">
+                      <Glyph strokeWidth={active ? 2.3 : 1.9} className={cn('h-[23px] w-[23px]', !active && 'text-faint')} />
+                      {key === 'inbox' && hasNeedsYou && (
+                        <span className="absolute top-0 right-0 h-2 w-2 rounded-full border-2 border-surface bg-alert" />
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
             </>
           )}
-          <button
-            onClick={toggleCreate}
-            aria-label={inGroup ? 'New market' : 'New group'}
-            aria-expanded={createOpen}
-            className="absolute top-0 flex h-full items-center justify-center border-0 bg-transparent p-0"
-            style={{ left: `${plusLeftPct}%`, width: `${slotPct}%` }}
-          >
-            <span
-              className={cn(
-                'flex h-[46px] w-[46px] items-center justify-center rounded-[14px] bg-ink transition-transform duration-[380ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] motion-reduce:transition-none',
-                createOpen && 'rotate-45',
-                bettingOff && 'opacity-35'
-              )}
-            >
-              <PlusIcon className="h-[19px] w-[19px] text-on-ink" />
-            </span>
-          </button>
         </div>
       </nav>
       )}

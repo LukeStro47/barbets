@@ -1,4 +1,4 @@
-export type NavTab = 'home' | 'markets' | 'board' | 'you';
+export type NavTab = 'home' | 'markets' | 'inbox' | 'group' | 'you';
 
 /** Pure, framework-free pathname parsing shared by BottomNav (the fixed bar) and
  * BottomNavSpacer (the bottom scroll padding) — kept in one place so the two can't
@@ -47,14 +47,23 @@ export function isMemberProfileModalRoute(pathname: string): boolean {
 export function getActiveNavTab(pathname: string): NavTab | null {
   if (pathname === '/profile') return 'you';
   if (pathname === '/groups') return 'home';
+  if (pathname === '/inbox') return 'inbox';
 
   const groupId = getRouteGroupId(pathname);
   if (!groupId) return null;
 
   const rest = pathname.slice(`/groups/${groupId}`.length);
   // Member records (and their head-to-head comparison) are only ever reached from the
-  // leaderboard/awards pages, never from a market — so the bar should stay on Board rather
-  // than falling through to the generic Markets default.
-  if (rest.startsWith('/leaderboard') || rest.startsWith('/awards') || rest.startsWith('/members')) return 'board';
+  // leaderboard/awards pages, never from a market — so the bar should stay on Group rather
+  // than falling through to the generic Markets default. Settings lives under the same tab
+  // now that the group bar (GroupBar.tsx) owns the switcher instead of linking to Settings.
+  if (
+    rest.startsWith('/leaderboard') ||
+    rest.startsWith('/awards') ||
+    rest.startsWith('/members') ||
+    rest.startsWith('/settings') ||
+    rest.startsWith('/seasons')
+  )
+    return 'group';
   return 'markets';
 }

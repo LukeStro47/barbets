@@ -8,7 +8,7 @@ import { UserAvatar } from '@/components/ui/UserAvatar';
 import { LeaderboardLenses } from '@/components/groups/LeaderboardLenses';
 import { SeasonStakesBand } from '@/components/groups/SeasonStakesBand';
 import { AwardGlyph } from '@/components/groups/AwardGlyph';
-import { ChevronRightIcon } from '@/components/ui/icons';
+import { ChevronRightIcon, SettingsIcon } from '@/components/ui/icons';
 import { formatTokens, formatOrdinal, numberWord } from '@/lib/formatNumber';
 import { TITLE_ORDER, type GroupTitleRow } from '@/lib/titles';
 import { cn } from '@/lib/cn';
@@ -429,6 +429,17 @@ export default async function LeaderboardPage({
       <PageHeader
         title="Leaderboard"
         action={seasonLine && <span className="shrink-0 text-[11.5px] font-extrabold text-faint">{seasonLine}</span>}
+        // Settings' one entry point now that GroupBar opens the switcher instead of linking here
+        // (see components/layout/GroupBar.tsx) — the "Group" bottom-nav tab lands on this page.
+        backAction={
+          <Link
+            href={`/groups/${groupId}/settings`}
+            aria-label="Group settings"
+            className="flex h-8 w-8 items-center justify-center rounded-[10px] border border-hairline bg-surface"
+          >
+            <SettingsIcon className="h-4 w-4 text-faint" />
+          </Link>
+        }
       />
 
       {hero}

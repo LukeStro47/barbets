@@ -1,5 +1,4 @@
-﻿import Link from 'next/link';
-import Image from 'next/image';
+﻿import Image from 'next/image';
 import { createClient, requireUser } from '@/lib/supabase/server';
 import { notFoundIfEmpty } from '@/lib/errors';
 import { getActiveMarkets, getSettledMarkets, type SettledCursor } from '@/lib/groupFeed';
@@ -22,34 +21,14 @@ import { MemberTitleCard } from '@/components/groups/MemberTitleCard';
 import { WhatsNextCard } from '@/components/groups/WhatsNextCard';
 import { WindingDownCard } from '@/components/groups/WindingDownCard';
 import { Mention } from '@/components/ui/Mention';
-import { GroupAvatar } from '@/components/ui/GroupAvatar';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
-import { CaretDownIcon } from '@/components/ui/icons';
 import { formatTokens } from '@/lib/formatNumber';
-import { getGroupTasks } from '@/lib/tasks';
+import { getGroupTasks, getGroupTaskCounts } from '@/lib/tasks';
+import { GroupBar } from '@/components/layout/GroupBar';
 import { TITLE_ORDER, TITLE_META, type GroupTitleRow } from '@/lib/titles';
 import { diffTitleSnapshots, type TitleSnapshotEntry } from '@/lib/seasonTitleDiff';
 import type { GroupSettings } from '@/lib/actions/groups';
 import { PipelineGroupFeed } from '@/components/groups/PipelineGroupFeed';
-
-function GroupHeader({ groupId, group }: { groupId: string; group: { name: string; avatar_key: string | null } }) {
-  return (
-    <Link
-      href={`/groups/${groupId}/settings`}
-      className="flex min-h-11 min-w-0 items-center gap-2.5"
-      aria-label={`Manage ${group.name}`}
-    >
-      <GroupAvatar
-        name={group.name}
-        avatarKey={group.avatar_key}
-        className="h-10 w-10 text-[11px]"
-        fallbackClassName="bg-ink text-on-ink"
-      />
-      <h1 className="min-w-0 truncate font-display text-[20px] font-bold tracking-[-0.02em] text-ink">{group.name}</h1>
-      <CaretDownIcon className="h-[15px] w-[15px] shrink-0 text-faint" />
-    </Link>
-  );
-}
 
 export default async function GroupFeedPage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
@@ -65,10 +44,22 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
   const user = await requireUser(supabase);
   const isOwner = group!.owner_id === user?.id;
 
-  const [{ data: membership }, { data: settings }] = await Promise.all([
+  const [{ data: membership }, { data: settings }, { data: otherGroupRows }] = await Promise.all([
     supabase.from('memberships').select('balance, nickname').eq('group_id', groupId).eq('user_id', user.id).single(),
     supabase.from('group_settings').select('seasons_enabled, season_length, betting_enabled, seed_amount').eq('group_id', groupId).single(),
+    // Just enough for GroupBar's switcher-vs-home button (do I have anywhere else to switch to)
+    // and its "needs you elsewhere" dot — not the full group list the switcher sheet itself
+    // renders (that one lives in app/(app)/layout.tsx, already fetched once for BottomNav).
+    supabase.from('memberships').select('group_id').eq('user_id', user.id).in('status', ['active', 'dormant']).neq('group_id', groupId),
   ]);
+  const otherGroupIds = (otherGroupRows ?? []).map((r) => r.group_id);
+  const otherGroupTaskCounts = otherGroupIds.length > 0 ? await getGroupTaskCounts(supabase, otherGroupIds, user.id) : new Map<string, number>();
+  const groupBarProps = {
+    groupName: group!.name,
+    avatarKey: group!.avatar_key,
+    hasOtherGroups: otherGroupIds.length > 0,
+    needsYou: [...otherGroupTaskCounts.values()].some((c) => c > 0),
+  };
 
   const { data: season } = settings?.seasons_enabled
     ? await supabase
@@ -194,7 +185,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
 
     return (
       <main className="mx-auto max-w-lg px-5 pt-[22px] pb-[110px]">
-        <GroupHeader groupId={groupId} group={group!} />
+        <GroupBar {...groupBarProps} />
 
         <div className="mt-[18px] flex flex-col gap-4">
           {group!.deletion_scheduled_at && (
@@ -347,7 +338,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
     <main className="mx-auto max-w-lg px-5 py-[22px]">
       <SaveBalanceSnapshot groupId={groupId} groupName={group!.name} balance={membership?.balance ?? 0} />
       <div className="flex flex-col gap-1.5">
-        <GroupHeader groupId={groupId} group={group!} />
+        <GroupBar {...groupBarProps} />
         {season && season.status === 'active' && (
           <div className="flex items-center gap-2 text-[13px] font-medium text-faint">
             <span>{season.name ?? `Season ${season.number}`}</span>
