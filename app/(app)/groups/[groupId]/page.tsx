@@ -23,7 +23,8 @@ import { WindingDownCard } from '@/components/groups/WindingDownCard';
 import { Mention } from '@/components/ui/Mention';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { formatTokens } from '@/lib/formatNumber';
-import { getGroupTasks, getGroupTaskCounts } from '@/lib/tasks';
+import { getGroupTasks } from '@/lib/tasks';
+import { getGroupBarSwitcherState } from '@/lib/groupBar';
 import { GroupBar } from '@/components/layout/GroupBar';
 import { TITLE_ORDER, TITLE_META, type GroupTitleRow } from '@/lib/titles';
 import { diffTitleSnapshots, type TitleSnapshotEntry } from '@/lib/seasonTitleDiff';
@@ -44,22 +45,12 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
   const user = await requireUser(supabase);
   const isOwner = group!.owner_id === user?.id;
 
-  const [{ data: membership }, { data: settings }, { data: otherGroupRows }] = await Promise.all([
+  const [{ data: membership }, { data: settings }, switcherState] = await Promise.all([
     supabase.from('memberships').select('balance, nickname').eq('group_id', groupId).eq('user_id', user.id).single(),
     supabase.from('group_settings').select('seasons_enabled, season_length, betting_enabled, seed_amount').eq('group_id', groupId).single(),
-    // Just enough for GroupBar's switcher-vs-home button (do I have anywhere else to switch to)
-    // and its "needs you elsewhere" dot — not the full group list the switcher sheet itself
-    // renders (that one lives in app/(app)/layout.tsx, already fetched once for BottomNav).
-    supabase.from('memberships').select('group_id').eq('user_id', user.id).in('status', ['active', 'dormant']).neq('group_id', groupId),
+    getGroupBarSwitcherState(supabase, groupId, user.id),
   ]);
-  const otherGroupIds = (otherGroupRows ?? []).map((r) => r.group_id);
-  const otherGroupTaskCounts = otherGroupIds.length > 0 ? await getGroupTaskCounts(supabase, otherGroupIds, user.id) : new Map<string, number>();
-  const groupBarProps = {
-    groupName: group!.name,
-    avatarKey: group!.avatar_key,
-    hasOtherGroups: otherGroupIds.length > 0,
-    needsYou: [...otherGroupTaskCounts.values()].some((c) => c > 0),
-  };
+  const groupBarProps = { groupName: group!.name, avatarKey: group!.avatar_key, ...switcherState };
 
   const { data: season } = settings?.seasons_enabled
     ? await supabase

@@ -9,6 +9,8 @@ import { LeaderboardLenses } from '@/components/groups/LeaderboardLenses';
 import { SeasonStakesBand } from '@/components/groups/SeasonStakesBand';
 import { AwardGlyph } from '@/components/groups/AwardGlyph';
 import { ChevronRightIcon, SettingsIcon } from '@/components/ui/icons';
+import { getGroupBarSwitcherState } from '@/lib/groupBar';
+import { GroupBar } from '@/components/layout/GroupBar';
 import { formatTokens, formatOrdinal, numberWord } from '@/lib/formatNumber';
 import { TITLE_ORDER, type GroupTitleRow } from '@/lib/titles';
 import { cn } from '@/lib/cn';
@@ -46,7 +48,8 @@ export default async function LeaderboardPage({
     .select('seasons_enabled, awards_enabled, prize_text, punishment_text')
     .eq('group_id', groupId)
     .single();
-  const { data: group } = await supabase.from('groups').select('is_public, owner_id').eq('id', groupId).single();
+  const { data: group } = await supabase.from('groups').select('name, avatar_key, is_public, owner_id').eq('id', groupId).single();
+  const switcherState = await getGroupBarSwitcherState(supabase, groupId, user.id);
 
   const { data: activeMembers } = await supabase
     .from('memberships')
@@ -426,6 +429,7 @@ export default async function LeaderboardPage({
 
   return (
     <main className="mx-auto max-w-lg space-y-3.5 px-5 py-8">
+      <GroupBar groupName={group!.name} avatarKey={group!.avatar_key} {...switcherState} />
       <PageHeader
         title="Leaderboard"
         action={seasonLine && <span className="shrink-0 text-[11.5px] font-extrabold text-faint">{seasonLine}</span>}
