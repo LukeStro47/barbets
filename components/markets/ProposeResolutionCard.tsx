@@ -203,7 +203,7 @@ export function ProposeResolutionCard({
       <button
         type="button"
         onClick={openModal}
-        className="w-full rounded-full bg-ink px-4 py-2.5 text-sm font-bold text-surface transition-colors hover:bg-ink"
+        className="w-full rounded-[12px] border-[1.5px] border-dash bg-surface py-[11px] text-[13px] font-bold text-ink"
       >
         {market.status === 'open' ? 'Propose result early' : 'Propose the outcome'}
       </button>

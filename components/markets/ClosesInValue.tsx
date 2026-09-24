@@ -11,8 +11,8 @@ const URGENT_THRESHOLD_MS = 60 * 60 * 1000;
  *
  * Ticks on its own 30s cadence rather than reading a value frozen at page load — the person most
  * likely to care is the one sitting on the page as it closes, and for them a one-shot check at
- * render would never flip on at all. The urgency lives in colour rather than the honey accent,
- * which on this screen already means money.
+ * render would never flip on at all. The urgency lives in colour (breathing to alert-red) rather
+ * than the signal-blue this cell's value already renders in.
  */
 export function ClosesInValue({ closesAt }: { closesAt: string }) {
   const [now, setNow] = useState<number | null>(null);

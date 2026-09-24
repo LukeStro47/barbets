@@ -9,10 +9,13 @@ export interface SettlesChipPeople {
 }
 
 /**
- * Slot 3 of the market template: the settlement criteria, plus the provenance chips that say who
- * stands behind this market and who it is hidden from. The criteria text reserves right padding
- * for the "?" clarification trigger, which `children` positions absolutely into this card's own
- * corner (`ClarificationRequests` owns that button and the pending-question list under it).
+ * Slot 3 of the market template: the resolution criteria, plus a "Hidden from" chip when the
+ * market has subjects. Started-by/Endorsed-by attribution moved up to the page header's subtitle
+ * (matching 4d's own "Started by @ellie · Endorsed by @marcus" line under the title) — this card
+ * used to carry that as chips alongside "Hidden from" too, which the actual mockup doesn't show
+ * here at all. The criteria text reserves right padding for the "?" clarification trigger, which
+ * `children` positions absolutely into this card's own corner (`ClarificationRequests` owns that
+ * button and the pending-question list under it).
  */
 export function HowItSettlesCard({
   description,
@@ -26,19 +29,17 @@ export function HowItSettlesCard({
   note?: ReactNode;
   children?: ReactNode;
 }) {
-  const { creator, sponsor, subjects = [] } = people;
+  const { subjects = [] } = people;
 
   return (
     <Card className="relative space-y-3">
-      <div className="pr-[34px]">
-        <p className="text-[11.5px] font-extrabold tracking-[0.08em] text-faint uppercase">How it settles</p>
-        <p className="mt-1 text-[14.5px] leading-[1.45] text-muted text-pretty">{description}</p>
+      <div>
+        <p className="max-w-[calc(100%-118px)] text-[10.5px] font-bold tracking-[0.1em] text-faint uppercase">Resolution criteria</p>
+        <p className="mt-1.5 text-[13.5px] leading-[1.5] text-muted text-pretty">{description}</p>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
-        {creator && <SettlesChip role="Started by">{<Mention nickname={creator} />}</SettlesChip>}
-        {sponsor && <SettlesChip role="Endorsed by">{<Mention nickname={sponsor} />}</SettlesChip>}
-        {subjects.length > 0 && (
+      {subjects.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
           <SettlesChip role="Hidden from">
             {subjects.map((nickname, i) => (
               <span key={i}>
@@ -47,8 +48,8 @@ export function HowItSettlesCard({
               </span>
             ))}
           </SettlesChip>
-        )}
-      </div>
+        </div>
+      )}
 
       {note && <p className="text-xs text-faint">{note}</p>}
 

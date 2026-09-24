@@ -183,9 +183,13 @@ export function ClarificationRequests({
             type="button"
             onClick={() => setAsking(true)}
             aria-label="Ask for clarification"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-rule text-sm font-bold text-muted ring-1 ring-hairline hover:bg-hairline"
+            className="inline-flex items-center gap-[5px] rounded-full border border-hairline bg-rule px-[10px] py-[4px] text-[11px] font-bold text-muted"
           >
-            ?
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M9.7 9.3a2.4 2.4 0 1 1 3.3 2.2c-.7.35-1 .9-1 1.6v.4M12 16.7h.01" />
+            </svg>
+            Question this
           </button>
 
           {askModal}

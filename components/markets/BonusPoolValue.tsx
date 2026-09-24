@@ -8,8 +8,8 @@ import { formatTokens } from '@/lib/formatNumber';
 /**
  * The Bonus cell's figure in an open market's `PoolStrip`, and the explainer it opens.
  *
- * Same tap-to-explain affordance as the Closes cell next to it (a dotted underline on a dark
- * strip, `espresso-300`), because the question it answers is the same shape: the number is the
+ * Same tap-to-explain affordance as the Closes cell next to it (a faint dotted underline),
+ * because the question it answers is the same shape: the number is the
  * headline, the reason it exists is one tap away rather than a sentence taking up the page.
  * `markets.bonus_pool` is money that came from somewhere other than this market's bettors, so
  * the modal spells out the arithmetic instead of asserting a total.

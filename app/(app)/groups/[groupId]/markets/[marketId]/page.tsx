@@ -285,6 +285,14 @@ export default async function MarketDetailPage({
     <>
       <PageHeader
         title={marketRow.title}
+        subtitle={
+          creatorNickname && (
+            <>
+              Started by @{creatorNickname}
+              {sponsorNickname && <> · Endorsed by @{sponsorNickname}</>}
+            </>
+          )
+        }
         backHref={`/groups/${groupId}`}
         backLabel={groupName}
         backAction={
@@ -415,7 +423,7 @@ export default async function MarketDetailPage({
 
         <PoolStrip
           cells={[
-            { label: 'Endorse by', value: <CountdownTimer target={endorseDeadline(marketRow)} prefix="" /> },
+            { label: 'Endorse by', value: <CountdownTimer target={endorseDeadline(marketRow)} prefix="" />, tone: 'signal' },
             { label: 'Betting runs', value: <CountdownTimer target={marketRow.closes_at} prefix="" /> },
             { label: 'Table', value: tableSize ?? '—' },
           ]}
@@ -493,12 +501,12 @@ export default async function MarketDetailPage({
                       flex: 1,
                     },
                     { label: 'Bets', value: openBetCount ?? 0, flex: 0.85 },
-                    { label: 'Closes', value: <ClosesInValue closesAt={marketRow.closes_at} />, flex: 1.25 },
+                    { label: 'Closes', value: <ClosesInValue closesAt={marketRow.closes_at} />, tone: 'signal', flex: 1.25 },
                   ]
                 : [
                     { label: 'Pool', value: formatTokens(staked) },
                     { label: 'Bets', value: openBetCount ?? 0 },
-                    { label: 'Closes in', value: <ClosesInValue closesAt={marketRow.closes_at} /> },
+                    { label: 'Closes in', value: <ClosesInValue closesAt={marketRow.closes_at} />, tone: 'signal' },
                   ]
             }
           />
@@ -595,6 +603,7 @@ export default async function MarketDetailPage({
                   prefix=""
                 />
               ),
+              tone: 'signal',
             },
           ]}
         />
@@ -681,6 +690,7 @@ export default async function MarketDetailPage({
                 ) : (
                   '—'
                 ),
+                tone: 'signal',
               },
             ]}
           />
