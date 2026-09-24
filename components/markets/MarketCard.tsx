@@ -18,8 +18,16 @@ export interface MarketCardData {
   status: MarketStatus;
   marketType: 'yes_no' | 'over_under' | 'multiple_choice';
   closesAt: string;
+  createdAt?: string;
   /** pending_sponsor only: the sooner of 24h-since-creation or 5-minutes-before-closes_at — the actual deadline to endorse before it auto-voids. */
   sponsorDeadline?: string;
+  /** pending_sponsor only: "You" for the viewer's own market, else the creator's nickname (or
+   * null if the account was since deleted — markets.creator_id is on delete set null). */
+  proposerLabel?: string | null;
+  /** pending_sponsor only: false when the viewer is the market's own creator (create_market's
+   * own rule: a creator can never endorse their own market), so the card shows "waiting on
+   * someone else" instead of an actionable Endorse footer. */
+  canEndorse?: boolean;
   /** When a market actually resolved (resolved/voided only) — used to order the resolved list. */
   resolvedAt?: string | null;
   outcome: string | null;
@@ -31,7 +39,21 @@ export interface MarketCardData {
   outcomeLabel?: string | null;
   /** proposed/disputed only: the resolution that's currently on the table. */
   proposedOutcomeLabel?: string;
+  /** proposed only: "You" or the proposer's nickname (null if the account's since gone) — the
+   * awaiting-resolution card's "Called by" column. Undefined once challenged (4b's disputed
+   * example doesn't repeat it, the ballot screen is where that identity stops mattering). */
+  calledByLabel?: string | null;
+  /** proposed only: when the challenge window (group_settings.resolution_window_hours after
+   * the proposal) closes — challenge_resolution() itself can't succeed after this. */
+  challengeDeadline?: string;
+  /** closed/proposed/disputed only: "you bet 200" style label built from the viewer's own
+   * position, reusing the exact bet data the 'open' bucket's myBets already carries (bets stay
+   * queryable under bets_select's own-rows-only policy regardless of market status). */
+  myBetLabel?: string;
   openBetCount?: number;
+  /** open only: total tokens staked so far (get_open_bet_volume) plus any carried bonus_pool —
+   * same "what will actually pay out" figure the market detail page's Pool cell already uses. */
+  openPool?: number;
   /** Total bets across all sides/options, once betting has closed. */
   closedBetCount?: number;
   odds?: { side: string; percent: number }[];

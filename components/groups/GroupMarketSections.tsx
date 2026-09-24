@@ -3,7 +3,8 @@
 import { useMemo, useState } from 'react';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/Button';
-import { MarketRowList, type MarketCardData } from '@/components/markets/MarketCard';
+import type { MarketCardData } from '@/components/markets/MarketCard';
+import { MarketCardList } from '@/components/markets/MarketListCard';
 import { loadMoreSettledMarkets } from '@/lib/actions/feed';
 import { STATUS_LABEL } from '@/lib/marketStatus';
 import type { SettledCursor } from '@/lib/groupFeed';
@@ -38,9 +39,16 @@ export function GroupMarketSections({
   /** Scopes "Load more" to the same season the first page was fetched with — omitted for a seasons-off group, which pages the all-time feed. */
   seasonId?: string;
 }) {
+  // "Closing soonest" (4a's section label) means what it says — nearest deadline first, not
+  // newest-created-first like every other bucket still is.
+  const openByClosingSoonest = useMemo(() => [...open].sort((a, b) => new Date(a.closesAt).getTime() - new Date(b.closesAt).getTime()), [open]);
   const openEmpty = open.length === 0;
-  const pendingEmpty = pendingSponsor.length === 0 && awaitingResolution.length === 0 && challenged.length === 0;
+  const pendingCount = pendingSponsor.length + awaitingResolution.length + challenged.length;
+  const pendingEmpty = pendingCount === 0;
   const nothingActive = openEmpty && pendingEmpty;
+  // The segmented control's pending dot means "something needs you specifically" — narrower
+  // than the count next to it, which includes markets merely waiting on someone else.
+  const pendingNeedsYou = pendingSponsor.some((m) => m.canEndorse);
 
   // Default to the first tab, in open -> pending -> settled order, that actually has something
   // in it — landing on an empty "Open" tab when everything's already settled just makes someone
@@ -92,27 +100,30 @@ export function GroupMarketSections({
   return (
     <div className="flex flex-col gap-[18px]">
       {!allEmpty && (
-        <div className="flex gap-0.5 rounded-2xl bg-rule p-1">
-          {TABS.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setFilter(tab.key)}
-              className={cn(
-                'flex-1 rounded-xl py-[7px] text-center text-[13px] transition-[background-color,box-shadow,color] duration-200',
-                filter === tab.key
-                  ? 'bg-surface font-semibold text-ink border border-hairline'
-                  : 'font-medium text-faint'
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="flex gap-1 rounded-[15px] bg-rule p-1">
+          {TABS.map((tab) => {
+            const count = tab.key === 'open' ? open.length : tab.key === 'pending' ? pendingCount : null;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setFilter(tab.key)}
+                className={cn(
+                  'flex flex-1 items-center justify-center gap-[5px] rounded-[11px] py-[9px] text-center text-[12.5px] transition-[background-color,box-shadow] duration-200',
+                  filter === tab.key ? 'bg-surface font-bold text-ink shadow-[0_1px_2px_rgba(12,16,24,0.07)]' : 'font-semibold text-muted'
+                )}
+              >
+                {tab.label}
+                {count !== null && <span className="font-mono font-semibold text-faint">{count}</span>}
+                {tab.key === 'pending' && pendingNeedsYou && <span className="h-[6px] w-[6px] rounded-full bg-alert" />}
+              </button>
+            );
+          })}
         </div>
       )}
 
       {effectiveFilter === 'open' && (
-        <Section label="Betting open">
+        <Section label="Closing soonest">
           {openEmpty ? (
             allEmpty ? (
               <EmptyState icon="🎲" title="Nothing open right now" subtitle="Tap the + below to start one." />
@@ -140,7 +151,7 @@ export function GroupMarketSections({
               />
             )
           ) : (
-            <MarketRowList markets={open} />
+            <MarketCardList markets={openByClosingSoonest} />
           )}
         </Section>
       )}
@@ -149,17 +160,17 @@ export function GroupMarketSections({
         <>
           {pendingSponsor.length > 0 && (
             <Section label={STATUS_LABEL.pending_sponsor}>
-              <MarketRowList markets={pendingSponsor} />
+              <MarketCardList markets={pendingSponsor} />
             </Section>
           )}
           {challenged.length > 0 && (
             <Section label={STATUS_LABEL.disputed}>
-              <MarketRowList markets={challenged} />
+              <MarketCardList markets={challenged} />
             </Section>
           )}
           {awaitingResolution.length > 0 && (
             <Section label={STATUS_LABEL.closed}>
-              <MarketRowList markets={awaitingResolution} />
+              <MarketCardList markets={awaitingResolution} />
             </Section>
           )}
           {pendingEmpty &&
@@ -186,7 +197,7 @@ export function GroupMarketSections({
             <EmptyState icon="🏁" title="No settled markets yet" subtitle="Once a market resolves, it'll show up here." />
           ) : (
             <>
-              <MarketRowList markets={settled} />
+              <MarketCardList markets={settled} />
               {cursor && (
                 <div className="flex flex-col items-center gap-2 pt-1">
                   {loadError && <p className="text-xs text-alert">{loadError}</p>}

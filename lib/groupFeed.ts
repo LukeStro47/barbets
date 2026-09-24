@@ -23,7 +23,7 @@ type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 /** The column list every bucket below is built from. */
 const MARKET_COLUMNS =
-  'id, title, status, market_type, closes_at, created_at, resolved_at, outcome, outcome_option_id, line, unit, season_id';
+  'id, title, status, market_type, closes_at, created_at, resolved_at, outcome, outcome_option_id, line, unit, season_id, bonus_pool, creator_id';
 
 const ACTIVE_STATUSES = ['pending_sponsor', 'open', 'closed', 'proposed', 'disputed'];
 const BETTING_CLOSED_STATUSES = ['closed', 'proposed', 'disputed'];
@@ -42,6 +42,8 @@ type MarketRow = {
   line: number | null;
   unit: string | null;
   season_id: string | null;
+  bonus_pool: number;
+  creator_id: string | null;
 };
 
 type BetRow = { market_id: string; side: string | null; option_id: string | null; amount: number; payout?: number | null };
@@ -54,6 +56,7 @@ function baseCard(m: MarketRow, groupId: string): MarketCardData {
     status: m.status,
     marketType: m.market_type,
     closesAt: m.closes_at,
+    createdAt: m.created_at,
     resolvedAt: m.resolved_at,
     outcome: m.outcome,
     line: m.line,
@@ -149,18 +152,37 @@ export async function getActiveMarkets(supabase: Supabase, groupId: string, user
   const bettingClosedIds = rows.filter((m) => BETTING_CLOSED_STATUSES.includes(m.status)).map((m) => m.id);
   const proposalMarketIds = rows.filter((m) => m.status === 'proposed' || m.status === 'disputed').map((m) => m.id);
 
-  const [{ data: proposalRows }, openCountEntries, oddsEntries] = await Promise.all([
+  const [{ data: proposalRows }, openCountEntries, openVolumeEntries, oddsEntries, { data: groupSettings }] = await Promise.all([
     proposalMarketIds.length > 0
-      ? supabase.from('resolution_proposals').select('market_id, proposed_outcome, proposed_option_id').in('market_id', proposalMarketIds)
-      : { data: [] as { market_id: string; proposed_outcome: string | null; proposed_option_id: string | null }[] },
-    // These two are still one round trip per market: get_open_bet_count and get_closed_odds
-    // only take a single market id, and giving them array-valued siblings is a migration. What
-    // changed is that they all go out at once instead of one-at-a-time inside the card loop, so
-    // the wait is the slowest call rather than the sum of every call.
+      ? supabase
+          .from('resolution_proposals')
+          .select('market_id, proposed_outcome, proposed_option_id, proposer_id, proposed_at')
+          .in('market_id', proposalMarketIds)
+      : {
+          data: [] as {
+            market_id: string;
+            proposed_outcome: string | null;
+            proposed_option_id: string | null;
+            proposer_id: string | null;
+            proposed_at: string;
+          }[],
+        },
+    // These are still one round trip per market: get_open_bet_count/get_open_bet_volume and
+    // get_closed_odds only take a single market id, and giving them array-valued siblings is a
+    // migration. What changed is that they all go out at once instead of one-at-a-time inside
+    // the card loop, so the wait is the slowest call rather than the sum of every call.
     Promise.all(
       openIds.map(async (id) => {
         const { data } = await supabase.rpc('get_open_bet_count', { p_market_id: id });
         return [id, (data as number | null) ?? 0] as const;
+      })
+    ),
+    // The 4a card's "Pool" figure — same openBetVolume + bonus_pool sum the market detail page's
+    // own Pool cell already uses, so the two never disagree about what will actually pay out.
+    Promise.all(
+      openIds.map(async (id) => {
+        const { data } = await supabase.rpc('get_open_bet_volume', { p_market_id: id });
+        return [id, Number(data ?? 0)] as const;
       })
     ),
     Promise.all(
@@ -170,7 +192,21 @@ export async function getActiveMarkets(supabase: Supabase, groupId: string, user
         return [id, (data ?? []) as { side?: string; option_id?: string; label?: string; pool_percent: number; bet_count: number }[]] as const;
       })
     ),
+    // The challenge-window countdown on an awaiting-resolution card needs the group's own
+    // window length (same setting challenge_resolution() itself checks against), not a
+    // hardcoded default.
+    supabase.from('group_settings').select('resolution_window_hours').eq('group_id', groupId).single(),
   ]);
+  const resolutionWindowHours = groupSettings?.resolution_window_hours ?? 8;
+
+  // One batched nickname lookup for both the pending-sponsor "Proposed by" label and the
+  // awaiting-resolution "Called by" label, rather than two separate queries doing the same join.
+  const creatorAndProposerIds = ids([...rows.map((m) => m.creator_id), ...(proposalRows ?? []).map((p) => p.proposer_id)]);
+  const { data: nicknameRows } =
+    creatorAndProposerIds.length > 0
+      ? await supabase.from('memberships').select('user_id, nickname').eq('group_id', groupId).in('user_id', creatorAndProposerIds)
+      : { data: [] as { user_id: string; nickname: string }[] };
+  const nicknameByUserId = new Map((nicknameRows ?? []).map((r) => [r.user_id, r.nickname]));
 
   // One lookup for every option label the whole feed needs: the proposed outcome of a
   // multiple-choice market awaiting resolution, and the option behind each of the viewer's own
@@ -185,6 +221,7 @@ export async function getActiveMarkets(supabase: Supabase, groupId: string, user
   const optionLabelById = new Map((optionRows ?? []).map((o) => [o.id, o.label]));
   const proposalByMarket = new Map((proposalRows ?? []).map((p) => [p.market_id, p]));
   const openCountByMarket = new Map(openCountEntries);
+  const openVolumeByMarket = new Map(openVolumeEntries);
   const oddsByMarket = new Map(oddsEntries);
   const needsClarificationIds = new Set((needsClarificationRows ?? []).map((m: { id: string }) => m.id));
   const myOpenBetsByMarket = groupBy((openBetRows ?? []) as BetRow[], (b) => b.market_id);
@@ -196,7 +233,12 @@ export async function getActiveMarkets(supabase: Supabase, groupId: string, user
     const base = baseCard(m, groupId);
 
     if (m.status === 'pending_sponsor') {
-      buckets.pending_sponsor.push({ ...base, sponsorDeadline: sponsorDeadline(m.created_at, m.closes_at) });
+      buckets.pending_sponsor.push({
+        ...base,
+        sponsorDeadline: sponsorDeadline(m.created_at, m.closes_at),
+        proposerLabel: m.creator_id === userId ? 'You' : (m.creator_id ? (nicknameByUserId.get(m.creator_id) ?? null) : null),
+        canEndorse: m.creator_id !== userId,
+      });
       continue;
     }
 
@@ -214,6 +256,7 @@ export async function getActiveMarkets(supabase: Supabase, groupId: string, user
       buckets.open.push({
         ...base,
         openBetCount: openCountByMarket.get(m.id) ?? 0,
+        openPool: (openVolumeByMarket.get(m.id) ?? 0) + m.bonus_pool,
         needsAttention: needsClarificationIds.has(m.id),
         myBets,
       });
@@ -225,6 +268,19 @@ export async function getActiveMarkets(supabase: Supabase, groupId: string, user
     const proposedOutcomeLabel = proposal?.proposed_option_id
       ? optionLabelById.get(proposal.proposed_option_id)
       : (proposal?.proposed_outcome ?? undefined);
+    const calledByLabel = proposal
+      ? proposal.proposer_id === userId
+        ? 'You'
+        : (proposal.proposer_id ? (nicknameByUserId.get(proposal.proposer_id) ?? null) : null)
+      : undefined;
+    const challengeDeadline = proposal
+      ? new Date(new Date(proposal.proposed_at).getTime() + resolutionWindowHours * 3_600_000).toISOString()
+      : undefined;
+
+    const myBetsForMarket = myOpenBetsByMarket.get(m.id);
+    const myBetLabel = myBetsForMarket?.length
+      ? `you bet ${myBetsForMarket.reduce((sum, b) => sum + b.amount, 0)}`
+      : undefined;
 
     const odds = oddsByMarket.get(m.id) ?? [];
     const closedBetCount = odds.reduce((sum, o) => sum + o.bet_count, 0);
@@ -235,6 +291,9 @@ export async function getActiveMarkets(supabase: Supabase, groupId: string, user
         closedBetCount,
         optionOdds: odds.map((o) => ({ id: o.option_id!, label: o.label!, percent: o.pool_percent })),
         proposedOutcomeLabel,
+        calledByLabel,
+        challengeDeadline,
+        myBetLabel,
       });
     } else {
       bucket.push({
@@ -242,6 +301,9 @@ export async function getActiveMarkets(supabase: Supabase, groupId: string, user
         closedBetCount,
         odds: odds.map((o) => ({ side: o.side!, percent: o.pool_percent })),
         proposedOutcomeLabel,
+        calledByLabel,
+        challengeDeadline,
+        myBetLabel,
       });
     }
   }

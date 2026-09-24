@@ -1,5 +1,4 @@
-﻿import Image from 'next/image';
-import { createClient, requireUser } from '@/lib/supabase/server';
+﻿import { createClient, requireUser } from '@/lib/supabase/server';
 import { notFoundIfEmpty } from '@/lib/errors';
 import { getActiveMarkets, getSettledMarkets, type SettledCursor } from '@/lib/groupFeed';
 import { GroupDeletionBanner } from '@/components/groups/GroupDeletionBanner';
@@ -8,8 +7,6 @@ import { SaveBalanceSnapshot } from '@/components/groups/SaveBalanceSnapshot';
 import { PendingBonusPoolNote } from '@/components/groups/PendingBonusPoolNote';
 import { OpenSeasonBettingButton, OpenBettingButton } from '@/components/groups/IntermissionActions';
 import { WaitingOnYouCard } from '@/components/groups/WaitingOnYouCard';
-import { InvitePill } from '@/components/groups/InvitePill';
-import { InviteQrButton } from '@/components/groups/InviteQrButton';
 import { SeasonRecapHero, type FinalBalanceRow } from '@/components/groups/SeasonRecapHero';
 import { SeasonSetupCard } from '@/components/groups/SeasonSetupCard';
 import type { RosterMember } from '@/components/groups/SeasonSetupEditSheet';
@@ -20,12 +17,12 @@ import { SeasonHighlightsCard, type SnapshotHighlight } from '@/components/group
 import { MemberTitleCard } from '@/components/groups/MemberTitleCard';
 import { WhatsNextCard } from '@/components/groups/WhatsNextCard';
 import { WindingDownCard } from '@/components/groups/WindingDownCard';
-import { Mention } from '@/components/ui/Mention';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
-import { formatTokens } from '@/lib/formatNumber';
+import { formatTokens, formatSignedTokens, formatOrdinal } from '@/lib/formatNumber';
 import { getGroupTasks } from '@/lib/tasks';
 import { getGroupBarSwitcherState } from '@/lib/groupBar';
 import { GroupBar } from '@/components/layout/GroupBar';
+import { cn } from '@/lib/cn';
 import { TITLE_ORDER, TITLE_META, type GroupTitleRow } from '@/lib/titles';
 import { diffTitleSnapshots, type TitleSnapshotEntry } from '@/lib/seasonTitleDiff';
 import type { GroupSettings } from '@/lib/actions/groups';
@@ -46,7 +43,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
   const isOwner = group!.owner_id === user?.id;
 
   const [{ data: membership }, { data: settings }, switcherState] = await Promise.all([
-    supabase.from('memberships').select('balance, nickname').eq('group_id', groupId).eq('user_id', user.id).single(),
+    supabase.from('memberships').select('id, balance, nickname').eq('group_id', groupId).eq('user_id', user.id).single(),
     supabase.from('group_settings').select('seasons_enabled, season_length, betting_enabled, seed_amount').eq('group_id', groupId).single(),
     getGroupBarSwitcherState(supabase, groupId, user.id),
   ]);
@@ -272,10 +269,30 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
   // Scoped to the current season once seasons are on, so a market settled before the season
   // changed doesn't linger in the Settled tab after the fact — it's still reachable, just from
   // the intermission recap's season archive instead (see SeasonMarketsArchiveCard/`/seasons`).
-  const [{ buckets, pendingTokens }, settledPage] = await Promise.all([
+  const [{ buckets, pendingTokens }, settledPage, { data: standingsRows }, { data: settledBetsRows }, { data: netRow }] = await Promise.all([
     getActiveMarkets(supabase, groupId, user.id),
     getSettledMarkets(supabase, groupId, user.id, null, season?.id),
+    // The 4a balance card's "2nd of 8" figure — same rank-by-balance shape the winding-down
+    // card below already computes, just needed unconditionally now instead of one status only.
+    supabase.from('memberships').select('user_id, balance').eq('group_id', groupId).in('status', ['active', 'dormant']).order('balance', { ascending: false }),
+    // Same win-rate definition the leaderboard's Accuracy card and profile page use (void
+    // markets excluded — bets_select is already own-rows-only, so this is safe under RLS).
+    supabase
+      .from('bets')
+      .select('side, option_id, markets!inner(group_id, status, outcome, outcome_option_id)')
+      .eq('user_id', user.id)
+      .eq('markets.group_id', groupId)
+      .eq('markets.status', 'resolved'),
+    // The balance card's green delta pill — every ledger entry but the seed, same definition
+    // the leaderboard's all-time card and the groups hub's per-card figure already use.
+    membership ? supabase.from('membership_ledger_net').select('net').eq('membership_id', membership.id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
+  const standings = standingsRows ?? [];
+  const yourStandingRank = standings.findIndex((m) => m.user_id === user.id) + 1 || null;
+  const settledBetsForAccuracy = (settledBetsRows ?? []) as unknown as { side: string | null; option_id: string | null; markets: { outcome: string | null; outcome_option_id: string | null } }[];
+  const correctCount = settledBetsForAccuracy.filter((b) => (b.option_id ? b.option_id === b.markets.outcome_option_id : b.side === b.markets.outcome)).length;
+  const accuracyPct = settledBetsForAccuracy.length > 0 ? Math.round((correctCount / settledBetsForAccuracy.length) * 100) : null;
+  const netHere = Number((netRow as { net: number } | null)?.net ?? 0);
 
   // NFL/CFB get a dedicated single-featured-market feed (PipelineGroupFeed) instead of the
   // ordinary Open/Pending/Settled tabs — see that component's own doc comment. "Featured" is
@@ -348,47 +365,53 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
           <GroupDeletionBanner groupId={groupId} deletionScheduledAt={group!.deletion_scheduled_at} isOwner={isOwner} />
         )}
 
-        <div className="relative overflow-hidden rounded-[24px] bg-ink px-5 py-[18px]">
-          <Image
-            src="/barbets-mono-white.png"
-            alt=""
-            width={96}
-            height={96}
-            className="pointer-events-none absolute -top-4 -right-4 rotate-[-10deg] opacity-[0.12]"
-          />
-          {/* In play sits under the free-to-bet total rather than off to its right: reading down
-              from the headline number to "and this much is already committed" tells that story
-              better than two unrelated figures competing for the same line. It's informational
-              only, not subtracted from the headline above — place_bet already deducts a bet's
-              stake from memberships.balance the instant it's placed (see the money rules in
-              ARCHITECTURE.md), so `balance` is already exactly what's free to bet; subtracting
-              pendingTokens from it here double-counted every open stake. */}
-          <div className="relative">
-            <p className="text-[10.5px] font-bold tracking-[0.12em] text-signal uppercase">Free to bet</p>
-            <p className="mt-0.5 font-display text-[38px] leading-none font-extrabold tracking-[-0.02em] text-surface">
-              {formatTokens(membership?.balance ?? 0)}
-            </p>
-            {pendingTokens > 0 && (
-              <p className="mt-2 flex items-baseline gap-1.5 text-[13px] font-semibold text-surface/45">
-                <span className="text-[10.5px] font-bold tracking-[0.12em] uppercase">In play</span>
-                <span className="text-[15px] font-bold text-on-ink">{formatTokens(pendingTokens)}</span>
-              </p>
+        {/* 4a's "Free to bet" card — a light card with the balance, a net-change pill, and a
+            bottom stat row (in play / standing / accuracy), replacing the old dark ink hero.
+            Invite access moved to Settings (InviteHeroCard/InviteQrButton are still there in
+            full) since the design doesn't carry it on the hub at all — GroupBar's switcher
+            button is the hub's only header affordance now. */}
+        <div className="rounded-[24px] border border-hairline bg-surface px-[18px] py-[17px] shadow-[0_1px_2px_rgba(12,16,24,0.04)]">
+          <p className="text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase">Free to bet</p>
+          <div className="mt-1.5 flex items-end justify-between gap-3.5">
+            <p className="font-mono text-[42px] leading-none font-semibold tracking-[-0.03em] text-ink">{formatTokens(membership?.balance ?? 0)}</p>
+            {netHere !== 0 && (
+              <span
+                className={cn(
+                  'inline-flex shrink-0 items-center gap-[5px] rounded-[8px] px-[9px] py-[5px] font-mono text-[13px] font-semibold',
+                  netHere > 0 ? 'bg-gain-bg text-gain' : 'bg-alert-bg text-alert'
+                )}
+              >
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                  <path d={netHere > 0 ? 'M2 8.5 5 5l2 2 3-4' : 'M2 3.5 5 7l2-2 3 4'} />
+                </svg>
+                {formatSignedTokens(netHere)}
+              </span>
             )}
           </div>
-          <div className="relative mt-3.5 flex items-center justify-between border-t border-white/10 pt-3">
-            {membership?.nickname && (
-              <p className="text-[13px] text-dash">
-                Playing as <Mention nickname={membership.nickname} className="text-on-ink" />
-              </p>
+          <div className="mt-3 flex items-center gap-[9px] border-t border-rule pt-[11px] font-mono text-xs text-faint">
+            {pendingTokens > 0 && (
+              <>
+                <span>
+                  <span className="font-semibold text-ink">{formatTokens(pendingTokens)}</span> in play
+                </span>
+                <span className="h-[3px] w-[3px] shrink-0 rounded-full bg-dash" />
+              </>
             )}
-            <div className="flex shrink-0 items-center gap-1.5">
-              <InviteQrButton inviteCode={group!.invite_code} groupName={group!.name} />
-              <InvitePill inviteCode={group!.invite_code} />
-            </div>
+            <span>
+              <span className="font-semibold text-ink">{yourStandingRank ? formatOrdinal(yourStandingRank) : '—'}</span> of {standings.length}
+            </span>
+            {accuracyPct != null && (
+              <>
+                <span className="h-[3px] w-[3px] shrink-0 rounded-full bg-dash" />
+                <span>
+                  <span className="font-semibold text-ink">{accuracyPct}%</span> accuracy
+                </span>
+              </>
+            )}
           </div>
         </div>
 
-        <WaitingOnYouCard groupId={groupId} tasks={tasks} />
+        <WaitingOnYouCard tasks={tasks} />
 
         {group!.pending_bonus_pool > 0 && <PendingBonusPoolNote amount={group!.pending_bonus_pool} />}
 
