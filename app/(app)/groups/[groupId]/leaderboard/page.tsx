@@ -297,16 +297,19 @@ export default async function LeaderboardPage({
       .eq('user_id', user.id)
       .single();
 
-    const [{ data: netRow }, { data: settledBets }, { data: resultsPage }] = await Promise.all([
-      myMembership
-        ? supabase.from('membership_ledger_net').select('net').eq('membership_id', myMembership.id).maybeSingle()
-        : Promise.resolve({ data: null }),
+    const [{ data: standingsRows }, { data: settledBets }, { count: totalBetCount }, { data: resultsPage }] = await Promise.all([
+      // 4r's real cross-member table — get_group_all_time_standings() computes every member's
+      // real net under elevated privilege (membership_ledger_net is own-rows-only, so a plain
+      // select here would have quietly shown everyone else as net 0 — see that function's own
+      // migration comment).
+      supabase.rpc('get_group_all_time_standings', { p_group_id: groupId }),
       supabase
         .from('bets')
         .select('side, option_id, markets!inner(group_id, status, outcome, outcome_option_id)')
         .eq('user_id', user.id)
         .eq('markets.group_id', groupId)
         .eq('markets.status', 'resolved'),
+      supabase.from('bets').select('id, markets!inner(group_id)', { count: 'exact', head: true }).eq('markets.group_id', groupId).eq('user_id', user.id),
       supabase
         .from('season_results')
         .select('snapshot, seasons(number, started_at, ended_at, name)')
@@ -315,11 +318,21 @@ export default async function LeaderboardPage({
         .range(from, to),
     ]);
 
-    const myNet = Number((netRow as { net: number } | null)?.net ?? 0);
+    const standings = (standingsRows ?? []) as { user_id: string; nickname: string; net: number; seasons_won: number }[];
+    const myStanding = standings.find((s) => s.user_id === user.id);
+    const myNet = Number(myStanding?.net ?? 0);
+    const myWins = myStanding?.seasons_won ?? 0;
     const correctCount = (settledBets ?? []).filter((b: any) =>
       b.option_id ? b.option_id === b.markets.outcome_option_id : b.side === b.markets.outcome
     ).length;
     const myAccuracy = (settledBets?.length ?? 0) > 0 ? Math.round((correctCount / settledBets!.length) * 100) : null;
+
+    const standingUserIds = standings.map((s) => s.user_id);
+    const { data: standingAvatarRows } =
+      standingUserIds.length > 0 && !group?.is_public
+        ? await supabase.from('users').select('id, avatar_updated_at, avatar_preset_key').in('id', standingUserIds)
+        : { data: [] };
+    const standingAvatarByUser = new Map((standingAvatarRows ?? []).map((r) => [r.id, r]));
 
     const hasNextPage = (resultsPage ?? []).length > SEASON_HISTORY_PAGE_SIZE;
     const results = (resultsPage ?? []).slice(0, SEASON_HISTORY_PAGE_SIZE);
@@ -327,25 +340,78 @@ export default async function LeaderboardPage({
 
     allTimeSection = (
       <div className="space-y-6">
-        <Card>
-          <h2 className="mb-3 font-display font-bold text-ink">Your all-time</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className={`font-mono text-2xl font-bold tabular-nums ${myNet >= 0 ? 'text-signal-deep' : 'text-faint'}`}>
+        <div className="rounded-[22px] bg-ink px-[18px] py-[13px]">
+          <p className="text-[10.5px] font-bold tracking-[0.1em] text-surface/50 uppercase">Your record here</p>
+          <div className="mt-[11px] flex gap-3.5">
+            <span className="flex-1">
+              <span className={`block font-mono text-[22px] leading-none font-semibold ${myNet >= 0 ? 'text-on-ink' : 'text-surface'}`}>
                 {myNet >= 0 ? '+' : '−'}
                 {formatTokens(Math.abs(myNet))}
-              </p>
-              <p className="mt-0.5 text-xs font-semibold text-faint">Net across every season</p>
-            </div>
-            <div>
-              <p className="font-mono text-2xl font-bold tabular-nums text-ink">{myAccuracy == null ? '—' : `${myAccuracy}%`}</p>
-              <p className="mt-0.5 text-xs font-semibold text-faint">Accuracy</p>
-            </div>
+              </span>
+              <span className="mt-1 block text-[11px] font-semibold text-surface/55">net</span>
+            </span>
+            <span className="flex-1">
+              <span className="block font-mono text-[22px] leading-none font-semibold text-surface">{myWins}</span>
+              <span className="mt-1 block text-[11px] font-semibold text-surface/55">{myWins === 1 ? 'season won' : 'seasons won'}</span>
+            </span>
+            <span className="flex-1">
+              <span className="block font-mono text-[22px] leading-none font-semibold text-surface">{myAccuracy == null ? '—' : `${myAccuracy}%`}</span>
+              <span className="mt-1 block text-[11px] font-semibold text-surface/55">accuracy</span>
+            </span>
+            <span className="flex-1">
+              <span className="block font-mono text-[22px] leading-none font-semibold text-surface">{totalBetCount ?? 0}</span>
+              <span className="mt-1 block text-[11px] font-semibold text-surface/55">bets</span>
+            </span>
           </div>
-        </Card>
+        </div>
+
+        {standings.length > 0 && (
+          <div className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+            <div className="flex items-center gap-[10px] border-b border-rule bg-[#fafbfc] px-4 py-[10px]">
+              <span className="w-[18px] text-[10.5px] font-bold tracking-[0.08em] text-faint uppercase">#</span>
+              <span className="flex-1 text-[10.5px] font-bold tracking-[0.08em] text-faint uppercase">Player</span>
+              <span className="w-10 text-right text-[10.5px] font-bold tracking-[0.08em] text-faint uppercase">Won</span>
+              <span className="w-[62px] text-right text-[10.5px] font-bold tracking-[0.08em] text-faint uppercase">Net</span>
+            </div>
+            {standings.slice(0, 10).map((s, i) => {
+              const isYou = s.user_id === user.id;
+              const avatar = standingAvatarByUser.get(s.user_id);
+              return (
+                <div
+                  key={s.user_id}
+                  className={cn(
+                    'flex items-center gap-[10px] border-b border-[#f4f6f8] px-4 py-[11px] last:border-b-0',
+                    isYou && 'bg-[#f7f9ff] shadow-[inset_3px_0_0_#2d55f5]'
+                  )}
+                >
+                  <span className={cn('w-[18px] font-mono text-[13px]', isYou ? 'text-signal' : 'text-faint')}>{i + 1}</span>
+                  {!group?.is_public && (
+                    <UserAvatar
+                      userId={s.user_id}
+                      nickname={s.nickname}
+                      avatarUpdatedAt={avatar?.avatar_updated_at}
+                      avatarPresetKey={avatar?.avatar_preset_key}
+                      className="h-7 w-7 shrink-0 text-[10px]"
+                      fallbackClassName="bg-rule text-signal-deep"
+                    />
+                  )}
+                  <span className="min-w-0 flex-1 truncate text-[13.5px] font-bold text-ink">
+                    <Mention nickname={s.nickname} />
+                    {isYou && <span className="font-semibold text-signal"> · you</span>}
+                  </span>
+                  <span className="w-10 text-right font-mono text-[12.5px] text-muted">{s.seasons_won}</span>
+                  <span className={`w-[62px] text-right font-mono text-[13.5px] font-semibold ${s.net >= 0 ? 'text-gain' : 'text-alert'}`}>
+                    {s.net >= 0 ? '+' : '−'}
+                    {formatTokens(Math.abs(s.net))}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         <div>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-faint">Season history</h2>
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-faint">Recent seasons</h2>
           {(results ?? []).length === 0 && page === 1 ? (
             <EmptyState icon="🏆" title="No seasons in the books yet" subtitle="History shows up here once a season ends." />
           ) : (
