@@ -6,13 +6,22 @@ import { Button } from '@/components/ui/Button';
 import { InfoIcon } from '@/components/ui/icons';
 
 /**
- * First touch: pick between making an account, redeeming an invite, and signing in. Deliberately
- * a splash rather than a marketing page — most arrivals are on a friend's invite link and already
- * know what this is, so the screen's whole job is to route them, not to sell.
+ * First touch: pick between making an account, signing in, and redeeming an invite code.
+ * Deliberately a splash rather than a marketing page — most arrivals are on a friend's invite
+ * link and already know what this is, so the screen's whole job is to route them, not to sell.
  *
- * "How it works" moved out of the button stack and into the corner pill: as the third full-width
- * button it competed with Sign in for the same glance, and it's the one thing here nobody needs
- * in order to proceed.
+ * Button hierarchy matches 5a2 exactly (Create an account / Log in, then "Got a group code?" as
+ * a plain tertiary link) even though most real arrivals are actually on an invite link, not a
+ * cold signup — that was the reasoning behind the previous version's hierarchy, which put the
+ * invite-code path on equal footing with signup and demoted sign-in to a text link. Matching the
+ * design's own hierarchy here on purpose, since a cold link (`/join/[code]`) already routes a
+ * signed-out invitee through account creation directly without ever landing on this screen at
+ * all — this splash is mainly for the "open the app cold" case, where create/log-in genuinely
+ * are the two real choices.
+ *
+ * "How it works" moved out of the button stack and into the corner pill: as a third full-width
+ * button it competed with the two real actions for the same glance, and it's the one thing here
+ * nobody needs in order to proceed.
  */
 export default async function LandingPage() {
   const supabase = await createClient();
@@ -49,27 +58,19 @@ export default async function LandingPage() {
       <div className="relative mt-11 flex w-full max-w-[330px] flex-col gap-3">
         <Link href="/login?mode=signup" className="w-full">
           <Button variant="accent" size="xl" className="w-full">
-            Start betting
+            Create an account
           </Button>
         </Link>
-        <Link
-          href="/join"
-          className="w-full rounded-full border border-dash px-6 py-[15px] text-base font-semibold text-ink"
-        >
-          I have an invite code
+        <Link href="/login" className="w-full">
+          <Button variant="outline" size="xl" className="w-full">
+            Log in
+          </Button>
         </Link>
       </div>
 
-      <div className="relative mt-[26px] flex w-full max-w-[330px] items-center gap-2.5">
-        <span className="h-px flex-1 bg-hairline" />
-        <span className="text-base text-muted">
-          Been here before?{' '}
-          <Link href="/login" className="font-bold text-ink underline underline-offset-4">
-            Sign in
-          </Link>
-        </span>
-        <span className="h-px flex-1 bg-hairline" />
-      </div>
+      <Link href="/join" className="relative mt-[18px] text-base font-semibold text-muted">
+        Got a group code?
+      </Link>
     </main>
   );
 }

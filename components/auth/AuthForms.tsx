@@ -8,6 +8,7 @@ import { Field } from '@/components/ui/Field';
 import { CheckIcon } from '@/components/ui/icons';
 import { DeferredTurnstileButton, TurnstileField } from '@/components/auth/TurnstileField';
 import { CONFIRM_CODE_LENGTH, ConfirmCodeBoxes } from '@/components/auth/ConfirmCodeBoxes';
+import { PasswordStrengthMeter } from '@/components/auth/PasswordStrengthMeter';
 
 export function SignInForm({ next }: { next?: string }) {
   const [state, formAction, isPending] = useActionState(signIn, null);
@@ -50,6 +51,7 @@ export function SignUpForm({ next }: { next?: string }) {
   const [agreed, setAgreed] = useState(false);
   const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   if (state?.success) {
     return <ConfirmEmailForm email={email} next={next} />;
   }
@@ -68,14 +70,19 @@ export function SignUpForm({ next }: { next?: string }) {
           onChange={(e) => setEmail(e.target.value)}
           required
         />
-        <Field
-          label="Password"
-          name="password"
-          type="password"
-          placeholder="6 characters or more"
-          autoComplete="new-password"
-          required
-        />
+        <div>
+          <Field
+            label="Password"
+            name="password"
+            type="password"
+            placeholder="6 characters or more"
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <PasswordStrengthMeter password={password} />
+        </div>
         <Field
           label="Confirm password"
           name="confirmPassword"

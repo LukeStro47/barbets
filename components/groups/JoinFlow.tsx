@@ -7,6 +7,9 @@ import { Capacitor } from '@capacitor/core';
 import { joinGroup, getGroupJoinMessage } from '@/lib/actions/groups';
 import { Button } from '@/components/ui/Button';
 import { GroupAvatar } from '@/components/ui/GroupAvatar';
+import { UserAvatar } from '@/components/ui/UserAvatar';
+import { AvatarPicker } from '@/components/profile/AvatarPicker';
+import { PencilIcon } from '@/components/ui/icons';
 import { Modal } from '@/components/ui/Modal';
 import { JUST_JOINED_GROUP_KEY } from '@/components/pwa/PushReminderModal';
 import { OpenAppPrompt } from '@/components/groups/OpenAppPrompt';
@@ -44,6 +47,9 @@ export function JoinFlow({
   groupName,
   groupAvatarKey = null,
   blockedReason = null,
+  userId,
+  avatarPresetKey,
+  avatarUpdatedAt,
 }: {
   inviteCode: string;
   /** Recorded on the group_join lifecycle row so admin can compare QR vs typed vs link. */
@@ -51,6 +57,12 @@ export function JoinFlow({
   groupName: string;
   groupAvatarKey?: string | null;
   blockedReason?: 'removed' | 'not_accepting' | null;
+  /** 5d's "Pick a face" step — edits the same account-level avatar AvatarPicker already owns
+   * (see the design-decision note in ARCHITECTURE.md on why this stayed account-level rather
+   * than becoming per-group), just surfaced here at join time too. */
+  userId: string;
+  avatarPresetKey: string | null;
+  avatarUpdatedAt: string | null;
 }) {
   const router = useRouter();
   const [step, setStep] = useState<'confirm' | 'nickname' | 'open-app'>('confirm');
@@ -173,6 +185,29 @@ export function JoinFlow({
       <span className="mt-3 text-[13px] text-muted">
         {nickname.length} / {NICKNAME_MAX_LENGTH}
       </span>
+
+      <p className="mt-7 text-[10.5px] font-bold tracking-[0.1em] text-faint uppercase">Pick a face</p>
+      <AvatarPicker
+        userId={userId}
+        nickname={nickname || '?'}
+        avatarUpdatedAt={avatarUpdatedAt}
+        avatarPresetKey={avatarPresetKey}
+        trigger={
+          <button type="button" className="relative mt-2.5 flex h-[60px] w-[60px] items-center justify-center">
+            <UserAvatar
+              userId={userId}
+              nickname={nickname || '?'}
+              avatarUpdatedAt={avatarUpdatedAt}
+              avatarPresetKey={avatarPresetKey}
+              className="h-[60px] w-[60px] border-[2.5px] border-signal text-xl"
+              fallbackClassName="bg-rule text-signal-deep"
+            />
+            <span className="absolute -right-0.5 -bottom-0.5 flex h-[22px] w-[22px] items-center justify-center rounded-full border-2 border-canvas bg-ink text-surface">
+              <PencilIcon className="h-2.5 w-2.5" />
+            </span>
+          </button>
+        }
+      />
 
       <Button
         variant="accent"

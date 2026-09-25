@@ -55,11 +55,13 @@ export function BootSplash() {
   return (
     <div
       aria-hidden="true"
-      className={`fixed inset-0 z-50 flex items-center justify-center bg-ink transition-opacity duration-300 ${
+      className={`fixed inset-0 z-50 flex flex-col items-center justify-center gap-[26px] bg-ink px-[54px] transition-opacity duration-300 ${
         exiting ? 'pointer-events-none opacity-0' : 'opacity-100'
       }`}
     >
+      <span className="text-[36px] font-extrabold tracking-[-0.04em] text-surface">barbets</span>
       <LoadingAnimation dark label="Settling the book" />
+      <p className="absolute right-0 bottom-[34px] left-0 text-center text-[11.5px] text-faint">Play money. No cash, ever.</p>
     </div>
   );
 }

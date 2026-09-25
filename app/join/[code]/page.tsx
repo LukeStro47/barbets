@@ -67,6 +67,11 @@ export default async function JoinPage({
   const blockedReason =
     group.my_status === 'removed' ? 'removed' : group.my_status === null && !group.accepting_members ? 'not_accepting' : null;
 
+  // 5d's "Pick a face" step edits the same account-level avatar AvatarPicker already owns
+  // (see components/groups/JoinFlow.tsx's own note on why this stayed account-level, not
+  // per-group) — just surfaced here instead of only being reachable later on /profile/account.
+  const { data: profile } = await supabase.from('users').select('avatar_preset_key, avatar_updated_at').eq('id', user.id).single();
+
   // No padding or centering here: JoinFlow's two steps are laid out differently (the confirm
   // step centers on the group, the nickname step is a top-aligned form screen), so each owns
   // its own gutters and safe-area inset.
@@ -78,6 +83,9 @@ export default async function JoinPage({
         groupName={group.name}
         groupAvatarKey={group.avatar_key}
         blockedReason={blockedReason}
+        userId={user.id}
+        avatarPresetKey={profile?.avatar_preset_key ?? null}
+        avatarUpdatedAt={profile?.avatar_updated_at ?? null}
       />
     </main>
   );
