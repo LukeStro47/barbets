@@ -1,8 +1,9 @@
 ﻿import { redirect } from 'next/navigation';
 import type { PostgrestError } from '@supabase/supabase-js';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAnonClientWithVisitorIp } from '@/lib/supabase/server';
 import { friendlyMessage, toActionError } from '@/lib/errors';
 import { JoinFlow } from '@/components/groups/JoinFlow';
+import { SignedOutInvitePreview } from '@/components/groups/SignedOutInvitePreview';
 import { InvalidInviteModal } from '@/components/groups/InvalidInviteModal';
 import { normalizeInviteCode } from '@/lib/inviteCode';
 import { inviteJoinPath, parseJoinSource } from '@/lib/inviteLink';
@@ -30,7 +31,31 @@ export default async function JoinPage({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect(`/login?next=${encodeURIComponent(inviteJoinPath(code, joinSource))}`);
+    // 5o: a real preview before the auth wall, not a bare redirect — the group's name/avatar/
+    // member count only (get_invite_code_preview is deliberately narrower than the design's own
+    // mock, which also shows real market questions; see that function's migration comment on
+    // why market content stays member-only even here). A wrong/expired code just falls through
+    // to the ordinary login redirect below, same as before — this function returns no rows
+    // rather than raising for that case (see get_group_by_invite_code's own not_found handling
+    // below for why zero rows beats an error for a guessable, low-stakes lookup).
+    const anonSupabase = await createAnonClientWithVisitorIp();
+    const { data: preview } = (await anonSupabase.rpc('get_invite_code_preview', { p_invite_code: code }).maybeSingle()) as {
+      data: { group_name: string; avatar_key: string | null; member_count: number } | null;
+    };
+    if (preview) {
+      return (
+        <main className="flex min-h-dvh flex-col bg-canvas">
+          <SignedOutInvitePreview
+            code={code}
+            joinSource={joinSource}
+            groupName={preview.group_name}
+            groupAvatarKey={preview.avatar_key}
+            memberCount={preview.member_count}
+          />
+        </main>
+      );
+    }
+    redirect(`/login?mode=signup&next=${encodeURIComponent(inviteJoinPath(code, joinSource))}`);
   }
 
   const { data: group, error } = (await supabase.rpc('get_group_by_invite_code', { p_invite_code: code }).maybeSingle()) as {
