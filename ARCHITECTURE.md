@@ -235,7 +235,12 @@ lib/
   supabase/{server,client,admin}.ts — per-request / browser / service-role Supabase clients.
                          server.ts also exports requireUser(), which every page under app/(app)
                          must use instead of auth.getUser() (see the design note on why a
-                         layout's redirect does not protect its pages)
+                         layout's redirect does not protect its pages), and
+                         createAnonClientWithVisitorIp() — a no-session client that forwards the
+                         real visitor's x-forwarded-for, for the app's rare anon-callable,
+                         IP-rate-limited RPCs (get_invite_code_preview, and invite_code_exists
+                         going forward) so they don't all silently share one bucket keyed to this
+                         Next.js server's own outbound IP
 components/
   ui/          — palette-driven atoms (Button, Card, Modal, RouteModal (the centered-dialog
                  shell an intercepted route opens, closed via router.back() rather than a
@@ -322,7 +327,10 @@ components/
                  more, see "The post-join open-the-app nudge" under Deployment), JoinedConfirmation
                  (5g's "you're in" screen every first-time join now sees: balance + settling bar,
                  the owner's optional join_message if set, then the three-things explainer —
-                 replaces the old join_message-only Modal), SettingsActions
+                 replaces the old join_message-only Modal), SignedOutInvitePreview (5o's real
+                 preview for a genuinely signed-out visitor hitting /join/[code] — group name/
+                 avatar/member count only, deliberately narrower than the mock; see the
+                 design-decision note below), SettingsActions
                  (RemoveMemberButton,
                  TransferOwnershipSheet — both also reused directly by SeasonSetupEditSheet
                  below, not just from OwnerOnlySection — OwnerOnlySection and its three sheets),
@@ -1293,3 +1301,5 @@ To confirm an ambiguity without executing anything (these are money functions, s
 - **Phase 5 (resolution & season: 4m/4n/5k/5n/4f/4r) shipped the real cross-member all-time leaderboard (`get_group_all_time_standings`, see its own migration comment and the design-decision entry above it) and deliberately deferred three others rather than rush them.**
   - **4m/4n (the settled and closed-awaiting-result market screens) were not rebuilt.** The real reveal experience (`RevealTicket.tsx`, 383 lines, plus `RevealSummary.tsx`) is a large, already-well-tested, money-display surface with its own deliberate dark-ticket visual language (documented in its own earlier design-decision entries as a genuine keep from the Phase 1 pass) — meaningfully different from 4m/4n's lighter card-based layout. Reshaping it needs its own dedicated look at every place `TicketCard`'s heavy border is used (the same reasoning already applied to leaving `PositionTicket` alone in the 4d pass), not a rushed change here. Also directly confirmed while reading 4m's actual artboard: its mock shows an active "Challenge this result · 8h left" footer on a *settled* market, which the real state machine cannot produce (`challenge_resolution` only ever succeeds on `proposed`, confirmed via the live SQL guard) — a settled-market rebuild would need to drop that footer entirely, per the standing rule that real behavior wins over an invented one.
   - **5n (season-over) was not consolidated onto one screen.** The design shows a season switcher, recap hero, final table, and award/lost-title cards all on one view; today that's genuinely three routes (`/groups/[groupId]`'s intermission branch, `/awards`, `/seasons`), each already fetching its own data. Pulling them together is mostly aggregation, not new logic, but it's still season-transition UI touching real balances and title state at the exact moment they're most visible (right after a season closes) — worth its own careful pass rather than tacking it onto the end of this one.
+- **5o's signed-out invite preview is deliberately narrower than its own mock, confirmed with the user before building rather than assumed.** The mock shows two real open-market questions with live countdowns to a visitor who isn't even signed up yet. Market content has exactly one privacy gate in this app (`is_market_visible()`), and it has never once been shown to a non-member — a signed-out preview surfacing real questions to anyone holding a 4-character invite code would have been a new, real crack in that wall, not a styling choice. `get_invite_code_preview()` returns group name, avatar, and member count only. The equivalent decision for `5e` (an *already signed-in* visitor on a cold link) didn't need asking: that screen already goes through the existing, richer `get_group_by_invite_code()` (authenticated-only, revoked from `anon` since the incident documented in the `anon`-grant entries above), which was never in question here.
+  - **Building this surfaced that `invite_code_exists()` — live since `20260814110000` — has never actually been called from anywhere in the app**, and neither it nor the new `get_invite_code_preview()` had (or has) a way to forward the real visitor's IP to Postgres's rate limiter, which reads `x-forwarded-for` off the incoming PostgREST request rather than the browser's. Without forwarding it explicitly, every anonymous visitor going through this Next.js server would have shared one bucket keyed to the server's own outbound IP — the exact failure mode `20260814110000`'s own migration comment warns about, just never actually wired up. Fixed with `createAnonClientWithVisitorIp()` (`lib/supabase/server.ts`), a no-session client that reads the real visitor's IP off Next's own `headers()` and forwards it as `x-forwarded-for` on the one call that needs it, used by `get_invite_code_preview()` now and available for `invite_code_exists()` whenever it gets a real caller.
