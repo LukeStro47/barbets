@@ -19,6 +19,7 @@ import {
   PUNISHMENT_MAX_LENGTH,
 } from '@/lib/limits';
 import { JUST_JOINED_GROUP_KEY } from '@/components/pwa/PushReminderModal';
+import { InviteHeroCard } from '@/components/groups/InviteHeroCard';
 import { cn } from '@/lib/cn';
 
 const SEASON_LENGTHS: SeasonLength[] = ['1m', '2m', '3m', 'manual', 'custom'];
@@ -130,7 +131,10 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
   const [isPending, startTransition] = useTransition();
 
   const [view, setView] = useState<'wizard' | 'advanced'>('wizard');
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  // Populated once handleCreate succeeds — step 3 (5m's invite screen) needs the real group's
+  // id/invite_code, which don't exist until create_group() actually returns.
+  const [createdGroup, setCreatedGroup] = useState<{ id: string; inviteCode: string } | null>(null);
 
   // Carried in from the bottom nav's drawer, which already asked for both. Editable here rather
   // than only there, so "wrong name" doesn't mean backing all the way out of the flow — the Edit
@@ -248,7 +252,8 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
       ]);
 
       localStorage.setItem(JUST_JOINED_GROUP_KEY, '1');
-      router.push(`/groups/${groupId}`);
+      setCreatedGroup({ id: groupId, inviteCode: result.data!.invite_code });
+      setStep(3);
     });
   }
 
@@ -304,6 +309,34 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
       </label>
     </div>
   );
+
+  // 5m: the invite screen every new group now lands on before the group itself, since nothing
+  // used to route a brand-new owner to an invite/share step at all — creation went straight to
+  // /groups/[id] with zero members to bet against yet. Reuses InviteHeroCard (the same dark
+  // invite card Manage group's own invite row already uses) rather than a bespoke rebuild of
+  // 5m's lighter QR-first layout, since the goal here is a real invite step existing at all.
+  if (step === 3 && createdGroup) {
+    return (
+      <div className="flex flex-1 flex-col gap-4">
+        <h1 className="font-display text-[26px] leading-[1.15] font-extrabold tracking-[-0.022em] text-ink">
+          {name || 'Your group'} is ready.
+        </h1>
+        <p className="text-[13.5px] leading-[1.5] text-muted">
+          Send the code or the link. Betting won't open until someone else is in.
+        </p>
+        <InviteHeroCard
+          groupId={createdGroup.id}
+          groupName={name || 'Your group'}
+          inviteCode={createdGroup.inviteCode}
+          footer="You can always find this again from Manage group."
+          canRegenerate={false}
+        />
+        <button type="button" onClick={() => router.push(`/groups/${createdGroup.id}`)} className={cn(footerButtonClasses, 'mt-auto')}>
+          Continue
+        </button>
+      </div>
+    );
+  }
 
   if (view === 'advanced') {
     return (
