@@ -5,6 +5,7 @@ import { cn } from '@/lib/cn';
 import { notFoundIfEmpty } from '@/lib/errors';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Badge } from '@/components/ui/Badge';
+import { LiveDot } from '@/components/ui/LiveDot';
 import { Card } from '@/components/ui/Card';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { PoolStrip } from '@/components/markets/PoolStrip';
@@ -304,7 +305,10 @@ export default async function MarketDetailPage({
                 !
               </span>
             )}
-            <Badge tone={STATUS_TONE[marketRow.status]}>{STATUS_LABEL[marketRow.status]}</Badge>
+            <Badge tone={STATUS_TONE[marketRow.status]}>
+              {marketRow.status === 'open' && <LiveDot className="mr-[5px] -mt-px" />}
+              {STATUS_LABEL[marketRow.status]}
+            </Badge>
             {overflowMenu}
           </div>
         }
