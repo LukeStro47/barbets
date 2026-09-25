@@ -248,7 +248,10 @@ components/
                  out its own multi-step row; both `Modal` and `RouteModal` lock `document.body`
                  scroll for as long as they're mounted, restoring whatever it was on unmount),
                  Logo, StackedLogo, CountdownTimer, Mention, GroupAvatar,
-                 UserAvatar, ConsequenceRow, Field, ...)
+                 UserAvatar, ConsequenceRow, Field, Skeleton (5i's route-level shimmer
+                 placeholder, globals.css's bb-shimmer), LiveDot (5i's inline "this is live"
+                 marker, bb-fade — both previously specified but unused until the Ledger
+                 page-fidelity pass), ...)
                  SettingsList — the settings page's "ledger" grammar: SectionLabel,
                  SettingsCard (hairline-separated rows), SettingRow (label + consequence
                  line + value), StatusPill, NavRowContent (see the design note below)
@@ -272,7 +275,10 @@ components/
                  its own token on click via `DeferredTurnstileButton`, the same as it always has.
                  ConfirmCodeBoxes (box-per-digit entry, the same shape as the invite
                  code's InviteCodeBoxes in components/groups/), ForgotPasswordForm,
-                 ResetPasswordForm, TurnstileField (see "Signup abuse protection" below)
+                 ResetPasswordForm, TurnstileField (see "Signup abuse protection" below),
+                 PasswordStrengthMeter (SignUpForm's 4-segment strength bar, scored on
+                 length/character variety — a nudge, not a security gate; the real minimum stays
+                 server-side in lib/actions/auth.ts)
   markets/     — MarketCard (MarketRowList/MarketRow, the grouped-row list — still used by
                  PipelineGroupFeed and WindingDownCard, not the group hub any more), MarketListCard
                  (MarketCardList — one bordered card per market with a status-specific stat row
@@ -307,11 +313,15 @@ components/
                  invite link in a modal, and the invite link as a full-screen white QR code, see
                  the "QR invite" design decision; InviteQrIconButton reuses the same full-screen
                  QR from Manage group's invite card), JoinFlow (the two-step /join/[code] confirm +
-                 nickname flow; on a mobile browser tab, a successful join shows OpenAppPrompt —
-                 "you're in, continue in the app" with store links and a copyable invite
-                 link/code — before landing in the group, since there is no mobile-browser gate
-                 forcing the app any more, see "The post-join open-the-app nudge" under
-                 Deployment), SettingsActions
+                 nickname flow — the nickname step also carries a "Pick a face" avatar control,
+                 AvatarPicker reused from /profile/account rather than a new per-group picker; on
+                 a mobile browser tab, a successful join shows OpenAppPrompt — "you're in,
+                 continue in the app" with store links and a copyable invite link/code — before
+                 landing in the group, since there is no mobile-browser gate forcing the app any
+                 more, see "The post-join open-the-app nudge" under Deployment), JoinedConfirmation
+                 (5g's "you're in" screen every first-time join now sees: balance + settling bar,
+                 the owner's optional join_message if set, then the three-things explainer —
+                 replaces the old join_message-only Modal), SettingsActions
                  (RemoveMemberButton,
                  TransferOwnershipSheet — both also reused directly by SeasonSetupEditSheet
                  below, not just from OwnerOnlySection — OwnerOnlySection and its three sheets),
@@ -401,6 +411,9 @@ components/
                  gate even though the two components that used to show install copy from it,
                  InstallPrompt/InstallBanner, are gone — see "PWA & push" for why),
                  PushReminderModal, OfflineRetryButton, OfflineGroupBalances (offline fallback page),
+                 OfflineBar (5p's persistent "no connection" notice for a page that already
+                 loaded, mounted once in app/(app)/layout.tsx — distinct from OfflineHeadline,
+                 which only renders after a navigation genuinely fails on /offline itself),
                  MovedBanner (temporary: only renders on mybarbets.com, delete after the domain move),
                  ChunkErrorRecovery (mounted first in app/layout.tsx, reloads the tab once on a
                  stale-chunk load failure — see "PWA & push"),
@@ -1267,3 +1280,9 @@ To confirm an ambiguity without executing anything (these are money functions, s
   - **`BetslipContext` changed shape to match**: `isOpen`/`close()` are gone (nothing left to open or close), replaced by a `slipRef` the inline card registers itself under. `open(pick)` now means "set this pick and scroll the card into view" rather than "reveal the drawer" — same call shape (`betslip?.open({ optionId })`, `betslip?.open({})` to clear), so nothing calling it had to change its own logic, only what "open" now does underneath.
   - **`LineTicket`/`OptionsTicket` (the old `MarketExplainer.tsx`, "slot 2," shown only while the viewer had no position yet) were deleted outright, not just unwired.** Once the bet card is always visible and always interactive, a separate card offering the same side/option choice a few pixels below it was pure duplication — over/under's line value moved onto the bet card's own side labels ("OVER 5.5 min") instead of losing a home entirely. Confirmed fully unused (`grep` across the repo) before deleting rather than left as dead code.
   - **This broke a deliberate pairing that isn't fixed yet: `components/ui/ConsequenceRow.tsx` still draws the dot-and-connecting-rail visual `ResolutionTimeline` used to, on the explicit reasoning "same grammar, both places" (its own doc comment says so).** `ResolutionTimeline` no longer draws that rail — see the entry above on its numbered-chip rebuild — and `ConsequenceRow` (the consequences list inside confirmation modals: `VoidAction`, `ProposeResolutionCard`'s step modals) was deliberately left alone rather than guessed at, since its dot color carries a severity ranking (danger/dark/faint) that a numbered chip doesn't have an obvious equivalent for, and no confirmed mockup for those specific modals was read this pass. The two now disagree visually where they used to match on purpose — worth a real look together, not a quick patch to either one alone.
+- **Phase 3 of the page-fidelity pass (auth/onboarding, 5a/5a2/5b/5d/5g/5i/5p) landed several real product calls worth remembering together, since they share one theme: match the design's visual language without quietly adopting product facts it invents.**
+  - **`app/page.tsx`'s button hierarchy now matches 5a2 exactly (Create an account / Log in, "Got a group code?" demoted to a tertiary text link) even though the previous version deliberately gave the invite-code path equal weight, reasoning that most real arrivals are on a friend's link, not a cold signup.** Both readings are true at once: a cold invite link never actually reaches this screen (`/join/[code]` bounces a signed-out visitor straight through account creation first), so this splash's real audience is someone opening the app with no link at all — where create/log-in genuinely are the two choices, and the design's hierarchy is the correct one for that audience. The design's fuller 5a2 (a top-aligned layout with a live market-preview card and two bullet explainers) was **not** built — that's a structural rebuild of the app's literal first screen, bigger than this pass's "copy/CTA hierarchy" scope, and is flagged as a real remaining gap rather than attempted alongside everything else.
+  - **5d's avatar-at-join edits the same account-level avatar `AvatarPicker` already owns, confirmed with the user before building it, rather than a new per-group avatar (schema change, new `join_group` parameter, every avatar call site reworked).** The design's own copy ("the name and face belong to the group, not the account") argues for the latter, but nicknames already carry that per-group identity story on their own — the avatar picker is a smaller, lower-risk win surfaced earlier in the flow instead.
+  - **5g's "you're in" confirmation is a new full screen (`JoinedConfirmation`) every first-time join sees now, not just the ones where an owner had set a custom `group_settings.join_message`.** The custom message, when present, renders as its own card inside this screen rather than a separate modal on top of it — it's more context about *this* group, not a competing welcome moment.
+  - **5i's Skeleton/LiveDot primitives were specified in `DESIGN.md`/`globals.css` since the Phase 1 token pass but never placed anywhere (confirmed dead CSS at the time)** — deliberately additive now, not a replacement of `PageLoader`/`LoadingAnimation`'s two-bar settle motif, which is its own separate, already-shipped decision for the "boot" state specifically. First real uses: a skeleton `loading.tsx` for `/inbox` (shaped to its actual layout, not the generic full-bleed spinner every other route still uses) and a live dot on an open market's status badge.
+  - **5p's "group full" error card describes a member cap this app doesn't actually have** (nothing in the schema or `ARCHITECTURE.md` supports one) **and was skipped rather than built against an invented rule.** "Already a member" was also deliberately left alone: `join_group` already re-succeeds silently for a member re-clicking an old link, landing them back in a group they're already in — inventing an error state to interrupt that would make the experience worse, not fix a gap. What did ship: `OfflineBar` (a persistent sticky notice for browsing already-stale content while offline, distinct from `/offline`'s own full-page fallback for a failed navigation) and a branded "stake didn't go through" card replacing `BetslipBar`'s old plain red error line.
