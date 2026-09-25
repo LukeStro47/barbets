@@ -80,7 +80,7 @@ export function CommentRow({ groupId, marketId, comment }: { groupId: string; ma
         <span className="text-[13px] font-bold text-ink">
           <Mention nickname={comment.nickname} />
         </span>
-        <span className="text-[11px] text-faint">{formatRelativeTime(comment.createdAt)}</span>
+        <span className="font-mono text-[11px] text-faint">{formatRelativeTime(comment.createdAt).replace(' ago', '')}</span>
       </div>
 
       <p className="text-[13.5px] leading-[1.5] text-ink text-pretty">{comment.body}</p>
