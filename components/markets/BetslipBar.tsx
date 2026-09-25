@@ -6,7 +6,7 @@ import { placeBet } from '@/lib/actions/bets';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { useBetslip } from '@/components/markets/BetslipContext';
-import { LockIcon } from '@/components/ui/icons';
+import { LockIcon, CloseIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/cn';
 import { formatTokens } from '@/lib/formatNumber';
 import { formatLine } from '@/lib/units';
@@ -142,7 +142,30 @@ export function BetslipBar({
         </div>
 
         <div className="px-[15px] pt-[13px] pb-[15px]">
-          {error && <p className="mb-3 text-sm font-semibold text-alert">{error}</p>}
+          {/* 5p's "stake didn't go through" card — money-red is reserved for exactly this kind
+              of failure, where the stake genuinely didn't leave the balance (place_bet either
+              commits the whole transaction or none of it, so "the error means nothing moved" is
+              always true here, not just reassuring copy). */}
+          {error && (
+            <div className="mb-3 rounded-[16px] border border-alert-line bg-alert-bg p-[14px]">
+              <div className="flex items-center gap-[10px]">
+                <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[7px] bg-alert">
+                  <CloseIcon className="h-[11px] w-[11px] text-surface" />
+                </span>
+                <span className="min-w-0 flex-1 text-[13.5px] font-bold text-ink">{error}</span>
+              </div>
+              <p className="mt-2 text-[12.5px] leading-[1.5] text-muted text-pretty">
+                Nothing was staked and nothing was charged.
+              </p>
+              <button
+                type="button"
+                onClick={() => setError(null)}
+                className="mt-3 w-full rounded-[11px] bg-ink py-[10px] text-center text-[13px] font-bold text-surface"
+              >
+                Try again
+              </button>
+            </div>
+          )}
           {blockedByHedgeSetting && (
             <p className="mb-3 text-sm font-semibold text-alert">
               This group only allows one side per market, and you already have a bet on the other side. You can still add to
