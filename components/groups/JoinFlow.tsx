@@ -13,6 +13,7 @@ import { PencilIcon } from '@/components/ui/icons';
 import { Modal } from '@/components/ui/Modal';
 import { JUST_JOINED_GROUP_KEY } from '@/components/pwa/PushReminderModal';
 import { OpenAppPrompt } from '@/components/groups/OpenAppPrompt';
+import { JoinedConfirmation } from '@/components/groups/JoinedConfirmation';
 import { CaretLeftIcon } from '@/components/ui/icons';
 import { isMobileBrowserUA } from '@/lib/mobileBrowser';
 import type { JoinSource } from '@/lib/inviteLink';
@@ -65,12 +66,12 @@ export function JoinFlow({
   avatarUpdatedAt: string | null;
 }) {
   const router = useRouter();
-  const [step, setStep] = useState<'confirm' | 'nickname' | 'open-app'>('confirm');
+  const [step, setStep] = useState<'confirm' | 'nickname' | 'joined' | 'open-app'>('confirm');
   const [showBlockedModal, setShowBlockedModal] = useState(false);
   const [nickname, setNickname] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [welcome, setWelcome] = useState<{ groupId: string; message: string } | null>(null);
+  const [joined, setJoined] = useState<{ groupId: string; balance: number; message: string | null } | null>(null);
   const [isBrowserJoin, setIsBrowserJoin] = useState(false);
   const [joinedGroupId, setJoinedGroupId] = useState<string | null>(null);
 
@@ -88,7 +89,7 @@ export function JoinFlow({
 
   function proceedToGroup(groupId: string) {
     if (isBrowserJoin) {
-      setWelcome(null);
+      setJoined(null);
       setJoinedGroupId(groupId);
       setStep('open-app');
     } else {
@@ -98,6 +99,18 @@ export function JoinFlow({
 
   if (step === 'open-app' && joinedGroupId) {
     return <OpenAppPrompt groupName={groupName} inviteCode={inviteCode} onContinueInBrowser={() => router.push(`/groups/${joinedGroupId}`)} />;
+  }
+
+  if (step === 'joined' && joined) {
+    return (
+      <JoinedConfirmation
+        groupName={groupName}
+        groupAvatarKey={groupAvatarKey}
+        balance={joined.balance}
+        joinMessage={joined.message}
+        onContinue={() => proceedToGroup(joined.groupId)}
+      />
+    );
   }
 
   if (step === 'confirm') {
@@ -224,30 +237,16 @@ export function JoinFlow({
             localStorage.setItem(JUST_JOINED_GROUP_KEY, '1');
             const groupId = result.data!.group_id;
             // Best-effort: a failure here should never block someone who already joined
-            // successfully from landing in their new group.
+            // successfully from landing in their new group — 5g's confirmation just renders
+            // with no custom note if this comes back empty.
             const messageResult = await getGroupJoinMessage(groupId);
-            if (!messageResult.error && messageResult.data) {
-              setWelcome({ groupId, message: messageResult.data });
-            } else {
-              proceedToGroup(groupId);
-            }
+            setJoined({ groupId, balance: result.data!.balance, message: messageResult.data ?? null });
+            setStep('joined');
           })
         }
       >
         Join {groupName}
       </Button>
-
-      {welcome && (
-        <Modal onClose={() => proceedToGroup(welcome.groupId)}>
-          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-ink">
-            Welcome to {groupName}
-          </p>
-          <p className="whitespace-pre-wrap text-sm leading-[1.5] text-muted">{welcome.message}</p>
-          <Button className="w-full" onClick={() => proceedToGroup(welcome.groupId)}>
-            Continue
-          </Button>
-        </Modal>
-      )}
     </div>
   );
 }
