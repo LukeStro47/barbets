@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
@@ -6,10 +6,10 @@ import { placeBet } from '@/lib/actions/bets';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { useBetslip } from '@/components/markets/BetslipContext';
+import { LockIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/cn';
 import { formatTokens } from '@/lib/formatNumber';
 import { formatLine } from '@/lib/units';
-import { useKeyboardState } from '@/lib/useKeyboardInset';
 import type { Market, MarketOption } from '@/lib/actions/markets';
 
 interface ExistingBet {
@@ -24,15 +24,15 @@ function roundToFive(n: number): number {
 }
 
 /**
- * The pinned bet slip and the drawer it opens — slot 5 of the market template, and the only
- * place a stake is ever entered.
+ * The "Your bet" card and the slim sticky footer under it — slot 5 of the market template, and
+ * the only place a stake is ever entered.
  *
- * The collapsed bar shows the actual choices rather than a generic "place a bet" affordance:
- * a binary market puts both sides right on the bar, so betting is one tap to the drawer already
- * primed with a side. Neither side gets the accent colour — honey is reserved for the single
- * committing action on screen (Confirm bet), so the UI never nudges anyone toward a side. A
- * multiple-choice market can't fit its options on one row, so it keeps a single "Bet" pill and
- * leans on the "What you can back" card above, whose rows open this same drawer primed.
+ * Used to be a collapsed bar that expanded into a full dark bottom-sheet drawer. The Ledger
+ * mockups (4d/4h/4h2/4h3) don't have a drawer at all: the pick/stake form sits directly in the
+ * page's own scroll flow as its own card, with just a slim sticky footer (current pick's amount
+ * + a submit button) pinned above BottomNav for whoever's scrolled past the card to read the
+ * rest of the page. Rebuilt to match that — a real interaction-model change, not a re-skin,
+ * done only after confirming that explicitly (see ARCHITECTURE.md's design-decision note).
  */
 export function BetslipBar({
   groupId,
@@ -68,42 +68,33 @@ export function BetslipBar({
   const existingSide = existingBets.find((b) => b.side)?.side as (typeof sides)[number] | undefined;
   const existingOptionId = existingBets.find((b) => b.option_id)?.option_id;
 
-  // Nullable, because the line ticket's "Pick a side" opens this with nothing chosen. Every other
-  // opener names a side, so in practice null is only ever on screen for that one entry point.
-  const [betSide, setBetSide] = useState<(typeof sides)[number] | null>(existingSide ?? null);
-  const [betOptionId, setBetOptionId] = useState<string | null>(existingOptionId ?? options?.[0]?.id ?? null);
+  const pick = betslip?.pick ?? null;
+  const [betSide, setBetSide] = useState<(typeof sides)[number] | null>(
+    (pick?.side as (typeof sides)[number] | undefined) ?? existingSide ?? null
+  );
+  const [betOptionId, setBetOptionId] = useState<string | null>(pick?.optionId ?? existingOptionId ?? options?.[0]?.id ?? null);
   const defaultAmount = Math.min(balance, roundToFive(seedAmount * 0.05));
   const [betAmount, setBetAmount] = useState(defaultAmount > 0 ? String(defaultAmount) : '');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [confirmed, setConfirmed] = useState<{ amount: number; label: string } | null>(null);
-  const [idleNudge, setIdleNudge] = useState(false);
 
-  const isOpen = betslip?.isOpen ?? false;
-  const pick = betslip?.pick ?? null;
-
-  // The provider carries only "which pick was tapped"; the side/option that actually gets
-  // submitted still lives here alongside the stake. This is the one wire between them, so a row
-  // in the options card and a chip inside the drawer end up setting the same thing.
-  // An empty pick object clears the selection rather than leaving the last one in place — that is
-  // how "Pick a side" opens the drawer neutral. Omitting the argument entirely doesn't change
-  // `pick`, so this doesn't re-run and the previous choice survives (what the Bet pill wants).
+  // Keeps the card in sync when something *else* on the page primes a pick after this component
+  // already mounted — the sticky footer's amount pill just scrolls back to this same card (no
+  // pick), but a future caller elsewhere on the page could still prime a specific side/option the
+  // way the pre-Ledger explainer cards used to. The useState initializer above only runs once, on
+  // first mount, so this effect is what makes a later prime actually take.
   useEffect(() => {
     if (!pick) return;
     if (isMultipleChoice) setBetOptionId(pick.optionId ?? null);
     else setBetSide((pick.side as (typeof sides)[number] | undefined) ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pick]);
-
-  // The amount input's numeric keyboard pushes this sheet up just enough to reveal the input
-  // itself, leaving Confirm flush against the keyboard with no breathing room — pad past it.
-  const { visible: keyboardOpen, inset: keyboardInset } = useKeyboardState();
 
   const betAmountNum = betAmount === '' ? 0 : Number(betAmount);
   const balanceAfter = Math.max(0, balance - betAmountNum);
   const hasExisting = existingBets.length > 0;
 
-  // Nothing picked yet can't conflict with anything — without this guard the hedge warning fires
-  // the moment the drawer opens neutral for someone who already has a bet.
   const hasPick = isMultipleChoice ? !!betOptionId : !!betSide;
   const conflictsWithExisting =
     hasPick && existingBets.some((b) => (isMultipleChoice ? b.option_id !== betOptionId : b.side !== betSide));
@@ -111,60 +102,13 @@ export function BetslipBar({
 
   const chipAmounts = [0.01, 0.05, 0.1].map((pct) => roundToFive(seedAmount * pct));
 
-  const title = hasExisting ? 'Add to your bet' : 'Place your bet';
-  const subtitle =
-    betCount === null || betCount === 0
-      ? 'Be the first to bet'
-      : `${betCount} ${betCount === 1 ? 'bet' : 'bets'} · ${formatTokens(betVolume ?? 0)} tokens in`;
-
   const selectedLabel = isMultipleChoice ? (options?.find((o) => o.id === betOptionId)?.label ?? '') : (betSide?.toUpperCase() ?? '');
   const lineLabel = market.market_type === 'over_under' && market.line != null ? formatLine(market.line, market.unit) : null;
 
-  useEffect(() => {
-    if (!isOpen) return;
-    document.body.style.overflow = 'hidden';
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') betslip?.close();
-    }
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.body.style.overflow = '';
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, [isOpen, betslip]);
-
-  // A gentle one-off bounce after 10s of nobody touching the page, just
-  // enough to draw the eye toward the bar — not a recurring nag. Resets on
-  // any interaction, and while the sheet itself is open there's nothing to
-  // nudge toward.
-  useEffect(() => {
-    if (isOpen) return;
-    let fired = false;
-    let timer: ReturnType<typeof setTimeout>;
-
-    function scheduleNudge() {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        if (!fired) {
-          fired = true;
-          setIdleNudge(true);
-        }
-      }, 10_000);
-    }
-
-    scheduleNudge();
-    window.addEventListener('pointerdown', scheduleNudge);
-    window.addEventListener('scroll', scheduleNudge, { passive: true });
-    window.addEventListener('keydown', scheduleNudge);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('pointerdown', scheduleNudge);
-      window.removeEventListener('scroll', scheduleNudge);
-      window.removeEventListener('keydown', scheduleNudge);
-    };
-  }, [isOpen]);
+  const canSubmit = !isPending && betAmountNum >= 1 && betAmountNum <= balance && hasPick && !blockedByHedgeSetting;
 
   function submit() {
+    if (!canSubmit) return;
     setError(null);
     startTransition(async () => {
       const result = await placeBet(groupId, market.id, betAmountNum, isMultipleChoice ? { optionId: betOptionId! } : { side: betSide! });
@@ -172,7 +116,6 @@ export function BetslipBar({
         setError(result.error);
         return;
       }
-      betslip?.close();
       setConfirmed({ amount: betAmountNum, label: selectedLabel });
     });
   }
@@ -186,126 +129,29 @@ export function BetslipBar({
     router.refresh();
   }
 
-  /** The bar's own contents, rendered twice: once for real, once invisibly in normal flow to
-   * reserve exactly this height at the end of the page. Sharing one function is what keeps the
-   * reserved space honest when the binary and multiple-choice forms differ in height. */
-  function barContents() {
-    if (isMultipleChoice) {
-      return (
-        <div className="px-5 pt-3 pb-4">
-          <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-white/25" />
-          <div className="mx-auto flex max-w-lg items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[15px] font-extrabold text-surface">{title}</p>
-              <p className="mt-0.5 text-xs font-semibold text-surface/55">{subtitle}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => betslip?.open()}
-              className="inline-flex shrink-0 items-center gap-[7px] rounded-full bg-signal px-[18px] py-[11px] text-sm font-extrabold text-ink transition-colors hover:bg-signal-deep"
-            >
-              Bet
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M4 10l4-4 4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="px-5 pt-[13px] pb-4">
-        <div className="mx-auto max-w-lg">
-          <div className="mb-2.5 flex items-baseline justify-between gap-2.5">
-            <p className="text-[13px] font-extrabold text-surface">{title}</p>
-            <p className="shrink-0 text-[11.5px] font-semibold text-surface/55">{subtitle}</p>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <SideButton label={sides[0]} onClick={() => betslip?.open({ side: sides[0] })} />
-            {lineLabel && (
-              <span className="shrink-0 rounded-full bg-white/10 px-[13px] py-2 text-[13.5px] font-extrabold whitespace-nowrap text-surface font-mono tabular-nums">
-                {lineLabel}
-              </span>
-            )}
-            <SideButton label={sides[1]} onClick={() => betslip?.open({ side: sides[1] })} />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <>
-      {/* In-flow, invisible twin of the bar below — reserves exactly the bar's real rendered
-          height at the end of the page, instead of a guessed padding value that drifts out of
-          sync with the bar's actual size and leaves a visible gap above it. BottomNavSpacer
-          (app/(app)/layout.tsx) separately reserves room for BottomNav itself, which this bar
-          now stacks above rather than covering. */}
-      <div aria-hidden="true" className="invisible !m-0">
-        {barContents()}
-      </div>
+      {/* ---- Inline "Your bet" card (4h) — sits in the page's own scroll flow, not a drawer ---- */}
+      <div ref={betslip?.slipRef} className="overflow-hidden rounded-[22px] border-[1.5px] border-dash bg-surface shadow-[0_1px_2px_rgba(12,16,24,0.04)]">
+        <div className="flex items-center justify-between gap-2.5 border-b border-rule bg-[#fafbfc] px-4 py-3">
+          <span className="text-[13px] font-extrabold tracking-[-0.01em] text-ink">{hasExisting ? 'Add to your bet' : 'Your bet'}</span>
+          <span className="inline-flex shrink-0 items-center gap-[5px] rounded-full border border-[#d9e1ff] bg-signal-tint px-[9px] py-1 text-[10.5px] font-bold whitespace-nowrap text-signal">
+            <LockIcon className="h-2.5 w-2.5" />
+            Sealed until close
+          </span>
+        </div>
 
-      {/* Static backing strip, pinned to BottomNav's top edge (not the true screen edge —
-          BottomNav itself now occupies that), never animated: the idle-bounce animation below
-          translates the whole bar upward, and since the bar itself is what carries the brown
-          background, that translation would otherwise uncover BottomNav's own bar for the
-          duration of the bounce. This sits behind it at the same color so the strip between the
-          bar and the nav always reads as solid brown, bounce or not. */}
-      <div aria-hidden="true" className="fixed inset-x-0 bottom-[var(--bottomnav-height)] z-20 !m-0 bg-ink pb-5" />
-
-      {/* !m-0 on every top-level element here: the parent <main> uses space-y-*, which in
-          Tailwind v4 puts margin-bottom on every child except the literal last one — since
-          fixed-position elements still receive that margin even though they're out of normal
-          flow, a bottom-0 element's rendered box shifts up by exactly the margin, off the true
-          screen edge. Explicit here rather than relying on this being the last child, which
-          would silently break again if page.tsx's structure ever changes. */}
-      <div
-        className={cn(
-          'fixed inset-x-0 bottom-[var(--bottomnav-height)] z-30 !m-0 rounded-t-[20px] bg-ink shadow-[0_-1px_2px_rgba(12,16,24,0.03)]',
-          idleNudge && 'animate-betslip-idle-bounce'
-        )}
-        onAnimationEnd={() => setIdleNudge(false)}
-      >
-        {barContents()}
-      </div>
-
-      {isOpen && <div className="fixed inset-0 z-40 !m-0 bg-ink/45" onClick={() => betslip?.close()} />}
-
-      <div
-        className={cn(
-          'fixed inset-x-0 bottom-0 z-50 !m-0 max-h-[85dvh] overflow-y-auto rounded-t-[22px] bg-ink pb-[calc(env(safe-area-inset-bottom)+24px)] transition-transform duration-300 ease-out',
-          isOpen ? 'translate-y-0' : 'translate-y-full'
-        )}
-        // The keyboard's height is *added* to the sheet's normal bottom padding, never swapped
-        // in for it. `keyboardOpen` is focus-driven, so it stays true while the field is focused
-        // with the keyboard swiped away — and on the WebViews that shrink the layout viewport,
-        // `keyboardInset` reads ~0 the whole time regardless. Overriding the padding outright in
-        // that state dropped the sheet's floor to a bare 16px, which is why Place bet sat lower
-        // than it does at rest until you blurred the field.
-        style={{
-          paddingBottom: keyboardOpen && keyboardInset > 0 ? `calc(env(safe-area-inset-bottom) + 24px + ${keyboardInset}px)` : undefined,
-        }}
-        aria-hidden={!isOpen}
-      >
-        <div className="mx-auto my-3 h-1 w-9 rounded-full bg-white/25" />
-        <div className="mx-auto max-w-lg px-5">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-[11.5px] font-extrabold tracking-[0.1em] text-surface/50 uppercase">Your bet</p>
-            <button type="button" onClick={() => betslip?.close()} className="text-[13px] font-semibold text-surface/60">
-              Cancel
-            </button>
-          </div>
-
-          {error && <p className="mt-3 text-sm font-semibold text-alert-bg">{error}</p>}
+        <div className="px-[15px] pt-[13px] pb-[15px]">
+          {error && <p className="mb-3 text-sm font-semibold text-alert">{error}</p>}
           {blockedByHedgeSetting && (
-            <p className="mt-3 text-sm font-semibold text-alert-bg">
+            <p className="mb-3 text-sm font-semibold text-alert">
               This group only allows one side per market, and you already have a bet on the other side. You can still add to
               your existing bet.
             </p>
           )}
 
-          <div className={cn('mt-3 flex gap-2', isMultipleChoice ? 'flex-col' : 'flex-wrap')}>
+          <p className="text-[10.5px] font-bold tracking-[0.1em] text-faint uppercase">{isMultipleChoice ? 'Pick an option' : 'Pick a side'}</p>
+          <div className={cn('mt-2 flex gap-2', isMultipleChoice ? 'flex-col' : undefined)}>
             {isMultipleChoice
               ? (options ?? []).map((o) => (
                   <PickChip key={o.id} selected={betOptionId === o.id} fullWidth onClick={() => setBetOptionId(o.id)}>
@@ -320,52 +166,30 @@ export function BetslipBar({
                 ))}
           </div>
 
-          {/* A real, obviously-editable field, not a display that happens to accept typing. The
-              quick amounts below are shortcuts into it — they're derived from the group's seed,
-              so they can't cover every group, and someone who wants to stake 37 must be able to
-              just say 37. The field is the control; the chips fill it in. */}
-          <div className="mt-4 border-t border-white/12 pt-4">
-            <div className="flex items-baseline justify-between gap-3">
-              <label htmlFor="betslip-stake" className="text-[11.5px] font-extrabold tracking-[0.1em] text-surface/50 uppercase">
-                Stake
-              </label>
-              <span className="text-[11.5px] font-semibold text-surface/45">You have {formatTokens(balance)}</span>
-            </div>
-            <div className="relative mt-2">
-              <input
-                id="betslip-stake"
-                type="number"
-                inputMode="numeric"
-                min={1}
-                max={balance}
-                placeholder="0"
-                value={betAmount}
-                onChange={(e) => setBetAmount(e.target.value)}
-                onFocus={(e) => e.target.select()}
-                className="w-full rounded-2xl border-[1.5px] border-white/22 bg-white/6 py-3 pr-[86px] pl-4 font-mono text-[30px] leading-none font-extrabold tracking-[-0.02em] text-surface tabular-nums placeholder:text-surface/25 focus:border-signal focus:outline-none"
-              />
-              <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-xs font-semibold text-surface/50">
-                tokens
-              </span>
-            </div>
+          <p className="mt-3.5 text-[10.5px] font-bold tracking-[0.1em] text-faint uppercase">Your stake</p>
+          <div className="mt-2 flex items-center justify-between gap-3 rounded-[15px] bg-ink px-[17px] py-[13px]">
+            <input
+              id="betslip-stake"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={balance}
+              placeholder="0"
+              value={betAmount}
+              onChange={(e) => setBetAmount(e.target.value)}
+              onFocus={(e) => e.target.select()}
+              className="min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-[29px] leading-none font-semibold tracking-[-0.02em] text-surface tabular-nums placeholder:text-surface/25 focus:outline-none"
+            />
+            <span className="shrink-0 font-mono text-[11.5px] whitespace-nowrap text-surface/55">of {formatTokens(balance)} free</span>
           </div>
 
-          <div className="mt-2.5 flex gap-2">
+          <div className="mt-2 flex gap-[7px]">
             {chipAmounts.map((amt) => (
-              <QuickAmount
-                key={amt}
-                selected={betAmountNum === amt}
-                disabled={amt < 1 || amt > balance}
-                onClick={() => setBetAmount(String(amt))}
-              >
+              <QuickAmount key={amt} selected={betAmountNum === amt} disabled={amt < 1 || amt > balance} onClick={() => setBetAmount(String(amt))}>
                 {formatTokens(amt)}
               </QuickAmount>
             ))}
-            <QuickAmount
-              selected={betAmountNum === balance && balance > 0}
-              disabled={balance < 1}
-              onClick={() => setBetAmount(String(balance))}
-            >
+            <QuickAmount selected={betAmountNum === balance && balance > 0} disabled={balance < 1} onClick={() => setBetAmount(String(balance))}>
               Max
             </QuickAmount>
           </div>
@@ -373,31 +197,57 @@ export function BetslipBar({
           {/* Where the design put a payout projection. Odds stay sealed while betting is open
               (get_closed_odds refuses outright until it closes), and a payout figure is a live
               odds readout by another name — anyone could divide their way back to the split. So
-              the slip commits to the one number it can state honestly. */}
-          <div className="mt-3.5 flex items-baseline justify-between gap-3">
-            <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-surface/60">
+              the card commits to the one number it can state honestly: what's left after. */}
+          <div className="mt-[11px] flex items-center justify-between gap-2.5 rounded-[12px] border border-rule bg-canvas px-[13px] py-[10px]">
+            <span className="min-w-0 flex-1 truncate text-[12.5px] text-muted">
               {hasPick ? (
                 <>
-                  Betting on <OptionLabel label={selectedLabel.toUpperCase()} className="text-on-ink" />
+                  {formatTokens(betAmountNum)} on <span className="font-bold text-ink">{selectedLabel}</span>
                 </>
               ) : (
-                <span className="text-on-ink">Pick a side above</span>
+                'Pick a side above'
               )}
             </span>
-            <span className="shrink-0 text-[13px] font-semibold text-surface/60">
-              Balance after <strong className="font-extrabold text-on-ink">{formatTokens(balanceAfter)}</strong>
-            </span>
+            <span className="shrink-0 font-mono text-[11.5px] text-faint">{formatTokens(balanceAfter)} left</span>
           </div>
 
           <button
             type="button"
-            disabled={isPending || betAmountNum < 1 || betAmountNum > balance || !hasPick || blockedByHedgeSetting}
+            disabled={!canSubmit}
             onClick={submit}
-            className="mt-3.5 w-full rounded-full bg-signal px-5 py-3.5 text-[15px] font-extrabold text-ink transition-colors hover:bg-signal-deep disabled:bg-signal/30 disabled:text-ink/40"
+            className="mt-2.5 w-full rounded-[14px] bg-signal py-[14px] text-[15px] font-bold text-surface shadow-[0_10px_20px_-10px_rgba(45,85,245,0.7)] transition-colors hover:bg-signal-deep disabled:bg-disabled-bg disabled:text-disabled-ink disabled:shadow-none"
           >
-            Place bet
+            {hasPick ? `${hasExisting ? 'Add' : 'Place'} ${formatTokens(betAmountNum)} on ${selectedLabel}` : 'Pick a side to continue'}
           </button>
         </div>
+      </div>
+
+      {/* ---- Slim sticky footer — a quick re-bet shortcut for anywhere else on the page ---- */}
+      <div aria-hidden="true" className="invisible !m-0 h-[86px]" />
+      <div className="fixed inset-x-0 bottom-[var(--bottomnav-height)] z-20 !m-0 border-t border-hairline bg-surface/96 px-[18px] pt-3 pb-[10px] backdrop-blur-sm">
+        <div className="mx-auto flex max-w-lg items-center gap-[9px]">
+          <button
+            type="button"
+            onClick={() => betslip?.open()}
+            className="flex shrink-0 items-center gap-[7px] rounded-[14px] border-[1.5px] border-signal bg-surface px-[13px] py-[10px] font-mono text-[22px] leading-none font-semibold tracking-[-0.02em] text-ink"
+          >
+            {formatTokens(betAmountNum)}
+            <svg width="9" height="6" viewBox="0 0 10 7" fill="none" className="shrink-0">
+              <path d="M1 1.5 5 5.5l4-4" stroke="#2d55f5" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            disabled={!canSubmit}
+            onClick={submit}
+            className="flex-1 rounded-[14px] bg-signal py-[14px] text-center text-[15px] font-bold text-surface shadow-[0_10px_20px_-10px_rgba(45,85,245,0.7)] disabled:bg-disabled-bg disabled:text-disabled-ink disabled:shadow-none"
+          >
+            {hasPick ? `${hasExisting ? 'Add to' : 'Bet on'} ${selectedLabel}` : 'Pick a side'}
+          </button>
+        </div>
+        <p className="mt-[9px] text-center font-mono text-[11px] text-faint">
+          {formatTokens(balance)} free to bet · {formatTokens(balanceAfter)} after this
+        </p>
       </div>
 
       {confirmed && (
@@ -415,19 +265,6 @@ export function BetslipBar({
   );
 }
 
-/** One of the two neutral sides on the collapsed binary bar. */
-function SideButton({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex-1 rounded-full border-[1.5px] border-white/28 bg-white/8 px-2.5 py-[13px] text-[15px] font-extrabold tracking-[0.04em] whitespace-nowrap text-surface uppercase transition-colors hover:border-white/50 hover:bg-white/16"
-    >
-      {label}
-    </button>
-  );
-}
-
 function PickChip({
   selected,
   onClick,
@@ -437,9 +274,9 @@ function PickChip({
   selected: boolean;
   onClick: () => void;
   children: React.ReactNode;
-  /** Multiple-choice options stack one per row instead of wrapping as inline chips — a wrapped
-   * chip sized to its own text left a ragged gap on one side of the row, so each option spans
-   * the full row width whether it's short or long. */
+  /** Multiple-choice options stack one per row instead of sitting side by side — a wrapped chip
+   * sized to its own text left a ragged gap on one side of the row, so each option spans the
+   * full row width whether it's short or long. */
   fullWidth?: boolean;
 }) {
   return (
@@ -447,9 +284,9 @@ function PickChip({
       type="button"
       onClick={onClick}
       className={cn(
-        'rounded-full border-[1.5px] px-4 py-[9px] text-sm font-extrabold',
-        fullWidth ? 'w-full text-left' : 'text-center',
-        selected ? 'border-signal bg-signal text-ink' : 'border-white/22 bg-white/6 text-surface'
+        'flex min-h-[46px] items-center justify-center rounded-[13px] border-[1.5px] px-3 py-2 text-[15px] font-bold tracking-[-0.01em]',
+        fullWidth ? 'w-full text-left' : 'flex-1 text-center',
+        selected ? 'border-signal bg-[#f7f9ff] text-ink shadow-[0_0_0_3px_rgba(45,85,245,0.09)]' : 'border-hairline bg-surface text-muted'
       )}
     >
       {children}
@@ -474,8 +311,8 @@ function QuickAmount({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'flex-1 rounded-xl border-[1.5px] py-[11px] text-sm font-extrabold font-mono tabular-nums',
-        selected ? 'border-signal bg-signal text-ink' : 'border-white/22 bg-white/6 text-surface',
+        'flex-1 rounded-[11px] border py-2 font-mono text-[12.5px] font-semibold',
+        selected ? 'border-[#d9e1ff] bg-signal-tint text-signal' : 'border-hairline bg-surface text-muted',
         disabled && 'opacity-40'
       )}
     >
@@ -485,11 +322,11 @@ function QuickAmount({
 }
 
 /**
- * What replaces the drawer once `placeBet` succeeds: the stake as a real torn ticket stub, plus
- * exactly the facts a bettor wants in the two seconds after committing — what they backed, on
- * which market, in which group, when it closes, what they have left.
+ * What replaces the inline card once `placeBet` succeeds: the stake as a real torn ticket stub,
+ * plus exactly the facts a bettor wants in the two seconds after committing — what they backed,
+ * on which market, in which group, when it closes, what they have left.
  *
- * No odds and no projected payout, for the same reason the slip above carries none: the split
+ * No odds and no projected payout, for the same reason the card above carries none: the split
  * stays sealed while betting is open, and a payout figure is a live odds readout by another name.
  * Dismissing goes to the group's market list rather than back to this market — the bet is done,
  * and the next thing anyone wants is the next market.

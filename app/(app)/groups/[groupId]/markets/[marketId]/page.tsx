@@ -29,7 +29,6 @@ import { ClarificationRequests, type Clarification } from '@/components/markets/
 import { ProposeResolutionCard } from '@/components/markets/ProposeResolutionCard';
 import { BetslipBar } from '@/components/markets/BetslipBar';
 import { BetslipProvider } from '@/components/markets/BetslipContext';
-import { LineTicket, OptionsTicket } from '@/components/markets/MarketExplainer';
 import { VouchingTicket } from '@/components/markets/VouchingTicket';
 import { ProposedOutcomeTicket } from '@/components/markets/ProposedOutcomeTicket';
 import { SubjectMarketPulse, type SubjectMarketPulseData } from '@/components/markets/SubjectMarketPulse';
@@ -511,7 +510,10 @@ export default async function MarketDetailPage({
             }
           />
 
-          {hasPosition ? (
+          {/* 4d/4h: the bet card sits right under the pool stats, not at the end of the page —
+              it's no longer a fixed drawer, so its position in the tree is its position on
+              screen now. PositionTicket (once there's a stake) still leads, same as before. */}
+          {hasPosition && (
             <PositionTicket
               rows={stakedRows}
               meta={kindLabel}
@@ -522,11 +524,20 @@ export default async function MarketDetailPage({
                   : undefined
               }
             />
-          ) : marketRow.market_type === 'over_under' && lineLabel ? (
-            <LineTicket lineLabel={lineLabel} />
-          ) : isMultipleChoice && marketOptions && marketOptions.length > 0 ? (
-            <OptionsTicket options={marketOptions} />
-          ) : null}
+          )}
+
+          <BetslipBar
+            groupId={groupId}
+            groupName={groupName}
+            market={marketRow}
+            balance={balance}
+            options={marketOptions}
+            existingBets={myBets}
+            allowHedgedBets={groupSettings?.allow_hedged_bets ?? true}
+            seedAmount={groupSettings?.seed_amount ?? 1000}
+            betCount={openBetCount}
+            betVolume={openBetVolume}
+          />
 
           <HowItSettlesCard
             description={marketRow.description}
@@ -554,19 +565,6 @@ export default async function MarketDetailPage({
               />
             </ResolutionTimeline>
           </Card>
-
-          <BetslipBar
-            groupId={groupId}
-            groupName={groupName}
-            market={marketRow}
-            balance={balance}
-            options={marketOptions}
-            existingBets={myBets}
-            allowHedgedBets={groupSettings?.allow_hedged_bets ?? true}
-            seedAmount={groupSettings?.seed_amount ?? 1000}
-            betCount={openBetCount}
-            betVolume={openBetVolume}
-          />
         </main>
       </BetslipProvider>
     );
