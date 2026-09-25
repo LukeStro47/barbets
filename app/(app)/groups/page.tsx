@@ -1,7 +1,6 @@
 ﻿import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient, requireUser } from '@/lib/supabase/server';
-import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/Button';
 import { InviteCodeBoxes } from '@/components/groups/InviteCodeBoxes';
@@ -12,6 +11,7 @@ import { ChevronRightIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/cn';
 import { formatSignedTokens, formatOrdinal, numberWordCapitalized } from '@/lib/formatNumber';
 import { GroupAvatar } from '@/components/ui/GroupAvatar';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 import { getGroupTaskCounts } from '@/lib/tasks';
 import { listPublicGroups } from '@/lib/actions/discover';
 import { isHomeSurfacePublicGroup } from '@/lib/publicGroups';
@@ -20,10 +20,15 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
   const { all } = await searchParams;
   const supabase = await createClient();
   const user = await requireUser(supabase);
-  const { data: groups } = await supabase
-    .from('groups')
-    .select('id, name, avatar_key, deletion_scheduled_at, is_public, memberships(user_id, balance, status)')
-    .order('created_at', { ascending: false });
+  const [{ data: groups }, { data: profile }] = await Promise.all([
+    supabase
+      .from('groups')
+      .select('id, name, avatar_key, deletion_scheduled_at, is_public, memberships(user_id, balance, status)')
+      .order('created_at', { ascending: false }),
+    // 4q's header carries the viewer's own avatar (this is the one screen with no single group
+    // to show a GroupBar for), not a page title — swapped in below.
+    supabase.from('users').select('avatar_preset_key, avatar_updated_at').eq('id', user.id).single(),
+  ]);
 
   // Net tokens per group — same definition the leaderboard page's "All-time net" card uses
   // (every ledger entry except the seed itself, so reseeding for a new season doesn't count as
@@ -105,10 +110,24 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
 
   return (
     <main className="mx-auto max-w-lg space-y-[18px] px-5 py-8">
-      <PageHeader
-        title="Your groups"
-        subtitle={hasGroups ? <span className="text-[12.5px] text-faint">{headerCaption}</span> : undefined}
-      />
+      {/* 4q's own header: wordmark + the viewer's own avatar, not a page title — this is the one
+          top-level screen with no single group to hand a GroupBar to. Text wordmark only, no
+          tile+glyph mark: the design's lowercase-b icon tile is a brand-asset change (see
+          DESIGN.md's own note that the existing "B" die icon stays untouched for now). */}
+      <div className="flex items-center gap-2">
+        <span className="min-w-0 flex-1 text-[16px] font-extrabold tracking-[-0.03em] text-ink">barbets</span>
+        <Link href="/profile">
+          <UserAvatar
+            userId={user.id}
+            nickname="you"
+            avatarUpdatedAt={profile?.avatar_updated_at ?? null}
+            avatarPresetKey={profile?.avatar_preset_key ?? null}
+            className="h-[30px] w-[30px] text-xs"
+            fallbackClassName="bg-rule text-signal-deep"
+          />
+        </Link>
+      </div>
+      {hasGroups && <p className="-mt-2.5 text-[12.5px] text-faint">{headerCaption}</p>}
 
       {!hasGroups ? (
         hasPublicGroups ? (
