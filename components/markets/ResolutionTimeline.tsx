@@ -1,5 +1,6 @@
 ﻿import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { Mention } from '@/components/ui/Mention';
+import { cn } from '@/lib/cn';
 
 export type ResolutionStage = 'pending_sponsor' | 'endorsing' | 'open' | 'closed' | 'proposed' | 'disputed';
 
@@ -109,19 +110,21 @@ export function ResolutionTimeline({
       </p>
       <div className="flex flex-col">
         {steps.map((step, i) => {
+          const isDone = i < currentIndex;
           const isCurrent = i === currentIndex;
+          const isLast = i === steps.length - 1;
           return (
-            <div key={i} className={i === 0 ? 'flex items-start gap-[11px] pt-0 pb-[11px]' : 'flex items-start gap-[11px] border-t border-rule py-[11px]'}>
-              <span
-                className={
-                  isCurrent
-                    ? 'flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] bg-signal-tint font-mono text-[11px] font-semibold text-signal'
-                    : 'flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] bg-rule font-mono text-[11px] font-semibold text-muted'
-                }
-              >
-                {i + 1}
-              </span>
-              <p className="min-w-0 flex-1 text-[13.5px] leading-[1.45] text-ink">{step}</p>
+            <div key={i} className="flex gap-2.5">
+              <div className="flex flex-col items-center pt-[5px]">
+                <span
+                  className={cn(
+                    'h-[7px] w-[7px] shrink-0 rounded-full',
+                    isCurrent ? 'bg-signal' : isDone ? 'bg-ink' : 'border-[1.5px] border-dash bg-canvas'
+                  )}
+                />
+                {!isLast && <span className="w-[1.5px] flex-1 bg-hairline" />}
+              </div>
+              <p className={cn('text-[13.5px] leading-[1.4] text-muted', !isLast && 'mb-2.5')}>{step}</p>
             </div>
           );
         })}
