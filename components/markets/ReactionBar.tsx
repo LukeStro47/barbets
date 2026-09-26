@@ -17,15 +17,10 @@ interface Props {
 }
 
 /**
- * Corner facepile on the reveal ticket: one overlapping glyph per reaction
- * that's actually been used, tightly stacked with no backing circle. Tapping
- * it opens a popover with the 6-emoji picker up top and a per-reaction "who
- * picked what" breakdown below.
- *
- * z-index stays below the sticky header's (z-10) on purpose — this used to
- * be z-20, which meant that once the ticket scrolled up far enough for the
- * pill to cross behind the header, it rendered in front of the header
- * instead of correctly disappearing behind it.
+ * A light, full-width footer row on the reveal screen: a chip per reaction
+ * that's actually been used, plus a trailing "+" affordance. Tapping
+ * anywhere on the row opens a popover with the 6-emoji picker up top and a
+ * per-reaction "who picked what" breakdown below.
  */
 export function ReactionBar({ groupId, marketId, counts, myReaction, nicknames, myNickname }: Props) {
   const router = useRouter();
@@ -72,39 +67,41 @@ export function ReactionBar({ groupId, marketId, counts, myReaction, nicknames, 
   const active = REACTIONS.filter((r) => (localCounts[r.emoji] ?? 0) > 0);
 
   return (
-    <div className="absolute top-5 right-5 z-0">
+    <div className="relative">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         disabled={isPending}
         aria-label="Reactions"
-        className={
-          active.length === 0
-            ? 'flex h-8 w-8 items-center justify-center rounded-full bg-black/30 ring-1 ring-white/15 backdrop-blur'
-            : 'flex items-center rounded-full bg-black/30 py-1 pr-2 pl-1 ring-1 ring-white/15 backdrop-blur'
-        }
+        className="flex w-full items-center gap-2 rounded-[16px] border border-hairline bg-surface px-3.5 py-3"
       >
         {active.length === 0 ? (
-          <span className="text-lg leading-none text-surface">+</span>
+          <span className="text-[13px] font-semibold text-faint">React to this result</span>
         ) : (
-          <span className="flex items-center">
-            {active.map((r, i) => (
-              <span
-                key={r.emoji}
-                className="-ml-2.5 flex h-7 w-7 items-center justify-center text-base first:ml-0"
-                style={{ zIndex: active.length - i }}
-              >
-                {r.glyph}
+          active.map((r) => (
+            <span
+              key={r.emoji}
+              className={
+                mine === r.emoji
+                  ? 'inline-flex items-center gap-1.5 rounded-full border border-[#d9e1ff] bg-signal-tint px-2.5 py-1.5 text-[13px]'
+                  : 'inline-flex items-center gap-1.5 rounded-full border border-hairline bg-rule px-2.5 py-1.5 text-[13px]'
+              }
+            >
+              <span>{r.glyph}</span>
+              <span className={mine === r.emoji ? 'font-mono text-[11px] font-semibold text-signal-deep' : 'font-mono text-[11px] font-semibold text-faint'}>
+                {localCounts[r.emoji]}
               </span>
-            ))}
-            <span className="ml-1 text-base leading-none text-surface/70">+</span>
-          </span>
+            </span>
+          ))
         )}
+        <span className="ml-auto flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full border border-hairline bg-surface text-[13px] text-faint">
+          +
+        </span>
       </button>
 
       {open && (
         <>
-          {/* Click-outside-to-close backdrop, purely for dismissal — not part of the ticket's own visual design. */}
+          {/* Click-outside-to-close backdrop, purely for dismissal — not part of the row's own visual design. */}
           <button type="button" aria-label="Close reaction picker" onClick={() => setOpen(false)} className="fixed inset-0 z-0 cursor-default" />
           <div className="absolute top-full right-0 z-[1] mt-2 w-56 space-y-2 rounded-2xl bg-surface p-2.5 ring-1 ring-dash/60">
             <div className="flex items-center justify-between">

@@ -1,5 +1,7 @@
-import { RevealTicket, type TicketOddsEntry } from '@/components/markets/RevealTicket';
+import Link from 'next/link';
+import { RevealTicket } from '@/components/markets/RevealTicket';
 import { SettlementLedger } from '@/components/markets/SettlementLedger';
+import { ChatIcon, ChevronRightIcon } from '@/components/ui/icons';
 import type { PayoutBreakdown } from '@/lib/actions/markets';
 import type { ReactionEmoji } from '@/lib/actions/reactions';
 import { formatLine } from '@/lib/units';
@@ -23,8 +25,6 @@ export function RevealSummary({
   line,
   unit,
   bets,
-  odds,
-  optionOdds,
   payoutBreakdown,
   carriedBonusPool,
   creatorNickname,
@@ -40,6 +40,7 @@ export function RevealSummary({
   myNickname,
   hasProof,
   isSubjectOfThisMarket,
+  commentCount,
 }: {
   groupName: string;
   /** The market's title, shown on the ticket itself since it has to be self-contained once shared outside the app. */
@@ -53,10 +54,6 @@ export function RevealSummary({
   /** over_under only, e.g. "$", "min", "pts". */
   unit?: string | null;
   bets: RevealBet[];
-  /** yes_no/over_under only. */
-  odds?: { side: string; percent: number }[];
-  /** multiple_choice only. isWinner precomputed by the caller against outcome_option_id. */
-  optionOdds?: { id: string; label: string; percent: number; isWinner: boolean }[];
   /** Only set when nobody predicted the outcome and the group has distribute_payout on. */
   payoutBreakdown?: PayoutBreakdown | null;
   /** markets.carried_bonus_pool: bonus tokens this market was seeded with at creation, from another
@@ -83,10 +80,9 @@ export function RevealSummary({
   hasProof: boolean;
   /** True when the viewer is a hidden subject of this market — see RevealTicket's `sealedForSubject`. */
   isSubjectOfThisMarket?: boolean;
+  /** Count of non-deleted comments on this market, for the "N comments" link below the ticket. */
+  commentCount: number;
 }) {
-  const [sideA, sideB] = marketType === 'yes_no' ? ['yes', 'no'] : ['over', 'under'];
-  const oddsA = odds?.find((o) => o.side === sideA);
-  const oddsB = odds?.find((o) => o.side === sideB);
   const sorted = [...bets].sort((a, b) => (b.payout ?? 0) - (a.payout ?? 0));
   const voided = headline === 'VOIDED';
   // Nobody predicted the actual outcome — every bet lost the pick, but
@@ -97,54 +93,56 @@ export function RevealSummary({
   const universalLoss = !voided && bets.length > 0 && bets.every((b) => !b.isWinner);
   const refundish = voided || universalLoss;
 
-  const ticketOdds: TicketOddsEntry[] =
-    marketType === 'multiple_choice'
-      ? [...(optionOdds ?? [])].sort((a, b) => b.percent - a.percent).map((o) => ({ label: o.label, percent: o.percent, isWinner: o.isWinner }))
-      : oddsA && oddsB
-        ? [
-            { label: sideA.toUpperCase(), percent: oddsA.percent },
-            { label: sideB.toUpperCase(), percent: oddsB.percent },
-          ]
-        : [];
-
-  const winnerPercent = refundish
-    ? null
-    : marketType === 'multiple_choice'
-      ? (optionOdds?.find((o) => o.isWinner)?.percent ?? null)
-      : (odds?.find((o) => o.side === headline.toLowerCase())?.percent ?? null);
-
   const detailLine =
     marketType === 'over_under' && actualValue !== null ? `Actual number: ${actualValue}.` : (justification?.trim() || null);
 
-  const callers = sorted
-    .filter((b) => b.isWinner)
-    .slice(0, 3)
-    .map((b) => ({ nickname: b.nickname, amount: b.amount, payout: b.payout ?? 0 }));
+  // Reference-equality dedup (not id-based — RevealBet carries no id), safe since `sorted` is a
+  // shallow copy of the same objects `bets` holds. Guarantees the viewer's own row always shows
+  // up in "What everyone got" even when it's well outside the top payouts, without duplicating it
+  // if it would have made the cut on its own.
+  const myBet = bets.find((b) => b.nickname === myNickname) ?? null;
+  const topOthers = sorted.filter((b) => b !== myBet).slice(0, myBet ? 2 : 3);
+  const previewBets = (myBet ? [...topOthers, myBet] : topOthers).sort((a, b) => (b.payout ?? 0) - (a.payout ?? 0));
+  const pool = bets.reduce((sum, b) => sum + b.amount, 0);
+  const winnerCount = bets.filter((b) => b.isWinner).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <RevealTicket
         groupName={groupName}
         question={question}
         resolvedAtIso={resolvedAtIso}
         headline={headline}
         isVoid={voided}
-        isMultipleChoice={marketType === 'multiple_choice'}
+        refundish={refundish}
         detailLine={detailLine}
         line={marketType === 'over_under' && line != null ? formatLine(line, unit) : undefined}
-        odds={ticketOdds}
-        winnerPercent={winnerPercent}
-        callers={callers}
+        myBet={myBet}
+        pool={pool}
+        winnerCount={winnerCount}
+        totalBets={bets.length}
+        previewBets={previewBets}
+        myNickname={myNickname}
         hiddenFrom={hiddenFrom}
         groupId={groupId}
         marketId={marketId}
         reactionCounts={reactionCounts}
         myReaction={myReaction}
         reactionNicknames={reactionNicknames}
-        myNickname={myNickname}
         hasProof={hasProof}
         sealedForSubject={isSubjectOfThisMarket}
       />
+
+      <Link
+        href={`/groups/${groupId}/markets/${marketId}?tab=comments`}
+        className="flex items-center justify-between gap-3 rounded-[20px] border border-hairline bg-surface px-4 py-3.5 transition-colors hover:bg-rule"
+      >
+        <span className="flex items-center gap-2.5 text-[14.5px] font-bold text-ink">
+          <ChatIcon className="h-4 w-4 text-faint" />
+          {commentCount > 0 ? `${commentCount} comment${commentCount === 1 ? '' : 's'}` : 'No comments yet'}
+        </span>
+        <ChevronRightIcon className="h-4 w-4 shrink-0 text-faint" />
+      </Link>
 
       {/* One row, not three cards. The carried-bonus note, the no-winner breakdown, and the list
           of bets were each a fragment of the same question ("where did the money go?"), and none

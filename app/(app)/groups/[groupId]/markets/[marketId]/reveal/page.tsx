@@ -24,11 +24,9 @@ export default async function RevealPage({ params }: { params: Promise<{ groupId
     redirect(`/groups/${groupId}/markets/${marketId}`);
   }
 
-  const [{ data: bets }, { data: odds }, { data: optionOdds }, { data: options }, { data: group }, { data: subjectRows }, { data: proposal }, { data: reactionRows }] =
+  const [{ data: bets }, { data: options }, { data: group }, { data: subjectRows }, { data: proposal }, { data: reactionRows }, { count: commentCount }] =
     await Promise.all([
       supabase.from('bets').select('user_id, side, option_id, amount, payout').eq('market_id', marketId),
-      isMultipleChoice ? Promise.resolve({ data: null }) : supabase.rpc('get_closed_odds', { p_market_id: marketId }),
-      isMultipleChoice ? supabase.rpc('get_closed_odds_options', { p_market_id: marketId }) : Promise.resolve({ data: null }),
       isMultipleChoice
         ? supabase.from('market_options').select('id, market_id, label, sort_order').eq('market_id', marketId).order('sort_order')
         : Promise.resolve({ data: null }),
@@ -38,6 +36,7 @@ export default async function RevealPage({ params }: { params: Promise<{ groupId
         ? supabase.from('resolution_proposals').select('justification, photo_path').eq('market_id', marketId).maybeSingle()
         : Promise.resolve({ data: null }),
       supabase.from('market_reactions').select('user_id, emoji').eq('market_id', marketId),
+      supabase.from('market_comments').select('id', { count: 'exact', head: true }).eq('market_id', marketId).is('deleted_at', null),
     ]);
 
   const reactionCounts = new Map<string, number>();
@@ -116,13 +115,6 @@ export default async function RevealPage({ params }: { params: Promise<{ groupId
           payout: b.payout,
           isWinner: isMultipleChoice ? b.option_id === marketRow.outcome_option_id : b.side === marketRow.outcome,
         }))}
-        odds={(odds ?? []).map((o: any) => ({ side: o.side, percent: o.pool_percent }))}
-        optionOdds={(optionOdds ?? []).map((o: any) => ({
-          id: o.option_id,
-          label: o.label,
-          percent: o.pool_percent,
-          isWinner: o.option_id === marketRow.outcome_option_id,
-        }))}
         payoutBreakdown={marketRow.payout_breakdown}
         carriedBonusPool={marketRow.carried_bonus_pool}
         creatorNickname={creator?.nickname ?? undefined}
@@ -138,6 +130,7 @@ export default async function RevealPage({ params }: { params: Promise<{ groupId
         reactionNicknames={Object.fromEntries(reactionNicknames)}
         myNickname={myNickname}
         isSubjectOfThisMarket={isSubjectOfThisMarket}
+        commentCount={commentCount ?? 0}
       />
       <p className="text-center text-xs text-faint">
         {marketRow.creator_id && (
