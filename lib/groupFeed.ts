@@ -1,6 +1,5 @@
 import type { createClient } from '@/lib/supabase/server';
 import type { MarketCardData } from '@/components/markets/MarketCard';
-import { REACTIONS } from '@/lib/reactions';
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
@@ -365,7 +364,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 /**
  * One page of the group's settled (resolved/voided) markets, newest first, with the viewer's
- * own net on each and its reaction facepile.
+ * own net on each.
  *
  * Keyset paged rather than offset paged: a market resolving while someone is reading pushes
  * every later row down by one, which an OFFSET would turn into a duplicated or skipped card.
@@ -419,8 +418,7 @@ export async function getSettledMarkets(
   const marketIds = page.map((m) => m.id);
   const optionIds = ids(page.map((m) => m.outcome_option_id));
 
-  const [{ data: reactionRows }, { data: myBetRows }, { data: optionRows }] = await Promise.all([
-    supabase.from('market_reactions').select('market_id, emoji').in('market_id', marketIds),
+  const [{ data: myBetRows }, { data: optionRows }] = await Promise.all([
     // The viewer's own bets on every market on this page, so each row can show "+N won" /
     // "-N lost" instead of the bare outcome. Same shape as the reveal page's per-bet query,
     // scoped to one user across many markets instead of every user on one market.
@@ -428,17 +426,14 @@ export async function getSettledMarkets(
     optionIds.length > 0 ? supabase.from('market_options').select('id, label').in('id', optionIds) : { data: [] as { id: string; label: string }[] },
   ]);
 
-  const emojisByMarket = groupBy((reactionRows ?? []) as { market_id: string; emoji: string }[], (r) => r.market_id);
   const myBetsByMarket = groupBy((myBetRows ?? []) as BetRow[], (b) => b.market_id);
   const optionLabelById = new Map((optionRows ?? []).map((o) => [o.id, o.label]));
 
   const markets = page.map((m) => {
-    const emojis = emojisByMarket.get(m.id);
     const isMultipleChoice = m.market_type === 'multiple_choice';
     return {
       ...baseCard(m, groupId),
       outcomeLabel: isMultipleChoice && m.outcome_option_id ? (optionLabelById.get(m.outcome_option_id) ?? null) : undefined,
-      reactionGlyphs: emojis ? REACTIONS.filter((r) => emojis.some((e) => e.emoji === r.emoji)).map((r) => r.glyph) : undefined,
       myNet: myNet(m, myBetsByMarket.get(m.id)),
     };
   });

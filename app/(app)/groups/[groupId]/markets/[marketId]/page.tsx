@@ -39,7 +39,7 @@ import { STATUS_LABEL, STATUS_TONE } from '@/lib/marketStatus';
 import { formatTokens } from '@/lib/formatNumber';
 import { formatLine } from '@/lib/units';
 import type { Market, MarketOption } from '@/lib/actions/markets';
-import type { ReactionEmoji } from '@/lib/actions/reactions';
+import type { ReactionEmoji } from '@/lib/reactions';
 
 /** An unendorsed market dies at the earlier of its own close time and 24h after creation — the
  * same pair expire_stale() sweeps on, surfaced as one deadline so an endorser sees the real one. */

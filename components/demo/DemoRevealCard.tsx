@@ -5,8 +5,8 @@ import type { DemoOutcome, DemoSide } from '@/lib/demoScenario';
 /**
  * A trimmed, static clone of the real reveal ticket
  * (components/markets/RevealTicket.tsx) — same visual language, but no
- * ReactionBar/ResolutionProofButton/image-capture-and-share, since those are
- * tightly coupled to real Supabase data and orthogonal to what this demos.
+ * ResolutionProofButton/image-capture-and-share, since those are tightly
+ * coupled to real Supabase data and orthogonal to what this demos.
  */
 export function DemoRevealCard({
   question,

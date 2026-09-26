@@ -3,8 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { deleteComment, reactToComment } from '@/lib/actions/comments';
-import type { ReactionEmoji } from '@/lib/actions/reactions';
-import { REACTIONS } from '@/lib/reactions';
+import { REACTIONS, type ReactionEmoji } from '@/lib/reactions';
 import { formatTokens } from '@/lib/formatNumber';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { Mention } from '@/components/ui/Mention';

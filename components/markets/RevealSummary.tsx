@@ -3,7 +3,6 @@ import { RevealTicket } from '@/components/markets/RevealTicket';
 import { SettlementLedger } from '@/components/markets/SettlementLedger';
 import { ChatIcon, ChevronRightIcon } from '@/components/ui/icons';
 import type { PayoutBreakdown } from '@/lib/actions/markets';
-import type { ReactionEmoji } from '@/lib/actions/reactions';
 import { formatLine } from '@/lib/units';
 
 export interface RevealBet {
@@ -34,9 +33,6 @@ export function RevealSummary({
   hiddenFrom,
   groupId,
   marketId,
-  reactionCounts,
-  myReaction,
-  reactionNicknames,
   myNickname,
   hasProof,
   isSubjectOfThisMarket,
@@ -70,11 +66,7 @@ export function RevealSummary({
   hiddenFrom: string[];
   groupId: string;
   marketId: string;
-  reactionCounts: Partial<Record<ReactionEmoji, number>>;
-  myReaction: ReactionEmoji | null;
-  /** Nicknames of everyone who picked each reaction, for the breakdown popover. */
-  reactionNicknames: Partial<Record<ReactionEmoji, string[]>>;
-  /** The current viewer's own nickname, so an optimistic tap can add/remove them from the breakdown locally. */
+  /** The current viewer's own nickname, so their own row can be found/highlighted in "What everyone got". */
   myNickname: string;
   /** Whether the winning resolution proposal has a proof photo attached. */
   hasProof: boolean;
@@ -126,9 +118,6 @@ export function RevealSummary({
         hiddenFrom={hiddenFrom}
         groupId={groupId}
         marketId={marketId}
-        reactionCounts={reactionCounts}
-        myReaction={myReaction}
-        reactionNicknames={reactionNicknames}
         hasProof={hasProof}
         sealedForSubject={isSubjectOfThisMarket}
       />

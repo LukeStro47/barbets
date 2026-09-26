@@ -62,8 +62,6 @@ export interface MarketCardData {
   groupName?: string;
   /** True when the viewer has something blocking on them specifically for this market (currently: an open clarification request they created the market for) — renders a small exclamation badge. */
   needsAttention?: boolean;
-  /** Distinct reaction glyphs present on a resolved/voided market, in REACTIONS canonical order — renders a compact view-only facepile. Mutually exclusive with needsAttention in practice (only open markets can need attention; only resolved/voided ones can have reactions), so they share the same badge slot. */
-  reactionGlyphs?: string[];
   /** resolved/voided only: the viewer's own total payout minus total stake across every bet they placed on this market (summed, in case of a hedge — same convention the "Resolved" push copy uses). Undefined when the viewer never bet on it; always 0 for a void (refund = stake back), so it never renders a won/lost suffix. */
   myNet?: number;
   /** open only: every bet the viewer has placed on this market so far (more than one entry means a hedge across sides/options). Undefined/empty when they haven't bet on it yet. */
@@ -79,19 +77,6 @@ function AttentionBadge() {
       title="Needs clarification"
     >
       !
-    </span>
-  );
-}
-
-/** Compact, view-only reaction facepile for market list rows/cards — same overlapping-glyph treatment as the interactive ReactionBar trigger, just smaller and non-clickable. */
-function ReactionFacepile({ glyphs }: { glyphs: string[] }) {
-  return (
-    <span className="flex shrink-0 items-center">
-      {glyphs.map((glyph, i) => (
-        <span key={i} className="-ml-1.5 flex h-5 w-5 items-center justify-center text-xs first:ml-0" style={{ zIndex: glyphs.length - i }}>
-          {glyph}
-        </span>
-      ))}
     </span>
   );
 }
@@ -146,7 +131,6 @@ export function MarketCard({ market }: { market: MarketCardData }) {
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             {market.needsAttention && <AttentionBadge />}
-            {market.reactionGlyphs && market.reactionGlyphs.length > 0 && <ReactionFacepile glyphs={market.reactionGlyphs} />}
             <Badge tone={STATUS_TONE[market.status]}>{STATUS_LABEL[market.status]}</Badge>
           </div>
         </div>
@@ -339,7 +323,6 @@ function MarketRow({ market, isLast }: { market: MarketCardData; isLast: boolean
         <MarketRowMeta market={market} />
       </span>
       {market.needsAttention && <AttentionBadge />}
-      {market.reactionGlyphs && market.reactionGlyphs.length > 0 && <ReactionFacepile glyphs={market.reactionGlyphs} />}
       {showBetPill ? (
         singleBet ? (
           <span className="max-w-[96px] shrink-0 truncate rounded-full bg-signal-tint px-3 py-[5px] text-xs font-bold text-signal-deep">

@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { runRpc, type ActionResult } from '@/lib/errors';
-import type { ReactionEmoji } from '@/lib/actions/reactions';
+import type { ReactionEmoji } from '@/lib/reactions';
 
 export interface MarketComment {
   id: string;

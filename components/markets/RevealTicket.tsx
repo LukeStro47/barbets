@@ -7,12 +7,10 @@ import { SHARE_BUTTONS_ENABLED } from '@/lib/flags';
 import { logShareClick } from '@/lib/actions/shareClicks';
 import { formatTokens, formatSignedTokens } from '@/lib/formatNumber';
 import { OptionLabel } from '@/components/markets/OptionLabel';
-import { ReactionBar } from '@/components/markets/ReactionBar';
 import { ResolutionProofButton } from '@/components/markets/ResolutionProofButton';
 import { SealedTicketCover } from '@/components/markets/SealedTicketCover';
 import { Button } from '@/components/ui/Button';
 import { CheckCircleIcon, RefreshIcon, DownloadIcon, ShareIcon } from '@/components/ui/icons';
-import type { ReactionEmoji } from '@/lib/actions/reactions';
 import type { RevealBet } from '@/components/markets/RevealSummary';
 
 export interface RevealTicketProps {
@@ -40,9 +38,6 @@ export interface RevealTicketProps {
   hiddenFrom: string[];
   groupId: string;
   marketId: string;
-  reactionCounts: Partial<Record<ReactionEmoji, number>>;
-  myReaction: ReactionEmoji | null;
-  reactionNicknames: Partial<Record<ReactionEmoji, string[]>>;
   /** Whether the winning resolution proposal has a proof photo attached — only known ahead of time by the caller (server-fetched), since the photo itself is never fetched until someone taps the button. */
   hasProof: boolean;
   /** True when the viewer is a hidden subject of this market — the first time they open it after
@@ -51,11 +46,11 @@ export interface RevealTicketProps {
   sealedForSubject?: boolean;
 }
 
-/** The reveal screen's result card, stat card, "what everyone got" preview, and reactions row —
- * plus the share/proof actions bound to it. One component because the ref they both need has to
- * live in the same tree. Everything here sits behind the sealed subject's tear-open cover, same
- * footprint as before; the full bet-by-bet ledger (SettlementLedger) and the comment count stay
- * outside it, in RevealSummary, matching the precedent that ledger detail was never itself gated. */
+/** The reveal screen's result card, stat card, and "what everyone got" preview — plus the
+ * share/proof actions bound to it. One component because the ref they both need has to live in
+ * the same tree. Everything here sits behind the sealed subject's tear-open cover, same footprint
+ * as before; the full bet-by-bet ledger (SettlementLedger) and the comment count stay outside it,
+ * in RevealSummary, matching the precedent that ledger detail was never itself gated. */
 export function RevealTicket({
   groupName,
   question,
@@ -74,9 +69,6 @@ export function RevealTicket({
   hiddenFrom,
   groupId,
   marketId,
-  reactionCounts,
-  myReaction,
-  reactionNicknames,
   hasProof,
   sealedForSubject,
 }: RevealTicketProps) {
@@ -281,21 +273,6 @@ export function RevealTicket({
               only content inside `ticketRef` (and so the only thing in a shared/saved capture) that
               says whose result this is once it's outside the app. */}
           <p className="pt-1 text-center text-[10.5px] font-bold tracking-[0.08em] text-faint uppercase">Barbets · mybarbets.com</p>
-        </div>
-
-        {/* Outside `ticketRef` on purpose, same as before this rebuild -- reactions are live and
-            interactive, not part of the result a share/save capture should freeze. Still inside the
-            sealed subject's covered footprint, since the cover positions itself against this whole
-            wrapper, not just the ref'd content. */}
-        <div className={tearing ? 'animate-mystery-row' : undefined} style={tearing ? { animationDelay: `${previewBets.length * 90}ms` } : undefined}>
-          <ReactionBar
-            groupId={groupId}
-            marketId={marketId}
-            counts={reactionCounts}
-            myReaction={myReaction}
-            nicknames={reactionNicknames}
-            myNickname={myNickname}
-          />
         </div>
 
         {coverVisible && (
