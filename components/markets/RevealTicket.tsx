@@ -277,16 +277,25 @@ export function RevealTicket({
             )}
           </div>
 
-          <div className={tearing ? 'animate-mystery-row' : undefined} style={tearing ? { animationDelay: `${previewBets.length * 90}ms` } : undefined}>
-            <ReactionBar
-              groupId={groupId}
-              marketId={marketId}
-              counts={reactionCounts}
-              myReaction={myReaction}
-              nicknames={reactionNicknames}
-              myNickname={myNickname}
-            />
-          </div>
+          {/* Small branding line, mainly for when SHARE_BUTTONS_ENABLED is back on -- this is the
+              only content inside `ticketRef` (and so the only thing in a shared/saved capture) that
+              says whose result this is once it's outside the app. */}
+          <p className="pt-1 text-center text-[10.5px] font-bold tracking-[0.08em] text-faint uppercase">Barbets · mybarbets.com</p>
+        </div>
+
+        {/* Outside `ticketRef` on purpose, same as before this rebuild -- reactions are live and
+            interactive, not part of the result a share/save capture should freeze. Still inside the
+            sealed subject's covered footprint, since the cover positions itself against this whole
+            wrapper, not just the ref'd content. */}
+        <div className={tearing ? 'animate-mystery-row' : undefined} style={tearing ? { animationDelay: `${previewBets.length * 90}ms` } : undefined}>
+          <ReactionBar
+            groupId={groupId}
+            marketId={marketId}
+            counts={reactionCounts}
+            myReaction={myReaction}
+            nicknames={reactionNicknames}
+            myNickname={myNickname}
+          />
         </div>
 
         {coverVisible && (
