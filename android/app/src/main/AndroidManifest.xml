@@ -54,6 +54,8 @@
              badge), generated per-density into drawable-*dpi/ic_stat_notify.png. -->
         <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat_notify" />
         <meta-data android:name="com.google.firebase.messaging.default_notification_color" android:resource="@color/notification_icon_color" />
+        <!-- Pre-downloads the Google code scanner module used by 5f's "Scan their QR" (@capacitor-mlkit/barcode-scanning), so the first scan does not wait on it. -->
+        <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode_ui" />
     </application>
 
     <!-- Permissions -->

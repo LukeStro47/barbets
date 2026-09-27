@@ -252,7 +252,37 @@ export function BetslipBar({
     </>
   );
 
-  const errorCard = error && (
+  // 5p's "shut while you were deciding": place_bet refused because betting had just closed. Not
+  // a failure to retry, so it gets its own neutral card and a way to the closed market instead.
+  const closedWhileDeciding = !!error && /betting is not open/i.test(error);
+  const closedAgo = (() => {
+    const s = Math.floor((Date.now() - new Date(market.closes_at).getTime()) / 1000);
+    if (s < 0) return 'Betting just closed';
+    if (s < 60) return `Betting closed ${s} ${s === 1 ? 'second' : 'seconds'} ago`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `Betting closed ${m} ${m === 1 ? 'minute' : 'minutes'} ago`;
+    return 'Betting has closed';
+  })();
+
+  const errorCard = closedWhileDeciding ? (
+    <div className="mb-3 rounded-2xl border border-hairline bg-surface px-[15px] py-3.5">
+      <p className="text-[13.5px] font-bold text-ink">{closedAgo}</p>
+      <p className="mt-1.5 text-[12.5px] leading-[1.5] text-muted text-pretty">
+        The pool is set and the odds are up. {hasExisting ? 'Your stake stands as it was.' : "You're not in this one."}
+      </p>
+      <button
+        type="button"
+        onClick={() => {
+          setError(null);
+          setStakeSheetOpen(false);
+          router.refresh();
+        }}
+        className="mt-3 block w-full rounded-[11px] bg-tile py-2.5 text-center text-[13px] font-bold text-ink"
+      >
+        See where it landed
+      </button>
+    </div>
+  ) : error && (
     // 5p's "stake didn't go through": the first line says what happened to the credits.
     // place_bet commits the whole transaction or none of it, so "nothing moved" is always true.
     <div className="mb-3 rounded-2xl border border-alert-line bg-alert-bg px-[15px] py-3.5">

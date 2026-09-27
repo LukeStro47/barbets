@@ -2,7 +2,7 @@
 import type { PostgrestError } from '@supabase/supabase-js';
 import { createClient, createAnonClientWithVisitorIp } from '@/lib/supabase/server';
 import { friendlyMessage, toActionError } from '@/lib/errors';
-import { JoinFlow } from '@/components/groups/JoinFlow';
+import { JoinFlow, type InviteFace } from '@/components/groups/JoinFlow';
 import { SignedOutInvitePreview } from '@/components/groups/SignedOutInvitePreview';
 import { InvalidInviteModal } from '@/components/groups/InvalidInviteModal';
 import { normalizeInviteCode } from '@/lib/inviteCode';
@@ -40,7 +40,7 @@ export default async function JoinPage({
     // below for why zero rows beats an error for a guessable, low-stakes lookup).
     const anonSupabase = await createAnonClientWithVisitorIp();
     const { data: preview } = (await anonSupabase.rpc('get_invite_code_preview', { p_invite_code: code }).maybeSingle()) as {
-      data: { group_name: string; avatar_key: string | null; member_count: number } | null;
+      data: { group_name: string; avatar_key: string | null; member_count: number; created_at?: string | null } | null;
     };
     if (preview) {
       return (
@@ -51,6 +51,7 @@ export default async function JoinPage({
             groupName={preview.group_name}
             groupAvatarKey={preview.avatar_key}
             memberCount={preview.member_count}
+            createdAt={preview.created_at ?? null}
           />
         </main>
       );
@@ -94,12 +95,33 @@ export default async function JoinPage({
 
   // 5d's "Pick a face" step edits the same account-level avatar AvatarPicker already owns
   // (see components/groups/JoinFlow.tsx's own note on why this stayed account-level, not
-  // per-group) — just surfaced here instead of only being reachable later on /profile/account.
-  const { data: profile } = await supabase.from('users').select('avatar_preset_key, avatar_updated_at').eq('id', user.id).single();
+  // per-group). 5e's counts and faces come from get_invite_details, which never returns market
+  // content (see its migration).
+  const [{ data: profile }, { data: detailsRow }] = await Promise.all([
+    supabase.from('users').select('avatar_preset_key, avatar_updated_at').eq('id', user.id).single(),
+    supabase.rpc('get_invite_details', { p_invite_code: code }).maybeSingle() as unknown as Promise<{
+      data: {
+        member_count: number;
+        open_count: number;
+        settled_count: number;
+        created_at: string;
+        opening_balance: number | null;
+        resolution_window_hours: number;
+        faces: InviteFace[];
+      } | null;
+    }>,
+  ]);
+  const details = {
+    memberCount: detailsRow?.member_count ?? 0,
+    openCount: detailsRow?.open_count ?? 0,
+    settledCount: detailsRow?.settled_count ?? 0,
+    createdAt: detailsRow?.created_at ?? new Date().toISOString(),
+    openingBalance: detailsRow?.opening_balance ?? null,
+    resolutionWindowHours: Number(detailsRow?.resolution_window_hours ?? 8),
+    faces: detailsRow?.faces ?? [],
+  };
 
-  // No padding or centering here: JoinFlow's two steps are laid out differently (the confirm
-  // step centers on the group, the nickname step is a top-aligned form screen), so each owns
-  // its own gutters and safe-area inset.
+  // No padding here: each of JoinFlow's screens owns its own gutters and safe-area inset.
   return (
     <main className="flex min-h-dvh flex-col bg-canvas">
       <JoinFlow
@@ -108,6 +130,7 @@ export default async function JoinPage({
         groupName={group.name}
         groupAvatarKey={group.avatar_key}
         blockedReason={blockedReason}
+        details={details}
         userId={user.id}
         avatarPresetKey={profile?.avatar_preset_key ?? null}
         avatarUpdatedAt={profile?.avatar_updated_at ?? null}

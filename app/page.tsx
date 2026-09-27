@@ -1,27 +1,13 @@
-﻿import Link from 'next/link';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { StackedLogo } from '@/components/ui/StackedLogo';
-import { Button } from '@/components/ui/Button';
-import { InfoIcon } from '@/components/ui/icons';
+import { Wordmark } from '@/components/ui/BrandMark';
 
 /**
- * First touch: pick between making an account, signing in, and redeeming an invite code.
- * Deliberately a splash rather than a marketing page — most arrivals are on a friend's invite
- * link and already know what this is, so the screen's whole job is to route them, not to sell.
- *
- * Button hierarchy matches 5a2 exactly (Create an account / Log in, then "Got a group code?" as
- * a plain tertiary link) even though most real arrivals are actually on an invite link, not a
- * cold signup — that was the reasoning behind the previous version's hierarchy, which put the
- * invite-code path on equal footing with signup and demoted sign-in to a text link. Matching the
- * design's own hierarchy here on purpose, since a cold link (`/join/[code]`) already routes a
- * signed-out invitee through account creation directly without ever landing on this screen at
- * all — this splash is mainly for the "open the app cold" case, where create/log-in genuinely
- * are the two real choices.
- *
- * "How it works" moved out of the button stack and into the corner pill: as a third full-width
- * button it competed with the two real actions for the same glance, and it's the one thing here
- * nobody needs in order to proceed.
+ * 5a2: the signed-out front door. The wordmark, the pitch, a sample market drawn exactly like a
+ * real one (an illustration, not live data — nobody signed out may see a real group's markets),
+ * the two rules that make barbets different, then Create an account / Log in / Got a group code?
+ * A cold invite link never lands here (/join/[code] has its own preview, 5o).
  */
 export default async function LandingPage() {
   const supabase = await createClient();
@@ -31,46 +17,65 @@ export default async function LandingPage() {
   if (user) redirect('/groups');
 
   return (
-    <main className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-canvas px-6 py-11 pt-[calc(env(safe-area-inset-top)+2.75rem)] text-center">
-      <div
-        aria-hidden
-        className="animate-splash-glow pointer-events-none absolute top-[120px] left-1/2 -ml-[210px] h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,rgba(45,85,245,0.35)_0%,rgba(45,85,245,0)_68%)]"
-      />
+    <main className="mx-auto min-h-dvh max-w-[430px] bg-canvas px-[22px] pt-[calc(env(safe-area-inset-top)+58px)] pb-[200px]">
+      <Wordmark size={22} />
 
-      <Link
-        href="/how-it-works"
-        className="absolute top-[calc(env(safe-area-inset-top)+1.5rem)] right-5 inline-flex items-center gap-1.5 rounded-full border border-hairline bg-surface py-2 pr-3.5 pl-3 text-[13px] font-semibold whitespace-nowrap text-muted"
-      >
-        <InfoIcon className="h-[15px] w-[15px] text-signal-deep" />
-        How it works
-      </Link>
+      <h1 className="mt-[26px] text-[34px] leading-[1.08] font-extrabold tracking-[-0.032em] text-ink text-pretty">Settle it properly.</h1>
+      <p className="mt-3 text-[15px] leading-[1.5] text-muted text-pretty">
+        Your group, your arguments, on the record. Play credits. There is no cash in barbets and never will be.
+      </p>
 
-      <div className="animate-splash-rise relative flex flex-col items-center">
-        <StackedLogo height={190} />
-        <h1 className="mt-[26px] max-w-[320px] font-display text-[26px]/[30px] font-extrabold tracking-[-0.02em] text-pretty text-ink">
-          Bet on your friends, and everything else.
-        </h1>
-        <p className="mt-3.5 max-w-[290px] text-base/[23px] text-muted">
-          Private prediction markets about anything. Play money, real odds.
-        </p>
+      <div aria-hidden className="mt-[26px] overflow-hidden rounded-[22px] border border-hairline bg-surface shadow-[0_1px_2px_rgba(12,16,24,0.04)]">
+        <div className="flex items-center gap-[9px] px-4 pt-[13px]">
+          <img src="/avatars/beer.png" alt="" className="h-5 w-5 rounded-full object-cover" />
+          <span className="text-[11.5px] font-bold text-faint">Wednesday Wagers</span>
+          <span className="ml-auto font-mono text-[11.5px] font-semibold text-signal">2h 15m</span>
+        </div>
+        <p className="px-4 pt-[9px] pb-[13px] text-[18px] leading-[1.28] font-bold tracking-[-0.015em] text-ink text-pretty">Will Jake finish the marathon?</p>
+        <div className="flex gap-2 px-4 pb-3.5">
+          <span className="flex-1 rounded-xl bg-ink py-[11px] text-center text-[14px] font-bold text-surface">Yes</span>
+          <span className="flex-1 rounded-xl border border-hairline bg-tile py-[11px] text-center text-[14px] font-bold text-muted">No</span>
+        </div>
+        <div className="flex items-center gap-[9px] border-t border-rule px-4 py-[11px] font-mono text-[12px] text-faint">
+          <span className="font-semibold text-ink">1,240</span>
+          <span>pooled</span>
+          <span className="h-[3px] w-[3px] rounded-full bg-dash" />
+          <span className="font-semibold text-ink">7</span>
+          <span>in</span>
+        </div>
       </div>
 
-      <div className="relative mt-11 flex w-full max-w-[330px] flex-col gap-3">
-        <Link href="/login?mode=signup" className="w-full">
-          <Button variant="accent" size="xl" className="w-full">
+      <div className="mt-5 flex flex-col gap-[11px]">
+        {[
+          ['No odds while it’s open.', 'The pool sets the price when betting shuts.'],
+          ['You call the results', 'between you, no house, no referee.'],
+        ].map(([lead, rest]) => (
+          <div key={lead} className="flex gap-[11px]">
+            <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[7px] bg-signal-tint text-signal">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                <path d="M2 6.3 4.6 9 10 3.2" />
+              </svg>
+            </span>
+            <span className="min-w-0 flex-1 text-[13px] leading-[1.45] text-muted text-pretty">
+              <span className="font-bold text-ink">{lead}</span> {rest}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-hairline bg-surface/[0.96] px-[18px] pt-3 pb-[max(28px,env(safe-area-inset-bottom))] backdrop-blur-[8px]">
+        <div className="mx-auto flex max-w-[430px] flex-col gap-[9px]">
+          <Link href="/login?mode=signup" className="block rounded-[14px] bg-signal py-[15px] text-center text-[15px] font-bold text-surface shadow-[0_10px_20px_-10px_rgba(45,85,245,0.7)]">
             Create an account
-          </Button>
-        </Link>
-        <Link href="/login" className="w-full">
-          <Button variant="outline" size="xl" className="w-full">
+          </Link>
+          <Link href="/login" className="block rounded-[14px] border border-hairline bg-surface py-[14px] text-center text-[15px] font-bold text-ink">
             Log in
-          </Button>
-        </Link>
+          </Link>
+          <Link href="/join" className="pt-0.5 text-center text-[13px] font-semibold text-faint">
+            Got a group code?
+          </Link>
+        </div>
       </div>
-
-      <Link href="/join" className="relative mt-[18px] text-base font-semibold text-muted">
-        Got a group code?
-      </Link>
     </main>
   );
 }
