@@ -38,7 +38,7 @@ export function MarketOverflowMenu({ groupId, marketId, isOwner, isCreator, owne
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Market options"
-        className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-rule text-muted transition-colors hover:bg-hairline"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[11px] border border-hairline bg-tile text-muted transition-colors hover:bg-rule"
       >
         <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
           <circle cx="2" cy="7" r="1.5" />

@@ -35,6 +35,16 @@ export async function revealBet(groupId: string, marketId: string, body: string)
   return result;
 }
 
+/** 4e's "Reveal" under a comment you've already posted: attaches your bet to that comment rather
+ *  than posting a new one (reveal_bet_on_comment, 20260927100000). */
+export async function revealBetOnComment(groupId: string, marketId: string, commentId: string): Promise<ActionResult<MarketComment>> {
+  const supabase = await createClient();
+  const result = await runRpc<MarketComment>(await supabase.rpc('reveal_bet_on_comment', { p_comment_id: commentId }));
+  if (result.error) return result;
+  revalidatePath(`/groups/${groupId}/markets/${marketId}`);
+  return result;
+}
+
 export async function deleteComment(groupId: string, marketId: string, commentId: string): Promise<ActionResult<null>> {
   const supabase = await createClient();
   const result = await runRpc<null>(await supabase.rpc('delete_market_comment', { p_comment_id: commentId }));

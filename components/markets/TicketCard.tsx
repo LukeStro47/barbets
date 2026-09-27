@@ -1,12 +1,11 @@
-﻿import type { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
 /**
- * The outlined "ticket" shell: a heavier espresso outline and a tinted header band, one clear
- * step above the plain `Card` used for everything informational. Reserved for the single card
- * on a market screen that answers "what am I actually deciding here" — your position once you
- * have one, otherwise the line / the options / what you're vouching for / the proposed call.
- * Exactly one of these is on screen at a time, which is what makes the outline mean something.
+ * The "ticket" shell, drawn the way 4h draws its "Your bet" card: a 1.5px edge outline, a wash
+ * header band with a 13/800 title on the left and a meta chip or line on the right, and a soft
+ * lift. One step above the plain card, reserved for the single card on a market screen that
+ * answers "what am I actually deciding here" — the call, what you're vouching for.
  */
 export function TicketCard({
   label,
@@ -16,32 +15,21 @@ export function TicketCard({
   className,
   bodyClassName,
 }: {
-  /** Left side of the header band, rendered uppercase. */
   label: string;
-  /** Right side of the header band — the market kind, the option count, the proposer. */
   meta?: ReactNode;
   children: ReactNode;
-  /** A quiet full-bleed rule under the body ("2 of 9 bets on this market"). Rendered outside the
-   * body's padding so its top border spans the whole card rather than insetting. */
   footer?: ReactNode;
   className?: string;
   bodyClassName?: string;
 }) {
   return (
-    <div
-      className={cn(
-        'overflow-hidden rounded-[22px] border-[1.5px] border-ink bg-surface',
-        className
-      )}
-    >
-      <div className="flex items-center justify-between gap-3 bg-rule px-[18px] py-[11px]">
-        <p className="text-xs font-extrabold tracking-[0.06em] text-ink uppercase">{label}</p>
-        {meta && <p className="shrink-0 text-xs font-semibold text-muted">{meta}</p>}
+    <div className={cn('overflow-hidden rounded-[22px] border-[1.5px] border-edge bg-surface shadow-[0_10px_26px_-18px_rgba(12,16,24,0.5)]', className)}>
+      <div className="flex items-center justify-between gap-2.5 border-b border-rule bg-wash px-4 py-3">
+        <p className="text-[13px] font-extrabold tracking-[-0.01em] text-ink">{label}</p>
+        {meta && <div className="shrink-0 text-[12px] font-semibold text-muted">{meta}</div>}
       </div>
-      <div className={cn('px-[18px] py-4', bodyClassName)}>{children}</div>
-      {footer && (
-        <div className="border-t border-rule px-[18px] py-2.5 text-xs font-semibold text-faint">{footer}</div>
-      )}
+      <div className={cn('px-[15px] pt-[13px] pb-[15px]', bodyClassName)}>{children}</div>
+      {footer && <div className="border-t border-rule px-4 py-2.5 text-[12px] font-semibold text-faint">{footer}</div>}
     </div>
   );
 }

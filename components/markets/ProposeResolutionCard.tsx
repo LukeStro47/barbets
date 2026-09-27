@@ -14,6 +14,7 @@ import { OptionLabel } from '@/components/markets/OptionLabel';
 import { CameraIcon, CheckIcon, ImageIcon } from '@/components/ui/icons';
 import { formatLine } from '@/lib/units';
 import { cn } from '@/lib/cn';
+import { StickyFooter, FooterButton } from '@/components/ui/Screen';
 import type { Market, MarketOption } from '@/lib/actions/markets';
 
 const inputClasses =
@@ -38,6 +39,7 @@ export function ProposeResolutionCard({
   options,
   resolutionWindowHours,
   canResolve = true,
+  trigger = 'inline',
 }: {
   groupId: string;
   market: Market;
@@ -47,6 +49,10 @@ export function ProposeResolutionCard({
       (propose_resolution()'s is_public branch) is what's actually load-bearing; this just
       keeps a regular member from seeing a button that would only come back as an error. */
   canResolve?: boolean;
+  /** 'inline' — the outlined "Propose the result early" button inside 4d/4h's What-happens-next
+   *  card. 'footer' — 4n's signal "Call the result" in a sticky footer, the one thing left to do
+   *  once betting has closed. */
+  trigger?: 'inline' | 'footer';
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -200,13 +206,19 @@ export function ProposeResolutionCard({
     <>
       {/* "early" only while betting is still open, where proposing is what closes it. On an
           already-closed market there is nothing early about it — it is just the next step. */}
-      <button
-        type="button"
-        onClick={openModal}
-        className="w-full rounded-[12px] border-[1.5px] border-dash bg-surface py-[11px] text-[13px] font-bold text-ink"
-      >
-        {market.status === 'open' ? 'Propose result early' : 'Propose the outcome'}
-      </button>
+      {trigger === 'footer' ? (
+        <StickyFooter>
+          <FooterButton onClick={openModal}>Call the result</FooterButton>
+        </StickyFooter>
+      ) : (
+        <button
+          type="button"
+          onClick={openModal}
+          className="w-full rounded-xl border-[1.5px] border-edge bg-surface py-[11px] text-[13px] font-bold text-ink"
+        >
+          {market.status === 'open' ? 'Propose the result early' : 'Call the result'}
+        </button>
+      )}
 
       {modalOpen && (
         <Modal onClose={closeModal} padded={false} panelClassName="max-h-[85dvh] overflow-x-hidden overflow-y-auto">

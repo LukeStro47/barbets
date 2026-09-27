@@ -3,16 +3,10 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { sponsorMarket } from '@/lib/actions/markets';
+import { StickyFooter } from '@/components/ui/Screen';
 
-/**
- * The endorsement screen's pinned action bar. Endorsing is the one thing this screen exists to
- * ask for, so it gets the accent colour and the full width of the row; "Not now" shrinks to fit
- * and stays a ghost, because walking away is a legitimate answer but not the one being proposed.
- *
- * Pinned above BottomNav rather than sitting in a card, mirroring where the bet slip lives on an
- * open market — the committing action is always in the same place on a market screen, whatever
- * stage it is at.
- */
+/** The endorsement screen's pinned action: "Endorse it" gets the accent and the width; "Not now"
+ *  stays outlined, because walking away is a legitimate answer but not the one being proposed. */
 export function EndorseActionBar({ groupId, marketId }: { groupId: string; marketId: string }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -40,43 +34,30 @@ export function EndorseActionBar({ groupId, marketId }: { groupId: string; marke
     });
   }
 
-  const bar = (
-    <div className="mx-auto max-w-lg space-y-2.5">
-      {error && <p className="text-sm font-semibold text-alert-bg">{error}</p>}
-      {notice && <p className="text-sm font-semibold text-surface/70">{notice}</p>}
-      <div className="flex gap-2.5">
+  // The Ledger sticky footer (README pattern 4): one committing action, full width, with the
+  // walk-away option as a quiet outlined button beside it. No mockup draws this screen, so it
+  // uses the same footer every other market state commits from.
+  return (
+    <StickyFooter>
+      {error && <p className="text-[12px] font-semibold text-alert">{error}</p>}
+      {notice && <p className="text-[12px] font-semibold text-muted">{notice}</p>}
+      <div className="flex gap-[9px]">
         <button
           type="button"
           disabled={isPending}
           onClick={runSponsor}
-          className="flex-1 rounded-full bg-signal px-5 py-[13px] text-[15px] font-extrabold whitespace-nowrap text-ink transition-colors hover:bg-signal-deep disabled:bg-signal/30 disabled:text-ink/40"
+          className="flex-1 rounded-[14px] bg-signal py-[15px] text-[15px] font-bold text-surface shadow-[0_10px_20px_-10px_rgba(45,85,245,0.7)] transition-colors hover:bg-signal-deep disabled:bg-disabled-bg disabled:text-disabled-ink disabled:shadow-none"
         >
           Endorse it
         </button>
         <button
           type="button"
           onClick={() => router.push(`/groups/${groupId}`)}
-          className="shrink-0 rounded-full border border-white/18 bg-white/6 px-[18px] py-[13px] text-[15px] font-semibold whitespace-nowrap text-surface/75 transition-colors hover:bg-white/12"
+          className="shrink-0 rounded-[14px] border border-hairline bg-surface px-5 py-[14px] text-[15px] font-bold text-ink"
         >
           Not now
         </button>
       </div>
-    </div>
-  );
-
-  return (
-    <>
-      {/* Invisible in-flow twin reserving the pinned bar's real height, same trick BetslipBar
-          uses — see the long note there for why a guessed padding value drifts. */}
-      <div aria-hidden="true" className="invisible !m-0 px-5 pt-3.5 pb-4">
-        {bar}
-      </div>
-
-      <div aria-hidden="true" className="fixed inset-x-0 bottom-[var(--bottomnav-height)] z-20 !m-0 bg-ink pb-5" />
-
-      <div className="fixed inset-x-0 bottom-[var(--bottomnav-height)] z-30 !m-0 rounded-t-[20px] bg-ink px-5 pt-3.5 pb-4 shadow-[0_-1px_2px_rgba(12,16,24,0.03)]">
-        {bar}
-      </div>
-    </>
+    </StickyFooter>
   );
 }

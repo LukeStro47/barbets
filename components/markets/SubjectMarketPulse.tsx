@@ -1,8 +1,8 @@
-import { PageHeader } from '@/components/ui/PageHeader';
-import { Badge } from '@/components/ui/Badge';
+import { ScreenHeader } from '@/components/ui/Screen';
+import { StatusChip } from '@/components/markets/MarketScreen';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { SealedTicketCover } from '@/components/markets/SealedTicketCover';
-import { STATUS_LABEL, STATUS_TONE, type MarketStatus } from '@/lib/marketStatus';
+import type { MarketStatus } from '@/lib/marketStatus';
 import { formatTokens } from '@/lib/formatNumber';
 
 export interface SubjectMarketPulseData {
@@ -35,15 +35,17 @@ export function SubjectMarketPulse({
   if (pulse.status === 'open') stats.push({ label: 'Closes', value: <CountdownTimer target={pulse.closes_at} prefix="" /> });
 
   return (
-    <main className="mx-auto max-w-lg space-y-6 px-5 py-8">
-      <PageHeader
-        title="A market about you"
-        backHref={`/groups/${groupId}`}
-        backLabel={groupName}
-        backAction={<Badge tone={STATUS_TONE[pulse.status]}>{STATUS_LABEL[pulse.status]}</Badge>}
+    <>
+      <ScreenHeader
+        title={groupName}
+        tone="context"
+        href={`/groups/${groupId}`}
+        right={<StatusChip label={pulse.status === 'open' ? 'Open' : 'Closed'} tone={pulse.status === 'open' ? 'quiet' : 'ink'} />}
       />
-
-      <SealedTicketCover groupLabel={`${groupName} · About you`} stats={stats} mode="static" />
-    </main>
+      <main className="mx-auto flex max-w-[430px] flex-col gap-[13px] px-[18px] pt-[13px] pb-10">
+        <h1 className="text-[22px] leading-[1.2] font-extrabold tracking-[-0.022em] text-ink">A market about you</h1>
+        <SealedTicketCover groupLabel={`${groupName} · About you`} stats={stats} mode="static" />
+      </main>
+    </>
   );
 }

@@ -2,32 +2,34 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { postComment, revealBet } from '@/lib/actions/comments';
-import { formatTokens } from '@/lib/formatNumber';
+import { postComment } from '@/lib/actions/comments';
+import { UserAvatar } from '@/components/ui/UserAvatar';
+import { cn } from '@/lib/cn';
 
 const MAX_LENGTH = 2000;
 
-export function CommentComposer({
-  groupId,
-  marketId,
-  /** Present only when the viewer has a bet on this market they haven't already revealed here. */
-  revealable,
-}: {
-  groupId: string;
-  marketId: string;
-  revealable?: { label: string; amount: number } | null;
-}) {
+export interface ComposerUser {
+  userId: string;
+  nickname: string;
+  avatarUpdatedAt: string | null;
+  avatarPresetKey: string | null;
+}
+
+/** 4e's composer: pinned to the bottom edge, your avatar, a pill field, a 36px send tile that
+ *  lights up signal once there's something to send. */
+export function CommentComposer({ groupId, marketId, me }: { groupId: string; marketId: string; me: ComposerUser }) {
   const router = useRouter();
   const [body, setBody] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const ready = body.trim().length > 0 && !isPending;
 
-  function submit(action: 'comment' | 'reveal') {
+  function submit() {
     const trimmed = body.trim();
     if (!trimmed) return;
     setError(null);
     startTransition(async () => {
-      const result = action === 'reveal' ? await revealBet(groupId, marketId, trimmed) : await postComment(groupId, marketId, trimmed);
+      const result = await postComment(groupId, marketId, trimmed);
       if (result.error) {
         setError(result.error);
         return;
@@ -38,39 +40,42 @@ export function CommentComposer({
   }
 
   return (
-    <div className="flex flex-col gap-2 border-t border-hairline pt-4">
-      <textarea
-        value={body}
-        onChange={(e) => setBody(e.target.value.slice(0, MAX_LENGTH))}
-        placeholder="Add to the banter..."
-        rows={2}
-        className="w-full resize-none rounded-[14px] border border-hairline bg-surface px-3.5 py-3 text-[13.5px] text-ink placeholder:text-faint focus:border-signal focus:outline-none"
-      />
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-mono text-[11px] text-faint">{body.length}/{MAX_LENGTH}</span>
-        <div className="flex items-center gap-2">
-          {revealable && (
-            <button
-              type="button"
-              disabled={isPending || !body.trim()}
-              onClick={() => submit('reveal')}
-              className="rounded-[14px] border border-signal px-3.5 py-2 text-[12.5px] font-bold text-signal-deep disabled:opacity-40"
-              title={`Post this with your bet attached: ${formatTokens(revealable.amount)} on ${revealable.label}`}
-            >
-              Post + reveal my bet
-            </button>
-          )}
+    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-hairline bg-surface px-4 pt-3 pb-[max(28px,env(safe-area-inset-bottom))]">
+      <div className="mx-auto max-w-[430px]">
+        {error && <p className="mb-2 text-[12px] font-semibold text-alert">{error}</p>}
+        <form
+          className="flex items-center gap-2.5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submit();
+          }}
+        >
+          <UserAvatar
+            userId={me.userId}
+            nickname={me.nickname}
+            avatarUpdatedAt={me.avatarUpdatedAt}
+            avatarPresetKey={me.avatarPresetKey}
+            className="h-8 w-8 text-[11px]"
+            fallbackClassName="bg-tile text-muted"
+          />
+          <input
+            value={body}
+            onChange={(e) => setBody(e.target.value.slice(0, MAX_LENGTH))}
+            placeholder="Add to the banter…"
+            className="min-w-0 flex-1 rounded-full border border-hairline bg-canvas px-[15px] py-[11px] text-[13px] text-ink placeholder:text-faint focus:border-signal focus:outline-none"
+          />
           <button
-            type="button"
-            disabled={isPending || !body.trim()}
-            onClick={() => submit('comment')}
-            className="rounded-[14px] bg-signal px-4 py-2 text-[12.5px] font-bold text-surface disabled:opacity-40"
+            type="submit"
+            disabled={!ready}
+            aria-label="Send"
+            className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl', ready ? 'bg-signal text-surface' : 'bg-disabled-bg text-faint')}
           >
-            Post
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2.5 8h11M9 3.5 13.5 8 9 12.5" />
+            </svg>
           </button>
-        </div>
+        </form>
       </div>
-      {error && <p className="text-[11.5px] text-alert">{error}</p>}
     </div>
   );
 }

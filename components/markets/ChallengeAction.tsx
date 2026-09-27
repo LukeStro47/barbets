@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { challengeResolution, finalizeMarket } from '@/lib/actions/resolution';
 import type { ActionResult } from '@/lib/errors';
+import { CountdownTimer } from '@/components/ui/CountdownTimer';
 
 /** True once `target` has passed — gates the manual "finalize now" fallback until the real timer would actually let it succeed. */
 function useElapsed(target: string | null): boolean {
@@ -45,7 +46,8 @@ export function ChallengeAction({
   const [confirming, setConfirming] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const windowElapsed = useElapsed(new Date(new Date(proposedAt).getTime() + resolutionWindowHours * 3_600_000).toISOString());
+  const windowEnd = new Date(new Date(proposedAt).getTime() + resolutionWindowHours * 3_600_000).toISOString();
+  const windowElapsed = useElapsed(windowEnd);
 
   function run(fn: () => Promise<ActionResult<unknown>>) {
     setError(null);
@@ -63,24 +65,29 @@ export function ChallengeAction({
       {iAmProposer ? (
         <p className="text-xs text-faint">You proposed this outcome, so you can't challenge it yourself.</p>
       ) : !confirming ? (
+        // 4m's challenge button: white, an alert hairline, the label in alert and the time left
+        // beside it in faint mono.
         <button
           type="button"
           disabled={isPending}
           onClick={() => setConfirming(true)}
-          className="w-full rounded-full border border-alert px-4 py-2.5 text-sm font-bold text-alert transition-colors hover:bg-alert-bg disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-[9px] rounded-[14px] border border-alert-line bg-surface py-3.5 transition-colors hover:bg-alert-bg disabled:opacity-50"
         >
-          Challenge this call
+          <span className="text-[14px] font-bold text-alert">Challenge this result</span>
+          <span className="font-mono text-[12px] text-faint">
+            <CountdownTimer target={windowEnd} prefix="" /> left
+          </span>
         </button>
       ) : (
         <>
-          <p className="text-xs font-semibold text-alert">
+          <p className="text-[12px] font-semibold text-alert">
             This moves the market to a secret ballot for everyone eligible to vote on what actually happened.
           </p>
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => setConfirming(false)}
-              className="flex-1 rounded-full border border-dash px-4 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-rule"
+              className="flex-1 rounded-xl border border-hairline bg-surface py-2.5 text-[13px] font-bold text-ink"
             >
               Cancel
             </button>
@@ -88,7 +95,7 @@ export function ChallengeAction({
               type="button"
               disabled={isPending}
               onClick={() => run(() => challengeResolution(groupId, marketId))}
-              className="flex-1 rounded-full bg-alert px-4 py-2.5 text-sm font-semibold text-surface transition-colors hover:bg-alert disabled:opacity-50"
+              className="flex-1 rounded-xl bg-alert py-2.5 text-[13px] font-bold text-surface disabled:opacity-50"
             >
               Confirm
             </button>
