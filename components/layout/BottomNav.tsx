@@ -231,7 +231,7 @@ export function BottomNav({
 
   function goToTab(tab: NavTab) {
     if (tab === 'home') router.push('/groups');
-    else if (tab === 'inbox') router.push('/inbox');
+    else if (tab === 'inbox') router.push(currentGroup ? `/inbox?group=${currentGroup.id}` : '/inbox');
     else if (tab === 'you') router.push(currentGroup ? `/profile?group=${currentGroup.id}` : '/profile');
     else if (tab === 'markets') router.push(currentGroup ? `/groups/${currentGroup.id}` : '/groups?all=1');
     else if (tab === 'group') router.push(currentGroup ? `/groups/${currentGroup.id}/leaderboard` : '/groups?all=1');
