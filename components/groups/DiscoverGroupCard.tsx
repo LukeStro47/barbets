@@ -91,29 +91,43 @@ export function DiscoverGroupCard({
   return (
     <>
       {variant === 'compact' ? (
-        <div className="rounded-[20px] border border-hairline bg-surface p-[15px]">
-          <div className="flex items-center gap-[11px]">
-            <GroupAvatar name={name} avatarKey={avatarKey} className="h-[42px] w-[42px] text-[13px]" fallbackClassName="bg-rule text-muted" />
+        // 5h: the group and its Join on top, the market it's running in a wash strip underneath.
+        <div className="overflow-hidden rounded-[20px] border border-hairline bg-surface shadow-[0_1px_2px_rgba(12,16,24,0.04)]">
+          <div className="flex items-center gap-3 px-[15px] py-3.5">
+            <GroupAvatar
+              name={name}
+              avatarKey={avatarKey}
+              radiusClassName="rounded-xl"
+              className="h-[38px] w-[38px] text-[12px]"
+              fallbackClassName="bg-tile text-muted"
+            />
             <span className="min-w-0 flex-1">
-              <span className="flex items-center gap-1.5">
-                <p className="truncate font-display text-[15.5px] font-extrabold tracking-[-0.01em] text-ink">{name}</p>
-                <span className="shrink-0 rounded-full bg-signal-tint px-1.5 py-[1px] text-[9.5px] font-extrabold tracking-[0.04em] text-signal-deep uppercase">
-                  Public
-                </span>
+              <span className="block truncate text-[14.5px] font-bold tracking-[-0.01em] text-ink">{name}</span>
+              <span className="mt-0.5 block truncate text-[11.5px] text-faint">
+                {memberCount.toLocaleString('en-GB')} playing · {openCopy.toLowerCase()}
               </span>
-              <p className="mt-[3px] flex items-center gap-1.5 text-xs text-muted">
-                <span>{openCopy}</span>
-                <span className="text-dash">·</span>
-                <span>{memberCount} playing</span>
-              </p>
             </span>
-            {joinButton}
+            {joined ? (
+              <Link href={`/groups/${groupId}`} className="shrink-0 rounded-[10px] border border-hairline px-[13px] py-2 text-[12.5px] font-bold text-muted">
+                Joined
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setJoining(true)}
+                className="shrink-0 rounded-[10px] bg-signal px-[13px] py-2 text-[12.5px] font-bold text-surface"
+              >
+                Join
+              </button>
+            )}
           </div>
           {featuredMarketTitle && (
-            <div className="mt-3 flex items-center gap-[9px] rounded-[13px] bg-rule px-3 py-2.5">
-              <p className="min-w-0 flex-1 truncate text-xs font-semibold text-muted">&ldquo;{featuredMarketTitle}&rdquo;</p>
+            <div className="flex items-center gap-2.5 border-t border-rule bg-wash px-[15px] py-[11px]">
+              <span className="min-w-0 flex-1 truncate text-[12.5px] font-bold text-ink">{featuredMarketTitle}</span>
               {!!featuredMarketBetCount && (
-                <span className="shrink-0 text-[11px] font-bold text-faint">{featuredMarketBetCount} bets</span>
+                <span className="shrink-0 font-mono text-[12px] font-semibold text-signal">
+                  {featuredMarketBetCount} bet{featuredMarketBetCount === 1 ? '' : 's'}
+                </span>
               )}
             </div>
           )}
