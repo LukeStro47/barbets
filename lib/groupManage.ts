@@ -103,8 +103,8 @@ export function membersSubtitle(roster: RosterRow[]): string {
 
 export function stakesSubtitle(prizeText: string | null, punishmentText: string | null): string {
   const parts: string[] = [];
-  if (prizeText) parts.push(`🏆 ${prizeText}`);
-  if (punishmentText) parts.push(`💀 ${punishmentText}`);
+  if (prizeText) parts.push(prizeText);
+  if (punishmentText) parts.push(punishmentText);
   return parts.join(' · ') || 'None set';
 }
 

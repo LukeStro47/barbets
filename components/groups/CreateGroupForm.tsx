@@ -19,7 +19,8 @@ import {
   PUNISHMENT_MAX_LENGTH,
 } from '@/lib/limits';
 import { JUST_JOINED_GROUP_KEY } from '@/components/pwa/PushReminderModal';
-import { InviteHeroCard } from '@/components/groups/InviteHeroCard';
+import { InviteScreen } from '@/components/groups/InviteScreen';
+import { ScreenHeader, StickyFooter, FooterButton, RowChevron } from '@/components/ui/Screen';
 import { cn } from '@/lib/cn';
 
 const SEASON_LENGTHS: SeasonLength[] = ['1m', '2m', '3m', 'manual', 'custom'];
@@ -38,7 +39,7 @@ const SEASON_LENGTH_SUMMARY: Record<SeasonLength, string> = {
 
 const cardClasses = 'rounded-[20px] border border-hairline bg-surface p-4';
 const footerButtonClasses =
-  'flex h-[52px] w-full items-center justify-center rounded-full border-0 bg-ink text-[15px] font-extrabold text-surface disabled:opacity-45';
+  'flex w-full items-center justify-center rounded-[14px] border-0 bg-ink py-[15px] text-[15px] font-bold text-surface disabled:bg-disabled-bg disabled:text-disabled-ink';
 
 /** datetime-local wants "YYYY-MM-DDTHH:mm" in the browser's local time, not UTC. */
 function toLocalDatetimeInputValue(date: Date): string {
@@ -68,9 +69,9 @@ function StepBar({
         type="button"
         onClick={onBack}
         aria-label={backLabel ?? 'Back'}
-        className="-ml-1.5 inline-flex shrink-0 items-center gap-0.5 border-0 bg-transparent p-0 text-faint"
+        className="-ml-1.5 inline-flex shrink-0 items-center gap-[3px] border-0 bg-transparent p-0 text-dash"
       >
-        <CaretLeftIcon className="h-[18px] w-[18px]" />
+        <CaretLeftIcon className="h-4 w-4" />
         {backLabel && <span className="text-[12.5px] font-bold text-faint">{backLabel}</span>}
       </button>
       <span className="flex flex-1 gap-[5px]">
@@ -266,10 +267,10 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
         <img src={`/avatars/${avatarKey}.png`} alt="" className="h-[38px] w-[38px] shrink-0 rounded-full object-cover" />
       )}
       <span className="min-w-0 flex-1">
-        <span className="block truncate font-display text-[16.5px] font-extrabold tracking-[-0.015em] text-surface">
+        <span className="block truncate text-[16.5px] font-extrabold tracking-[-0.015em] text-surface">
           {name || 'Your group'}
         </span>
-        <span className="mt-0.5 block text-xs text-surface/55">
+        <span className="mt-0.5 block text-[12px] text-[#a8b0bd]">
           {withIdentity && nickname.trim() ? `@${nickname.trim()} · ` : ''}
           {formatTokens(seedAmountNumber || 0)} tokens each
         </span>
@@ -315,25 +316,21 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
   // /groups/[id] with zero members to bet against yet. Reuses InviteHeroCard (the same dark
   // invite card Manage group's own invite row already uses) rather than a bespoke rebuild of
   // 5m's lighter QR-first layout, since the goal here is a real invite step existing at all.
+  // 5m, as the last step of making a group: the group exists now, so hand the code out before
+  // anything else — nobody else is in it yet to bet against.
   if (step === 3 && createdGroup) {
     return (
-      <div className="flex flex-1 flex-col gap-4">
-        <h1 className="font-display text-[26px] leading-[1.15] font-extrabold tracking-[-0.022em] text-ink">
-          {name || 'Your group'} is ready.
-        </h1>
-        <p className="text-[13.5px] leading-[1.5] text-muted">
-          Send the code or the link. Betting won't open until someone else is in.
-        </p>
-        <InviteHeroCard
-          groupId={createdGroup.id}
-          groupName={name || 'Your group'}
-          inviteCode={createdGroup.inviteCode}
-          footer="You can always find this again from Manage group."
-          canRegenerate={false}
-        />
-        <button type="button" onClick={() => router.push(`/groups/${createdGroup.id}`)} className={cn(footerButtonClasses, 'mt-auto')}>
-          Continue
-        </button>
+      <div className="-mx-[22px] -mt-6 flex flex-1 flex-col">
+        <ScreenHeader title={`Invite to ${name || 'your group'}`} href={`/groups/${createdGroup.id}`} />
+        <div className="px-[22px] pt-5">
+          <p className="mb-3.5 text-[13.5px] leading-[1.5] text-muted">Send the code or the link. Betting won&apos;t open until someone else is in.</p>
+          <InviteScreen groupId={createdGroup.id} groupName={name || 'Your group'} inviteCode={createdGroup.inviteCode} joiners={[]} canReset={false} />
+        </div>
+        <StickyFooter>
+          <FooterButton tone="ink" onClick={() => router.push(`/groups/${createdGroup.id}`)}>
+            Go to {name || 'the group'}
+          </FooterButton>
+        </StickyFooter>
       </div>
     );
   }
@@ -426,7 +423,8 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
             step={0.5}
             value={resolutionWindowHours}
             onChange={(e) => setResolutionWindowHours(Number(e.target.value))}
-            className="mt-3.5 w-full accent-signal"
+            className="challenge-window-slider mt-3.5 w-full"
+            style={{ ['--fill' as string]: `${((resolutionWindowHours - 0.5) / 9.5) * 100}%` }}
           />
           <div className="mt-2 flex justify-between text-[11px] text-faint">
             <span>30 min</span>
@@ -453,11 +451,11 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
           </div>
         </SectionCard>
 
-        <div className="mt-auto pt-6">
+        <StickyFooter>
           <button type="button" disabled={!creatorPctValid} onClick={() => setView('wizard')} className={footerButtonClasses}>
             Done
           </button>
-        </div>
+        </StickyFooter>
       </div>
     );
   }
@@ -492,11 +490,11 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
                   aria-pressed={avatarKey === a.key}
                   title={a.label}
                   className={cn(
-                    'h-11 w-11 shrink-0 overflow-hidden rounded-full bg-transparent p-0',
-                    avatarKey === a.key ? 'border-2 border-signal' : 'border border-hairline opacity-90'
+                    'h-11 w-11 shrink-0 overflow-hidden rounded-full bg-transparent',
+                    avatarKey === a.key ? 'border-2 border-signal p-0.5' : 'p-0 opacity-90'
                   )}
                 >
-                  <img src={`/avatars/${a.key}.png`} alt={a.label} className="h-full w-full object-cover" />
+                  <img src={`/avatars/${a.key}.png`} alt={a.label} className="h-full w-full rounded-full object-cover" />
                 </button>
               ))}
             </div>
@@ -505,7 +503,7 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
 
           <SectionCard title="Your nickname here" hint="One word. This is how you get @mentioned.">
             <div className="mt-2.5 flex items-center gap-1 rounded-[14px] border-[1.5px] border-signal px-[15px] py-3">
-              <span className="text-xl font-extrabold text-signal-deep">@</span>
+              <span className="text-xl font-extrabold text-signal">@</span>
               <input
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value.toLowerCase())}
@@ -516,12 +514,12 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
             </div>
           </SectionCard>
 
-          <div className="mt-auto flex flex-col gap-2.5 pt-6">
+          <StickyFooter>
             <button type="button" disabled={!step1Valid} onClick={() => setStep(2)} className={footerButtonClasses}>
               Next
             </button>
-            <p className="text-center text-xs text-faint">Seasons and time zone come next.</p>
-          </div>
+            <p className="text-center text-[12px] text-faint">Seasons and time zone come next.</p>
+          </StickyFooter>
         </>
       ) : (
         <>
@@ -545,7 +543,7 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
             </div>
 
             {seasonsEnabled && (
-              <div className="mt-3 border-t border-hairline pt-3">
+              <div className="mt-[13px] border-t border-rule pt-[13px]">
                 {!(seasonLocked && seasonLength) ? (
                   <div className="flex flex-col gap-1.5">
                     {SEASON_LENGTHS.map((len) => {
@@ -560,7 +558,7 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
                           }}
                           className={cn(
                             'flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left',
-                            on ? 'border-[1.5px] border-signal bg-signal-tint' : 'border border-hairline bg-transparent'
+                            on ? 'border-[1.5px] border-signal bg-signal-wash' : 'border border-hairline bg-surface'
                           )}
                         >
                           <span
@@ -569,7 +567,7 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
                               on ? 'border-4 border-signal' : 'border-[1.5px] border-dash'
                             )}
                           />
-                          <span className={cn('text-[13px] font-extrabold', on ? 'text-signal-deep' : 'text-ink')}>
+                          <span className="text-[13.5px] font-bold text-ink">
                             {SEASON_LENGTH_SHORT_LABEL[len]}
                           </span>
                         </button>
@@ -577,21 +575,22 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
                     })}
                   </div>
                 ) : (
-                  <div className="rounded-[14px] border-[1.5px] border-signal bg-signal-tint px-3.5 py-3">
+                  <>
+                  <div className="rounded-[14px] border-[1.5px] border-signal bg-signal-wash px-3.5 py-[13px]">
                     <div className="flex items-center gap-2.5">
-                      <CheckIcon className="h-4 w-4 shrink-0 text-signal-deep" />
-                      <span className="min-w-0 flex-1 text-[14.5px] font-extrabold text-signal-deep">
+                      <CheckIcon className="h-[15px] w-[15px] shrink-0 text-signal" />
+                      <span className="min-w-0 flex-1 text-[14.5px] font-extrabold text-ink">
                         {SEASON_LENGTH_SHORT_LABEL[seasonLength]}
                       </span>
                       <button
                         type="button"
                         onClick={() => setSeasonLocked(false)}
-                        className="shrink-0 border-0 border-b border-signal-deep/40 bg-transparent p-0 text-[11.5px] font-extrabold text-signal-deep"
+                        className="shrink-0 border-0 border-b border-[#b9c8ff] bg-transparent p-0 text-[11.5px] font-extrabold text-signal"
                       >
                         Cancel
                       </button>
                     </div>
-                    <p className="mt-2.5 text-xs leading-[1.45] text-signal-deep">{SEASON_LENGTH_SUMMARY[seasonLength]}</p>
+                    <p className="mt-2.5 text-[12px] leading-[1.45] text-signal-ink text-pretty">{SEASON_LENGTH_SUMMARY[seasonLength]}</p>
 
                     {seasonLength === 'custom' && (
                       <input
@@ -604,22 +603,37 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
                       />
                     )}
 
-                    <div className="mt-3 border-t border-signal-deep/20 pt-3">
-                      <span className="block text-[10.5px] font-extrabold tracking-[0.08em] text-signal-deep uppercase">
-                        Name this season
+                    <div className="mt-3 border-t border-signal-edge pt-3">
+                      <span className="block text-[10.5px] font-extrabold tracking-[0.08em] text-signal uppercase">Name this season</span>
+                      <span className="mt-[7px] flex items-center rounded-xl border-[1.5px] border-signal bg-surface px-[13px] py-[11px]">
+                        <input
+                          value={seasonName}
+                          onChange={(e) => setSeasonName(e.target.value)}
+                          maxLength={SEASON_NAME_MAX_LENGTH}
+                          placeholder="The Autumn Run"
+                          className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[14.5px] font-bold text-ink placeholder:text-dash focus:outline-none"
+                        />
+                        <span className="ml-2 shrink-0 font-mono text-[11px] text-faint">
+                          {seasonName.length}/{SEASON_NAME_MAX_LENGTH}
+                        </span>
                       </span>
-                      <input
-                        value={seasonName}
-                        onChange={(e) => setSeasonName(e.target.value)}
-                        maxLength={SEASON_NAME_MAX_LENGTH}
-                        placeholder="The August Run"
-                        className="mt-[7px] w-full rounded-xl border-[1.5px] border-signal bg-surface px-3 py-2.5 text-[14.5px] font-bold text-ink placeholder:text-dash focus:outline-none"
-                      />
-                      <span className="mt-[7px] block text-[11px] text-signal-deep">
-                        Optional. We'll call it Season 1 otherwise.
-                      </span>
+                      <span className="mt-[7px] block text-[11px] text-signal-ink">Optional. We&apos;ll call it Season 1 otherwise.</span>
                     </div>
                   </div>
+                  {/* 5l2: the other lengths stay one tap away as chips under the chosen one. */}
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {SEASON_LENGTHS.filter((len) => len !== seasonLength).map((len) => (
+                      <button
+                        key={len}
+                        type="button"
+                        onClick={() => setSeasonLength(len)}
+                        className="rounded-full border border-hairline bg-surface px-3 py-1.5 text-[11.5px] font-bold text-faint"
+                      >
+                        {SEASON_LENGTH_SHORT_LABEL[len]}
+                      </button>
+                    ))}
+                  </div>
+                  </>
                 )}
               </div>
             )}
@@ -629,31 +643,29 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
             <div className="mt-3 flex flex-col gap-3">
               <label className="block">
                 <span className="block text-[11px] font-bold text-muted">Prize</span>
-                <textarea
+                <input
                   value={prizeText}
                   onChange={(e) => setPrizeText(e.target.value)}
                   maxLength={PRIZE_MAX_LENGTH}
-                  rows={2}
                   placeholder="Winner picks the next group outing."
-                  className="mt-1 block w-full rounded-xl border border-dash bg-surface px-3 py-2.5 text-sm font-bold text-ink focus:border-signal focus:outline-none"
+                  className="mt-[5px] block w-full rounded-xl border border-hairline bg-surface px-[13px] py-[11px] text-[13.5px] font-bold text-ink placeholder:font-normal placeholder:text-disabled-ink focus:border-signal focus:outline-none"
                 />
               </label>
               <label className="block">
                 <span className="block text-[11px] font-bold text-muted">Punishment</span>
-                <textarea
+                <input
                   value={punishmentText}
                   onChange={(e) => setPunishmentText(e.target.value)}
                   maxLength={PUNISHMENT_MAX_LENGTH}
-                  rows={2}
                   placeholder="Loser buys the first round next time."
-                  className="mt-1 block w-full rounded-xl border border-dash bg-surface px-3 py-2.5 text-sm font-bold text-ink focus:border-signal focus:outline-none"
+                  className="mt-[5px] block w-full rounded-xl border border-hairline bg-surface px-[13px] py-[11px] text-[13.5px] font-bold text-ink placeholder:font-normal placeholder:text-disabled-ink focus:border-signal focus:outline-none"
                 />
               </label>
             </div>
           </SectionCard>
 
           <SectionCard title="Time zone" hint="Shown next to every closing time.">
-            <div className="relative mt-2.5 flex items-center gap-2.5 rounded-[14px] border border-dash px-[15px] py-3">
+            <div className="relative mt-2.5 flex items-center gap-2.5 rounded-[14px] border border-hairline px-[15px] py-3">
               <ClockIcon className="h-[17px] w-[17px] shrink-0 text-muted" />
               <span className="min-w-0 flex-1 truncate text-[14.5px] font-bold text-ink">
                 {friendlyTimezoneName(timezone)}
@@ -686,14 +698,14 @@ export function CreateGroupForm({ initialName, initialSeedAmount }: { initialNam
             className="flex items-center justify-between rounded-[18px] border border-hairline bg-surface px-4 py-3.5"
           >
             <span className="text-[13px] font-extrabold text-muted">Advanced settings</span>
-            <CaretDownIcon className="h-[15px] w-[15px] text-faint -rotate-90" />
+            <RowChevron className="text-faint" />
           </button>
 
-          <div className="mt-auto pt-6">
+          <StickyFooter>
             <button type="button" disabled={isPending || !step2Valid} onClick={handleCreate} className={footerButtonClasses}>
-              {isPending ? 'Creating…' : 'Create group'}
+              {isPending ? 'Creating' : 'Create group'}
             </button>
-          </div>
+          </StickyFooter>
         </>
       )}
     </div>
