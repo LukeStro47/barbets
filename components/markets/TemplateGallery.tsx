@@ -4,24 +4,44 @@ import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { deleteMarketTemplate } from '@/lib/actions/marketTemplates';
 import { MARKET_TEMPLATE_CATEGORIES, categoryLabel } from '@/lib/marketTemplateCategories';
-import { MARKET_TYPE_LABEL, MARKET_TYPE_ICON } from '@/lib/marketType';
-import { Mention } from '@/components/ui/Mention';
+import type { MarketType } from '@/lib/marketType';
+import { ScreenHeader, StickyFooter, FooterButton, RowChevron } from '@/components/ui/Screen';
+import { GroupAvatar } from '@/components/ui/GroupAvatar';
 import { Modal } from '@/components/ui/Modal';
-import { CaretDownIcon } from '@/components/ui/icons';
 import type { MarketTemplate } from '@/lib/marketTemplates';
 import type { MemberOption } from '@/components/markets/MarketForms';
 import { cn } from '@/lib/cn';
 
-const eyebrowClasses = 'text-[10.5px] font-extrabold tracking-[0.1em] text-faint uppercase';
-const cardClasses = 'relative rounded-[18px] border border-hairline bg-surface p-3.5 text-left';
-const emptyStateClasses = 'rounded-[18px] border border-dashed border-dash p-4 text-[13px] leading-[1.45] text-faint';
+const eyebrowClasses = 'text-[10.5px] font-bold tracking-[0.1em] text-faint uppercase';
+const cardClasses = 'relative rounded-[18px] border border-hairline bg-surface px-3.5 py-3 text-left';
+const emptyStateClasses = 'rounded-[18px] border border-dashed border-dash p-3.5 text-[12.5px] leading-[1.45] text-faint';
+
+/** The same three glyphs the + menu (4p) and the propose form (4i) draw for each question type. */
+const TYPE_GLYPH: Record<MarketType, React.ReactNode> = {
+  yes_no: <path d="M5 8h6M5 16h6M15 6l3 3 3-6" />,
+  multiple_choice: (
+    <>
+      <circle cx="6" cy="7" r="2" />
+      <circle cx="6" cy="17" r="2" />
+      <path d="M11 7h8M11 17h8" />
+    </>
+  ),
+  over_under: <path d="M4 18h16M7 18V9M12 18V5M17 18v-6" />,
+};
+
+function kindLine(t: MarketTemplate): string {
+  if (t.market_type === 'yes_no') return 'Yes / No';
+  if (t.market_type === 'over_under') return 'Over / Under';
+  const n = (t as { options?: string[] | null }).options?.length ?? 0;
+  return n > 0 ? `One of ${n} options` : 'Pick a winner';
+}
 
 /** A section that always renders (so "you have none" is a real, legible state rather than the
  * section just vanishing), showing its cards or a dashed empty-state card in its place. */
 function TemplateSection({ label, emptyMessage, children }: { label: string; emptyMessage: string; children: React.ReactNode[] }) {
   return (
     <section>
-      <p className={cn(eyebrowClasses, 'mb-2.5')}>{label}</p>
+      <p className={cn(eyebrowClasses, 'mb-[9px]')}>{label}</p>
       {children.length > 0 ? <div className="flex flex-col gap-2">{children}</div> : <p className={emptyStateClasses}>{emptyMessage}</p>}
     </section>
   );
@@ -41,25 +61,23 @@ function TemplateCard({
   return (
     <div className={cardClasses}>
       <button type="button" onClick={onTap} className="flex w-full items-center gap-3 border-0 bg-transparent p-0 text-left">
-        <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-rule text-base font-semibold text-muted">
-          {MARKET_TYPE_ICON[template.market_type]}
+        <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] bg-tile text-muted">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            {TYPE_GLYPH[template.market_type]}
+          </svg>
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[14.5px] leading-[1.35] font-semibold text-ink">
+          <span className="block text-[14px] leading-[1.35] font-bold text-ink">
             {template.has_placeholder ? <PlaceholderTitle title={template.title} /> : template.title}
           </span>
-          <span className="mt-1 flex items-center gap-1.5">
+          <span className="mt-[5px] flex items-center gap-[7px]">
             {template.has_placeholder && (
-              <span className="rounded-full bg-signal-tint px-2 py-0.5 text-[11px] font-extrabold text-signal-deep">Fill in @</span>
+              <span className="rounded-full border border-signal-edge bg-signal-tint px-2 py-0.5 text-[10px] font-bold text-signal">Fill in @</span>
             )}
-            <span className="text-[11px] text-faint">{MARKET_TYPE_LABEL[template.market_type]}</span>
+            <span className="text-[11px] text-faint">{kindLine(template)}</span>
           </span>
         </span>
-        {!deletable && (
-          <svg className="h-3.5 w-3.5 shrink-0 text-dash" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
-        )}
+        {!deletable && <RowChevron className="text-faint" />}
       </button>
       {deletable && onDelete && (
         <button
@@ -85,7 +103,7 @@ function PlaceholderTitle({ title }: { title: string }) {
       {parts.map((chunk, i) => (
         <span key={i}>
           {chunk}
-          {i < parts.length - 1 && <span className="font-bold text-signal-deep italic">@</span>}
+          {i < parts.length - 1 && <span className="text-signal">@</span>}
         </span>
       ))}
     </>
@@ -106,7 +124,7 @@ function MemberPickerModal({
   return (
     <Modal onClose={onClose} padded={false} panelClassName="overflow-hidden">
       <div className="bg-rule px-[18px] py-[13px]">
-        <p className="text-xs font-extrabold tracking-[0.06em] text-ink uppercase">Who&apos;s this about?</p>
+        <p className="text-[13px] font-extrabold text-ink">Who&apos;s this about?</p>
         <p className="mt-1 text-[12.5px] text-muted">
           <PlaceholderTitle title={template.title} />
         </p>
@@ -117,15 +135,15 @@ function MemberPickerModal({
             key={m.userId}
             type="button"
             onClick={() => onPick(m)}
-            className="rounded-full border-[1.5px] border-dash px-[15px] py-2 text-[13px] font-bold text-muted"
+            className="rounded-full border-[1.5px] border-hairline px-[15px] py-2 text-[13px] font-bold text-ink"
           >
-            <Mention nickname={m.nickname} />
+            @{m.nickname}
           </button>
         ))}
         {members.length === 0 && <p className="text-sm text-faint">No one else to pick from yet.</p>}
       </div>
       <div className="border-t border-rule px-[18px] py-[14px]">
-        <button type="button" onClick={onClose} className="w-full rounded-full border border-dash py-3 text-sm font-semibold text-ink">
+        <button type="button" onClick={onClose} className="w-full rounded-[14px] border border-hairline py-3 text-sm font-bold text-ink">
           Cancel
         </button>
       </div>
@@ -136,20 +154,22 @@ function MemberPickerModal({
 /** A curated category section, collapsed/expanded independently of every other one. Defaults
  * closed, so the gallery opens as a short, scannable list of category names rather than every
  * idea in every category at once. */
-function CollapsibleCategory({ label, children }: { label: string; children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
+function CollapsibleCategory({ label, defaultOpen = false, children }: { label: string; defaultOpen?: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
-    <section>
+    <section className={open ? 'py-1' : 'border-b border-rule'}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-2 border-0 bg-transparent p-0"
+        className={cn('flex w-full items-center justify-between gap-2.5 border-0 bg-transparent p-0', open ? 'pt-1' : 'py-3.5')}
       >
         <span className={eyebrowClasses}>{label}</span>
-        <CaretDownIcon className={cn('h-3.5 w-3.5 text-faint transition-transform', open && 'rotate-180')} />
+        <svg width="12" height="8" viewBox="0 0 12 8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className={cn('text-faint transition-transform', open && 'rotate-180')}>
+          <path d="M1.5 2.5 6 6.5l4.5-4" />
+        </svg>
       </button>
-      {open && <div className="mt-2.5 flex flex-col gap-2">{children}</div>}
+      {open && <div className="mt-2.5 mb-[18px] flex flex-col gap-2">{children}</div>}
     </section>
   );
 }
@@ -161,9 +181,11 @@ export function TemplateGallery({
   members,
   templates,
   viewerId,
+  groupAvatarKey,
 }: {
   groupId: string;
   groupName: string;
+  groupAvatarKey?: string | null;
   isPublic: boolean;
   members: MemberOption[];
   templates: MarketTemplate[];
@@ -209,23 +231,21 @@ export function TemplateGallery({
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-[22px]">
+    <div className="-mx-[18px] -mt-6">
+      <ScreenHeader
+        title="Templates"
+        href={`/groups/${groupId}`}
+        right={
+          <span className="inline-flex shrink-0 items-center gap-1.5 text-[12.5px] font-semibold text-muted">
+            <GroupAvatar name={groupName} avatarKey={groupAvatarKey ?? null} className="h-5 w-5 text-[8px]" fallbackClassName="bg-ink text-on-ink" />
+            {groupName.split(/\s+/)[0]}
+          </span>
+        }
+      />
+    <div className="flex flex-col gap-5 px-[18px] pt-5">
       <div>
-        <button
-          type="button"
-          onClick={() => router.push(`/groups/${groupId}`)}
-          className="-ml-1.5 inline-flex items-center gap-0.5 border-0 bg-transparent p-0 text-faint"
-        >
-          <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
-        <h1 className="mt-2.5 font-display text-[28px] leading-[1.1] font-extrabold tracking-[-0.02em] text-ink">
-          Start from an idea
-        </h1>
-        <p className="mt-1 text-[13.5px] leading-[1.45] text-faint">
-          Pick one to prefill, or build a market from scratch.
-        </p>
+        <h1 className="text-[25px] leading-[1.15] font-extrabold tracking-[-0.022em] text-ink">Start from an idea</h1>
+        <p className="mt-1.5 text-[13px] leading-[1.45] text-faint">Pick one to prefill, or build a market from scratch.</p>
       </div>
 
       <TemplateSection label="Your templates" emptyMessage="Nothing saved yet. Save a market as a template from its review step to see it here.">
@@ -240,11 +260,11 @@ export function TemplateGallery({
         ))}
       </TemplateSection>
 
-      {MARKET_TEMPLATE_CATEGORIES.map(({ slug }) => {
+      <div>
+      {MARKET_TEMPLATE_CATEGORIES.filter(({ slug }) => curated.some((t) => t.category === slug)).map(({ slug }, i) => {
         const inCategory = curated.filter((t) => t.category === slug);
-        if (inCategory.length === 0) return null;
         return (
-          <CollapsibleCategory key={slug} label={categoryLabel(slug)}>
+          <CollapsibleCategory key={slug} label={categoryLabel(slug)} defaultOpen={i === 0}>
             {inCategory.map((t) => (
               <TemplateCard key={t.id} template={t} deletable={false} onTap={() => tap(t)} />
             ))}
@@ -264,6 +284,15 @@ export function TemplateGallery({
           </CollapsibleCategory>
         );
       })()}
+
+      </div>
+    </div>
+
+      <StickyFooter>
+        <FooterButton tone="ink" href={`/groups/${groupId}/markets/new`}>
+          Build from scratch
+        </FooterButton>
+      </StickyFooter>
 
       {picking && (
         <MemberPickerModal

@@ -24,7 +24,7 @@ export default async function NewMarketPage({
   const [{ data: members }, { data: settings }, { data: group }, { data: myMembership }] = await Promise.all([
     supabase.from('memberships').select('user_id, nickname').eq('group_id', groupId).eq('status', 'active'),
     supabase.from('group_settings').select('timezone, require_endorsement').eq('group_id', groupId).single(),
-    supabase.from('groups').select('name, owner_id, is_public').eq('id', groupId).single(),
+    supabase.from('groups').select('name, owner_id, is_public, avatar_key').eq('id', groupId).single(),
     supabase.from('memberships').select('role').eq('group_id', groupId).eq('user_id', user.id).maybeSingle(),
   ]);
 
@@ -40,9 +40,17 @@ export default async function NewMarketPage({
   // A market's creator can never be its own subject, so they're not a valid @mention target here.
   // Alphabetical because the only way to find a name in a chip strip is to look for it, and
   // membership order (which is what the query returns) is an order nobody can predict.
-  const memberOptions = (members ?? [])
-    .filter((m) => m.user_id !== user?.id)
-    .map((m) => ({ userId: m.user_id, nickname: m.nickname }))
+  const others = (members ?? []).filter((m) => m.user_id !== user?.id);
+  // 4i's person chips carry each member's face; none in a public group, for anyone.
+  const { data: memberUsers } =
+    others.length > 0 && !group?.is_public
+      ? await supabase.from('users').select('id, avatar_updated_at, avatar_preset_key').in('id', others.map((m) => m.user_id))
+      : { data: [] };
+  const memberOptions = others
+    .map((m) => {
+      const u = (memberUsers ?? []).find((x) => x.id === m.user_id);
+      return { userId: m.user_id, nickname: m.nickname, avatarUpdatedAt: u?.avatar_updated_at ?? null, avatarPresetKey: u?.avatar_preset_key ?? null };
+    })
     .sort((a, b) => a.nickname.localeCompare(b.nickname));
 
   // Reached from the template gallery (see markets/templates/page.tsx and TemplateGallery). A
@@ -65,10 +73,11 @@ export default async function NewMarketPage({
   const applied = template ? applyTemplate(template, chosenMember) : null;
 
   return (
-    <main className="mx-auto flex min-h-[var(--flow-height)] max-w-lg flex-col px-5 pt-5 pb-8">
+    <main className="mx-auto flex min-h-[var(--flow-height)] max-w-[430px] flex-col px-[18px] pt-6 pb-[130px]">
       <CreateMarketForm
         groupId={groupId}
         groupName={group?.name ?? ''}
+        groupAvatarKey={group?.avatar_key ?? null}
         members={memberOptions}
         totalMemberCount={(members ?? []).length}
         timezone={settings?.timezone ?? 'UTC'}
