@@ -84,23 +84,34 @@ export default async function InboxPage() {
     .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
 
   const recent: RecentRow[] = recentByGroup
-    .flatMap(({ group, rows }) =>
-      rows.map((r) => {
+    .flatMap(({ group, rows }) => {
+      // Hedging is opt-out, not the exception (see ARCHITECTURE.md), so a single market can
+      // carry more than one bet row for the same user -- collapse those to one Inbox row per
+      // market, summing stake and payout, same convention MarketCard's own myNet already uses.
+      // Un-collapsed, two rows for the same market shared the same key (groupId:marketId).
+      const byMarket = new Map<string, { market: { id: string; title: string; status: string; resolved_at: string }; amount: number; payout: number }>();
+      for (const r of rows) {
         const market = r.markets as unknown as { id: string; title: string; status: string; resolved_at: string };
-        const outcome: RecentRow['outcome'] = market.status === 'voided' ? 'voided' : (r.payout ?? 0) > 0 ? 'won' : 'lost';
-        return {
-          key: `${group.id}:${r.market_id}`,
-          groupId: group.id,
-          groupName: group.name,
-          marketId: market.id,
-          marketTitle: market.title,
-          amount: r.amount,
-          payout: r.payout,
-          outcome,
-          at: market.resolved_at,
-        };
-      })
-    )
+        const existing = byMarket.get(market.id);
+        if (existing) {
+          existing.amount += r.amount;
+          existing.payout += r.payout ?? 0;
+        } else {
+          byMarket.set(market.id, { market, amount: r.amount, payout: r.payout ?? 0 });
+        }
+      }
+      return [...byMarket.values()].map(({ market, amount, payout }) => ({
+        key: `${group.id}:${market.id}`,
+        groupId: group.id,
+        groupName: group.name,
+        marketId: market.id,
+        marketTitle: market.title,
+        amount,
+        payout,
+        outcome: (market.status === 'voided' ? 'voided' : payout > 0 ? 'won' : 'lost') as RecentRow['outcome'],
+        at: market.resolved_at,
+      }));
+    })
     .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
 
   const now = new Date();
