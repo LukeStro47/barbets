@@ -79,7 +79,8 @@ export default async function MarketDetailPage({
   const marketRow = notFoundIfEmpty<Market>(market);
   const isMultipleChoice = marketRow.market_type === 'multiple_choice';
 
-  if (marketRow.status === 'resolved' || marketRow.status === 'voided') {
+  // A settled market's Market tab is the reveal page; its Comments tab still renders here.
+  if ((marketRow.status === 'resolved' || marketRow.status === 'voided') && activeTab !== 'comments') {
     redirect(`/groups/${groupId}/markets/${marketId}/reveal`);
   }
 

@@ -9,52 +9,52 @@ import { formatTokens, formatSignedTokens } from '@/lib/formatNumber';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { ResolutionProofButton } from '@/components/markets/ResolutionProofButton';
 import { SealedTicketCover } from '@/components/markets/SealedTicketCover';
+import { sideTitle } from '@/components/markets/MarketScreen';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 import { Button } from '@/components/ui/Button';
-import { CheckCircleIcon, RefreshIcon, DownloadIcon, ShareIcon } from '@/components/ui/icons';
+import { RefreshIcon, DownloadIcon, ShareIcon } from '@/components/ui/icons';
 import type { RevealBet } from '@/components/markets/RevealSummary';
 
 export interface RevealTicketProps {
   groupName: string;
   question: string;
-  resolvedAtIso: string;
-  /** 'VOIDED', a bet_side in caps, or the winning option's label, same convention as RevealSummary's headline. */
+  /** 'VOIDED', a bet_side, or the winning option's label, same convention as RevealSummary's headline. */
   headline: string;
   isVoid: boolean;
-  /** True for both a real void and a "nobody predicted this" refund — see RevealSummary's `refundish`. Governs the result card's tone (neutral, not a win) and the stat card's framing ("Refunded", not "You won"). */
+  /** True for both a real void and a "nobody predicted this" refund — see RevealSummary. */
   refundish: boolean;
   detailLine?: string | null;
   /** over_under only, e.g. "26.2 mi". */
   line?: number | string | null;
-  /** The viewer's own bet on this market, or null if they never bet — the stat card renders nothing without one. */
   myBet: { amount: number; payout: number | null; isWinner: boolean } | null;
-  /** Total tokens staked across every bet. */
   pool: number;
   winnerCount: number;
-  totalBets: number;
-  /** Up to 3 rows for "What everyone got" — the viewer's own bet plus the next highest payouts, already assembled by the caller. */
+  /** Up to 3 rows for "What everyone got" — the viewer's own bet plus the next highest payouts. */
   previewBets: RevealBet[];
   myNickname: string;
-  /** Subject names, already formatted with a leading @ (e.g. "@marcus") since this renders as plain text, not <Mention>. */
+  /** Subject names, already formatted with a leading @. */
   hiddenFrom: string[];
   groupId: string;
   marketId: string;
-  /** Whether the winning resolution proposal has a proof photo attached — only known ahead of time by the caller (server-fetched), since the photo itself is never fetched until someone taps the button. */
   hasProof: boolean;
   /** True when the viewer is a hidden subject of this market — the first time they open it after
-   * resolution, a wax-sealed cover tears open over this same card instead of it just appearing
-   * outright. Every other viewer (and this subject's second+ visit) renders exactly as before. */
+   * resolution, a sealed cover tears open over this card instead of it just appearing. */
   sealedForSubject?: boolean;
+  /** Who called the result, for the proof row's "from @ellie". */
+  proofByNickname?: string;
+  /** The full ledger, rendered as the "All N bets and the ledger" footer of "What everyone got". */
+  ledger?: React.ReactNode;
 }
 
-/** The reveal screen's result card, stat card, and "what everyone got" preview — plus the
- * share/proof actions bound to it. One component because the ref they both need has to live in
- * the same tree. Everything here sits behind the sealed subject's tear-open cover, same footprint
- * as before; the full bet-by-bet ledger (SettlementLedger) and the comment count stay outside it,
- * in RevealSummary, matching the precedent that ledger detail was never itself gated. */
+/**
+ * 4m's result stack: the result card (green for a real winning side, neutral for a void or a
+ * refund nobody won) with the proof photo as its own row, your own result on ink, and "What
+ * everyone got" with the ledger one tap away at its foot. One component because the share
+ * capture ref and the subject's tear-open cover both need to wrap exactly this.
+ */
 export function RevealTicket({
   groupName,
   question,
-  resolvedAtIso,
   headline,
   isVoid,
   refundish,
@@ -63,7 +63,6 @@ export function RevealTicket({
   myBet,
   pool,
   winnerCount,
-  totalBets,
   previewBets,
   myNickname,
   hiddenFrom,
@@ -71,20 +70,12 @@ export function RevealTicket({
   marketId,
   hasProof,
   sealedForSubject,
+  proofByNickname,
+  ledger,
 }: RevealTicketProps) {
-  // Plays once: the very first time a subject opens this market after it resolved — but only on
-  // tap, not automatically on mount. It used to auto-play, which raced BootSplash's fixed ~3s
-  // display on a cold load: the whole ~1.5s tear could finish invisibly underneath it. Loading
-  // covered (with an unlocked-padlock affordance) and waiting for a real click sidesteps that
-  // entirely, since a click can only happen after the splash is long gone. `tearing` drives both
-  // the cover's shake+fly-off and the card content's own entrance animations (it stays true
-  // after the cover is gone — the CSS animations it triggers only ever play once per mount, so
-  // there's nothing to reset). `coverVisible` is what actually renders SealedTicketCover; it
-  // clears the moment the cover finishes flying off. `mystery-torn-${marketId}` is a per-device
-  // localStorage flag, not a cross-device guarantee — acceptable here since the real data is
-  // already fully on the client by the time this renders (RLS/is_market_visible() has already
-  // lifted the wall), so replaying this on a second device or after clearing storage never leaks
-  // anything, it's just seen twice.
+  // Plays once: the first time a subject opens this market after it resolved, on tap (an
+  // auto-play raced BootSplash on a cold load). `mystery-torn-${marketId}` is a per-device flag;
+  // the data is already on the client by now, so replaying it elsewhere never leaks anything.
   const [tearing, setTearing] = useState(false);
   const [coverVisible, setCoverVisible] = useState(false);
   const [captureGateOpen, setCaptureGateOpen] = useState(false);
@@ -100,17 +91,10 @@ export function RevealTicket({
 
   useEffect(() => {
     if (!tearing) return;
-    // Opens once the tear has visually settled (cover gone, last staggered row done) —
-    // sharing/saving a capture mid-animation would freeze an ugly half-faded frame.
     const captureTimer = setTimeout(() => setCaptureGateOpen(true), 2000);
     return () => clearTimeout(captureTimer);
   }, [tearing]);
 
-  // Always the image, never a link. There used to be a url/text `navigator.share()` rung in the
-  // middle of this, which is what every Capacitor WebView viewer actually got (no
-  // `navigator.canShare`, so the file rung was skipped) — a bare link to a page nobody outside the
-  // group can open, in place of the one thing this card exists to be. `ready` holds the capture
-  // until any tear animation has settled; sharing a half-faded frame would be worse than waiting.
   const {
     ref: ticketRef,
     status: shareStatus,
@@ -124,98 +108,88 @@ export function RevealTicket({
     ready: captureGateOpen,
   });
 
-  // Logged on click intent, not on successful completion — Web Share API's promise
-  // resolves on a completed share and rejects on cancel, but "clicked" is what the
-  // frequency-of-use tracking this feeds actually wants to know.
   const handleShareClick = () => {
     void logShareClick('reveal_ticket', groupId);
     handleShare();
   };
 
-  const formattedDate = new Date(resolvedAtIso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-
   const statValue = !myBet
     ? null
     : refundish
-      ? `+${formatTokens(myBet.payout ?? myBet.amount)}`
+      ? formatTokens(myBet.payout ?? myBet.amount)
       : myBet.isWinner
         ? formatSignedTokens((myBet.payout ?? 0) - myBet.amount)
         : `−${formatTokens(myBet.amount)}`;
 
+  const proofSub = [detailLine, line != null ? `Line ${line}` : null, proofByNickname ? `from @${proofByNickname}` : null].filter(Boolean).join(' · ');
+
   return (
     <div>
       <div className="relative">
-        <div ref={ticketRef} className={cn('flex flex-col gap-3', tearing && 'animate-mystery-ticket-pop')}>
-          <div>
-            <p className="mb-1.5 text-[11.5px] font-bold tracking-[0.1em] text-signal uppercase">
-              {groupName} &middot; {isVoid ? 'Voided' : 'Resolved'} {formattedDate}
-            </p>
-            <p
-              className={cn(
-                'text-balance text-[22px] leading-[1.2] font-extrabold tracking-[-0.015em] text-ink',
-                tearing && 'animate-mystery-question'
-              )}
-            >
-              {question}
-            </p>
-            {hiddenFrom.length > 0 && (
-              <p className={cn('mt-1.5 text-[12px] text-faint', tearing && 'animate-mystery-detail')}>
-                Hidden from {hiddenFrom.join(', ')} until now.
-              </p>
-            )}
-          </div>
-
+        <div ref={ticketRef} className={cn('flex flex-col gap-[11px]', tearing && 'animate-mystery-ticket-pop')}>
           <div
             className={cn(
-              'overflow-hidden rounded-[20px] border bg-surface',
-              refundish ? 'border-hairline' : 'border-gain-line',
+              'overflow-hidden rounded-[20px] border-[1.5px] bg-surface',
+              refundish ? 'border-hairline' : 'border-gain-line shadow-[0_8px_20px_-16px_rgba(11,138,91,0.7)]',
               tearing && 'animate-mystery-detail'
             )}
           >
-            <div className={cn('flex items-center gap-3 px-4 py-[15px]', refundish ? 'bg-rule' : 'bg-gain-bg')}>
-              <span
-                className={cn(
-                  'flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px]',
-                  refundish ? 'bg-dash' : 'bg-gain'
-                )}
-              >
+            <div className={cn('flex items-center gap-3 px-4 py-[15px]', refundish ? 'bg-tile' : 'bg-gain-bg')}>
+              <span className={cn('flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px]', refundish ? 'bg-faint' : 'bg-gain')}>
                 {refundish ? (
                   <RefreshIcon className="h-4 w-4 text-surface" />
                 ) : (
-                  <CheckCircleIcon className="h-[18px] w-[18px] text-surface" />
+                  <svg width="17" height="17" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round">
+                    <path d="M2 6.3 4.6 9 10 3.2" />
+                  </svg>
                 )}
               </span>
-              <span className="min-w-0">
+              <span className="min-w-0 flex-1">
                 <span className={cn('block text-[10.5px] font-bold tracking-[0.1em] uppercase', refundish ? 'text-muted' : 'text-gain')}>
                   {isVoid ? 'Voided' : refundish ? 'Result' : 'Winning side'}
                 </span>
-                <span className="mt-0.5 block text-[17px] font-extrabold tracking-[-0.01em] text-ink">
-                  {isVoid ? 'Every stake was refunded.' : <OptionLabel label={headline} />}
+                <span className="mt-[3px] block text-[19px] font-extrabold tracking-[-0.015em] text-ink text-pretty">
+                  {isVoid ? 'Every stake went back.' : <OptionLabel label={headline} />}
                 </span>
               </span>
             </div>
-            {(detailLine || line != null) && (
-              <div className="space-y-1 border-t border-rule px-4 py-3 text-[12.5px] leading-[1.5] text-muted">
-                {line != null && <p>Line: {line}</p>}
-                {detailLine && <p>{detailLine}</p>}
+            {hasProof ? (
+              <div className="flex items-center gap-[11px] px-4 py-[11px]">
+                <span className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[10px] border border-hairline bg-rule text-muted">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 8h3l1.4-2h7.2L17 8h3v11H4z" />
+                    <circle cx="12" cy="13" r="3.4" />
+                  </svg>
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[13px] font-bold text-ink">Photo proof attached</span>
+                  {proofSub && <span className="mt-px block truncate text-[11.5px] text-faint">{proofSub}</span>}
+                </span>
+                <ResolutionProofButton marketId={marketId} variant="view" />
               </div>
-            )}
-            {hasProof && (
-              <div className="border-t border-rule px-4 py-3">
-                <ResolutionProofButton marketId={marketId} variant="chip" />
-              </div>
+            ) : (
+              (detailLine || line != null) && (
+                <div className="border-t border-rule px-4 py-3 text-[12.5px] leading-[1.5] text-muted">
+                  {line != null && <p>Line: {line}</p>}
+                  {detailLine && <p>{detailLine}</p>}
+                </div>
+              )
             )}
           </div>
 
+          {hiddenFrom.length > 0 && (
+            <p className={cn('px-1 text-[12px] text-faint', tearing && 'animate-mystery-detail')}>Hidden from {hiddenFrom.join(', ')} until now.</p>
+          )}
+
           {myBet && statValue && (
             <div className={cn('flex items-end justify-between gap-3 rounded-[20px] bg-ink px-[18px] py-4', tearing && 'animate-mystery-detail')}>
-              <span>
-                <span className="text-[10.5px] font-bold tracking-[0.1em] text-surface/50 uppercase">
+              <span className="min-w-0">
+                <span className="block text-[10.5px] font-bold tracking-[0.1em] text-surface/50 uppercase">
                   {refundish ? 'Refunded' : myBet.isWinner ? 'You won' : 'You lost'}
                 </span>
-                <span className="mt-1.5 block font-mono text-[28px] font-semibold tracking-[-0.02em] text-on-ink">{statValue}</span>
+                <span className="mt-1.5 block font-mono text-[32px] leading-none font-semibold tracking-[-0.02em] text-surface">{statValue}</span>
               </span>
-              <span className="shrink-0 text-right font-mono text-[11.5px] leading-[1.5] text-surface/60">
+              <span className="shrink-0 text-right font-mono text-[12px] leading-[1.5] text-surface/60">
                 {formatTokens(myBet.amount)} staked
                 {!refundish && myBet.isWinner && (
                   <>
@@ -228,51 +202,67 @@ export function RevealTicket({
           )}
 
           <div className="overflow-hidden rounded-[20px] border border-hairline bg-surface">
-            <div className="flex items-baseline justify-between gap-2.5 border-b border-rule px-4 py-2.5">
-              <p className="text-[10.5px] font-bold tracking-[0.1em] text-faint uppercase">What everyone got</p>
-              <span className="shrink-0 font-mono text-[11.5px] text-faint">
-                {formatTokens(pool)} pool &middot; {winnerCount} won
+            <div className="flex items-baseline justify-between gap-2.5 border-b border-rule px-4 pt-3 pb-2.5">
+              <p className="text-[10.5px] font-bold tracking-[0.1em] whitespace-nowrap text-faint uppercase">What everyone got</p>
+              <span className="shrink-0 font-mono text-[11.5px] whitespace-nowrap text-faint">
+                {formatTokens(pool)} pool · {winnerCount} won
               </span>
             </div>
             {previewBets.length > 0 ? (
-              previewBets.map((b, i) => (
-                <div
-                  key={b.nickname}
-                  className={cn(
-                    'flex items-center gap-2.5 border-b border-[#f4f6f8] px-4 py-2.5 last:border-b-0',
-                    b.nickname === myNickname && 'bg-signal-tint',
-                    tearing && 'animate-mystery-row'
-                  )}
-                  style={tearing ? { animationDelay: `${i * 90}ms` } : undefined}
-                >
-                  <span className="min-w-0 flex-1 truncate text-[12.5px] font-bold text-ink">@{b.nickname}</span>
-                  <span className="shrink-0 font-mono text-[11px] text-faint">
-                    <OptionLabel label={b.choiceLabel.toUpperCase()} /> {formatTokens(b.amount)}
-                  </span>
-                  <span
+              previewBets.map((b, i) => {
+                const mine = b.nickname === myNickname;
+                return (
+                  <div
+                    key={b.nickname}
                     className={cn(
-                      'w-[56px] shrink-0 text-right font-mono text-[12.5px] font-semibold',
-                      b.isWinner ? 'text-gain' : 'text-faint'
+                      'flex items-center gap-[9px] border-b border-row-rule px-4 py-2.5',
+                      mine && 'bg-signal-wash shadow-[inset_3px_0_0_var(--color-signal)]',
+                      tearing && 'animate-mystery-row'
                     )}
+                    style={tearing ? { animationDelay: `${i * 90}ms` } : undefined}
                   >
-                    {b.isWinner ? formatSignedTokens((b.payout ?? 0) - b.amount) : `−${formatTokens(b.amount)}`}
-                  </span>
-                </div>
-              ))
+                    {b.userId ? (
+                      <UserAvatar
+                        userId={b.userId}
+                        nickname={b.nickname}
+                        avatarUpdatedAt={b.avatarUpdatedAt ?? null}
+                        avatarPresetKey={b.avatarPresetKey ?? null}
+                        className="h-6 w-6 text-[9px]"
+                        fallbackClassName="bg-tile text-muted"
+                      />
+                    ) : (
+                      <span className="h-6 w-6 shrink-0 rounded-full bg-tile" />
+                    )}
+                    <span className="min-w-0 flex-1 truncate text-[12.5px] font-bold text-ink">@{b.nickname}</span>
+                    <span className="shrink-0 font-mono text-[11px] text-faint">
+                      <OptionLabel label={sideTitle(b.choiceLabel)} /> {formatTokens(b.amount)}
+                    </span>
+                    <span
+                      className={cn(
+                        'w-[52px] shrink-0 text-right font-mono text-[12.5px] font-semibold',
+                        refundish ? 'text-faint' : b.isWinner ? 'text-gain' : 'text-alert'
+                      )}
+                    >
+                      {refundish
+                        ? formatTokens(b.payout ?? b.amount)
+                        : b.isWinner
+                          ? formatSignedTokens((b.payout ?? 0) - b.amount)
+                          : `−${formatTokens(b.amount)}`}
+                    </span>
+                  </div>
+                );
+              })
             ) : (
-              <p className="px-4 py-3 text-[13px] text-faint">Nobody bet on this one.</p>
+              <p className="border-b border-row-rule px-4 py-3 text-[13px] text-faint">Nobody bet on this one.</p>
             )}
-            {totalBets > 0 && (
-              <div className="bg-canvas px-4 py-[11px] text-[12px] text-faint">
-                {totalBets} bet{totalBets === 1 ? '' : 's'} total
-              </div>
-            )}
+            {ledger}
           </div>
 
-          {/* Small branding line, mainly for when SHARE_BUTTONS_ENABLED is back on -- this is the
-              only content inside `ticketRef` (and so the only thing in a shared/saved capture) that
-              says whose result this is once it's outside the app. */}
-          <p className="pt-1 text-center text-[10.5px] font-bold tracking-[0.08em] text-faint uppercase">Barbets · mybarbets.com</p>
+          {/* Only inside the capture when sharing is on — the one line that says whose result
+              this is once the image is outside the app. */}
+          {SHARE_BUTTONS_ENABLED && (
+            <p className="pt-1 text-center text-[10.5px] font-bold tracking-[0.08em] text-faint uppercase">Barbets · mybarbets.com</p>
+          )}
         </div>
 
         {coverVisible && (

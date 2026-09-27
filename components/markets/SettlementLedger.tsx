@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Mention } from '@/components/ui/Mention';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { ChevronRightIcon } from '@/components/ui/icons';
+import { RowChevron } from '@/components/ui/Screen';
 import { formatTokens } from '@/lib/formatNumber';
 import type { PayoutBreakdown } from '@/lib/actions/markets';
 import type { RevealBet } from '@/components/markets/RevealSummary';
@@ -122,7 +123,11 @@ export function SettlementLedger({
   sponsorNickname,
   voided,
   refundish,
+  variant = 'row',
 }: {
+  /** 'row' — a standalone card row. 'link' — 4m's "All N bets and the ledger" footer strip,
+   *  closing off the "What everyone got" card. */
+  variant?: 'row' | 'link';
   bets: RevealBet[];
   payoutBreakdown?: PayoutBreakdown | null;
   carriedBonusPool?: number;
@@ -150,17 +155,30 @@ export function SettlementLedger({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="flex w-full items-center justify-between gap-3 rounded-[20px] border border-hairline bg-surface px-4 py-3.5 text-left transition-colors hover:bg-rule"
-      >
-        <span className="min-w-0">
-          <span className="block text-[14.5px] font-bold text-ink">Full ledger</span>
-          <span className="block truncate text-[12.5px] text-faint">{summary}</span>
-        </span>
-        <ChevronRightIcon className="h-4 w-4 shrink-0 text-faint" />
-      </button>
+      {variant === 'link' ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex w-full items-center justify-between gap-2.5 bg-wash px-4 py-[11px] text-left"
+        >
+          <span className="text-[12px] font-bold text-signal">
+            {bets.length === 0 ? 'The ledger' : `All ${bets.length} bet${bets.length === 1 ? '' : 's'} and the ledger`}
+          </span>
+          <RowChevron className="text-signal" />
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex w-full items-center justify-between gap-3 rounded-[20px] border border-hairline bg-surface px-4 py-3.5 text-left transition-colors hover:bg-rule"
+        >
+          <span className="min-w-0">
+            <span className="block text-[14.5px] font-bold text-ink">Full ledger</span>
+            <span className="block truncate text-[12.5px] text-faint">{summary}</span>
+          </span>
+          <ChevronRightIcon className="h-4 w-4 shrink-0 text-faint" />
+        </button>
+      )}
 
       {open && (
         <Modal onClose={() => setOpen(false)} padded={false} panelClassName="overflow-hidden">

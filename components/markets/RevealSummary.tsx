@@ -1,20 +1,34 @@
 import Link from 'next/link';
 import { RevealTicket } from '@/components/markets/RevealTicket';
 import { SettlementLedger } from '@/components/markets/SettlementLedger';
-import { ChatIcon, ChevronRightIcon } from '@/components/ui/icons';
+import { UserAvatar } from '@/components/ui/UserAvatar';
+import { RowChevron } from '@/components/ui/Screen';
 import type { PayoutBreakdown } from '@/lib/actions/markets';
 import { formatLine } from '@/lib/units';
 
 export interface RevealBet {
   nickname: string;
+  userId?: string;
+  avatarUpdatedAt?: string | null;
+  avatarPresetKey?: string | null;
   /** Precomputed by the caller: the bet_side or the option's label, whichever applies. */
   choiceLabel: string;
   amount: number;
   payout: number | null;
-  /** Precomputed by the caller by comparing this bet's side/option to the market's actual outcome — not inferred from payout, since a winning bet can still floor to a $0 payout. */
+  /** Compared against the actual outcome by the caller — not inferred from payout, since a winning bet can floor to 0. */
   isWinner: boolean;
 }
 
+export interface LatestComment {
+  userId: string;
+  nickname: string;
+  avatarUpdatedAt: string | null;
+  avatarPresetKey: string | null;
+  body: string;
+}
+
+/** 4m's stack under the title: the result, your result, what everyone got (with the ledger at its
+ *  foot), then the latest comment and a link into the thread. */
 export function RevealSummary({
   groupName,
   question,
@@ -28,7 +42,6 @@ export function RevealSummary({
   carriedBonusPool,
   creatorNickname,
   sponsorNickname,
-  resolvedAtIso,
   justification,
   hiddenFrom,
   groupId,
@@ -37,73 +50,53 @@ export function RevealSummary({
   hasProof,
   isSubjectOfThisMarket,
   commentCount,
+  latestComment,
+  calledByNickname,
 }: {
   groupName: string;
-  /** The market's title, shown on the ticket itself since it has to be self-contained once shared outside the app. */
   question: string;
-  /** Precomputed by the caller: 'VOIDED', a bet_side in caps, or the winning option's label. */
   headline: string;
   actualValue: number | null;
   marketType: 'yes_no' | 'over_under' | 'multiple_choice';
-  /** over_under only. */
   line?: number | null;
-  /** over_under only, e.g. "$", "min", "pts". */
   unit?: string | null;
   bets: RevealBet[];
-  /** Only set when nobody predicted the outcome and the group has distribute_payout on. */
   payoutBreakdown?: PayoutBreakdown | null;
-  /** markets.carried_bonus_pool: bonus tokens this market was seeded with at creation, from another
-      market's earlier zero-winner split. The only bonus-pool signal that survives resolution —
-      markets.bonus_pool itself is always zeroed by finalize_market() the moment a market resolves,
-      whether or not it started with a carried amount. */
   carriedBonusPool?: number;
   creatorNickname?: string;
   sponsorNickname?: string;
-  resolvedAtIso: string;
-  /** The winning resolution proposal's justification, if one was given. */
   justification?: string | null;
-  /** Subject nicknames — safe to reveal now that the market's resolved. */
   hiddenFrom: string[];
   groupId: string;
   marketId: string;
-  /** The current viewer's own nickname, so their own row can be found/highlighted in "What everyone got". */
   myNickname: string;
-  /** Whether the winning resolution proposal has a proof photo attached. */
   hasProof: boolean;
-  /** True when the viewer is a hidden subject of this market — see RevealTicket's `sealedForSubject`. */
   isSubjectOfThisMarket?: boolean;
-  /** Count of non-deleted comments on this market, for the "N comments" link below the ticket. */
   commentCount: number;
+  latestComment?: LatestComment | null;
+  calledByNickname?: string;
 }) {
   const sorted = [...bets].sort((a, b) => (b.payout ?? 0) - (a.payout ?? 0));
   const voided = headline === 'VOIDED';
-  // Nobody predicted the actual outcome — every bet lost the pick, but
-  // that's not the same as "lost the money": depending on distribute_payout,
-  // they were either fully or partially refunded, not wiped out. Treat these
-  // like a void for display purposes so nobody reads "lost" next to a bet
-  // that actually came back.
+  // Nobody predicted the outcome: every pick lost, but the stakes came back (fully or partly),
+  // so it reads like a void rather than "lost" next to money that returned.
   const universalLoss = !voided && bets.length > 0 && bets.every((b) => !b.isWinner);
   const refundish = voided || universalLoss;
 
-  const detailLine =
-    marketType === 'over_under' && actualValue !== null ? `Actual number: ${actualValue}.` : (justification?.trim() || null);
+  const detailLine = marketType === 'over_under' && actualValue !== null ? `Actual ${actualValue}` : justification?.trim() || null;
 
-  // Reference-equality dedup (not id-based — RevealBet carries no id), safe since `sorted` is a
-  // shallow copy of the same objects `bets` holds. Guarantees the viewer's own row always shows
-  // up in "What everyone got" even when it's well outside the top payouts, without duplicating it
-  // if it would have made the cut on its own.
   const myBet = bets.find((b) => b.nickname === myNickname) ?? null;
   const topOthers = sorted.filter((b) => b !== myBet).slice(0, myBet ? 2 : 3);
-  const previewBets = (myBet ? [...topOthers, myBet] : topOthers).sort((a, b) => (b.payout ?? 0) - (a.payout ?? 0));
+  const previewBets = (myBet ? [myBet, ...topOthers] : topOthers).sort((a, b) => (a === myBet ? -1 : b === myBet ? 1 : 0));
   const pool = bets.reduce((sum, b) => sum + b.amount, 0);
   const winnerCount = bets.filter((b) => b.isWinner).length;
+  const commentsHref = `/groups/${groupId}/markets/${marketId}?tab=comments`;
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-[11px]">
       <RevealTicket
         groupName={groupName}
         question={question}
-        resolvedAtIso={resolvedAtIso}
         headline={headline}
         isVoid={voided}
         refundish={refundish}
@@ -112,7 +105,6 @@ export function RevealSummary({
         myBet={myBet}
         pool={pool}
         winnerCount={winnerCount}
-        totalBets={bets.length}
         previewBets={previewBets}
         myNickname={myNickname}
         hiddenFrom={hiddenFrom}
@@ -120,33 +112,50 @@ export function RevealSummary({
         marketId={marketId}
         hasProof={hasProof}
         sealedForSubject={isSubjectOfThisMarket}
+        proofByNickname={calledByNickname}
+        ledger={
+          <SettlementLedger
+            variant="link"
+            bets={bets}
+            payoutBreakdown={payoutBreakdown}
+            carriedBonusPool={carriedBonusPool}
+            creatorNickname={creatorNickname}
+            sponsorNickname={sponsorNickname}
+            voided={voided}
+            refundish={refundish}
+          />
+        }
       />
 
-      <Link
-        href={`/groups/${groupId}/markets/${marketId}?tab=comments`}
-        className="flex items-center justify-between gap-3 rounded-[20px] border border-hairline bg-surface px-4 py-3.5 transition-colors hover:bg-rule"
-      >
-        <span className="flex items-center gap-2.5 text-[14.5px] font-bold text-ink">
-          <ChatIcon className="h-4 w-4 text-faint" />
-          {commentCount > 0 ? `${commentCount} comment${commentCount === 1 ? '' : 's'}` : 'No comments yet'}
-        </span>
-        <ChevronRightIcon className="h-4 w-4 shrink-0 text-faint" />
-      </Link>
-
-      {/* One row, not three cards. The carried-bonus note, the no-winner breakdown, and the list
-          of bets were each a fragment of the same question ("where did the money go?"), and none
-          of them explained how the figures were reached. SettlementLedger holds all of it,
-          rounding rule included, one tap away. */}
-      <SettlementLedger
-        bets={bets}
-        payoutBreakdown={payoutBreakdown}
-        carriedBonusPool={carriedBonusPool}
-        creatorNickname={creatorNickname}
-        sponsorNickname={sponsorNickname}
-        voided={voided}
-        refundish={refundish}
-      />
+      {latestComment ? (
+        <div className="rounded-2xl border border-hairline bg-surface px-[15px] py-3">
+          <div className="flex gap-2.5">
+            <UserAvatar
+              userId={latestComment.userId}
+              nickname={latestComment.nickname}
+              avatarUpdatedAt={latestComment.avatarUpdatedAt}
+              avatarPresetKey={latestComment.avatarPresetKey}
+              className="h-[26px] w-[26px] text-[10px]"
+              fallbackClassName="bg-tile text-muted"
+            />
+            <span className="min-w-0 flex-1">
+              <span className="block text-[12.5px] font-bold text-ink">@{latestComment.nickname}</span>
+              <span className="mt-0.5 line-clamp-3 block text-[13px] leading-[1.45] text-muted text-pretty">{latestComment.body}</span>
+            </span>
+          </div>
+          <Link href={commentsHref} className="mt-2.5 flex items-center justify-between gap-2.5 border-t border-rule pt-[9px]">
+            <span className="text-[12px] font-bold text-signal">
+              Read all {commentCount} comment{commentCount === 1 ? '' : 's'}
+            </span>
+            <RowChevron className="text-signal" />
+          </Link>
+        </div>
+      ) : (
+        <Link href={commentsHref} className="flex items-center justify-between gap-2.5 rounded-2xl border border-hairline bg-surface px-[15px] py-3">
+          <span className="text-[12px] font-bold text-signal">No comments yet. Say something</span>
+          <RowChevron className="text-signal" />
+        </Link>
+      )}
     </div>
   );
 }
-

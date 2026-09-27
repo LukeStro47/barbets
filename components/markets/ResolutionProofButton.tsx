@@ -19,7 +19,8 @@ export function ResolutionProofButton({
   className,
 }: {
   marketId: string;
-  variant: 'action' | 'icon' | 'chip';
+  /** 'view' — 4m's small "View" button at the end of the photo-proof row. */
+  variant: 'action' | 'icon' | 'chip' | 'view';
   /** 'action' variant only -- merged onto the Button so a lone caller (e.g. RevealTicket when
    * SHARE_BUTTONS_ENABLED is off) can stretch it full-width instead of leaving it content-sized. */
   className?: string;
@@ -56,6 +57,15 @@ export function ResolutionProofButton({
           <CameraIcon className="h-4 w-4" />
           {loading ? 'Loading…' : 'Proof'}
         </Button>
+      ) : variant === 'view' ? (
+        <button
+          type="button"
+          onClick={open}
+          disabled={loading}
+          className="shrink-0 rounded-[10px] border border-hairline bg-tile px-[11px] py-[7px] text-[11.5px] font-bold text-ink disabled:opacity-50"
+        >
+          {loading ? 'Loading' : 'View'}
+        </button>
       ) : variant === 'chip' ? (
         // Sits inline beside the proposed outcome itself, so it reads as an attribute of the
         // call ("here's what backs it") rather than a second action competing with Challenge.
