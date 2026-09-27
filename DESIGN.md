@@ -1,7 +1,7 @@
 ---
 version: 1.0
 name: Barbets
-updated: 2026-09-23
+updated: 2026-09-27
 description: >
   Barbets is a free-to-play social betting app for private groups. The interface
   is built to read like a financial ledger rather than a casino: a near-white
@@ -12,10 +12,10 @@ description: >
 
   This file describes the system as actually implemented in this codebase — the
   token names below are the real `@theme` custom properties in `app/globals.css`,
-  and every component named below is the real file. Brand assets (the app icon,
-  the logo mark, store listing art) are intentionally out of scope for this
-  system and still use the pre-Ledger "B" die mark; nothing here should be read
-  as a claim about them.
+  and every component named below is the real file. The brand mark is the 3ac
+  "b" tile (components/ui/BrandMark.tsx: BrandTile, Wordmark, BrandLockup), used
+  in the app and in the PWA/favicon icon set. The native iOS/Android store icons
+  are regenerated separately and may still show the old mark.
 
 colors:
   canvas: "#f6f7f9"
@@ -38,6 +38,14 @@ colors:
   alert-line: "#f6d9d5"
   disabled-bg: "#eef0f4"
   disabled-ink: "#a8b0bd"
+  tile: "#f1f3f7"
+  wash: "#fafbfc"
+  row-rule: "#f4f6f8"
+  edge: "#dfe4ee"
+  signal-wash: "#f7f9ff"
+  signal-line: "#e3e9ff"
+  signal-edge: "#d9e1ff"
+  signal-ink: "#3b4a6b"
 
 typography:
   families:
@@ -97,6 +105,14 @@ The app sits on **canvas** (`#f6f7f9`) with **surface** (`#ffffff`) cards.
 **muted** (`#5a6373`) carries supporting sentences; **faint** (`#8a929f`) is
 for eyebrows, timestamps, and chevrons only — never body copy.
 
+The screen-by-screen pass added a few quieter steps the mocks use over and
+over, so no screen has to hand-write a hex: **tile** (`#f1f3f7`) for icon
+tiles, secondary chips and the header's back/close tile; **wash**
+(`#fafbfc`) for a card's footer strip or a table's header row; **row-rule**
+(`#f4f6f8`) for the divider between rows inside one card (lighter than
+`rule`); **edge** (`#dfe4ee`) for a heavier outline, like an unselected
+option or an outlined secondary button.
+
 ### Signal blue
 
 `#2d55f5` is the voltage. It appears on: the primary CTA, live countdowns,
@@ -110,6 +126,12 @@ the bet slip's confirmation screen), and `signal-tint` (`#eef2ff`, meant for
 a light tinted chip on a light ground) is nearly invisible there. `on-ink` is
 the token for exactly that "bright accent text on a dark card" role;
 `signal-tint` is only for a light-background tint.
+
+For "this row is yours" (your line on a leaderboard, a selected option), the
+ground is **signal-wash** (`#f7f9ff`) with a **signal-line** (`#e3e9ff`)
+hairline, body text on it in **signal-ink** (`#3b4a6b`). **Signal-edge**
+(`#d9e1ff`) borders a `signal-tint` chip. These are grounds for the one
+blue thing, not extra blue things: the rule about one blue still holds.
 
 ### Semantics
 
@@ -146,6 +168,26 @@ a CSS `peer`. The Ledger mockups (5b, 5c, 5f, 5l...) show a bordered box with
 the label as a plain caption above it, so the new `Field` is a real bordered
 14px box — the underline model is gone, not just recolored.
 
+## Screen furniture
+
+Every drill-in screen is built from `components/ui/Screen.tsx`, so none of
+them re-draw the chrome:
+
+- **`ScreenHeader`**: the white sticky header (safe-area aware) with a 32px
+  back or close **`HeaderTile`**, a 15/800 title (or a 14/700 muted "context"
+  title, the market page's group name), and an optional right slot. Sticky, not
+  fixed, because page transitions use a transform (see ARCHITECTURE.md).
+- **`StickyFooter` + `FooterButton`**: the frosted white bottom bar that
+  holds a screen's one action. `FooterButton` is the 14px-radius, 15/700
+  CTA in `signal` (with the CTA glow), `ink`, or `outline`.
+- **`Eyebrow`**, **`StatCell`** (the uppercase-label-over-mono-figure cell
+  in a row of stats), **`RowChevron`** (the 7x12 chevron that ends every
+  tappable row).
+
+The bottom nav only appears on the five top-level screens (groups, a group's
+markets, its leaderboard, Inbox, You); anything you drill into gets
+`ScreenHeader` and, if it has an action, `StickyFooter`.
+
 ## Motion
 
 Motion is functional and short. No spinner anywhere in the app —
@@ -153,8 +195,9 @@ Motion is functional and short. No spinner anywhere in the app —
 on one track (`bb-settle` / `bb-settle-b` in `globals.css`), the same idea
 as a market settling on a price, used for the boot splash and every route
 loading state. `bb-fade` is the loader's caption and any live-dot pulse;
-`bb-shimmer` is available for a skeleton-row sweep (not yet wired into a
-skeleton component — the app doesn't have one yet).
+`bb-shimmer` is the skeleton-row sweep (`components/ui/Skeleton.tsx`).
+`SettleBar` (in `LoadingAnimation.tsx`) is the same two-bar motif at three
+sizes, including inline inside a button or a ticket.
 
 ## Do and don't
 
