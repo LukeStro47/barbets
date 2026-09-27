@@ -16,7 +16,7 @@ import { FooterButton, RowChevron, ScreenHeader, StickyFooter } from '@/componen
  * already handles the signed-out bounce through sign-up and back.
  *
  * "Scan their QR" only exists in the native app: it opens the platform's own scanner
- * (@capacitor-mlkit/barcode-scanning, Google's code scanner on Android, a camera sheet on iOS).
+ * (@capacitor/barcode-scanner, Capacitor's own plugin, which ships a Swift package like the rest of the iOS build).
  * A browser has no equivalent worth shipping, and the phone's own camera app already opens an
  * invite QR straight into /join/[code], so on the web the row says so instead of pretending.
  */
@@ -59,34 +59,29 @@ export function JoinWithCode({ startGroupHref }: { startGroupHref: string }) {
 
   async function scan() {
     setScanError(null);
+    let raw: string | undefined;
     try {
-      const { BarcodeScanner, BarcodeFormat } = await import('@capacitor-mlkit/barcode-scanning');
-      if (Capacitor.getPlatform() === 'android') {
-        const { available } = await BarcodeScanner.isGoogleBarcodeScannerModuleAvailable();
-        if (!available) {
-          await BarcodeScanner.installGoogleBarcodeScannerModule();
-          setScanError('Getting the scanner ready. Try again in a few seconds.');
-          return;
-        }
-      } else {
-        const { camera } = await BarcodeScanner.requestPermissions();
-        if (camera !== 'granted' && camera !== 'limited') {
-          setScanError('Camera access is off for barbets. Turn it on in Settings, or type the code.');
-          return;
-        }
+      const { CapacitorBarcodeScanner, CapacitorBarcodeScannerTypeHint } = await import('@capacitor/barcode-scanner');
+      const result = await CapacitorBarcodeScanner.scanBarcode({
+        hint: CapacitorBarcodeScannerTypeHint.QR_CODE,
+        scanInstructions: 'Point at the group QR',
+        cancelButtonAccessibilityLabel: 'Cancel',
+      });
+      raw = result.ScanResult;
+    } catch (e) {
+      // Backing out of the scanner rejects too; only say something when it genuinely failed.
+      if (!/cancel/i.test(e instanceof Error ? e.message : String(e))) {
+        setScanError("The scanner didn't open. Check camera access for barbets in Settings, or type the code.");
       }
-      const { barcodes } = await BarcodeScanner.scan({ formats: [BarcodeFormat.QrCode] });
-      const raw = barcodes[0]?.rawValue;
-      if (!raw) return; // Cancelled.
-      const scanned = inviteCodeFromText(raw);
-      if (!scanned) {
-        setScanError("That QR isn't a barbets invite.");
-        return;
-      }
-      router.push(inviteJoinPath(scanned, 'qr'));
-    } catch {
-      setScanError("The scanner didn't open. Type the code instead.");
+      return;
     }
+    if (!raw) return;
+    const scanned = inviteCodeFromText(raw);
+    if (!scanned) {
+      setScanError("That QR isn't a barbets invite.");
+      return;
+    }
+    router.push(inviteJoinPath(scanned, 'qr'));
   }
 
   const rowClass = 'flex w-full items-center gap-3 rounded-[18px] border border-hairline bg-surface px-[15px] py-3.5 text-left';
