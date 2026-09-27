@@ -1,20 +1,16 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/Button';
-import { ConsequenceRow } from '@/components/ui/ConsequenceRow';
 import { SeasonSetupEditSheet, type RosterMember } from '@/components/groups/SeasonSetupEditSheet';
-import { formatTokens } from '@/lib/formatNumber';
-import { formatSeasonLength, type SeasonLength } from '@/lib/seasonLength';
+import { StickyFooter, FooterButton } from '@/components/ui/Screen';
+import { formatTokens, numberWordCapitalized } from '@/lib/formatNumber';
 import type { GroupSettings } from '@/lib/actions/groups';
 
 /**
- * Owner-only. Configure opens SeasonSetupEditSheet rather than starting the season directly —
- * name, length, reseed amount, and the roster are all things that are only changeable *now*, one
- * tap away, so the button that moves you forward is the same one that surfaces them, rather than
- * a silent "starts with whatever's already set" action next to a separate, easy-to-miss Edit. The
- * two rows below read as what happens *when* you do (a ConsequenceRow pair, same connected-dot
- * grammar as a confirmation modal's "what this does"), not just a snapshot of current state.
+ * Owner-only, on 5n: the next season's setup as one dashed card ("Eight playing, @tom out.
+ * Everyone reseeded to 1,000 when you start.") and "Configure Season N" in the footer, which
+ * opens SeasonSetupEditSheet — name, length, reseed and roster are only changeable now, so the
+ * button that moves you forward is the one that surfaces them.
  */
 export function SeasonSetupCard({
   groupId,
@@ -33,36 +29,24 @@ export function SeasonSetupCard({
   settings: GroupSettings;
   members: RosterMember[];
   playingCount: number;
-  /** e.g. "@tom out" or "2 out" — precomputed so this card doesn't need the full roster shape. */
+  /** e.g. "@tom out" or "2 out". */
   sittingOutLabel: string | null;
 }) {
   const [editOpen, setEditOpen] = useState(false);
-  const seasonLength = (settings.season_length ?? 'manual') as SeasonLength;
 
   return (
-    <div className="overflow-hidden rounded-[24px] border-[1.5px] border-signal bg-surface">
-      <div className="flex items-center gap-2 bg-signal-tint px-3.5 py-2">
-        <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-signal" />
-        <p className="flex-1 text-xs font-extrabold tracking-[0.06em] text-signal-deep uppercase">Season {nextSeasonNumber} setup</p>
-      </div>
-      <div className="flex flex-col gap-3 px-4 py-4">
-        <p className="text-[11.5px] leading-[1.35] text-faint">
-          {seasonName ?? `Season ${nextSeasonNumber}`} · {formatSeasonLength(seasonLength)} · {formatTokens(settings.seed_amount)} each
+    <>
+      <div className="rounded-[18px] border border-dashed border-dash bg-surface px-4 py-[15px]">
+        <p className="text-[13px] font-bold text-ink">{seasonName ?? `Season ${nextSeasonNumber}`} setup</p>
+        <p className="mt-1.5 text-[12.5px] leading-[1.5] text-muted text-pretty">
+          {numberWordCapitalized(playingCount)} playing{sittingOutLabel ? `, ${sittingOutLabel}` : ''}. Everyone reseeded to{' '}
+          {formatTokens(settings.seed_amount)} when you start.
         </p>
-        <div>
-          <ConsequenceRow dotClassName="bg-signal">
-            <strong className="font-bold text-ink">{playingCount} playing</strong>
-            {sittingOutLabel && `, ${sittingOutLabel}`}
-          </ConsequenceRow>
-          <ConsequenceRow dotClassName="bg-dash" isLast>
-            Everyone reseeded to <strong className="font-bold text-ink">{formatTokens(settings.seed_amount)}</strong> when you
-            start
-          </ConsequenceRow>
-        </div>
-        <Button size="lg" className="w-full" onClick={() => setEditOpen(true)}>
-          Configure
-        </Button>
       </div>
+
+      <StickyFooter>
+        <FooterButton onClick={() => setEditOpen(true)}>Configure {seasonName ?? `Season ${nextSeasonNumber}`}</FooterButton>
+      </StickyFooter>
 
       {editOpen && (
         <SeasonSetupEditSheet
@@ -76,6 +60,6 @@ export function SeasonSetupCard({
           onClose={() => setEditOpen(false)}
         />
       )}
-    </div>
+    </>
   );
 }

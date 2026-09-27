@@ -71,7 +71,8 @@ export function getActiveNavTab(pathname: string): NavTab | null {
     rest.startsWith('/awards') ||
     rest.startsWith('/members') ||
     rest.startsWith('/settings') ||
-    rest.startsWith('/seasons')
+    rest.startsWith('/seasons') ||
+    rest.startsWith('/recap')
   )
     return 'group';
   return 'markets';

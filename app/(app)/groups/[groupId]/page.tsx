@@ -7,14 +7,8 @@ import { SaveBalanceSnapshot } from '@/components/groups/SaveBalanceSnapshot';
 import { PendingBonusPoolNote } from '@/components/groups/PendingBonusPoolNote';
 import { OpenSeasonBettingButton, OpenBettingButton } from '@/components/groups/IntermissionActions';
 import { WaitingOnYouCard } from '@/components/groups/WaitingOnYouCard';
-import { SeasonRecapHero, type FinalBalanceRow } from '@/components/groups/SeasonRecapHero';
 import { SeasonSetupCard } from '@/components/groups/SeasonSetupCard';
 import type { RosterMember } from '@/components/groups/SeasonSetupEditSheet';
-import { FinalTableCard } from '@/components/groups/FinalTableCard';
-import { SeasonMarketsArchiveCard } from '@/components/groups/SeasonMarketsArchiveCard';
-import { SeasonNumbersCard } from '@/components/groups/SeasonNumbersCard';
-import { SeasonHighlightsCard, type SnapshotHighlight } from '@/components/groups/SeasonHighlightsCard';
-import { MemberTitleCard } from '@/components/groups/MemberTitleCard';
 import { WhatsNextCard } from '@/components/groups/WhatsNextCard';
 import { WindingDownCard } from '@/components/groups/WindingDownCard';
 import { formatTokens, formatSignedTokens, formatOrdinal } from '@/lib/formatNumber';
@@ -22,10 +16,10 @@ import { getGroupTasks } from '@/lib/tasks';
 import { getGroupBarSwitcherState } from '@/lib/groupBar';
 import { GroupBar } from '@/components/layout/GroupBar';
 import { cn } from '@/lib/cn';
-import { TITLE_ORDER, TITLE_META, type GroupTitleRow } from '@/lib/titles';
-import { diffTitleSnapshots, type TitleSnapshotEntry } from '@/lib/seasonTitleDiff';
 import type { GroupSettings } from '@/lib/actions/groups';
 import { PipelineGroupFeed } from '@/components/groups/PipelineGroupFeed';
+import { SeasonOver } from '@/components/groups/SeasonOver';
+import { loadSeasonOver } from '@/lib/seasonOver';
 
 export default async function GroupFeedPage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
@@ -63,56 +57,15 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
   // the open/pending/settled feed entirely and renders the recap instead.
   // ---------------------------------------------------------------------
   if (season?.status === 'intermission') {
-    const [{ data: endedResult }, { data: rosterRows }, { data: optouts }, { data: optins }, { data: titleRows }] = await Promise.all([
-      supabase
-        .from('season_results')
-        .select('snapshot, seasons(id, number, name, started_at, ended_at, seed_amount)')
-        .eq('group_id', groupId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single(),
+    // 5n: the whole season end on one screen (see components/groups/SeasonOver.tsx), plus the
+    // owner's next-season setup or a member's what-happens-next and sit-out toggle.
+    const [seasonOver, { data: rosterRows }, { data: optouts }, { data: optins }] = await Promise.all([
+      loadSeasonOver(supabase, groupId, user.id),
       supabase.from('memberships').select('user_id, nickname, status').eq('group_id', groupId).in('status', ['active', 'dormant']),
       supabase.from('season_optouts').select('user_id').eq('season_id', season.id),
       supabase.from('season_optins').select('user_id').eq('season_id', season.id),
-      supabase.from('group_titles').select('title_key, user_id, stat_value, label, icon_key').eq('group_id', groupId),
     ]);
-    notFoundIfEmpty(endedResult);
-
-    const endedSeason = endedResult!.seasons as unknown as {
-      id: string;
-      number: number;
-      name: string | null;
-      started_at: string;
-      ended_at: string | null;
-      seed_amount: number | null;
-    };
-    const snapshot = endedResult!.snapshot as {
-      champion: FinalBalanceRow | null;
-      loser: FinalBalanceRow | null;
-      prize_text: string | null;
-      punishment_text: string | null;
-      final_balances: FinalBalanceRow[];
-      biggest_single_win: (SnapshotHighlight & { amount: number }) | null;
-      worst_beat: (SnapshotHighlight & { amount: number }) | null;
-      biggest_upset: (SnapshotHighlight & { multiple: number }) | null;
-      markets_settled: number;
-      tokens_wagered: number;
-      bets_placed: number;
-      titles_snapshot: TitleSnapshotEntry[];
-    };
-
-    const { data: priorResult } =
-      endedSeason.number - 1 > 0
-        ? await supabase
-            .from('season_results')
-            .select('snapshot, seasons!inner(number)')
-            .eq('group_id', groupId)
-            .eq('seasons.number', endedSeason.number - 1)
-            .maybeSingle()
-        : { data: null };
-    const priorTitlesSnapshot = ((priorResult?.snapshot as { titles_snapshot?: TitleSnapshotEntry[] } | undefined)?.titles_snapshot ??
-      null) as TitleSnapshotEntry[] | null;
-    const titleChanges = diffTitleSnapshots(snapshot.titles_snapshot ?? [], priorTitlesSnapshot);
+    notFoundIfEmpty(seasonOver);
 
     const optedOutIds = new Set((optouts ?? []).map((o) => o.user_id));
     const optedInIds = new Set((optins ?? []).map((o) => o.user_id));
@@ -121,142 +74,63 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
     const sittingOut = roster.filter((m) => !playing.some((p) => p.user_id === m.user_id));
     const mine = roster.find((m) => m.user_id === user.id);
     const ownerNickname = roster.find((m) => m.user_id === group!.owner_id)?.nickname ?? '';
+    const sittingOutLabel = sittingOut.length === 0 ? null : sittingOut.length === 1 ? `@${sittingOut[0].nickname} out` : `${sittingOut.length} out`;
 
-    const finalBalances = snapshot.final_balances ?? [];
-    const seasonName = endedSeason.name ?? `Season ${endedSeason.number}`;
+    const avatarIds = [...new Set([...seasonOver!.finalBalances.map((r) => r.user_id), ...(seasonOver!.champion ? [seasonOver!.champion.user_id] : [])])];
+    const { data: avatarRows } =
+      avatarIds.length > 0 && !group!.is_public
+        ? await supabase.from('users').select('id, avatar_updated_at, avatar_preset_key').in('id', avatarIds)
+        : { data: [] };
+    const avatars = new Map((avatarRows ?? []).map((r) => [r.id, r]));
 
-    const myTitles = ((titleRows ?? []) as GroupTitleRow[]).filter((r) => r.user_id === user.id);
-    const myFirstTitle = TITLE_ORDER.map((k) => myTitles.find((r) => r.title_key === k)).find((r): r is GroupTitleRow => !!r);
-
-    let viewerNet: number | undefined;
-    let viewerAccuracy: number | null | undefined;
-    let viewerBetCount: number | undefined;
-    if (!isOwner) {
-      const you = finalBalances.find((m) => m.user_id === user.id);
-      viewerNet = (you?.balance ?? 0) - (endedSeason.seed_amount ?? 0);
-
-      const { data: mySeasonBets } = await supabase
-        .from('bets')
-        .select('market_id, side, option_id, markets!inner(season_id, status, outcome, outcome_option_id)')
-        .eq('user_id', user.id)
-        .eq('markets.season_id', endedSeason.id);
-      const betRows = (mySeasonBets ?? []) as any[];
-      viewerBetCount = new Set(betRows.map((b) => b.market_id)).size;
-      const resolvedBets = betRows.filter((b) => b.markets.status === 'resolved');
-      const correctCount = resolvedBets.filter((b) => (b.option_id ? b.option_id === b.markets.outcome_option_id : b.side === b.markets.outcome)).length;
-      viewerAccuracy = resolvedBets.length > 0 ? Math.round((correctCount / resolvedBets.length) * 100) : null;
-    } else {
-      const { count } = await supabase
-        .from('bets')
-        .select('id, markets!inner(season_id)', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('markets.season_id', endedSeason.id);
-      viewerBetCount = count ?? undefined;
-    }
-
-    const sittingOutLabel =
-      sittingOut.length === 0 ? null : sittingOut.length === 1 ? `@${sittingOut[0].nickname} out` : `${sittingOut.length} out`;
-
-    let fullSettings: GroupSettings | null = null;
-    let rosterMembers: RosterMember[] = [];
+    let setup: React.ReactNode = null;
     if (isOwner) {
       const { data } = await supabase.from('group_settings').select('*').eq('group_id', groupId).single();
-      fullSettings = data as GroupSettings;
-      rosterMembers = roster.map((m) => ({
+      const rosterMembers: RosterMember[] = roster.map((m) => ({
         userId: m.user_id,
         nickname: m.nickname ?? '',
         status: m.status as 'active' | 'dormant',
         isOwner: m.user_id === group!.owner_id,
       }));
+      setup = (
+        <SeasonSetupCard
+          groupId={groupId}
+          seasonId={season.id}
+          nextSeasonNumber={season.number}
+          seasonName={season.name}
+          settings={data as GroupSettings}
+          members={rosterMembers}
+          playingCount={playing.length}
+          sittingOutLabel={sittingOutLabel}
+        />
+      );
+    } else if (mine) {
+      setup = (
+        <WhatsNextCard
+          groupId={groupId}
+          seasonId={season.id}
+          ownerNickname={ownerNickname}
+          reseedAmount={settings?.seed_amount ?? null}
+          playingCount={playing.length}
+          sittingOutNicknames={sittingOut.map((m) => m.nickname ?? '')}
+          membershipStatus={mine.status as 'active' | 'dormant'}
+          hasOptedOut={optedOutIds.has(mine.user_id)}
+          hasOptedIn={optedInIds.has(mine.user_id)}
+        />
+      );
     }
 
     return (
       <>
-      <GroupBar {...groupBarProps} />
-      <main className="mx-auto max-w-[430px] px-[18px] pt-5 pb-[110px]">
-        <div className="flex flex-col gap-4">
+        <GroupBar {...groupBarProps} />
+        <main className={cn('mx-auto max-w-[430px] px-[22px] pt-6', isOwner ? 'pb-[140px]' : 'pb-10')}>
           {group!.deletion_scheduled_at && (
-            <GroupDeletionBanner groupId={groupId} deletionScheduledAt={group!.deletion_scheduled_at} isOwner={isOwner} />
+            <div className="mb-4">
+              <GroupDeletionBanner groupId={groupId} deletionScheduledAt={group!.deletion_scheduled_at} isOwner={isOwner} />
+            </div>
           )}
-
-          <SeasonRecapHero
-            viewer={isOwner ? 'owner' : 'member'}
-            seasonName={seasonName}
-            marketsSettled={snapshot.markets_settled ?? 0}
-            finalBalances={finalBalances}
-            viewerUserId={user.id}
-            viewerNet={viewerNet}
-            viewerAccuracy={viewerAccuracy}
-            viewerTitlesHeld={myTitles.length}
-            loser={snapshot.loser}
-            prizeText={snapshot.prize_text}
-            punishmentText={snapshot.punishment_text}
-          />
-
-          {isOwner && fullSettings ? (
-            <SeasonSetupCard
-              groupId={groupId}
-              seasonId={season.id}
-              nextSeasonNumber={season.number}
-              seasonName={season.name}
-              settings={fullSettings}
-              members={rosterMembers}
-              playingCount={playing.length}
-              sittingOutLabel={sittingOutLabel}
-            />
-          ) : (
-            <>
-              {myFirstTitle && (
-                <MemberTitleCard
-                  titleKey={myFirstTitle.title_key}
-                  label={myFirstTitle.label ?? TITLE_META[myFirstTitle.title_key].label}
-                  iconKey={myFirstTitle.icon_key ?? TITLE_META[myFirstTitle.title_key].defaultIconKey}
-                  statValue={myFirstTitle.stat_value}
-                  otherCount={myTitles.length - 1}
-                />
-              )}
-              {mine && (
-                <WhatsNextCard
-                  groupId={groupId}
-                  seasonId={season.id}
-                  ownerNickname={ownerNickname}
-                  reseedAmount={settings?.seed_amount ?? null}
-                  playingCount={playing.length}
-                  sittingOutNicknames={sittingOut.map((m) => m.nickname ?? '')}
-                  membershipStatus={mine.status as 'active' | 'dormant'}
-                  hasOptedOut={optedOutIds.has(mine.user_id)}
-                  hasOptedIn={optedInIds.has(mine.user_id)}
-                />
-              )}
-            </>
-          )}
-
-          <FinalTableCard groupId={groupId} finalBalances={finalBalances} viewerUserId={user.id} />
-
-          {isOwner && (
-            <SeasonNumbersCard
-              marketsSettled={snapshot.markets_settled ?? 0}
-              tokensWagered={snapshot.tokens_wagered ?? 0}
-              betsPlaced={snapshot.bets_placed ?? 0}
-            />
-          )}
-
-          <SeasonHighlightsCard
-            groupId={groupId}
-            biggestSingleWin={snapshot.biggest_single_win}
-            biggestUpset={snapshot.biggest_upset}
-            titleChanges={titleChanges}
-          />
-
-          <SeasonMarketsArchiveCard
-            groupId={groupId}
-            seasonNumber={endedSeason.number}
-            marketsSettled={snapshot.markets_settled ?? 0}
-            viewerBetCount={viewerBetCount}
-            hasEarlierSeasons={endedSeason.number > 1}
-          />
-        </div>
-      </main>
+          <SeasonOver groupId={groupId} data={seasonOver!} viewerId={user.id} avatars={avatars} setup={setup} />
+        </main>
       </>
     );
   }
