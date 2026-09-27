@@ -28,8 +28,8 @@ export function SettingsCard({ className, children }: { className?: string; chil
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-[14px] border border-hairline bg-surface',
-        '[&>*+*]:border-t [&>*+*]:border-hairline',
+        'overflow-hidden rounded-[18px] border border-hairline bg-surface',
+        '[&>*+*]:border-t [&>*+*]:border-row-rule',
         className
       )}
     >
@@ -84,7 +84,7 @@ export const settingsNavRowClasses =
 
 /** Front-door rows on Manage group: slightly taller than a control row, current value as the subtitle. */
 export const manageNavRowClasses =
-  'flex w-full items-center justify-between gap-3.5 px-4 py-[15px] text-left transition-colors hover:bg-rule/60';
+  'flex w-full items-center justify-between gap-[11px] px-4 py-[13px] text-left transition-colors hover:bg-wash';
 
 export function ManageNavRow({
   href,
@@ -101,16 +101,21 @@ export function ManageNavRow({
   trailing?: React.ReactNode;
   highlight?: boolean;
 }) {
-  const className = cn(manageNavRowClasses, highlight && 'bg-signal-tint hover:bg-signal-tint');
+  // `highlight` is accepted for older call sites but no longer tints: 4l/4o draw every front-door
+  // row the same, plain white on a hairline.
+  void highlight;
+  const className = manageNavRowClasses;
   const inner = (
     <>
       <span className="min-w-0">
-        <span className="block truncate text-[14.5px] font-bold text-ink">{title}</span>
-        <span className="mt-0.5 block truncate text-xs leading-[1.45] text-faint">{subtitle}</span>
+        <span className="block truncate text-[13.5px] font-bold text-ink">{title}</span>
+        <span className="mt-0.5 block truncate text-[11.5px] leading-[1.4] text-faint">{subtitle}</span>
       </span>
       <span className="flex shrink-0 items-center gap-2">
         {trailing}
-        <ChevronRightIcon className="h-3.5 w-2 text-faint" />
+        <svg width="7" height="12" viewBox="0 0 8 14" fill="none" className="shrink-0 text-faint" aria-hidden>
+          <path d="M1 1l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
       </span>
     </>
   );

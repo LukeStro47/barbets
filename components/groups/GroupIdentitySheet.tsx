@@ -89,7 +89,7 @@ export function GroupIdentitySheet({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="shrink-0 rounded-full border border-dash px-3 py-1.5 text-[12.5px] font-bold text-ink transition-colors hover:bg-rule"
+        className="shrink-0 rounded-[10px] border border-hairline bg-surface px-3 py-[7px] text-[12px] font-bold text-ink"
       >
         Edit
       </button>

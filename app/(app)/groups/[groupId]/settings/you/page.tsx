@@ -12,7 +12,7 @@ export default async function YouInThisGroupPage({ params }: { params: Promise<{
   const { group, isOwner, isPublic, isModerator, myMembership } = ctx;
 
   return (
-    <main className="mx-auto flex max-w-lg flex-col gap-5 px-5 pb-7 pt-[30px]">
+    <main className="mx-auto flex max-w-lg flex-col gap-5 px-5 pb-7 pt-8">
       <PageHeader title="You in this group" backHref={`/groups/${groupId}/settings`} backLabel={groupSetupTitle(isOwner)} />
 
       <section>

@@ -1,44 +1,58 @@
 import Link from 'next/link';
-import { CaretLeftIcon } from '@/components/ui/icons';
 
+/**
+ * The header for screens the mockups don't draw individually (awards, member records, account,
+ * notifications, owner tools, admin...). With a back link it becomes the Ledger drill-in header
+ * every mocked screen uses — a sticky white bar with a hairline, a 32px back tile and the title
+ * at 15/800 — and bleeds out of its page's 20px/32px padding (`-mx-5 -mt-8`) so it spans the
+ * screen the way ScreenHeader does. The subtitle drops underneath as a plain line.
+ *
+ * Without a back link it's a top-level page title (26/800), which is how it began.
+ */
 export function PageHeader({
   title,
   subtitle,
   backHref,
-  backLabel,
   backAction,
   action,
 }: {
   title: string;
   subtitle?: React.ReactNode;
   backHref?: string;
+  /** Kept for older callers; the back tile carries no label. */
   backLabel?: string;
-  /** Rendered on the same row as the back link, right-aligned — for compact status pills that would otherwise crowd the title onto a narrower line. */
+  /** Right-hand content in the header bar (a status pill, an Edit button). */
   backAction?: React.ReactNode;
   action?: React.ReactNode;
 }) {
+  if (backHref) {
+    return (
+      <div>
+        <header className="sticky top-0 z-40 -mx-5 -mt-8 border-b border-hairline bg-surface pt-[calc(env(safe-area-inset-top)+12px)]">
+          <div className="flex items-center gap-[11px] px-3.5 pb-[11px]">
+            <Link
+              href={backHref}
+              aria-label="Back"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[11px] border border-hairline bg-tile text-ink"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" aria-hidden>
+                <path d="M15 6l-6 6 6 6" />
+              </svg>
+            </Link>
+            <span className="min-w-0 flex-1 truncate text-[15px] font-extrabold tracking-[-0.015em] text-ink">{title}</span>
+            {backAction}
+            {action}
+          </div>
+        </header>
+        {subtitle && <div className="mt-5 text-[13px] leading-[1.45] text-faint">{subtitle}</div>}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-1">
-      {(backHref || backAction) && (
-        <div className="flex items-center justify-between gap-3">
-          {/* -ml-1 pulls the caret glyph's own padding back out, so the label still starts on the
-              page's left margin instead of sitting indented under the title. */}
-          {backHref ? (
-            <Link href={backHref} className="-ml-1 inline-flex items-center gap-0.5 text-[12.5px] font-bold text-faint hover:text-muted">
-              <CaretLeftIcon className="h-4 w-4 text-faint" />
-              {backLabel ?? 'Back'}
-            </Link>
-          ) : (
-            <span />
-          )}
-          {backAction}
-        </div>
-      )}
-      {/* Baseline, not top: `action` is always a short status line sat beside the title (the
-          leaderboard's season/day), and top-aligning small text against a 26px display size
-          leaves it floating above the word it belongs to. */}
       <div className="flex items-baseline justify-between gap-4">
-        <h1 className="min-w-0 font-display text-[26px] leading-[1.15] font-extrabold tracking-[-0.02em] text-ink">{title}</h1>
+        <h1 className="min-w-0 text-[26px] leading-[1.15] font-extrabold tracking-[-0.02em] text-ink">{title}</h1>
         {action}
       </div>
       {subtitle && <p className="text-[13px] leading-[1.4] text-faint">{subtitle}</p>}

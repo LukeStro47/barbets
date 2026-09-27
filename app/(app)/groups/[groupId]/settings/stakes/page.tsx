@@ -12,7 +12,7 @@ export default async function GroupStakesPage({ params }: { params: Promise<{ gr
   notFoundIfEmpty(ctx.settings);
 
   return (
-    <main className="mx-auto flex max-w-lg flex-col gap-[22px] px-5 pb-7 pt-[30px]">
+    <main className="mx-auto flex max-w-lg flex-col gap-[22px] px-5 pb-7 pt-8">
       <StakesEditor
         groupId={groupId}
         settings={ctx.settings as GroupSettings}

@@ -409,28 +409,28 @@
     to right,
     var(--color-signal) 0%,
     var(--color-signal) var(--fill, 0%),
-    var(--color-hairline) var(--fill, 0%),
-    var(--color-hairline) 100%
+    var(--color-rule) var(--fill, 0%),
+    var(--color-rule) 100%
   );
 }
 .challenge-window-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  height: 20px;
-  width: 20px;
+  height: 18px;
+  width: 18px;
   border-radius: 999px;
   background: var(--color-surface);
-  border: 1.5px solid var(--color-signal-deep);
-  box-shadow: 0 1px 3px rgba(12, 16, 24, 0.3);
+  border: 2px solid var(--color-signal);
+  box-shadow: 0 1px 3px rgba(12, 16, 24, 0.2);
   cursor: pointer;
 }
 .challenge-window-slider::-moz-range-thumb {
-  height: 20px;
-  width: 20px;
+  height: 18px;
+  width: 18px;
   border-radius: 999px;
   background: var(--color-surface);
-  border: 1.5px solid var(--color-signal-deep);
-  box-shadow: 0 1px 3px rgba(12, 16, 24, 0.3);
+  border: 2px solid var(--color-signal);
+  box-shadow: 0 1px 3px rgba(12, 16, 24, 0.2);
   cursor: pointer;
 }
 .challenge-window-slider::-moz-range-track {

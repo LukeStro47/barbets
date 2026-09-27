@@ -80,6 +80,7 @@ export function OwnerOnlySection({
   deletionScheduled,
   isPublic = false,
   heading = true,
+  variant = 'full',
 }: {
   groupId: string;
   groupName: string;
@@ -91,8 +92,44 @@ export function OwnerOnlySection({
   deletionScheduled: boolean;
   isPublic?: boolean;
   heading?: boolean;
+  /** 'list' — 4o2's "Owner tools": an alert-edged card of three plain alert rows. */
+  variant?: 'full' | 'list';
 }) {
   const [openSheet, setOpenSheet] = useState<null | 'end-season' | 'transfer' | 'delete'>(null);
+
+  const sheets = (
+    <>
+      {openSheet === 'end-season' && activeSeason && (
+        <EndSeasonSheet groupId={groupId} season={activeSeason} resolutionWindowHours={resolutionWindowHours} onClose={() => setOpenSheet(null)} />
+      )}
+      {openSheet === 'transfer' && (
+        <TransferOwnershipSheet groupId={groupId} members={members} onClose={() => setOpenSheet(null)} isPublic={isPublic} />
+      )}
+      {openSheet === 'delete' && <DeleteGroupSheet groupId={groupId} groupName={groupName} onClose={() => setOpenSheet(null)} />}
+    </>
+  );
+
+  if (variant === 'list') {
+    const row = (label: string, onClick: () => void) => (
+      <button type="button" onClick={onClick} className="flex w-full items-center justify-between gap-2.5 border-b border-alert-line px-4 py-[13px] text-left last:border-b-0">
+        <span className="text-[13.5px] font-bold text-alert">{label}</span>
+        <svg width="7" height="12" viewBox="0 0 8 14" fill="none" className="shrink-0 text-alert" aria-hidden>
+          <path d="M1 1l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      </button>
+    );
+    return (
+      <section>
+        <p className="text-[10.5px] font-bold tracking-[0.1em] text-faint uppercase">Owner tools</p>
+        <div className="mt-[9px] overflow-hidden rounded-[18px] border border-alert-line bg-surface">
+          {activeSeason && row('End this season', () => setOpenSheet('end-season'))}
+          {row('Transfer ownership', () => setOpenSheet('transfer'))}
+          {!deletionScheduled && row('Delete this group', () => setOpenSheet('delete'))}
+        </div>
+        {sheets}
+      </section>
+    );
+  }
 
   return (
     <section>

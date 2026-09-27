@@ -31,16 +31,16 @@ export function Switch({
       onClick={onChange}
       className={cn(
         'relative inline-flex shrink-0 items-center rounded-full transition-colors duration-200 ease-in-out disabled:cursor-not-allowed disabled:opacity-50',
-        small ? 'h-[22px] w-[38px]' : 'h-7 w-12',
-        checked ? 'bg-signal' : 'bg-dash',
+        small ? 'h-[22px] w-[38px]' : 'h-[25px] w-[42px]',
+        checked ? 'bg-signal' : 'bg-edge',
         className
       )}
     >
       <span
         className={cn(
-          'inline-block rounded-full bg-surface shadow-[0_1px_3px_rgba(12,16,24,0.35)] transition-transform duration-200 ease-in-out',
-          small ? 'h-4 w-4' : 'h-5 w-5',
-          small ? (checked ? 'translate-x-[19px]' : 'translate-x-[3px]') : checked ? 'translate-x-6' : 'translate-x-1'
+          'inline-block rounded-full bg-surface shadow-[0_1px_2px_rgba(12,16,24,0.2)] transition-transform duration-200 ease-in-out',
+          small ? 'h-4 w-4' : 'h-[19px] w-[19px]',
+          small ? (checked ? 'translate-x-[19px]' : 'translate-x-[3px]') : checked ? 'translate-x-5' : 'translate-x-[3px]'
         )}
       />
     </button>

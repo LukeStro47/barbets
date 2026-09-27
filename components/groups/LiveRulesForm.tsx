@@ -10,14 +10,15 @@ import {
   formatChallengeWindow,
   groupSettingsInput,
   type ActiveSeasonSummary,
-} from '@/lib/groupManage';import { PageHeader } from '@/components/ui/PageHeader';
+} from '@/lib/groupManage';
+import { ScreenHeader } from '@/components/ui/Screen';
 import { SectionLabel, SettingsCard } from '@/components/ui/SettingsList';
 import { Switch } from '@/components/ui/Switch';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { CaretDownIcon, LockIcon } from '@/components/ui/icons';
 import { SaveStatusChip, type SaveState } from '@/components/groups/SaveStatusChip';
-import { EndSeasonSheet } from '@/components/groups/SettingsActions';
+import { EndSeasonSheet, OwnerOnlySection } from '@/components/groups/SettingsActions';
 import { formatTokens } from '@/lib/formatNumber';
 import { JOIN_MESSAGE_MAX_LENGTH } from '@/lib/limits';
 import { COMMON_TIMEZONES, friendlyTimezoneName } from '@/lib/timezone';
@@ -120,7 +121,7 @@ export function LiveRulesForm({
   activeSeason,
   isPublic,
   canEdit,
-  backLabel,
+  ownerTools,
 }: {
   groupId: string;
   settings: GroupSettings;
@@ -128,7 +129,10 @@ export function LiveRulesForm({
   activeSeason: { id: string; number: number; name: string | null } | null;
   isPublic: boolean;
   canEdit: boolean;
-  backLabel: string;
+  /** The owner's end/transfer/delete list at the foot of the page (4o2). */
+  ownerTools?: { groupName: string; members: { userId: string; nickname: string }[]; deletionScheduled: boolean } | null;
+  /** Unused since the header became a back tile; kept so older callers still type-check. */
+  backLabel?: string;
 }) {
   const router = useRouter();
   const [committed, setCommitted] = useState(settings);
@@ -236,17 +240,16 @@ export function LiveRulesForm({
 
   return (
     <>
-      <PageHeader
+      <ScreenHeader
         title="Group rules"
-        backHref={`/groups/${groupId}/settings`}
-        backLabel={backLabel}
-        action={canEdit ? <SaveStatusChip state={saveState} onRetry={retry} /> : undefined}
+        href={`/groups/${groupId}/settings`}
+        right={canEdit ? <SaveStatusChip state={saveState} onRetry={retry} /> : undefined}
       />
-
+      <main className="mx-auto flex max-w-[430px] flex-col gap-3 px-[18px] pt-[13px] pb-8">
       <section>
         <SectionLabel
           action={
-            <Link href={`/how-it-works?group=${groupId}&tab=your-group`} className="text-[11.5px] font-bold text-signal-deep">
+            <Link href={`/how-it-works?group=${groupId}&tab=your-group`} className="text-[11.5px] font-bold text-signal">
               Explain the rules ›
             </Link>
           }
@@ -257,15 +260,29 @@ export function LiveRulesForm({
         <SettingsCard>
           {!isPublic &&
             (canEdit && !betweenSeasons ? (
-              <ToggleRow
-                label="Betting"
-                helper={bettingOn ? 'Anyone can start a market' : 'No one can start a market'}
-                checked={bettingOn}
-                disabled={bettingLockedOn}
-                onChange={() => {
-                  if (!bettingOn) setConfirmingBetting(true);
-                }}
-              />
+              bettingLockedOn ? (
+                // 4o2: once betting is on it can't be switched off from here, so the row says so
+                // with a locked "Stays on" chip rather than a disabled switch.
+                <div className="flex items-start justify-between gap-3.5 px-4 py-[13px]">
+                  <span className="min-w-0">
+                    <span className="block text-[13.5px] font-bold text-ink">Betting</span>
+                    <span className="mt-0.5 block text-[11.5px] leading-[1.45] text-faint">Anyone can start a market</span>
+                  </span>
+                  <span className="inline-flex shrink-0 items-center gap-[5px] rounded-full border border-hairline bg-tile px-[9px] py-1 text-[10.5px] font-bold text-muted">
+                    <LockIcon className="h-2.5 w-2.5" />
+                    Stays on
+                  </span>
+                </div>
+              ) : (
+                <ToggleRow
+                  label="Betting"
+                  helper={bettingOn ? 'Anyone can start a market' : 'No one can start a market'}
+                  checked={bettingOn}
+                  onChange={() => {
+                    if (!bettingOn) setConfirmingBetting(true);
+                  }}
+                />
+              )
             ) : (
               <ValueRow label="Betting" helper={betting.consequence} value={canEdit ? betting.value : betting.memberValue} />
             ))}
@@ -305,10 +322,10 @@ export function LiveRulesForm({
           {canEdit ? (
             <div className="flex items-center justify-between gap-3.5 px-4 py-[13px]">
               <span className="min-w-0">
-                <span className="block text-sm font-semibold text-ink">Token allocation</span>
-                <span className="mt-0.5 block text-xs leading-[1.45] text-faint">What each new member starts with</span>
+                <span className="block text-[13.5px] font-bold text-ink">Token allocation</span>
+                <span className="mt-0.5 block text-[11.5px] leading-[1.45] text-faint">What each new member starts with</span>
               </span>
-              <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-dash p-[3px]">
+              <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-hairline p-[3px]">
                 <button
                   type="button"
                   aria-label="Decrease token allocation"
@@ -320,11 +337,11 @@ export function LiveRulesForm({
                   onPointerUp={stopHold}
                   onPointerCancel={stopHold}
                   onPointerLeave={stopHold}
-                  className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-rule text-[15px] font-extrabold text-muted disabled:opacity-40"
+                  className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-tile text-[15px] font-bold text-muted disabled:opacity-40"
                 >
                   −
                 </button>
-                <span className="min-w-12 text-center text-sm font-extrabold text-ink">{formatTokens(local.seedAmount)}</span>
+                <span className="min-w-12 text-center font-mono text-[13px] font-semibold text-ink">{formatTokens(local.seedAmount)}</span>
                 <button
                   type="button"
                   aria-label="Increase token allocation"
@@ -336,7 +353,7 @@ export function LiveRulesForm({
                   onPointerUp={stopHold}
                   onPointerCancel={stopHold}
                   onPointerLeave={stopHold}
-                  className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-rule text-[15px] font-extrabold text-muted disabled:opacity-40"
+                  className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-tile text-[15px] font-bold text-ink disabled:opacity-40"
                 >
                   +
                 </button>
@@ -349,12 +366,12 @@ export function LiveRulesForm({
           {!isPublic && (
             <div className="px-4 py-[13px]">
               <div className="flex items-baseline justify-between gap-3">
-                <span className="text-sm font-semibold text-ink">Challenge window</span>
-                <span className="font-display text-[15px] font-extrabold text-signal-deep">
+                <span className="text-[13.5px] font-bold text-ink">Challenge window</span>
+                <span className="font-mono text-[14px] font-semibold text-signal">
                   {formatChallengeWindow(local.resolutionWindowHours)}
                 </span>
               </div>
-              <p className="mt-0.5 text-xs leading-[1.45] text-faint">
+              <p className="mt-0.5 text-[11.5px] leading-[1.45] text-faint">
                 How long a called result can be disputed.
               </p>
               {canEdit && (
@@ -374,10 +391,10 @@ export function LiveRulesForm({
                     }
                     onPointerUp={() => persist()}
                     onKeyUp={() => persist()}
-                    className="challenge-window-slider mt-2.5 w-full"
+                    className="challenge-window-slider mt-[11px] w-full"
                     style={{ ['--fill' as string]: `${fillPct}%` }}
                   />
-                  <div className="mt-1 flex justify-between text-[11px] text-faint">
+                  <div className="mt-[7px] flex justify-between text-[11px] text-faint">
                     <span>30 min</span>
                     <span>10 hours</span>
                   </div>
@@ -392,10 +409,10 @@ export function LiveRulesForm({
               onClick={() => setMoreOpen((v) => !v)}
               className="flex w-full items-center justify-between gap-3.5 px-4 py-[13px] text-left"
             >
-              <span className="text-[13px] font-bold text-signal-deep">More rules</span>
+              <span className="text-[13px] font-bold text-signal">More rules</span>
               <span className="flex items-center gap-2">
                 <span className="text-[11.5px] text-faint">{moreHint}</span>
-                <CaretDownIcon className={cn('h-3.5 w-3.5 text-signal-deep transition-transform duration-200', moreOpen && 'rotate-180')} />
+                <CaretDownIcon className={cn('h-3.5 w-3.5 text-signal transition-transform duration-200', moreOpen && 'rotate-180')} />
               </span>
             </button>
             <div className={cn('grid transition-[grid-template-rows] duration-200 ease-out', moreOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}>
@@ -403,7 +420,7 @@ export function LiveRulesForm({
                 {!isPublic && (
                   <div className="border-t border-hairline px-4 py-[13px]">
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-sm font-semibold text-ink">Season length</span>
+                      <span className="text-[13.5px] font-bold text-ink">Season length</span>
                       {canEdit ? (
                         seasonsLocked ? (
                           <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-rule px-2.5 py-[3px] text-[11px] font-bold text-muted">
@@ -417,7 +434,7 @@ export function LiveRulesForm({
                         <span className="shrink-0 text-sm font-bold text-ink">{local.seasonsEnabled ? 'On' : 'Off'}</span>
                       )}
                     </div>
-                    <p className="mt-0.5 text-xs leading-[1.45] text-faint">
+                    <p className="mt-0.5 text-[11.5px] leading-[1.45] text-faint">
                       {local.seasonsEnabled
                         ? 'Standings archive, then everyone is reseeded.'
                         : 'The board never resets. Turning seasons on is permanent.'}
@@ -531,10 +548,10 @@ export function LiveRulesForm({
                   ))}
 
                 <div className="border-t border-hairline px-4 py-[13px]">
-                  <label className="block text-sm font-semibold text-ink" htmlFor="group-timezone">
+                  <label className="block text-[13.5px] font-bold text-ink" htmlFor="group-timezone">
                     Time zone
                   </label>
-                  <p className="mt-0.5 mb-2 text-xs leading-[1.45] text-faint">Shown next to every closing time.</p>
+                  <p className="mt-0.5 mb-2 text-[11.5px] leading-[1.45] text-faint">Shown next to every closing time.</p>
                   {canEdit ? (
                     <select
                       id="group-timezone"
@@ -614,10 +631,10 @@ export function LiveRulesForm({
 
                 {!isPublic && (
                   <div className="border-t border-hairline px-4 py-[13px]">
-                    <label className="block text-sm font-semibold text-ink" htmlFor="join-message">
+                    <label className="block text-[13.5px] font-bold text-ink" htmlFor="join-message">
                       Join message
                     </label>
-                    <p className="mt-0.5 mb-2 text-xs leading-[1.45] text-faint">Shown when someone joins. Leave blank for none.</p>
+                    <p className="mt-0.5 mb-2 text-[11.5px] leading-[1.45] text-faint">Shown when someone joins. Leave blank for none.</p>
                     {canEdit ? (
                       <>
                         <textarea
@@ -658,6 +675,22 @@ export function LiveRulesForm({
       <p className="px-0.5 text-[11.5px] leading-[1.5] text-faint">
         {canEdit ? 'Applies to markets opened from now on.' : 'Set by the owner. Applies to markets opened from now on.'}
       </p>
+
+      {ownerTools && (
+        <div className="mt-1.5">
+          <OwnerOnlySection
+            groupId={groupId}
+            groupName={ownerTools.groupName}
+            resolutionWindowHours={local.resolutionWindowHours}
+            activeSeason={activeSeason}
+            members={ownerTools.members}
+            deletionScheduled={ownerTools.deletionScheduled}
+            isPublic={isPublic}
+            variant="list"
+          />
+        </div>
+      )}
+      </main>
 
       {confirmingBetting && (
         <Modal onClose={() => setConfirmingBetting(false)}>
@@ -726,10 +759,10 @@ function ToggleRow({
   return (
     <div className="flex items-start justify-between gap-3.5 px-4 py-[13px]">
       <span className="min-w-0">
-        <span className="block text-sm font-semibold text-ink">{label}</span>
-        <span className="mt-0.5 block text-xs leading-[1.45] text-faint">{helper}</span>
+        <span className="block text-[13.5px] font-bold text-ink">{label}</span>
+        <span className="mt-0.5 block text-[11.5px] leading-[1.45] text-faint">{helper}</span>
       </span>
-      <Switch checked={checked} onChange={onChange} disabled={disabled} className="mt-0.5" />
+      <Switch size="sm" checked={checked} onChange={onChange} disabled={disabled} className="mt-0.5" />
     </div>
   );
 }
@@ -738,8 +771,8 @@ function ValueRow({ label, helper, value }: { label: string; helper: React.React
   return (
     <div className="flex items-start justify-between gap-3.5 px-4 py-[13px]">
       <span className="min-w-0">
-        <span className="block text-sm font-semibold text-ink">{label}</span>
-        <span className="mt-0.5 block text-xs leading-[1.45] text-faint">{helper}</span>
+        <span className="block text-[13.5px] font-bold text-ink">{label}</span>
+        <span className="mt-0.5 block text-[11.5px] leading-[1.45] text-faint">{helper}</span>
       </span>
       <span className="shrink-0 text-sm font-bold text-ink">{value}</span>
     </div>
