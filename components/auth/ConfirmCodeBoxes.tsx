@@ -22,12 +22,14 @@ export function ConfirmCodeBoxes({ onChange }: { onChange?: (code: string) => vo
 
   function setChar(i: number, value: string) {
     const clean = value.slice(-1).replace(/[^0-9]/g, '');
-    setChars((prev) => {
-      const next = [...prev];
-      next[i] = clean;
-      onChange?.(next.join(''));
-      return next;
-    });
+    // Compute `next` and call onChange outside the setChars updater, same as handlePaste below —
+    // calling a parent setState from inside a useState updater runs it during this component's
+    // own render/commit, which is what "Cannot update a component while rendering a different
+    // component" was flagging.
+    const next = [...chars];
+    next[i] = clean;
+    setChars(next);
+    onChange?.(next.join(''));
     if (clean && i < CONFIRM_CODE_LENGTH - 1) inputRefs.current[i + 1]?.focus();
   }
 
