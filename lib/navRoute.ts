@@ -15,10 +15,19 @@ export function isCreateFlow(pathname: string): boolean {
   return false;
 }
 
-/** Only the full-screen create flows hide the bar — a market's detail/reveal page keeps it
- * visible (BetslipBar stacks itself just above it, see --bottomnav-height in globals.css). */
+/** The bar only appears on the five top-level destinations the design draws it on: the
+ * all-groups hub (4q), a group's market list (4a/4b), its leaderboard (4f/4r), the Inbox (4j), and
+ * You (4k). Every other screen is a drill-in with its own back/close header (ScreenHeader) and,
+ * often, its own sticky footer CTA — the mockups never stack the nav under either. */
 export function shouldHideBottomNav(pathname: string): boolean {
-  return isCreateFlow(pathname);
+  const path = pathname.replace(/\/+$/, '') || '/';
+  if (path === '/groups' || path === '/inbox' || path === '/profile') return false;
+  const groupId = getRouteGroupId(path);
+  if (groupId) {
+    const rest = path.slice(`/groups/${groupId}`.length);
+    if (rest === '' || rest === '/leaderboard') return false;
+  }
+  return true;
 }
 
 /** Routes whose whole state is an unsaved draft, so a pull-to-refresh would silently throw the

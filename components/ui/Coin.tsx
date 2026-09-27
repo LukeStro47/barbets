@@ -1,7 +1,7 @@
-import Image from 'next/image';
-import { cn } from '@/lib/cn';
+import { BrandTile } from '@/components/ui/BrandMark';
 
-/** The coin emblem alone, no wordmark — for centered hero placements (auth pages, invite confirmation) where <Logo />'s horizontal lockup would be too wide. */
+/** The mark alone, no wordmark (3ac): the signal-blue "b" tile. Kept under its old name so
+ *  existing hero placements pick up the new mark without churn. */
 export function Coin({ size = 64, className }: { size?: number; className?: string }) {
-  return <Image src="/barbets-coin.png" alt="" width={size} height={size} priority className={cn('shrink-0', className)} />;
+  return <BrandTile size={size} className={className} />;
 }

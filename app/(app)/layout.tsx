@@ -8,6 +8,7 @@ import { OfflineBar } from '@/components/pwa/OfflineBar';
 import { PolicyReapprovalGate } from '@/components/legal/PolicyReapprovalGate';
 import { getGroupTaskCounts } from '@/lib/tasks';
 import { CURRENT_POLICY_VERSION } from '@/lib/legal';
+import { formatTokens, formatOrdinal } from '@/lib/formatNumber';
 
 export default async function AppLayout({ children, modal }: { children: React.ReactNode; modal: React.ReactNode }) {
   const supabase = await createClient();
@@ -29,7 +30,7 @@ export default async function AppLayout({ children, modal }: { children: React.R
 
   const { data: groupRows } = await supabase
     .from('groups')
-    .select('id, name, avatar_key, owner_id, is_public, memberships(status, user_id, nickname, role)')
+    .select('id, name, avatar_key, owner_id, is_public, memberships(status, user_id, nickname, role, balance)')
     .order('created_at', { ascending: false });
 
   const groupIds = (groupRows ?? []).map((g) => g.id);
@@ -60,13 +61,21 @@ export default async function AppLayout({ children, modal }: { children: React.R
   const hasNeedsYou = [...taskCounts.values()].some((count) => count > 0);
 
   const groups: NavGroup[] = (groupRows ?? []).map((g) => {
-    const memberCount = (g.memberships ?? []).filter((m: { status: string }) => m.status === 'active' || m.status === 'dormant').length;
+    // 4c's meta line is the viewer's own balance and standing, same rank definition the
+    // leaderboard uses: currently-playing members (active or dormant) by balance, descending.
+    const playing = (g.memberships ?? [])
+      .filter((m: { status: string }) => m.status === 'active' || m.status === 'dormant')
+      .sort((a: { balance: number }, b: { balance: number }) => Number(b.balance) - Number(a.balance));
+    const myIndex = playing.findIndex((m: { user_id: string }) => m.user_id === user.id);
+    const mine = playing[myIndex] as { balance: number } | undefined;
+    const needsCount = taskCounts.get(g.id) ?? 0;
     return {
       id: g.id,
       name: g.name,
       avatarKey: g.avatar_key,
-      meta: `${memberCount} member${memberCount === 1 ? '' : 's'}`,
-      needsYou: (taskCounts.get(g.id) ?? 0) > 0,
+      meta: mine ? `${formatTokens(Number(mine.balance))} · ${formatOrdinal(myIndex + 1)} of ${playing.length}` : `${playing.length} playing`,
+      needsYou: needsCount > 0,
+      needsCount,
     };
   });
 

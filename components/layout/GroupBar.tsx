@@ -45,18 +45,22 @@ export function GroupBar({
 }) {
   const openSwitcher = () => window.dispatchEvent(new CustomEvent(OPEN_GROUP_SWITCHER_EVENT));
 
+  // The white, hairline-bottomed header 4a/4b/4f/4j/4k all share: the bar is the whole header,
+  // not a row sitting on the canvas. Sticky rather than fixed (see ScreenHeader for why).
   return (
+    <header className="sticky top-0 z-40 -mt-[env(safe-area-inset-top)] border-b border-hairline bg-surface pt-[calc(env(safe-area-inset-top)+12px)]">
     <button
       onClick={openSwitcher}
       aria-label={hasOtherGroups ? `Switch groups, currently ${groupName}` : groupName}
-      className="flex w-full items-center gap-[11px] rounded-[14px] border-0 bg-transparent p-0 text-left"
+      className="mx-auto flex w-full max-w-[430px] items-center gap-[11px] border-0 bg-transparent px-3.5 pt-0 pb-[11px] text-left"
     >
       <GroupAvatar name={groupName} avatarKey={avatarKey} className="h-[30px] w-[30px] text-[10.5px]" fallbackClassName="bg-ink text-on-ink" />
       <span className="min-w-0 flex-1 truncate text-[16px] font-extrabold tracking-[-0.015em] text-ink">{groupName}</span>
-      <span className="relative flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] border border-hairline bg-rule text-ink">
+      <span className="relative flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] border border-hairline bg-tile text-ink">
         {hasOtherGroups ? <SwitcherGlyph className="h-[15px] w-[15px]" /> : <HomeGlyph className="h-[15px] w-[15px]" />}
         {hasOtherGroups && needsYou && <span className="absolute top-[-2px] right-[-2px] h-[9px] w-[9px] rounded-full border-2 border-surface bg-alert" />}
       </span>
     </button>
+    </header>
   );
 }

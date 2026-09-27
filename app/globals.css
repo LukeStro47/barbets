@@ -36,6 +36,18 @@
 
   --color-disabled-bg: #eef0f4;
   --color-disabled-ink: #a8b0bd;
+
+  /* Secondary shades the screen mockups use repeatedly but DESIGN.md's token list never named.
+     Matching the artboards exactly needs them, and a raw hex at every call site is how a system
+     drifts, so they live here. */
+  --color-tile: #f1f3f7; /* icon tiles, secondary chips, the header back tile */
+  --color-wash: #fafbfc; /* a card's footer strip / table header row */
+  --color-row-rule: #f4f6f8; /* divider between rows inside one card */
+  --color-edge: #dfe4ee; /* a heavier outline: unselected option, secondary outlined button */
+  --color-signal-wash: #f7f9ff; /* a selected row / "your" row: the lightest blue ground */
+  --color-signal-line: #e3e9ff; /* hairline on a signal-wash strip */
+  --color-signal-edge: #d9e1ff; /* border of a signal-tint chip */
+  --color-signal-ink: #3b4a6b; /* body text sitting on signal-wash */
 }
 
 @layer base {
@@ -48,7 +60,7 @@
        any page-specific bottom bar (currently just BetslipBar) can stack itself flush above
        the nav instead of underneath it, rather than duplicating this as a guessed magic number
        in more than one component. */
-    --bottomnav-height: calc(60px + max(20px, env(safe-area-inset-bottom)));
+    --bottomnav-height: calc(58px + max(26px, env(safe-area-inset-bottom)));
 
     /* The height a full-screen flow (the two create wizards) can fill without pushing the page
        into a scroll. The layout already spends env(safe-area-inset-top) as in-flow padding above

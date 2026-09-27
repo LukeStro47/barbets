@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/Button';
 import type { MarketCardData } from '@/components/markets/MarketCard';
 import { MarketCardList } from '@/components/markets/MarketListCard';
 import { loadMoreSettledMarkets } from '@/lib/actions/feed';
-import { STATUS_LABEL } from '@/lib/marketStatus';
 import type { SettledCursor } from '@/lib/groupFeed';
 import { cn } from '@/lib/cn';
 
@@ -98,7 +97,7 @@ export function GroupMarketSections({
   const effectiveFilter: Filter = allEmpty ? 'open' : filter;
 
   return (
-    <div className="flex flex-col gap-[18px]">
+    <div className="flex flex-col">
       {!allEmpty && (
         <div className="flex gap-1 rounded-[15px] bg-rule p-1">
           {TABS.map((tab) => {
@@ -123,7 +122,7 @@ export function GroupMarketSections({
       )}
 
       {effectiveFilter === 'open' && (
-        <Section label="Closing soonest">
+        <Section label="Closing soonest" className="mt-2.5">
           {openEmpty ? (
             allEmpty ? (
               <EmptyState icon="🎲" title="Nothing open right now" subtitle="Tap the + below to start one." />
@@ -157,22 +156,10 @@ export function GroupMarketSections({
       )}
 
       {effectiveFilter === 'pending' && (
-        <>
-          {pendingSponsor.length > 0 && (
-            <Section label={STATUS_LABEL.pending_sponsor}>
-              <MarketCardList markets={pendingSponsor} />
-            </Section>
-          )}
-          {challenged.length > 0 && (
-            <Section label={STATUS_LABEL.disputed}>
-              <MarketCardList markets={challenged} />
-            </Section>
-          )}
-          {awaitingResolution.length > 0 && (
-            <Section label={STATUS_LABEL.closed}>
-              <MarketCardList markets={awaitingResolution} />
-            </Section>
-          )}
+        <div className="mt-3.5">
+          {/* 4b draws the pending tab as one unlabelled stack — each card's own stat row already
+              says which stage it's at (Proposed by / Called by), so a heading per stage repeated it. */}
+          {!pendingEmpty && <MarketCardList markets={[...pendingSponsor, ...challenged, ...awaitingResolution]} gap={10} />}
           {pendingEmpty &&
             (nothingActive ? (
               <EmptyState
@@ -188,11 +175,11 @@ export function GroupMarketSections({
             ) : (
               <EmptyState icon="⏳" title="Nothing pending" subtitle="No markets awaiting endorsement, resolution, or a vote." />
             ))}
-        </>
+        </div>
       )}
 
       {effectiveFilter === 'settled' && (
-        <Section label="Settled">
+        <Section label="Settled" className="mt-2.5">
           {settled.length === 0 ? (
             <EmptyState icon="🏁" title="No settled markets yet" subtitle="Once a market resolves, it'll show up here." />
           ) : (
@@ -214,10 +201,10 @@ export function GroupMarketSections({
   );
 }
 
-function Section({ label, children }: { label: string; children: React.ReactNode }) {
+function Section({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className="flex flex-col gap-2">
-      <h2 className="ml-1 text-xs font-bold uppercase tracking-[0.08em] text-faint">{label}</h2>
+    <div className={cn('flex flex-col gap-[9px]', className)}>
+      <h2 className="text-[11px] font-bold tracking-[0.1em] text-faint uppercase">{label}</h2>
       {children}
     </div>
   );

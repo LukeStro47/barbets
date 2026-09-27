@@ -17,7 +17,6 @@ import { SeasonHighlightsCard, type SnapshotHighlight } from '@/components/group
 import { MemberTitleCard } from '@/components/groups/MemberTitleCard';
 import { WhatsNextCard } from '@/components/groups/WhatsNextCard';
 import { WindingDownCard } from '@/components/groups/WindingDownCard';
-import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { formatTokens, formatSignedTokens, formatOrdinal } from '@/lib/formatNumber';
 import { getGroupTasks } from '@/lib/tasks';
 import { getGroupBarSwitcherState } from '@/lib/groupBar';
@@ -172,10 +171,10 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
     }
 
     return (
-      <main className="mx-auto max-w-lg px-5 pt-[22px] pb-[110px]">
-        <GroupBar {...groupBarProps} />
-
-        <div className="mt-[18px] flex flex-col gap-4">
+      <>
+      <GroupBar {...groupBarProps} />
+      <main className="mx-auto max-w-[430px] px-[18px] pt-5 pb-[110px]">
+        <div className="flex flex-col gap-4">
           {group!.deletion_scheduled_at && (
             <GroupDeletionBanner groupId={groupId} deletionScheduledAt={group!.deletion_scheduled_at} isOwner={isOwner} />
           )}
@@ -258,6 +257,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
           />
         </div>
       </main>
+      </>
     );
   }
 
@@ -342,25 +342,14 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
     );
   }
 
+  // 4a: no season line under the bar — "No date, no season detail" (4g). The season and its
+  // countdown live on the leaderboard (4f).
   return (
-    <main className="mx-auto max-w-lg px-5 py-[22px]">
+    <>
+    <GroupBar {...groupBarProps} />
+    <main className="mx-auto max-w-[430px] px-[18px] pt-5">
       <SaveBalanceSnapshot groupId={groupId} groupName={group!.name} balance={membership?.balance ?? 0} />
-      <div className="flex flex-col gap-1.5">
-        <GroupBar {...groupBarProps} />
-        {season && season.status === 'active' && (
-          <div className="flex items-center gap-2 text-[13px] font-medium text-faint">
-            <span>{season.name ?? `Season ${season.number}`}</span>
-            {season.ends_at && (
-              <>
-                <span className="h-1 w-1 shrink-0 rounded-full bg-faint" />
-                <CountdownTimer target={season.ends_at} prefix="Ends in" />
-              </>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="mt-[18px] flex flex-col gap-[18px] pb-10">
+      <div className="flex flex-col pb-10 [&>*+*]:mt-[11px]">
         {group!.deletion_scheduled_at && (
           <GroupDeletionBanner groupId={groupId} deletionScheduledAt={group!.deletion_scheduled_at} isOwner={isOwner} />
         )}
@@ -389,14 +378,10 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
             )}
           </div>
           <div className="mt-3 flex items-center gap-[9px] border-t border-rule pt-[11px] font-mono text-xs text-faint">
-            {pendingTokens > 0 && (
-              <>
-                <span>
-                  <span className="font-semibold text-ink">{formatTokens(pendingTokens)}</span> in play
-                </span>
-                <span className="h-[3px] w-[3px] shrink-0 rounded-full bg-dash" />
-              </>
-            )}
+            <span>
+              <span className="font-semibold text-ink">{formatTokens(pendingTokens)}</span> in play
+            </span>
+            <span className="h-[3px] w-[3px] shrink-0 rounded-full bg-dash" />
             <span>
               <span className="font-semibold text-ink">{yourStandingRank ? formatOrdinal(yourStandingRank) : '—'}</span> of {standings.length}
             </span>
@@ -423,6 +408,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
 
         {!settings?.seasons_enabled && !settings?.betting_enabled && isOwner && <OpenBettingButton groupId={groupId} />}
 
+        <div className="!mt-[13px]">
         {isPipelineGroup ? (
           <PipelineGroupFeed
             groupId={groupId}
@@ -442,7 +428,9 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
             seasonId={season?.id}
           />
         )}
+        </div>
       </div>
     </main>
+    </>
   );
 }

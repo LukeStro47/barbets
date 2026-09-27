@@ -2,7 +2,8 @@ import Link from 'next/link';
 import type { MarketCardData } from '@/components/markets/MarketCard';
 import { OptionLabel } from '@/components/markets/OptionLabel';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
-import { ChevronRightIcon, LockIcon } from '@/components/ui/icons';
+import { LockIcon } from '@/components/ui/icons';
+import { RowChevron } from '@/components/ui/Screen';
 import { formatTokens } from '@/lib/formatNumber';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { cn } from '@/lib/cn';
@@ -41,19 +42,32 @@ function TextStatCell({ label, value, valueClassName, first }: { label: string; 
   );
 }
 
-function Footer({ tone, left, right, chevron }: { tone: 'signal' | 'alert' | 'muted'; left: React.ReactNode; right?: React.ReactNode; chevron: boolean }) {
+function Footer({
+  tone,
+  left,
+  right,
+  chevron,
+  quiet,
+}: {
+  tone: 'signal' | 'alert' | 'muted';
+  left: React.ReactNode;
+  right?: React.ReactNode;
+  chevron: boolean;
+  /** 4b's "Waiting on someone else to endorse": a status, not an action — faint and 600. */
+  quiet?: boolean;
+}) {
   const toneClasses =
     tone === 'signal'
-      ? 'border-t border-[#e3e9ff] bg-[#f7f9ff] text-signal-deep'
+      ? 'border-t border-signal-line bg-signal-wash text-signal'
       : tone === 'alert'
         ? 'border-t border-alert-line bg-alert-bg text-alert'
-        : 'border-t border-rule bg-[#fafbfc] text-ink';
+        : 'border-t border-rule bg-wash text-ink';
   return (
     <div className={cn('flex items-center justify-between gap-2.5 px-4 py-2.5', toneClasses)}>
-      <span className="min-w-0 truncate text-[12px] font-bold">{left}</span>
+      <span className={cn('min-w-0 truncate text-[12px]', quiet ? 'font-semibold text-faint' : 'font-bold')}>{left}</span>
       <span className="flex shrink-0 items-center gap-2">
         {right}
-        {chevron && <ChevronRightIcon className={cn('h-3 w-1.5', tone === 'muted' && 'text-faint')} />}
+        {chevron && <RowChevron className={tone === 'muted' ? 'text-faint' : undefined} />}
       </span>
     </div>
   );
@@ -91,7 +105,7 @@ function MarketListCard({ market: m }: { market: MarketCardData }) {
         <div className="flex border-t border-rule">
           <TextStatCell first label="Proposed by" value={m.proposerLabel ?? '—'} />
           <StatCell label="Waiting" value={m.createdAt ? formatRelativeTime(m.createdAt).replace(' ago', '') : '—'} />
-          <StatCell label="Needs" value="1" valueClassName="text-alert" />
+          <StatCell label="Needs" value="1" valueClassName={m.canEndorse ? 'text-alert' : undefined} />
         </div>
       )}
 
@@ -130,7 +144,7 @@ function MarketListCard({ market: m }: { market: MarketCardData }) {
           <Footer
             tone="signal"
             left="Your bet"
-            right={<span className="font-mono text-[13px] font-semibold text-signal-deep">{m.myBets.map((b) => `${formatTokens(b.amount)} on ${b.label}`).join(', ')}</span>}
+            right={<span className="font-mono text-[13px] font-semibold text-signal">{m.myBets.map((b) => `${formatTokens(b.amount)} on ${b.label}`).join(', ')}</span>}
             chevron={false}
           />
         ) : (
@@ -138,7 +152,7 @@ function MarketListCard({ market: m }: { market: MarketCardData }) {
         ))}
 
       {m.status === 'pending_sponsor' &&
-        (m.canEndorse ? <Footer tone="alert" left="Endorse" chevron /> : <Footer tone="muted" left="Waiting on someone else to endorse" chevron={false} />)}
+        (m.canEndorse ? <Footer tone="alert" left="Endorse" chevron /> : <Footer tone="muted" quiet left="Waiting on someone else to endorse" chevron={false} />)}
 
       {(m.status === 'proposed' || m.status === 'disputed') &&
         !m.mystery &&
@@ -151,9 +165,9 @@ function MarketListCard({ market: m }: { market: MarketCardData }) {
   );
 }
 
-export function MarketCardList({ markets }: { markets: MarketCardData[] }) {
+export function MarketCardList({ markets, gap = 8 }: { markets: MarketCardData[]; gap?: number }) {
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col" style={{ gap }}>
       {markets.map((m) => (
         <MarketListCard key={m.id} market={m} />
       ))}
