@@ -6,20 +6,23 @@ import { cn } from '@/lib/cn';
 /**
  * 4f/4r's two lenses: "This season" and "All time", as the same segmented control the market list
  * uses (4a). Both panes are server-rendered up front and just toggled — no client fetch. The
- * header above the control is a render prop because its subtitle and the Settings button change
- * with the lens (4r drops Settings and reads "4 seasons since March 2026"). Without an all-time
+ * header above the control changes with the lens (4r drops Settings and reads "4 seasons since
+ * March 2026"), so it comes in as two pre-rendered headers, not a render prop: this is a client
+ * component fed by a server page, and a function can't cross that boundary. Without an all-time
  * pane (seasons off) there's nothing to switch between, so the control isn't drawn.
  */
 export function LeaderboardLenses({
   initialLens,
   currentLabel = 'This season',
-  header,
+  currentHeader,
+  allTimeHeader,
   current,
   allTime,
 }: {
   initialLens: 'current' | 'alltime';
   currentLabel?: string;
-  header: (lens: 'current' | 'alltime') => React.ReactNode;
+  currentHeader: React.ReactNode;
+  allTimeHeader: React.ReactNode;
   current: React.ReactNode;
   allTime: React.ReactNode;
 }) {
@@ -27,7 +30,7 @@ export function LeaderboardLenses({
 
   return (
     <div>
-      {header(lens)}
+      {lens === 'alltime' ? allTimeHeader : currentHeader}
       {allTime && (
         <div className="mt-[13px] flex gap-1 rounded-[15px] bg-rule p-1">
           {(['current', 'alltime'] as const).map((k) => (

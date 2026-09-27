@@ -398,32 +398,37 @@ export default async function LeaderboardPage({
     );
   }
 
+  // Rendered here for both lenses and handed over as two finished headers: LeaderboardLenses is a
+  // client component, and a function prop can't be passed to one from a server page.
+  const header = (lens: 'current' | 'alltime') => (
+    <div className="flex items-start justify-between gap-3">
+      <span className="min-w-0">
+        <h1 className="text-[25px] font-extrabold tracking-[-0.022em] text-ink">Leaderboard</h1>
+        <p className="mt-1.5 text-[13px] text-faint">{lens === 'alltime' && allTimeSubtitle ? allTimeSubtitle : seasonLine}</p>
+      </span>
+      {lens === 'current' && (
+        <Link
+          href={`/groups/${groupId}/settings`}
+          className="flex shrink-0 items-center gap-[7px] rounded-[11px] border border-hairline bg-surface px-3 py-2"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-ink">
+            <circle cx="12" cy="12" r="3.1" />
+            <path d="M19.1 14.4a1.5 1.5 0 0 0 .3 1.65l.05.06a1.8 1.8 0 1 1-2.55 2.55l-.06-.05a1.5 1.5 0 0 0-1.65-.3 1.5 1.5 0 0 0-.9 1.37V20a1.8 1.8 0 1 1-3.6 0v-.1a1.5 1.5 0 0 0-.98-1.37 1.5 1.5 0 0 0-1.65.3l-.06.05A1.8 1.8 0 1 1 5.45 16.3l.05-.06a1.5 1.5 0 0 0 .3-1.65 1.5 1.5 0 0 0-1.37-.9H4a1.8 1.8 0 1 1 0-3.6h.1a1.5 1.5 0 0 0 1.37-.98 1.5 1.5 0 0 0-.3-1.65l-.05-.06A1.8 1.8 0 1 1 7.67 4.85l.06.05a1.5 1.5 0 0 0 1.65.3h.07a1.5 1.5 0 0 0 .9-1.37V3.7a1.8 1.8 0 1 1 3.6 0v.1a1.5 1.5 0 0 0 .9 1.37 1.5 1.5 0 0 0 1.65-.3l.06-.05a1.8 1.8 0 1 1 2.55 2.55l-.05.06a1.5 1.5 0 0 0-.3 1.65v.07a1.5 1.5 0 0 0 1.37.9H20a1.8 1.8 0 1 1 0 3.6h-.1a1.5 1.5 0 0 0-1.37.9z" />
+          </svg>
+          <span className="text-[12.5px] font-bold text-ink">Settings</span>
+        </Link>
+      )}
+    </div>
+  );
+
   return (
     <>
       <GroupBar groupName={group!.name} avatarKey={group!.avatar_key} {...switcherState} />
       <main className="mx-auto flex max-w-[430px] flex-col px-[18px] pt-5 pb-10">
         <LeaderboardLenses
           initialLens={lensParam === 'alltime' && allTimePane ? 'alltime' : 'current'}
-          header={(lens) => (
-            <div className="flex items-start justify-between gap-3">
-              <span className="min-w-0">
-                <h1 className="text-[25px] font-extrabold tracking-[-0.022em] text-ink">Leaderboard</h1>
-                <p className="mt-1.5 text-[13px] text-faint">{lens === 'alltime' && allTimeSubtitle ? allTimeSubtitle : seasonLine}</p>
-              </span>
-              {lens === 'current' && (
-                <Link
-                  href={`/groups/${groupId}/settings`}
-                  className="flex shrink-0 items-center gap-[7px] rounded-[11px] border border-hairline bg-surface px-3 py-2"
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-ink">
-                    <circle cx="12" cy="12" r="3.1" />
-                    <path d="M19.1 14.4a1.5 1.5 0 0 0 .3 1.65l.05.06a1.8 1.8 0 1 1-2.55 2.55l-.06-.05a1.5 1.5 0 0 0-1.65-.3 1.5 1.5 0 0 0-.9 1.37V20a1.8 1.8 0 1 1-3.6 0v-.1a1.5 1.5 0 0 0-.98-1.37 1.5 1.5 0 0 0-1.65.3l-.06.05A1.8 1.8 0 1 1 5.45 16.3l.05-.06a1.5 1.5 0 0 0 .3-1.65 1.5 1.5 0 0 0-1.37-.9H4a1.8 1.8 0 1 1 0-3.6h.1a1.5 1.5 0 0 0 1.37-.98 1.5 1.5 0 0 0-.3-1.65l-.05-.06A1.8 1.8 0 1 1 7.67 4.85l.06.05a1.5 1.5 0 0 0 1.65.3h.07a1.5 1.5 0 0 0 .9-1.37V3.7a1.8 1.8 0 1 1 3.6 0v.1a1.5 1.5 0 0 0 .9 1.37 1.5 1.5 0 0 0 1.65-.3l.06-.05a1.8 1.8 0 1 1 2.55 2.55l-.05.06a1.5 1.5 0 0 0-.3 1.65v.07a1.5 1.5 0 0 0 1.37.9H20a1.8 1.8 0 1 1 0 3.6h-.1a1.5 1.5 0 0 0-1.37.9z" />
-                  </svg>
-                  <span className="text-[12.5px] font-bold text-ink">Settings</span>
-                </Link>
-              )}
-            </div>
-          )}
+          currentHeader={header('current')}
+          allTimeHeader={header('alltime')}
           currentLabel={isIntermission ? 'Final table' : 'This season'}
           current={currentPane}
           allTime={allTimePane}
