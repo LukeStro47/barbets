@@ -10,6 +10,7 @@ import { RowChevron } from '@/components/ui/Screen';
 import { formatTokens } from '@/lib/formatNumber';
 import type { PayoutBreakdown } from '@/lib/actions/markets';
 import type { RevealBet } from '@/components/markets/RevealSummary';
+import { combineBets, sameLine } from '@/lib/combineBets';
 
 type Mode = 'paid' | 'refunded' | 'split';
 
@@ -141,7 +142,8 @@ export function SettlementLedger({
   const [open, setOpen] = useState(false);
   const settlement = computeSettlement(bets, payoutBreakdown, refundish);
   const { mode, staked, bonusIn, pool, winningPool, dust, dustBet } = settlement;
-  const sorted = [...bets].sort((a, b) => (b.payout ?? 0) - (a.payout ?? 0));
+  // Listed one line per person per pick; computeSettlement above works from the individual bets.
+  const sorted = combineBets(bets).sort((a, b) => (b.payout ?? 0) - (a.payout ?? 0));
   const perWinningToken = winningPool > 0 ? pool / winningPool : null;
 
   const summary =
@@ -322,7 +324,7 @@ export function SettlementLedger({
 
               {bets.length > 0 && (
               <div className="flex flex-col gap-2 border-t border-rule pt-3.5">
-                <SectionLabel>Every bet</SectionLabel>
+                <SectionLabel>Every bet, one line per person</SectionLabel>
                 {sorted.length > 0 && (
                   <ul className="overflow-hidden rounded-[16px] border border-hairline">
                     {sorted.map((b, i) => {
@@ -369,7 +371,7 @@ export function SettlementLedger({
                                 <p className="text-gain">+{formatTokens(winnings)} won</p>
                                 <p className="text-[11px] font-semibold text-faint">
                                   {formatTokens(b.payout ?? 0)} back total
-                                  {dust > 0 && dustBet === b ? `, incl. ${formatTokens(dust)} rounding` : ''}
+                                  {dust > 0 && dustBet && sameLine(dustBet, b) ? `, incl. ${formatTokens(dust)} rounding` : ''}
                                 </p>
                               </>
                             )}

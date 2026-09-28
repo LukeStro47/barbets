@@ -217,6 +217,11 @@ lib/
                          recap/`/seasons`, not the live hub; omitted only for a seasons-off group,
                          which has no season to scope to). Enforces
                          "no query inside a per-market loop" — see the design note on the feed
+  combineBets.ts       — combineBets(): one line per person per pick wherever bets are listed
+                         (the 4m result, the ledger, You's open bets). A top-up is a second bets
+                         row but the same bet to a reader; a hedge stays two lines. Display only:
+                         the ledger's settlement maths keeps the individual rows, since each
+                         payout is floored separately
   seasonOver.ts        — loadSeasonOver(supabase, groupId, userId, seasonNumber?): everything
                          5n draws for one finished season (champion, final table, the viewer's
                          own line, highlights, awards), read from

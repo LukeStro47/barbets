@@ -5,6 +5,7 @@ import { UserAvatar } from '@/components/ui/UserAvatar';
 import { RowChevron } from '@/components/ui/Screen';
 import type { PayoutBreakdown } from '@/lib/actions/markets';
 import { formatLine } from '@/lib/units';
+import { combineBets } from '@/lib/combineBets';
 
 export interface RevealBet {
   nickname: string;
@@ -76,7 +77,9 @@ export function RevealSummary({
   latestComment?: LatestComment | null;
   calledByNickname?: string;
 }) {
-  const sorted = [...bets].sort((a, b) => (b.payout ?? 0) - (a.payout ?? 0));
+  // One line per person per pick (lib/combineBets.ts); the ledger still gets the raw bets for its maths.
+  const lines = combineBets(bets);
+  const sorted = [...lines].sort((a, b) => (b.payout ?? 0) - (a.payout ?? 0));
   const voided = headline === 'VOIDED';
   // Nobody predicted the outcome: every pick lost, but the stakes came back (fully or partly),
   // so it reads like a void rather than "lost" next to money that returned.
@@ -85,11 +88,11 @@ export function RevealSummary({
 
   const detailLine = marketType === 'over_under' && actualValue !== null ? `Actual ${actualValue}` : justification?.trim() || null;
 
-  const myBet = bets.find((b) => b.nickname === myNickname) ?? null;
+  const myBet = lines.find((b) => b.nickname === myNickname) ?? null;
   const topOthers = sorted.filter((b) => b !== myBet).slice(0, myBet ? 2 : 3);
   const previewBets = (myBet ? [myBet, ...topOthers] : topOthers).sort((a, b) => (a === myBet ? -1 : b === myBet ? 1 : 0));
   const pool = bets.reduce((sum, b) => sum + b.amount, 0);
-  const winnerCount = bets.filter((b) => b.isWinner).length;
+  const winnerCount = new Set(lines.filter((b) => b.isWinner).map((b) => b.nickname)).size;
   const commentsHref = `/groups/${groupId}/markets/${marketId}?tab=comments`;
 
   return (

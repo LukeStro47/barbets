@@ -213,7 +213,7 @@ export function RevealTicket({
                 const mine = b.nickname === myNickname;
                 return (
                   <div
-                    key={b.nickname}
+                    key={`${b.nickname}:${b.choiceLabel}`}
                     className={cn(
                       'flex items-center gap-[9px] border-b border-row-rule px-4 py-2.5',
                       mine && 'bg-signal-wash shadow-[inset_3px_0_0_var(--color-signal)]',

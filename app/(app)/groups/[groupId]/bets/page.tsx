@@ -31,7 +31,26 @@ export default async function MyBetsPage({ params }: { params: Promise<{ groupId
     .eq('markets.group_id', groupId)
     .order('created_at', { ascending: false });
 
-  const myBets = (bets ?? []) as unknown as BetRow[];
+  // One line per market and pick: a top-up is the same bet, bigger (see lib/combineBets.ts).
+  const myBets = [
+    ...((bets ?? []) as unknown as BetRow[])
+      .reduce((byPick, b) => {
+        const key = `${b.market_id}:${b.side ?? ''}:${b.option_id ?? ''}`;
+        const prev = byPick.get(key);
+        byPick.set(
+          key,
+          prev
+            ? {
+                ...prev,
+                amount: prev.amount + b.amount,
+                payout: prev.payout == null && b.payout == null ? null : (prev.payout ?? 0) + (b.payout ?? 0),
+              }
+            : b
+        );
+        return byPick;
+      }, new Map<string, BetRow>())
+      .values(),
+  ];
 
   const optionIds = [...new Set(myBets.map((b) => b.option_id).filter((id): id is string => !!id))];
   const { data: options } =

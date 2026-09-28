@@ -77,7 +77,18 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
     | { balance: number; net: number; accuracy_pct: number | null; settled_bet_count: number; best_call_multiple: number | null; best_call_title: string | null }
     | null
     | undefined;
-  const openBets = ((betsResult?.data ?? []) as unknown as OpenBetRow[]).filter((b) => b.markets);
+  // Topping up a bet adds a row; show it as one line per market and pick (same rule as the ledger).
+  const openBets = [
+    ...((betsResult?.data ?? []) as unknown as OpenBetRow[])
+      .filter((b) => b.markets)
+      .reduce((byPick, b) => {
+        const key = `${b.market_id}:${b.side ?? ''}:${b.option_id ?? ''}`;
+        const prev = byPick.get(key);
+        byPick.set(key, prev ? { ...prev, amount: prev.amount + b.amount } : b);
+        return byPick;
+      }, new Map<string, OpenBetRow>())
+      .values(),
+  ];
   const optionIds = [...new Set(openBets.map((b) => b.option_id).filter((id): id is string => !!id))];
   const { data: options } = optionIds.length > 0 ? await supabase.from('market_options').select('id, label').in('id', optionIds) : { data: [] };
   const optionLabel = new Map((options ?? []).map((o) => [o.id, o.label as string]));
