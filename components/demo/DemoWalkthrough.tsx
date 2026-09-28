@@ -1,488 +1,518 @@
-﻿'use client';
+'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Modal } from '@/components/ui/Modal';
-import { Mention } from '@/components/ui/Mention';
-import { CountdownTimer } from '@/components/ui/CountdownTimer';
-import { CaretLeftIcon, CameraIcon, PlusIcon, AtSignIcon, UsersIcon, CalendarIcon } from '@/components/ui/icons';
-import { TicketCard } from '@/components/markets/TicketCard';
-import { PoolStrip } from '@/components/markets/PoolStrip';
-import { ResolutionTimeline } from '@/components/markets/ResolutionTimeline';
-import { STATUS_LABEL, STATUS_TONE } from '@/lib/marketStatus';
-import { formatTokens } from '@/lib/formatNumber';
-import { MARKET_TYPE_ICON } from '@/lib/marketType';
+import { FooterButton, ScreenHeader, StatCell, StickyFooter } from '@/components/ui/Screen';
+import { ClosedBetBox, ClosedOddsCard, CriteriaCard, NextStepsCard, StatusChip, sideTitle } from '@/components/markets/MarketScreen';
+import { LoadingAnimation } from '@/components/ui/LoadingAnimation';
+import { formatSignedTokens, formatTokens } from '@/lib/formatNumber';
 import { cn } from '@/lib/cn';
-import {
-  DEMO_QUESTION,
-  DEMO_STARTING_BALANCE,
-  SEED_BET_COUNT,
-  SEED_POOL_TOTAL,
-  resolveDemoBet,
-  type DemoOutcome,
-  type DemoSide,
-} from '@/lib/demoScenario';
-import { DemoBetslip } from '@/components/demo/DemoBetslip';
-import { DemoRevealCard } from '@/components/demo/DemoRevealCard';
+import { DEMO_QUESTION, DEMO_STARTING_BALANCE, resolveDemoBet, type DemoOutcome, type DemoSide } from '@/lib/demoScenario';
 
 const STEP_COUNT = 6;
-const PROPOSER_NICKNAME = 'sam';
-const JUSTIFICATION = 'Chip time 3:52. Screenshot attached.';
+const CREATOR = 'priya';
+const PROPOSER = 'sam';
+const CHALLENGER = 'marcus';
+const JUSTIFICATION = 'Chip time 3:52. Screenshot in the chat.';
+/** The same quick amounts the real bet card offers: fractions of the group's starting balance. */
+const QUICK = [25, 50, 100, 250];
 
-/** Closes-in caption is purely cosmetic here — nothing in the demo actually gates on it. */
-const COSMETIC_CLOSES_AT = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
-
-const CTA_CLASS =
-  'animate-demo-fade-up-btn w-full rounded-full bg-signal py-[15px] text-base font-extrabold text-ink transition-all duration-150 hover:bg-signal-deep active:scale-[0.97] disabled:bg-signal/40 disabled:text-ink/40 disabled:active:scale-100';
-
-type VoteChoice = 'yes' | 'no' | 'void';
-const BALLOT_CHOICES: { value: VoteChoice; label: string }[] = [
-  { value: 'yes', label: 'Yes' },
-  { value: 'no', label: 'No' },
-  { value: 'void', label: 'Void' },
-];
-
-/** Same tab glyphs as BottomNav.tsx, copied verbatim rather than rendering the real (stateful,
- * Supabase-driven) component in a non-interactive diagram. */
-const NAV_TABS: { d: string; isPlus?: boolean; active?: boolean }[] = [
-  { d: 'M4 11.5 12 4l8 7.5M6 10v9h5v-5h2v5h5v-9' },
-  { d: 'M3 17l5-5 3 3 6-7M14 8h5v5', active: true },
-  { d: '', isPlus: true },
-  { d: 'M8 20V11M14 20V4M20 20v-7M2 20h20' },
-  { d: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8c0-3.9 3.1-7 7-7s7 3.1 7 7' },
-];
-const NAV_LABELS = ['Groups', 'Markets', 'New', 'Board', 'You'];
-
-/** A minimal, self-contained neutral odds bar so its fill can animate 0 -> real percent on entry —
- * the shared NeutralOddsBar always renders pre-filled, with no transition. */
-function AnimatedOddsBar({
-  leftLabel,
-  leftPercent,
-  rightLabel,
-  rightPercent,
-  revealed,
-}: {
-  leftLabel: string;
-  leftPercent: number;
-  rightLabel: string;
-  rightPercent: number;
-  revealed: boolean;
-}) {
-  return (
-    <div>
-      <div className="mb-1.5 flex items-baseline justify-between gap-2 text-[15px] font-extrabold text-ink">
-        <span className="whitespace-nowrap">
-          {leftLabel} <span className="font-mono tabular-nums">{leftPercent}%</span>
-        </span>
-        <span className="whitespace-nowrap">
-          {rightLabel} <span className="font-mono tabular-nums">{rightPercent}%</span>
-        </span>
-      </div>
-      <div className="flex h-3 gap-0.5 overflow-hidden rounded-full">
-        <div
-          className="h-full rounded-full bg-signal transition-[width] duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
-          style={{ width: `${revealed ? leftPercent : 0}%` }}
-        />
-        <div
-          className="h-full rounded-full bg-signal-tint transition-[width] duration-[900ms] delay-[50ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
-          style={{ width: `${revealed ? rightPercent : 0}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
-/** A non-Supabase stand-in for ResolutionProofButton — the real one fetches a signed URL for a
- * real photo_path, which this demo market doesn't have. Same "chip" look, a static modal instead. */
-function DemoProofChip() {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-rule px-[13px] py-[7px] text-[12.5px] font-bold whitespace-nowrap text-muted transition-colors hover:bg-hairline"
-      >
-        <CameraIcon className="h-3 w-3" />
-        Proof
-      </button>
-      {open && (
-        <Modal onClose={() => setOpen(false)}>
-          <p className="font-display font-bold text-ink">Proof photo</p>
-          <p className="text-sm text-muted">
-            This is a demo, so there&apos;s no real photo, just the idea that a proposer can attach one.
-          </p>
-          <Button className="w-full" onClick={() => setOpen(false)}>
-            Close
-          </Button>
-        </Modal>
-      )}
-    </>
-  );
-}
-
-function FactRow({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
-  return (
-    <div className="flex gap-3 rounded-2xl border border-hairline bg-surface p-3.5">
-      <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-xl bg-rule text-muted">{icon}</span>
-      <div>
-        <p className="text-[13.5px] font-extrabold text-ink">{title}</p>
-        <p className="mt-0.5 text-[12.5px] leading-[1.45] text-muted">{body}</p>
-      </div>
-    </div>
-  );
-}
+type Vote = 'yes' | 'no' | 'void';
 
 /**
- * The first-run explainer, folded into a six-step guided market: a full lifecycle (open -> closed
- * odds -> proposed -> contested -> settled) ending on where things live in the app, so nothing is
- * explained before it has happened.
- *
- * The flow makes no Supabase calls on any step — DemoProofChip and the ballot card below are
- * local stand-ins for the real ResolutionProofButton/MarketActions, which call server actions
- * this fake market has no backing rows for.
+ * /demo: a six-step guided market (open, closed, called, challenged, settled, where things live),
+ * drawn with the same pieces as the real market page (MarketScreen, the 4h bet card, the 5j
+ * ticket, the 5k ballot, the 4m result) so what someone learns here is what they'll see in a
+ * group. Nothing touches Supabase: the other bettors are made up, but the payout is the real
+ * parimutuel formula (lib/demoScenario.ts), so the number at the end is genuinely computed.
  */
 export function DemoWalkthrough({ isLoggedIn }: { isLoggedIn: boolean }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
-  const [betslipOpen, setBetslipOpen] = useState(false);
   const [side, setSide] = useState<DemoSide | null>(null);
+  const [amount, setAmount] = useState('50');
+  const [ticketOpen, setTicketOpen] = useState(false);
   const [outcome, setOutcome] = useState<DemoOutcome | null>(null);
-  const [vote, setVote] = useState<VoteChoice | null>(null);
-  const [ballotExpanded, setBallotExpanded] = useState(true);
-  const [barsRevealed, setBarsRevealed] = useState(false);
-  const [showRulesModal, setShowRulesModal] = useState(false);
+  const [vote, setVote] = useState<Vote | null>(null);
 
-  // The odds bars start at 0% and animate in to their real value whenever a step that has one
-  // (closed, settled) becomes active.
-  useEffect(() => {
-    if (step !== 1 && step !== 4) return;
-    setBarsRevealed(false);
-    const id = setTimeout(() => setBarsRevealed(true), 60);
-    return () => clearTimeout(id);
-  }, [step]);
+  const amountNum = amount === '' ? 0 : Number(amount);
+  const canPlace = !!side && amountNum >= 1 && amountNum <= DEMO_STARTING_BALANCE;
+  const stake = outcome?.callers.find((c) => c.isYou)?.amount ?? amountNum;
 
-  function handleBetConfirmed(betSide: DemoSide, amount: number) {
-    setSide(betSide);
-    setOutcome(resolveDemoBet(betSide, amount));
-    setStep(1);
+  function back() {
+    if (ticketOpen) return setTicketOpen(false);
+    if (step > 0) return setStep((s) => s - 1);
+    if (window.history.length > 1) router.back();
+    else router.push(isLoggedIn ? '/groups' : '/');
   }
 
-  function handleBack() {
-    if (betslipOpen) {
-      setBetslipOpen(false);
-      return;
-    }
-    if (step === 0) {
-      if (typeof window !== 'undefined' && window.history.length > 1) router.back();
-      else router.push(isLoggedIn ? '/groups' : '/');
-      return;
-    }
-    setStep((s) => s - 1);
+  function place() {
+    if (!canPlace || !side) return;
+    setOutcome(resolveDemoBet(side, amountNum));
+    setTicketOpen(true);
   }
-
-  function handlePrimary() {
-    if (step === 0) {
-      setBetslipOpen(true);
-      return;
-    }
-    if (step === 3 && vote === null) return;
-    setStep((s) => s + 1);
-  }
-
-  const stakeAmount = outcome?.callers.find((c) => c.isYou)?.amount ?? 0;
 
   const coach = [
-    'Bets stay sealed while a market is open. Nobody sees who bet what.',
-    'Betting closed, so the sealed bets become visible odds. Bets are locked in now.',
-    'Unchallenged, this call becomes final. If it looks wrong, anyone can challenge it.',
-    'Ballots stay hidden until voting closes. A tie upholds the proposal.',
-    'Winners split the losers’ stakes in proportion to what they staked.',
+    'Bets are sealed while a market is open. Nobody sees who backed what, or how the money splits.',
+    'Betting shut, so the split became the odds. Your return is fixed from here.',
+    "Someone calls what happened. If nobody objects inside the window, it stands.",
+    'Someone objected, so the group votes. Ballots stay sealed until the window shuts.',
+    'Winners split the losing side in proportion to what each of them staked.',
+    null,
   ][step];
 
-  const ctaLabel = [
-    'Place a bet',
-    'See who calls it',
-    'Challenge this call',
-    vote === null ? 'Pick an answer first' : 'Close the vote',
-    'One last thing',
-  ][step];
+  const dots = (
+    <span aria-label={`Step ${step + 1} of ${STEP_COUNT}`} className="flex shrink-0 items-center gap-1">
+      {Array.from({ length: STEP_COUNT }).map((_, i) => (
+        <span key={i} className={cn('h-[5px] rounded-[3px] transition-all duration-300', i === step ? 'w-[18px] bg-ink' : i < step ? 'w-[5px] bg-ink' : 'w-[5px] bg-edge')} />
+      ))}
+    </span>
+  );
+
+  const youSideLabel = side ? sideTitle(side) : '';
+  const otherSide: DemoSide = side === 'no' ? 'yes' : 'no';
 
   return (
-    <div className="pb-36">
-      <div className="mb-[18px] flex items-center justify-between">
-        <button
-          type="button"
-          onClick={handleBack}
-          className="-ml-1 inline-flex items-center gap-0.5 text-[13px] font-bold text-muted hover:text-ink"
-        >
-          <CaretLeftIcon className="h-[15px] w-[15px]" />
-          Back
-        </button>
-        <span className="text-[10.5px] font-extrabold tracking-[0.1em] text-faint uppercase">Demo market</span>
-      </div>
+    <div className="min-h-dvh bg-canvas">
+      <ScreenHeader title="Demo market" onTile={back} right={dots} />
 
-      <div className="mb-[22px] flex gap-1.5">
-        {Array.from({ length: STEP_COUNT }).map((_, i) => (
-          <span
-            key={i}
-            className={cn(
-              'block h-1.5 rounded-full transition-all duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
-              i === step ? 'w-[22px] bg-signal' : i < step ? 'w-1.5 bg-signal' : 'w-1.5 bg-hairline'
-            )}
-          />
-        ))}
-      </div>
+      <div key={step} className="mx-auto max-w-[430px] animate-demo-fade-up px-[18px] pt-5 pb-[230px]">
+        {step < 5 && (
+          <div className="mb-3.5 flex items-start justify-between gap-3">
+            <span className="min-w-0">
+              <h1 className="text-[22px] leading-[1.2] font-extrabold tracking-[-0.022em] text-ink text-pretty">{DEMO_QUESTION}</h1>
+              <p className="mt-1.5 text-[12.5px] text-faint">
+                Yes or no · started by @{CREATOR}
+                {step === 0 && ' · closes in 2h 15m'}
+              </p>
+            </span>
+            <StatusChip
+              label={['Open', 'Closed', 'Called', 'Challenged', 'Settled'][step]!}
+              tone={step === 0 ? 'quiet' : 'ink'}
+            />
+          </div>
+        )}
 
-      <div key={step}>
+        {/* ---- 0: open, the 4h bet card ---- */}
         {step === 0 && (
-          <div>
-            <TicketCard
-              label="The question"
-              meta={<Badge tone={STATUS_TONE.open}>{STATUS_LABEL.open}</Badge>}
-              className="animate-demo-fade-up-scale"
-              bodyClassName="px-[18px] py-4"
-            >
-              <div className="space-y-3.5">
-                <p className="font-display text-xl leading-[1.25] font-extrabold tracking-[-0.01em] text-ink">{DEMO_QUESTION}</p>
-                <div className="flex items-center gap-2 text-[12.5px] font-semibold text-muted">
-                  <span className="text-[19px] text-faint">{MARKET_TYPE_ICON.yes_no}</span>
-                  <span>
-                    Yes / No &middot; started by <Mention nickname="priya" />
-                  </span>
-                </div>
+          <div className="flex flex-col gap-[11px]">
+            <div className="overflow-hidden rounded-[22px] border-[1.5px] border-edge bg-surface shadow-[0_10px_26px_-18px_rgba(12,16,24,0.5)]">
+              <div className="flex items-center justify-between gap-2.5 border-b border-rule bg-wash px-4 py-3">
+                <span className="text-[13px] font-extrabold tracking-[-0.01em] text-ink">Your bet</span>
+                <span className="inline-flex shrink-0 items-center gap-[5px] rounded-full border border-signal-edge bg-signal-tint px-[9px] py-1 text-[10.5px] font-bold whitespace-nowrap text-signal">
+                  <LockGlyph size={10} />
+                  Sealed until close
+                </span>
               </div>
-            </TicketCard>
-            <PoolStrip
-              className="mt-3"
-              cells={[
-                { label: 'Pool', value: formatTokens(SEED_POOL_TOTAL) },
-                { label: 'Bets', value: SEED_BET_COUNT },
-                { label: 'Closes', value: <CountdownTimer target={COSMETIC_CLOSES_AT} prefix="" /> },
+              <div className="px-[15px] pt-[13px] pb-[15px]">
+                <p className="text-[10.5px] font-bold tracking-[0.1em] text-faint uppercase">Pick a side</p>
+                <div className="mt-2 flex gap-2">
+                  {(['yes', 'no'] as const).map((s) => {
+                    const on = side === s;
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setSide(s)}
+                        className={cn(
+                          'flex min-h-[46px] flex-1 items-center justify-center rounded-[13px] border-[1.5px] text-[15px] font-extrabold tracking-[-0.01em]',
+                          on ? 'border-signal bg-signal-wash text-ink shadow-[0_0_0_3px_rgba(45,85,245,0.09)]' : 'border-hairline bg-surface text-muted'
+                        )}
+                      >
+                        {sideTitle(s)}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <p className="mt-3.5 text-[10.5px] font-bold tracking-[0.1em] text-faint uppercase">Your stake</p>
+                <div className="mt-2 flex items-center justify-between gap-3 rounded-[15px] bg-ink px-[17px] py-[13px]">
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={DEMO_STARTING_BALANCE}
+                    placeholder="0"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    onFocus={(e) => e.target.select()}
+                    aria-label="Stake"
+                    className="min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-[29px] leading-none font-semibold tracking-[-0.02em] text-surface tabular-nums placeholder:text-surface/25 focus:outline-none"
+                  />
+                  <span className="shrink-0 font-mono text-[11.5px] whitespace-nowrap text-surface/55">of {formatTokens(DEMO_STARTING_BALANCE)} free</span>
+                </div>
+                <div className="mt-2 flex gap-[7px]">
+                  {[...QUICK.map((q) => ({ key: String(q), value: q, label: formatTokens(q), sans: false })), { key: 'max', value: DEMO_STARTING_BALANCE, label: 'Max', sans: true }].map(
+                    (q) => (
+                      <button
+                        key={q.key}
+                        type="button"
+                        onClick={() => setAmount(String(q.value))}
+                        className={cn(
+                          'flex-1 rounded-[11px] border py-2 text-center text-[12.5px]',
+                          q.sans ? 'font-sans' : 'font-mono',
+                          amountNum === q.value ? 'border-signal-edge bg-signal-tint font-bold text-signal' : 'border-hairline bg-surface font-semibold text-muted'
+                        )}
+                      >
+                        {q.label}
+                      </button>
+                    )
+                  )}
+                </div>
+
+                <div className="mt-[11px] flex items-center justify-between gap-2.5 rounded-xl border border-rule bg-canvas px-[13px] py-2.5">
+                  <span className="min-w-0 flex-1 truncate text-[12.5px] leading-[1.4] text-muted">
+                    {side ? (
+                      <>
+                        {formatTokens(amountNum)} on <span className="font-bold text-ink">{youSideLabel}</span>
+                      </>
+                    ) : (
+                      'Pick a side above'
+                    )}
+                  </span>
+                  <span className="shrink-0 font-mono text-[11.5px] text-faint">{formatTokens(Math.max(0, DEMO_STARTING_BALANCE - amountNum))} left</span>
+                </div>
+                <button
+                  type="button"
+                  disabled={!canPlace}
+                  onClick={place}
+                  className="mt-2.5 w-full rounded-[14px] bg-signal py-3.5 text-[15px] font-bold text-surface shadow-[0_10px_20px_-10px_rgba(45,85,245,0.7)] transition-colors hover:bg-signal-deep disabled:bg-disabled-bg disabled:text-disabled-ink disabled:shadow-none"
+                >
+                  {side ? `Place ${formatTokens(amountNum)} on ${youSideLabel}` : 'Pick a side to continue'}
+                </button>
+              </div>
+            </div>
+
+            <CriteriaCard compact label="How it settles" description="Yes if Jake's official chip time is under 4:00:00. No if it's over, or he doesn't finish." />
+          </div>
+        )}
+
+        {/* ---- 1: closed, 4n ---- */}
+        {step === 1 && outcome && side && (
+          <div className="flex flex-col gap-[11px]">
+            <ClosedOddsCard
+              pool={outcome.totalPool}
+              mySideKey={side}
+              sides={[
+                { key: 'yes', label: 'Yes', percent: outcome.yesPercent, staked: Math.round((outcome.totalPool * outcome.yesPercent) / 100) },
+                { key: 'no', label: 'No', percent: outcome.noPercent, staked: Math.round((outcome.totalPool * outcome.noPercent) / 100) },
               ]}
             />
-            <p className="animate-demo-fade-up mt-3.5 text-[13px] text-faint" style={{ animationDelay: '140ms' }}>
-              You hold {formatTokens(DEMO_STARTING_BALANCE)} demo tokens.
+            <ClosedBetBox amount={stake} label={youSideLabel} pays={outcome.payout} />
+            <NextStepsCard
+              steps={[
+                { title: 'Betting closed', sub: 'The split is the price now', state: 'done' },
+                { title: 'Someone calls it', sub: 'Anyone in the group says what happened', state: 'current' },
+                { title: 'Two hours to object', sub: 'Or it settles as called', state: 'upcoming' },
+              ]}
+            />
+          </div>
+        )}
+
+        {/* ---- 2: called ---- */}
+        {step === 2 && outcome && side && (
+          <div className="flex flex-col gap-[11px]">
+            <div className="rounded-[20px] border border-hairline bg-surface px-[18px] py-4">
+              <p className="text-[10.5px] font-bold tracking-[0.1em] text-faint uppercase">@{PROPOSER} called it</p>
+              <p className="mt-1.5 text-[24px] font-extrabold tracking-[-0.02em] text-ink">{youSideLabel}</p>
+              <p className="mt-2 text-[13px] leading-[1.5] text-muted text-pretty">&ldquo;{JUSTIFICATION}&rdquo;</p>
+            </div>
+            <ClosedBetBox amount={stake} label={youSideLabel} pays={outcome.payout} />
+            <NextStepsCard
+              steps={[
+                { title: 'Betting closed', state: 'done' },
+                { title: `@${PROPOSER} called it ${youSideLabel}`, state: 'done' },
+                { title: 'Two hours to object', sub: 'Anyone who thinks the call is wrong can challenge it', state: 'current' },
+                { title: 'Settles', sub: 'Winners are paid out', state: 'upcoming' },
+              ]}
+            />
+          </div>
+        )}
+
+        {/* ---- 3: challenged, the 5k ballot ---- */}
+        {step === 3 && side && (
+          <div>
+            <div className="rounded-[22px] bg-ink p-5">
+              <p className="text-[11px] font-bold tracking-[0.1em] text-faint uppercase">{CHALLENGER} challenged the call</p>
+              <p className="mt-3 text-[20px] leading-[1.25] font-extrabold tracking-[-0.02em] text-surface text-pretty">{DEMO_QUESTION}</p>
+              <div className="mt-4 flex items-center gap-3 border-t border-white/12 pt-3.5">
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[11px] font-bold tracking-[0.1em] text-faint uppercase">{PROPOSER} called it</span>
+                  <span className="mt-1 block truncate text-[16px] font-extrabold text-surface">{youSideLabel}</span>
+                </span>
+                <span className="shrink-0 rounded-lg bg-white/12 px-2.5 py-[5px] text-[11.5px] font-bold text-disabled-ink">In dispute</span>
+              </div>
+              <p className="mt-3 text-[12.5px] leading-[1.45] text-disabled-ink">&ldquo;{JUSTIFICATION}&rdquo;</p>
+            </div>
+
+            <p className="mt-[22px] text-[10.5px] font-bold tracking-[0.1em] text-faint uppercase">What actually happened</p>
+            <div className="mt-[9px] flex flex-col gap-2">
+              {(
+                [
+                  { value: 'yes', label: 'Yes' },
+                  { value: 'no', label: 'No' },
+                  { value: 'void', label: 'Nobody can say', sub: 'Voids the market, every stake back' },
+                ] as { value: Vote; label: string; sub?: string }[]
+              ).map((c) => {
+                const on = vote === c.value;
+                return (
+                  <button
+                    key={c.value}
+                    type="button"
+                    onClick={() => setVote(c.value)}
+                    className={cn(
+                      'flex w-full items-center gap-3 rounded-2xl px-4 py-[15px] text-left',
+                      on ? 'border-[1.5px] border-signal bg-signal-wash' : 'border border-hairline bg-surface'
+                    )}
+                  >
+                    <span className={cn('h-[18px] w-[18px] shrink-0 rounded-full bg-surface', on ? 'border-[5px] border-signal' : 'border-[1.5px] border-dash')} />
+                    <span className="min-w-0 flex-1">
+                      <span className={cn('block text-[15.5px]', on ? 'font-extrabold text-ink' : 'font-bold text-muted')}>{c.label}</span>
+                      {c.sub && <span className="mt-0.5 block text-[11.5px] text-faint">{c.sub}</span>}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-3 flex items-center gap-[11px] rounded-2xl border border-hairline bg-surface px-[15px] py-3.5">
+              <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[10px] bg-tile text-muted">
+                <LockGlyph size={15} />
+              </span>
+              <span className="min-w-0 flex-1 text-[12.5px] leading-[1.45] text-muted text-pretty">
+                Sealed. Nobody sees a single vote, yours included, until the window shuts.
+              </span>
+            </div>
+            <div className="mt-3 flex rounded-2xl border border-hairline bg-surface px-4 py-[15px]">
+              <StatCell first label="Final in" value="1h 40m" tone="signal" />
+              <StatCell label="Voted" value={`${vote ? 4 : 3} of 6`} />
+              <StatCell label="Your stake" value={formatTokens(stake)} flex={1.1} />
+            </div>
+            <p className="mt-3.5 text-[12px] leading-[1.5] text-faint text-pretty">
+              Most votes wins. No votes, or a tie that includes the call, keeps the call. Any other tie voids the market and every stake goes back.
             </p>
           </div>
         )}
 
-        {step === 1 && outcome && side && (
-          <TicketCard
-            label="Odds at close"
-            meta={<Badge tone={STATUS_TONE.closed}>{STATUS_LABEL.closed}</Badge>}
-            className="animate-demo-fade-up-scale"
-            bodyClassName="px-[18px] py-4"
-          >
-            <div className="space-y-4">
-              <p className="text-[16.5px] leading-[1.3] font-bold text-ink">{DEMO_QUESTION}</p>
-              <AnimatedOddsBar leftLabel="YES" leftPercent={outcome.yesPercent} rightLabel="NO" rightPercent={outcome.noPercent} revealed={barsRevealed} />
-              <div className="flex items-center justify-between gap-3 border-t border-rule pt-3.5">
-                <span className="text-[11.5px] font-extrabold tracking-[0.08em] text-faint uppercase">Your position</span>
-                <span className="text-[15px] font-extrabold text-ink">
-                  {formatTokens(stakeAmount)} on {side.toUpperCase()}
+        {/* ---- 4: settled, 4m ---- */}
+        {step === 4 && side && outcome && (
+          <div className="flex flex-col gap-[11px]">
+            <div className="overflow-hidden rounded-[20px] border-[1.5px] border-gain-line bg-surface shadow-[0_8px_20px_-16px_rgba(11,138,91,0.7)]">
+              <div className="flex items-center gap-3 bg-gain-bg px-4 py-[15px]">
+                <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] bg-gain">
+                  <svg width="17" height="17" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round">
+                    <path d="M2 6.3 4.6 9 10 3.2" />
+                  </svg>
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[10.5px] font-bold tracking-[0.1em] text-gain uppercase">Winning side</span>
+                  <span className="mt-[3px] block text-[19px] font-extrabold tracking-[-0.015em] text-ink">{youSideLabel}</span>
                 </span>
               </div>
+              <div className="border-t border-rule px-4 py-3 text-[12.5px] leading-[1.5] text-muted">The vote upheld @{PROPOSER}&apos;s call.</div>
             </div>
-          </TicketCard>
-        )}
 
-        {step === 2 && outcome && side && (
-          <div>
-            <TicketCard
-              label="Proposed outcome"
-              meta={
-                <>
-                  by <Mention nickname={PROPOSER_NICKNAME} />
-                </>
-              }
-              className="animate-demo-fade-up-scale"
-              bodyClassName="px-[18px] pt-4 pb-[18px]"
-            >
-              <div className="space-y-3.5">
-                <div className="flex items-baseline justify-between gap-3">
-                  <p className="font-display text-[34px] leading-none font-extrabold tracking-[-0.02em] text-ink">{side.toUpperCase()}</p>
-                  <DemoProofChip />
-                </div>
-                <p className="text-[14.5px] leading-[1.45] text-muted text-pretty">&ldquo;{JUSTIFICATION}&rdquo;</p>
-                <div className="flex items-center justify-between gap-3 border-t border-rule pt-3.5">
-                  <span className="text-[11.5px] font-extrabold tracking-[0.08em] text-faint uppercase">Your position</span>
-                  <span className="text-[15px] font-extrabold text-gain">
-                    {formatTokens(stakeAmount)} on {side.toUpperCase()} wins
-                  </span>
-                </div>
-              </div>
-            </TicketCard>
-            <Card className="mt-3">
-              <ResolutionTimeline resolutionWindowHours={2} stage="proposed" proposerNickname={PROPOSER_NICKNAME} />
-            </Card>
-          </div>
-        )}
-
-        {step === 3 && side && (
-          <div className="animate-demo-fade-up-scale overflow-hidden rounded-[22px] border-[1.5px] border-alert bg-surface">
-            <div className="flex items-center justify-between gap-2 bg-alert-bg px-[18px] py-3">
-              <p className="text-xs font-extrabold tracking-[0.06em] text-alert uppercase">Your ballot</p>
-              <p className="text-[12.5px] font-bold text-alert">{vote === null ? 3 : 4} of 6 voted</p>
+            <div className="flex items-end justify-between gap-3 rounded-[20px] bg-ink px-[18px] py-4">
+              <span className="min-w-0">
+                <span className="block text-[10.5px] font-bold tracking-[0.1em] text-surface/50 uppercase">You won</span>
+                <span className="mt-1.5 block font-mono text-[32px] leading-none font-semibold tracking-[-0.02em] text-surface">
+                  {formatSignedTokens(outcome.payout - stake)}
+                </span>
+              </span>
+              <span className="shrink-0 text-right font-mono text-[12px] leading-[1.5] text-surface/60">
+                {formatTokens(stake)} staked
+                <br />
+                {formatTokens(outcome.payout)} back
+              </span>
             </div>
-            <div className="space-y-3.5 p-[18px]">
-              <div className="space-y-1 rounded-2xl bg-rule p-3.5">
-                <p className="text-xs text-muted">
-                  <Mention nickname={PROPOSER_NICKNAME} /> proposed <strong className="font-extrabold text-ink">{side.toUpperCase()}</strong>
-                </p>
-                <p className="text-[13.5px] leading-[1.4] text-muted">&ldquo;{JUSTIFICATION}&rdquo;</p>
-              </div>
 
-              <div className="space-y-0.5">
-                <p className="text-base font-extrabold text-ink">What actually happened?</p>
-                <p className="text-[13px] leading-[1.4] text-muted">
-                  Vote on the outcome, not on whether you agree with the proposal.{' '}
-                  <button type="button" onClick={() => setShowRulesModal(true)} className="font-bold text-signal-deep">
-                    How votes settle
-                  </button>
-                </p>
+            <div className="overflow-hidden rounded-[20px] border border-hairline bg-surface">
+              <div className="flex items-baseline justify-between gap-2.5 border-b border-rule px-4 pt-3 pb-2.5">
+                <span className="text-[13px] font-extrabold text-ink">What everyone got</span>
+                <span className="font-mono text-[11px] text-faint">
+                  {formatTokens(outcome.totalPool)} pool · {outcome.callers.length} won
+                </span>
               </div>
-
-              {ballotExpanded ? (
-                <div className="flex flex-col gap-2">
-                  {BALLOT_CHOICES.map((c) => (
-                    <button
-                      key={c.value}
-                      type="button"
-                      onClick={() => {
-                        setVote(c.value);
-                        setBallotExpanded(false);
-                      }}
-                      className="flex w-full items-center gap-2.5 rounded-2xl border-[1.5px] border-dash px-3.5 py-3 text-left text-[15px] font-extrabold uppercase text-muted"
-                    >
-                      <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 border-dash" />
-                      <span className="min-w-0 flex-1 truncate">{c.label}</span>
-                      {c.value === 'void' && <span className="shrink-0 text-xs font-semibold normal-case text-faint">Can&apos;t be judged</span>}
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex w-full items-center gap-2.5 rounded-2xl border-[1.5px] border-ink bg-ink px-3.5 py-3">
-                  <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 border-on-ink">
-                    <span className="h-2 w-2 rounded-full bg-signal-tint" />
+              {outcome.callers.map((c) => (
+                <div
+                  key={c.nickname}
+                  className={cn('flex items-center gap-[9px] border-b border-row-rule px-4 py-2.5 last:border-b-0', c.isYou && 'bg-signal-wash shadow-[inset_3px_0_0_var(--color-signal)]')}
+                >
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-tile text-[10px] font-bold text-muted">
+                    {(c.isYou ? 'Y' : c.nickname[0]!).toUpperCase()}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-[15px] font-extrabold text-surface">Your vote: {vote?.toUpperCase()}</span>
-                  <button type="button" onClick={() => setBallotExpanded(true)} className="shrink-0 text-xs font-bold text-on-ink underline">
-                    Switch vote
-                  </button>
+                  <span className="min-w-0 flex-1 truncate text-[12.5px] font-bold text-ink">{c.isYou ? 'You' : `@${c.nickname}`}</span>
+                  <span className="shrink-0 font-mono text-[11px] text-faint">
+                    {youSideLabel} {formatTokens(c.amount)}
+                  </span>
+                  <span className="w-[52px] shrink-0 text-right font-mono text-[12.5px] font-semibold text-gain">{formatSignedTokens(c.payout - c.amount)}</span>
                 </div>
-              )}
-
-              <p className="text-xs text-faint">Secret until voting closes. Change it any time before then.</p>
+              ))}
+              <p className="bg-wash px-4 py-[11px] text-[12px] text-faint">Everyone on {sideTitle(otherSide)} lost their stake to the pool.</p>
             </div>
           </div>
         )}
 
-        {step === 4 && side && outcome && <DemoRevealCard question={DEMO_QUESTION} side={side} outcome={outcome} barsRevealed={barsRevealed} />}
-
+        {/* ---- 5: where things live ---- */}
         {step === 5 && (
-          <div className="animate-demo-fade-up">
-            <h2 className="font-display text-[23px] font-extrabold tracking-[-0.01em] text-ink">Where everything lives</h2>
+          <div>
+            <h1 className="text-[25px] leading-[1.15] font-extrabold tracking-[-0.022em] text-ink">Where everything lives</h1>
+            <p className="mt-1.5 text-[13.5px] leading-[1.5] text-muted">Inside a group, the bar along the bottom looks like this.</p>
 
-            <div className="mt-[18px] overflow-hidden rounded-[20px] border border-hairline bg-surface">
-              <div className="relative flex h-[60px] items-center">
-                <span aria-hidden className="absolute bottom-[9px] h-[3px] w-[22px] rounded-full bg-signal-deep" style={{ left: 'calc(30% - 11px)' }} />
-                {NAV_TABS.map((t, i) =>
-                  t.isPlus ? (
-                    <span key={i} className="flex flex-1 items-center justify-center">
-                      <span className="flex h-[46px] w-[46px] items-center justify-center rounded-full bg-ink">
-                        <PlusIcon className="h-[19px] w-[19px] text-on-ink" />
-                      </span>
+            <div className="mt-4 overflow-hidden rounded-[20px] border border-hairline bg-surface px-[18px] pt-3 pb-3.5">
+              <div className="flex items-center justify-between">
+                {NAV.map((t) =>
+                  t.plus ? (
+                    <span key="plus" className="flex h-12 w-12 items-center justify-center rounded-2xl bg-signal text-surface shadow-[0_10px_20px_-8px_rgba(45,85,245,0.6)]">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                        <path d="M12 5v14M5 12h14" />
+                      </svg>
                     </span>
                   ) : (
-                    <span key={i} className={cn('flex flex-1 items-center justify-center', t.active ? 'text-ink' : 'text-faint')}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" className="h-[23px] w-[23px]">
-                        <path d={t.d} />
+                    <span key={t.label} className={cn('flex w-14 flex-col items-center gap-1', t.active ? 'text-signal' : 'text-faint')}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={t.active ? 2.2 : 1.9} strokeLinecap="round" strokeLinejoin="round" className="h-[21px] w-[21px]">
+                        {t.d.map((d) => (
+                          <path key={d} d={d} />
+                        ))}
                       </svg>
+                      <span className={cn('text-[10px]', t.active ? 'font-bold' : 'font-semibold')}>{t.label}</span>
                     </span>
                   )
                 )}
               </div>
-              <div className="flex border-t border-dashed border-hairline bg-canvas">
-                {NAV_LABELS.map((l) => (
-                  <span key={l} className="flex-1 py-2 text-center text-[9.5px] font-extrabold tracking-[0.06em] text-faint uppercase">
-                    {l}
-                  </span>
-                ))}
-              </div>
             </div>
 
-            <div className="mt-[18px] flex flex-col gap-2.5">
-              <FactRow
-                icon={<AtSignIcon className="h-[15px] w-[15px]" />}
-                title="@mention someone to hide a market from someone"
-                body="They'll know the market exists, just not what it's about."
-              />
-              <FactRow
-                icon={<CalendarIcon className="h-[15px] w-[15px]" />}
-                title="Seasons end when you choose"
-                body="Balances reset, titles change hands, and betting opens again."
-              />
-              <FactRow
-                icon={<UsersIcon className="h-[15px] w-[15px]" />}
-                title="Don't have a group yet? Join a public one"
-                body="Public groups run their own markets so you can get a feel for the app."
-              />
+            <div className="mt-3 overflow-hidden rounded-[18px] border border-hairline bg-surface">
+              {[
+                ['Markets', 'Everything open, waiting on a call, and settled.'],
+                ['Inbox', 'Anything waiting on you, across every group.'],
+                ['+', 'Start a market: yes or no, pick a winner, or a number.'],
+                ['Group', 'The leaderboard, and what first and last place are playing for.'],
+                ['You', 'Your record in this group, your open bets, your name here.'],
+              ].map(([k, v]) => (
+                <div key={k} className="flex gap-3 border-b border-row-rule px-4 py-3 last:border-b-0">
+                  <span className="w-[62px] shrink-0 text-[13px] font-bold text-ink">{k}</span>
+                  <span className="min-w-0 flex-1 text-[12.5px] leading-[1.45] text-muted text-pretty">{v}</span>
+                </div>
+              ))}
             </div>
+
+            <p className="mt-4 text-[12px] leading-[1.5] text-faint text-pretty">
+              This was a demo. Nothing you did here touched a real balance.
+            </p>
           </div>
         )}
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center bg-[linear-gradient(to_top,var(--color-canvas)_62%,transparent)] px-5 pt-[26px] pb-[calc(env(safe-area-inset-bottom)+20px)]">
-        <div className="w-full max-w-lg">
-          {step < 5 ? (
-            <>
-              <div key={step} className="animate-demo-fade-up mb-3.5 flex items-start gap-2.5 rounded-2xl bg-rule px-[15px] py-[13px]">
-                <span className="mt-px flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-signal text-[11px] font-extrabold text-ink">i</span>
-                <p className="text-[13px] leading-[1.45] text-muted text-pretty">{coach}</p>
-              </div>
-              <button key={`cta-${step}`} type="button" onClick={handlePrimary} disabled={step === 3 && vote === null} className={CTA_CLASS}>
-                {ctaLabel}
-              </button>
-            </>
-          ) : (
-            <div className="animate-demo-fade-up-btn flex flex-col gap-2.5">
-              {/* Straight to /groups/new used to skip the shared name+allocation drawer every
-                  other "create a group" entry point opens first (see StartGroupButton). Routing
-                  through the groups hub with this flag lets BottomNav (mounted there, not here)
-                  open that same drawer, so the wizard only ever answers what the drawer didn't. */}
-              <Link href={isLoggedIn ? '/groups?all=1&startGroup=1' : '/login?mode=signup'} className="block">
-                <Button size="lg" variant="accent" className="w-full transition-transform active:scale-[0.97]">
-                  Create a Group
-                </Button>
-              </Link>
-              <Link href="/groups/discover" className="block text-center text-[12.5px] text-faint hover:underline">
-                Browse public groups instead
-              </Link>
+      <StickyFooter>
+        {coach && (
+          <div key={`coach-${step}`} className="flex animate-demo-fade-up items-start gap-2.5 rounded-[14px] border border-signal-line bg-signal-wash px-[13px] py-[11px]">
+            <span className="mt-px flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-signal font-mono text-[10px] font-semibold text-surface">i</span>
+            <p className="text-[12.5px] leading-[1.45] text-signal-ink text-pretty">{coach}</p>
+          </div>
+        )}
+        {step === 0 && <p className="text-center text-[12px] text-faint">Place a bet above to keep going.</p>}
+        {step === 1 && <FooterButton onClick={() => setStep(2)}>See who calls it</FooterButton>}
+        {step === 2 && <FooterButton onClick={() => setStep(3)}>Challenge this call</FooterButton>}
+        {step === 3 && (
+          <FooterButton disabled={!vote} onClick={() => setStep(4)}>
+            {vote ? 'Lock in my vote' : 'Pick what happened'}
+          </FooterButton>
+        )}
+        {step === 4 && <FooterButton onClick={() => setStep(5)}>One last thing</FooterButton>}
+        {step === 5 && (
+          <>
+            <FooterButton href={isLoggedIn ? '/groups?all=1&startGroup=1' : '/login?mode=signup'}>Start a group</FooterButton>
+            <FooterButton tone="outline" href={isLoggedIn ? '/groups/discover' : '/join'}>
+              {isLoggedIn ? 'Browse public groups' : 'I have a group code'}
+            </FooterButton>
+          </>
+        )}
+      </StickyFooter>
+
+      {ticketOpen && outcome && side && (
+        <DemoTicket
+          amount={stake}
+          label={youSideLabel}
+          balanceAfter={DEMO_STARTING_BALANCE - stake}
+          onClose={() => {
+            setTicketOpen(false);
+            setStep(1);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+const NAV: { label: string; d: string[]; active?: boolean; plus?: boolean }[] = [
+  { label: 'Markets', d: ['M3 17l5-5 3 3 6-7M14 8h5v5'], active: true },
+  { label: 'Inbox', d: ['M12 4a5 5 0 0 0-5 5v4l-2 3h14l-2-3V9a5 5 0 0 0-5-5z', 'M10 19a2 2 0 0 0 4 0'] },
+  { label: '+', d: [], plus: true },
+  { label: 'Group', d: ['M8 20V11M14 20V4M20 20v-7M2 20h20'] },
+  { label: 'You', d: ['M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8c0-3.9 3.1-7 7-7s7 3.1 7 7'] },
+];
+
+function LockGlyph({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+      <rect x="5" y="11" width="14" height="9" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </svg>
+  );
+}
+
+/** 5j's ticket, for the demo: same torn card, a fixed "closes in" since nothing real is closing. */
+function DemoTicket({ amount, label, balanceAfter, onClose }: { amount: number; label: string; balanceAfter: number; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[60] overflow-y-auto bg-canvas">
+      <ScreenHeader title="Bet placed" tile="close" onTile={onClose} right={<span className="text-[12.5px] font-semibold text-muted">Demo</span>} />
+      <div className="mx-auto max-w-[430px] px-[22px] pt-5 pb-[140px]">
+        <div className="relative rounded-[22px] border border-hairline bg-surface shadow-[0_1px_2px_rgba(12,16,24,0.04)]">
+          <div className="px-5 pt-[22px] pb-[18px]">
+            <div className="flex items-center gap-[9px]">
+              <span className="flex h-[26px] w-[26px] animate-bet-check-circle items-center justify-center rounded-[9px] bg-signal">
+                <svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round">
+                  <path d="M2 6.3 4.6 9 10 3.2" />
+                </svg>
+              </span>
+              <span className="text-[11px] font-bold tracking-[0.1em] text-signal uppercase">Your stake is in</span>
             </div>
-          )}
+            <p className="mt-3.5 text-[21px] leading-[1.24] font-extrabold tracking-[-0.022em] text-ink text-pretty">{DEMO_QUESTION}</p>
+            <div className="mt-4 flex items-end justify-between gap-3.5">
+              <span className="min-w-0">
+                <span className="block text-[9.5px] font-bold tracking-[0.1em] text-faint uppercase">You backed</span>
+                <span className="mt-[5px] block text-[24px] font-extrabold tracking-[-0.02em] text-ink">{label}</span>
+              </span>
+              <span className="shrink-0 text-right">
+                <span className="block text-[9.5px] font-bold tracking-[0.1em] text-faint uppercase">Stake</span>
+                <span className="mt-1 block font-mono text-[30px] leading-none font-semibold tracking-[-0.03em] text-ink">{formatTokens(amount)}</span>
+              </span>
+            </div>
+          </div>
+          <div className="relative h-px border-t-[1.5px] border-dashed border-edge">
+            <span className="absolute -top-[9px] -left-[9px] h-[18px] w-[18px] rounded-full border border-hairline bg-canvas" />
+            <span className="absolute -top-[9px] -right-[9px] h-[18px] w-[18px] rounded-full border border-hairline bg-canvas" />
+          </div>
+          <div className="flex px-5 pt-4 pb-[18px]">
+            <StatCell first label="Betting shuts" value="2h 15m" tone="signal" flex={1.2} size={14} />
+            <StatCell label="Stake" value={formatTokens(amount)} size={14} />
+            <StatCell label="Left free" value={formatTokens(balanceAfter)} size={14} />
+          </div>
+        </div>
+        <div className="mt-4 rounded-[18px] border border-hairline bg-surface px-[17px] py-4">
+          <p className="text-[13px] font-bold text-ink">What you&apos;ll win isn&apos;t known yet</p>
+          <p className="mt-1.5 text-[12.5px] leading-[1.5] text-muted text-pretty">
+            Nobody sees the split while betting is open. When it shuts, the pool becomes the price and your return is fixed from it.
+          </p>
+          <div className="mt-3.5">
+            <LoadingAnimation size="sm" />
+          </div>
         </div>
       </div>
-
-      <DemoBetslip isOpen={betslipOpen} onClose={() => setBetslipOpen(false)} balance={DEMO_STARTING_BALANCE} onConfirmed={handleBetConfirmed} />
-
-      {showRulesModal && (
-        <Modal onClose={() => setShowRulesModal(false)}>
-          <p className="font-display font-bold text-ink">How votes settle</p>
-          <p className="text-sm text-muted">
-            Secret ballot on what actually happened, not on whether you agree with the proposal. Vote VOID if it
-            can&apos;t be fairly judged. A tie or no votes upholds the proposal; a tie without it voids instead. Ballots
-            reveal once voting closes, early if everyone&apos;s voted. You can change your vote until then.
-          </p>
-          <Button className="w-full" onClick={() => setShowRulesModal(false)}>
-            Got it
-          </Button>
-        </Modal>
-      )}
+      <StickyFooter className="z-[61]">
+        <FooterButton onClick={onClose}>Skip to betting closing</FooterButton>
+      </StickyFooter>
     </div>
   );
 }
