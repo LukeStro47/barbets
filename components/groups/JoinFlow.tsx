@@ -199,7 +199,8 @@ export function JoinFlow({
             </span>
           </div>
 
-          {details.faces.length > 0 && (
+          {/* One or two faces on their own read as a gap, not a crowd; the member count above says it. */}
+          {details.faces.length >= 3 && (
             <div className="mt-4 flex">
               {details.faces.map((f, i) => (
                 <UserAvatar
