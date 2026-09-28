@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { placeBet } from '@/lib/actions/bets';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { OptionLabel } from '@/components/markets/OptionLabel';
-import { useBetslip } from '@/components/markets/BetslipContext';
+import { useBetslip, type ConfirmedBet } from '@/components/markets/BetslipContext';
 import { sideTitle } from '@/components/markets/MarketScreen';
 import { GroupAvatar } from '@/components/ui/GroupAvatar';
 import { HeaderTile, StickyFooter, FooterButton } from '@/components/ui/Screen';
@@ -88,7 +88,10 @@ export function BetslipBar({
   const [betAmount, setBetAmount] = useState(defaultAmount > 0 ? String(defaultAmount) : '');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [confirmed, setConfirmed] = useState<{ amount: number; label: string; betId: string; placedAt: string } | null>(null);
+  // Lives in BetslipContext when there is one (see ConfirmedBet there for why); local otherwise.
+  const [localConfirmed, setLocalConfirmed] = useState<ConfirmedBet | null>(null);
+  const confirmed = betslip ? betslip.confirmed : localConfirmed;
+  const setConfirmed = betslip ? betslip.setConfirmed : setLocalConfirmed;
   const [stakeSheetOpen, setStakeSheetOpen] = useState(false);
 
   useEffect(() => {
@@ -140,6 +143,8 @@ export function BetslipBar({
         label: selectedLabel,
         betId: (result.data as { id?: string } | undefined)?.id ?? market.id,
         placedAt: (result.data as { created_at?: string } | undefined)?.created_at ?? new Date().toISOString(),
+        pool: (betVolume ?? 0) + bonusPool + betAmountNum,
+        balanceAfter: Math.max(0, balance - betAmountNum),
       });
     });
   }
@@ -415,8 +420,8 @@ export function BetslipBar({
           groupName={groupName}
           groupAvatarKey={groupAvatarKey ?? null}
           closesAt={market.closes_at}
-          pool={(betVolume ?? 0) + bonusPool + confirmed.amount}
-          balanceAfter={Math.max(0, balance - confirmed.amount)}
+          pool={confirmed.pool}
+          balanceAfter={confirmed.balanceAfter}
           betId={confirmed.betId}
           placedAt={confirmed.placedAt}
           onClose={dismissConfirmation}

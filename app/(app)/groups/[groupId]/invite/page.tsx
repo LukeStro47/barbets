@@ -20,7 +20,7 @@ export default async function InvitePage({ params }: { params: Promise<{ groupId
 
   return (
     <>
-      <ScreenHeader title={`Invite to ${group!.name}`} href={`/groups/${groupId}/settings`} />
+      <ScreenHeader title={`Invite to ${group!.name}`} fallbackHref={`/groups/${groupId}/settings`} />
       <main className="mx-auto max-w-[430px] px-[22px] pt-5 pb-10">
         <InviteScreen groupId={groupId} groupName={group!.name} inviteCode={group!.invite_code} joiners={joiners} canReset={group!.owner_id === user.id} />
       </main>

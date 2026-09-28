@@ -436,7 +436,6 @@ export function CreateMarketForm({
             </p>
           )}
         </div>
-        {!isPublic && <p className="mt-[7px] text-[11.5px] text-faint">Type @ to name anyone in the group.</p>}
 
         <div className="mt-[15px]">
           <SectionHead n={3} label={isOverUnder ? 'The line' : 'The options'} />
@@ -512,36 +511,39 @@ export function CreateMarketForm({
             </div>
             {lineFormat === 'number' && (
               <div className="mt-[9px] flex flex-wrap gap-1.5">
-                {OVER_UNDER_UNIT_PRESETS.map((preset) => (
+                {OVER_UNDER_UNIT_PRESETS.flatMap((preset) => [
                   <button
                     type="button"
                     key={preset}
                     onPointerDown={preset === '$' ? startCurrencyPress : undefined}
                     onPointerUp={preset === '$' ? endCurrencyPress : undefined}
                     onPointerLeave={preset === '$' ? endCurrencyPress : undefined}
+                    onContextMenu={preset === '$' ? (e) => e.preventDefault() : undefined}
                     onClick={() => {
                       setUnit(unit === preset ? '' : preset);
                       setCustomUnit(false);
                     }}
-                    className={cn(chip(unit === preset && !customUnit), preset === '$' && 'font-mono')}
+                    className={cn(chip(unit === preset && !customUnit), preset === '$' && 'font-mono select-none [-webkit-touch-callout:none]')}
                   >
                     {preset}
-                  </button>
-                ))}
-                {showCurrencyAlternates &&
-                  OVER_UNDER_CURRENCY_ALTERNATES.map((alt) => (
-                    <button
-                      type="button"
-                      key={alt}
-                      onClick={() => {
-                        setUnit(alt);
-                        setCustomUnit(false);
-                      }}
-                      className={cn(chip(unit === alt && !customUnit), 'font-mono')}
-                    >
-                      {alt}
-                    </button>
-                  ))}
+                  </button>,
+                  // Held-$ currencies appear right beside it, not at the end of the row.
+                  ...(preset === '$' && showCurrencyAlternates
+                    ? OVER_UNDER_CURRENCY_ALTERNATES.map((alt) => (
+                        <button
+                          type="button"
+                          key={alt}
+                          onClick={() => {
+                            setUnit(alt);
+                            setCustomUnit(false);
+                          }}
+                          className={cn(chip(unit === alt && !customUnit), 'font-mono')}
+                        >
+                          {alt}
+                        </button>
+                      ))
+                    : []),
+                ])}
                 {unit && !(OVER_UNDER_UNIT_PRESETS as readonly string[]).includes(unit) && !(OVER_UNDER_CURRENCY_ALTERNATES as readonly string[]).includes(unit) && !customUnit && (
                   <span className={chip(true)}>{unit}</span>
                 )}
@@ -555,6 +557,11 @@ export function CreateMarketForm({
                 >
                   Custom
                 </button>
+                {!showCurrencyAlternates && !customUnit && (
+                  <p className="w-full text-[11px] text-faint">
+                    Hold <span className="font-mono">$</span> for {OVER_UNDER_CURRENCY_ALTERNATES.join(' and ')}.
+                  </p>
+                )}
                 {customUnit && (
                   <input
                     autoFocus
@@ -589,9 +596,10 @@ export function CreateMarketForm({
               ))}
             </div>
             <div className="mt-[11px] flex items-center gap-[9px] rounded-xl border border-signal-line bg-signal-wash px-3 py-2.5">
-              <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[7px] bg-signal text-surface">
-                <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                  <path d="M2 6.3 4.6 9 10 3.2" />
+              <span aria-hidden className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[7px] bg-signal text-surface">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                  <path d="M6 5.4v3.4" />
+                  <circle cx="6" cy="3.4" r="0.35" fill="currentColor" />
                 </svg>
               </span>
               <p className="text-[12px] leading-[1.45] text-muted text-pretty">
@@ -642,8 +650,10 @@ export function CreateMarketForm({
               <div className="mt-2 rounded-[14px] border border-hairline bg-surface px-[13px] py-[11px]">
                 <SubjectChips members={members} selected={subjects} onChange={setSubjects} maxSubjects={maxSubjects} />
                 <p className="mt-[9px] border-t border-rule pt-[9px] text-[11.5px] leading-[1.45] text-faint text-pretty">
-                  {subjects.length === 0
-                    ? "Pick who it's about. They won't see this market and can't bet on it."
+                  {maxSubjects === 0
+                    ? "A market needs at least two people left who can bet on it, and whoever it's about can't. With this few people in the group, it can't be about anyone yet."
+                    : subjects.length === 0
+                    ? `Pick who it's about. They won't see this market and can't bet on it. At least two people have to be left to bet, so you can pick up to ${maxSubjects}.`
                     : `${subjects.map((s) => `@${s.nickname}`).join(subjects.length === 2 ? ' and ' : ', ')} won't see this market and can't bet on it.`}
                 </p>
               </div>
@@ -657,6 +667,13 @@ export function CreateMarketForm({
         <div className="mt-[9px] flex gap-2">
           <button
             type="button"
+            onClick={() => setCloseChoice('custom')}
+            className={cn('flex-1 rounded-xl py-2.5 text-center text-[13px]', closeChoice === 'custom' ? 'bg-ink font-bold text-surface' : 'border border-hairline bg-surface font-semibold text-muted')}
+          >
+            Pick a time
+          </button>
+          <button
+            type="button"
             onClick={() => setCloseChoice('tonight')}
             className={cn('flex-1 rounded-xl py-2.5 text-center text-[13px]', closeChoice === 'tonight' ? 'bg-ink font-bold text-surface' : 'border border-hairline bg-surface font-semibold text-muted')}
           >
@@ -668,13 +685,6 @@ export function CreateMarketForm({
             className={cn('flex-1 rounded-xl py-2.5 text-center text-[13px]', closeChoice === 'saturday' ? 'bg-ink font-bold text-surface' : 'border border-hairline bg-surface font-semibold text-muted')}
           >
             {presetLabel(presets.saturday)}
-          </button>
-          <button
-            type="button"
-            onClick={() => setCloseChoice('custom')}
-            className={cn('flex-1 rounded-xl py-2.5 text-center text-[13px]', closeChoice === 'custom' ? 'bg-ink font-bold text-surface' : 'border border-hairline bg-surface font-semibold text-muted')}
-          >
-            Pick a time
           </button>
         </div>
         {closeChoice === 'custom' ? (

@@ -20,6 +20,21 @@ interface BetslipState {
   /** The DOM node BetslipBar's inline card registers itself under, so `open()` has something to
    * scroll to. A ref object rather than a callback ref: BetslipBar needs to both read and set it. */
   slipRef: RefObject<HTMLDivElement | null>;
+  /** The 5j ticket for a bet just placed. Held here, not in BetslipBar, because placing the bet
+   *  refreshes the page into its "you have a position" layout, which mounts a fresh BetslipBar:
+   *  local state would vanish and the ticket would flash and disappear. */
+  confirmed: ConfirmedBet | null;
+  setConfirmed: (c: ConfirmedBet | null) => void;
+}
+
+export interface ConfirmedBet {
+  amount: number;
+  label: string;
+  betId: string;
+  placedAt: string;
+  /** Pool and balance as of placing, so the ticket doesn't shift under the refresh. */
+  pool: number;
+  balanceAfter: number;
 }
 
 const BetslipCtx = createContext<BetslipState | null>(null);
@@ -36,6 +51,7 @@ const BetslipCtx = createContext<BetslipState | null>(null);
  */
 export function BetslipProvider({ children }: { children: ReactNode }) {
   const [pick, setPick] = useState<BetslipPick | null>(null);
+  const [confirmed, setConfirmed] = useState<ConfirmedBet | null>(null);
   const slipRef = useRef<HTMLDivElement | null>(null);
 
   const open = useCallback((next?: BetslipPick) => {
@@ -43,7 +59,7 @@ export function BetslipProvider({ children }: { children: ReactNode }) {
     slipRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, []);
 
-  const value = useMemo(() => ({ pick, open, slipRef }), [pick, open]);
+  const value = useMemo(() => ({ pick, open, slipRef, confirmed, setConfirmed }), [pick, open, confirmed]);
   return <BetslipCtx.Provider value={value}>{children}</BetslipCtx.Provider>;
 }
 

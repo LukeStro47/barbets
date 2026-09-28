@@ -407,6 +407,19 @@ export default async function LeaderboardPage({
         <p className="mt-1.5 text-[13px] text-faint">{lens === 'alltime' && allTimeSubtitle ? allTimeSubtitle : seasonLine}</p>
       </span>
       {lens === 'current' && (
+        <span className="flex shrink-0 items-center gap-1.5">
+        {!isPublic && (
+          <Link
+            href={`/groups/${groupId}/invite`}
+            className="flex shrink-0 items-center gap-[7px] rounded-[11px] border border-hairline bg-surface px-3 py-2"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" className="text-ink">
+              <circle cx="10" cy="8" r="3.6" />
+              <path d="M3.5 19.5c1.2-3.2 3.6-4.8 6.5-4.8s5.3 1.6 6.5 4.8M19 8v6M16 11h6" />
+            </svg>
+            <span className="text-[12.5px] font-bold text-ink">Invite</span>
+          </Link>
+        )}
         <Link
           href={`/groups/${groupId}/settings`}
           className="flex shrink-0 items-center gap-[7px] rounded-[11px] border border-hairline bg-surface px-3 py-2"
@@ -417,6 +430,7 @@ export default async function LeaderboardPage({
           </svg>
           <span className="text-[12.5px] font-bold text-ink">Settings</span>
         </Link>
+        </span>
       )}
     </div>
   );
