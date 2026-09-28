@@ -14,10 +14,10 @@ function windowPhrase(hours: number): string {
 function steps(resolutionWindowHours: number) {
   return [
     { title: 'Stake blind', body: 'No odds while a market is open. You back a side without knowing the crowd.' },
-    { title: 'The pool sets the price', body: 'When betting closes, the split you all made becomes the odds.' },
+    { title: 'The pool sets the price', body: 'When betting closes, the split becomes the odds.' },
     {
       title: 'Anyone calls it',
-      body: `One of you proposes the result, the group has ${windowPhrase(resolutionWindowHours)} to object.`,
+      body: `Any of you can propose the result, and the group has ${windowPhrase(resolutionWindowHours)} to object.`,
     },
   ];
 }
