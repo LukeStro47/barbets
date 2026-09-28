@@ -225,4 +225,24 @@ describe('market comments', () => {
       .eq('event_type', 'market_comment_mention');
     expect(eventsAfter).toHaveLength(1); // unchanged
   });
+
+  test('a mention is addressed to the person named, once, and never to a hidden subject', async () => {
+    const market = await openMarket(users.owner, users.sponsor, group.id, { subjectIds: [users.subject.id] });
+
+    const { error } = await users.bettor.client.rpc('post_market_comment', {
+      p_market_id: market.id,
+      p_body: `@${users.sponsor.tag} and @${users.sponsor.tag.toUpperCase()} again, and @${users.subject.tag} who can't see this`,
+    });
+    expect(error).toBeNull();
+
+    await sleep(200);
+    const { data: events } = await adminClient
+      .from('notification_events')
+      .select('target_user_id, actor_id')
+      .eq('market_id', market.id)
+      .eq('event_type', 'market_comment_mention');
+    expect(events).toHaveLength(1);
+    expect(events![0].target_user_id).toBe(users.sponsor.id);
+    expect(events![0].actor_id).toBe(users.bettor.id);
+  });
 });
