@@ -112,20 +112,40 @@ export function CommentRow({
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="text-[13px] font-bold text-ink">@{comment.nickname}</span>
           {comment.isMine && <span className="text-[11px] font-semibold text-signal">you</span>}
-          {comment.revealedLabel && comment.revealedAmount != null && (
-            <span className="inline-flex items-center rounded-md border border-signal-line bg-signal-wash px-[7px] py-0.5 font-mono text-[10.5px] font-semibold text-signal">
-              revealed {formatTokens(comment.revealedAmount)} on {comment.revealedLabel}
-            </span>
-          )}
           <span className="font-mono text-[11px] text-faint">{formatRelativeTime(comment.createdAt).replace(' ago', '')}</span>
         </div>
 
-        <p className="mt-[3px] text-[13.5px] leading-[1.5] text-ink text-pretty">{comment.body}</p>
+        <p className="mt-[3px] text-[13.5px] leading-[1.5] text-ink text-pretty">
+          {comment.body.split(/(@[A-Za-z0-9_]+)/g).map((part, i) =>
+            /^@[A-Za-z0-9_]+$/.test(part) ? (
+              <span key={i} className="font-bold text-signal">
+                {part}
+              </span>
+            ) : (
+              part
+            )
+          )}
+        </p>
+
+        {/* A revealed bet reads as its own line under the words, not a tag squeezed into the
+            header: it's the one thing in the thread that isn't banter. */}
+        {comment.revealedLabel && comment.revealedAmount != null && (
+          <div className="mt-2 inline-flex items-center gap-2 rounded-[11px] bg-ink px-3 py-[7px]">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="text-on-ink">
+              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            <span className="text-[11.5px] font-semibold text-surface/60">{comment.isMine ? 'Your bet' : 'Their bet'}</span>
+            <span className="font-mono text-[12.5px] font-semibold text-surface">
+              {formatTokens(comment.revealedAmount)} on {comment.revealedLabel}
+            </span>
+          </div>
+        )}
 
         {revealable && (
           <div className="mt-2 flex items-center gap-[9px] rounded-xl border border-signal-line bg-signal-wash px-[11px] py-[9px]">
             <span className="min-w-0 flex-1">
-              <span className="block text-[12px] font-bold text-signal">Show the group your bet</span>
+              <span className="block text-[12px] font-bold text-signal">Reveal your bet on this comment</span>
               <span className="mt-px block font-mono text-[11px] text-faint">
                 {formatTokens(revealable.amount)} on {revealable.label}. You can&apos;t take it back.
               </span>

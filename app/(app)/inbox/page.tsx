@@ -14,7 +14,7 @@ import { cn } from '@/lib/cn';
  * 4j: everything waiting on you across your groups, then the news. Built entirely from data the
  * viewer can already read under existing RLS — never a replay of notification_events, which has
  * no client read path (see ARCHITECTURE.md):
- *   - Needs you: getGroupTasks() across every group (endorse / vote), naming who's asking.
+ *   - Needs you: getGroupTasks() across every group (endorse / vote / review a called result), naming who's asking.
  *   - Paid out / settled: the viewer's own settled bets from the last 14 days.
  *   - Mentions: comments in visible markets whose body carries "@yournickname" in that group.
  *   - Closes soon: open markets the viewer holds a bet on, closing within a day.
@@ -96,14 +96,18 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const tasks = perGroup.flatMap(({ g, tasks }) => tasks.map((t) => ({ ...t, group: g })));
   const endorseIds = tasks.filter((t) => t.type === 'endorse').map((t) => t.marketId);
   const voteIds = tasks.filter((t) => t.type === 'vote').map((t) => t.marketId);
-  const [{ data: creators }, { data: challenges }, { data: myDisputedBets }] = await Promise.all([
+  const reviewIds = tasks.filter((t) => t.type === 'review').map((t) => t.marketId);
+  const stakeIds = [...voteIds, ...reviewIds];
+  const [{ data: creators }, { data: challenges }, { data: myDisputedBets }, { data: proposals }] = await Promise.all([
     endorseIds.length ? supabase.from('markets').select('id, creator_id').in('id', endorseIds) : Promise.resolve({ data: [] }),
     voteIds.length ? supabase.from('challenges').select('market_id, challenger_id').in('market_id', voteIds) : Promise.resolve({ data: [] }),
-    voteIds.length ? supabase.from('bets').select('market_id, amount').eq('user_id', user.id).in('market_id', voteIds) : Promise.resolve({ data: [] }),
+    stakeIds.length ? supabase.from('bets').select('market_id, amount').eq('user_id', user.id).in('market_id', stakeIds) : Promise.resolve({ data: [] }),
+    reviewIds.length ? supabase.from('resolution_proposals').select('market_id, proposer_id').in('market_id', reviewIds) : Promise.resolve({ data: [] }),
   ]);
   const actorByMarket = new Map<string, string>();
   for (const c of creators ?? []) if (c.creator_id) actorByMarket.set(c.id, c.creator_id);
   for (const c of challenges ?? []) actorByMarket.set(c.market_id, c.challenger_id);
+  for (const p of proposals ?? []) actorByMarket.set(p.market_id, p.proposer_id);
   const stakeByMarket = new Map<string, number>();
   for (const b of myDisputedBets ?? []) stakeByMarket.set(b.market_id, (stakeByMarket.get(b.market_id) ?? 0) + b.amount);
 
@@ -267,6 +271,9 @@ function NeedsYouCard({
   stake: number;
 }) {
   const endorse = task.type === 'endorse';
+  const review = task.type === 'review';
+  const who = actorNickname ? `@${actorNickname}` : 'Someone';
+  const staked = stake > 0 ? ` You bet ${formatTokens(stake)}.` : '';
   return (
     <Link href={`/groups/${groupId}/markets/${task.marketId}`} className="block overflow-hidden rounded-[18px] border border-alert-line bg-surface shadow-[0_1px_2px_rgba(12,16,24,0.04)]">
       <div className="flex items-start gap-[11px] px-4 pt-3.5 pb-3">
@@ -284,13 +291,15 @@ function NeedsYouCard({
         )}
         <span className="min-w-0 flex-1">
           <span className="block text-[11px] font-bold tracking-[0.08em] text-alert uppercase">
-            {endorse ? 'Endorsement' : 'Disputed result'}
+            {endorse ? 'Endorsement' : review ? 'Result called' : 'Disputed result'}
             {groupName && <span className="font-semibold text-faint normal-case tracking-normal"> · {groupName}</span>}
           </span>
           <span className="mt-[3px] block text-[14.5px] leading-[1.35] font-bold text-ink text-pretty">
             {endorse
-              ? `${actorNickname ? `@${actorNickname}` : 'Someone'} wants to open "${task.marketTitle}"`
-              : `${actorNickname ? `@${actorNickname}` : 'Someone'} says the result of "${task.marketTitle}" was wrong.${stake > 0 ? ` You bet ${formatTokens(stake)}.` : ''}`}
+              ? `${who} wants to open "${task.marketTitle}"`
+              : review
+                ? `${who} called the result of "${task.marketTitle}". Check it before it settles.${staked}`
+                : `${who} says the result of "${task.marketTitle}" was wrong.${staked}`}
           </span>
         </span>
       </div>
@@ -300,7 +309,7 @@ function NeedsYouCard({
             'Endorse'
           ) : (
             <>
-              Have your say · <CountdownTimer target={task.deadline} prefix="" /> left
+              {review ? 'Review it' : 'Have your say'} · <CountdownTimer target={task.deadline} prefix="" /> left
             </>
           )}
         </span>

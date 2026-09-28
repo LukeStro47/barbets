@@ -89,6 +89,9 @@ export function MarketActions({
   const isMultipleChoice = market.market_type === 'multiple_choice';
   const onFile = myVote?.voted_option_id ?? myVote?.outcome ?? null;
   const [choice, setChoice] = useState<string | null>(onFile);
+  // Once a ballot is on file the page shows the market with a "your vote is in" card rather than
+  // the open ballot; "Change my vote" brings the ballot back until the window shuts.
+  const [editing, setEditing] = useState(!onFile);
 
   const windowEnd = challenge ? new Date(new Date(challenge.created_at).getTime() + resolutionWindowHours * 3_600_000).toISOString() : null;
   const voteWindowElapsed = useElapsed(windowEnd);
@@ -121,10 +124,15 @@ export function MarketActions({
         isMultipleChoice && choice !== 'void' ? { optionId: choice } : { outcome: choice as 'yes' | 'no' | 'over' | 'under' | 'void' }
       );
       if (result.error) setError(result.error);
-      else router.refresh();
+      else {
+        setEditing(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        router.refresh();
+      }
     });
   }
 
+  const votedLabel = choice ? (choices.find((c) => c.value === choice)?.label ?? '') : '';
   const unchanged = choice !== null && choice === onFile;
 
   return (
@@ -153,6 +161,25 @@ export function MarketActions({
         )}
       </div>
 
+      {!editing && choice && (
+        <div className="mt-[11px] flex items-center gap-3 rounded-[20px] border-[1.5px] border-signal bg-signal-wash px-4 py-3.5">
+          <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[10px] bg-signal text-surface">
+            <svg width="14" height="14" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+              <path d="M2 6.3 4.6 9 10 3.2" />
+            </svg>
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[11px] font-bold tracking-[0.1em] text-signal uppercase">Your vote is in</span>
+            <span className="mt-0.5 block truncate text-[16px] font-extrabold text-ink">
+              <OptionLabel label={votedLabel} />
+            </span>
+            <span className="mt-0.5 block text-[12px] leading-[1.4] text-signal-ink">Sealed until the window shuts. You can change it until then.</span>
+          </span>
+        </div>
+      )}
+
+      {editing && (
+      <>
       <p className="mt-[22px] text-[10.5px] font-bold tracking-[0.1em] text-faint uppercase">What actually happened</p>
       <div className="mt-[9px] flex flex-col gap-2">
         {choices.map((c) => {
@@ -191,6 +218,8 @@ export function MarketActions({
           Sealed. Nobody sees a single vote, yours included, until the window shuts.
         </span>
       </div>
+      </>
+      )}
 
       <div className="mt-3 flex rounded-2xl border border-hairline bg-surface px-4 py-[15px]">
         <StatCell first label="Final in" value={windowEnd ? <CountdownTimer target={windowEnd} prefix="" /> : '—'} tone="signal" />
@@ -226,9 +255,29 @@ export function MarketActions({
 
       <StickyFooter>
         {error && <p className="text-[12px] font-semibold text-alert">{error}</p>}
-        <FooterButton disabled={!choice || unchanged || isPending} onClick={lockIn}>
-          {isPending ? 'Locking in' : unchanged ? 'Vote locked in' : onFile ? 'Change my vote' : 'Lock in my vote'}
-        </FooterButton>
+        {editing ? (
+          <>
+            <FooterButton disabled={!choice || unchanged || isPending} onClick={lockIn}>
+              {isPending ? 'Locking in' : unchanged ? 'Vote locked in' : onFile ? 'Change my vote' : 'Lock in my vote'}
+            </FooterButton>
+            {onFile && (
+              <button
+                type="button"
+                onClick={() => {
+                  setChoice(onFile);
+                  setEditing(false);
+                }}
+                className="text-center text-[13px] font-semibold text-faint"
+              >
+                Keep my vote
+              </button>
+            )}
+          </>
+        ) : (
+          <FooterButton tone="outline" onClick={() => setEditing(true)}>
+            Change my vote
+          </FooterButton>
+        )}
       </StickyFooter>
     </>
   );

@@ -12,6 +12,7 @@ export function CommentThread({
   marketId,
   comments,
   revealable,
+  mentionable,
   endorsedBy,
   me,
 }: {
@@ -19,6 +20,8 @@ export function CommentThread({
   marketId: string;
   comments: CommentRowData[];
   revealable?: { label: string; amount: number } | null;
+  /** Nicknames the composer's @ picker offers (members who can see this market). */
+  mentionable?: string[];
   /** The endorser's nickname, for the "@marcus endorsed this market" system line. */
   endorsedBy?: string | null;
   me: ComposerUser;
@@ -58,7 +61,7 @@ export function CommentThread({
         ))
       )}
 
-      <CommentComposer groupId={groupId} marketId={marketId} me={me} />
+      <CommentComposer groupId={groupId} marketId={marketId} me={me} mentionable={mentionable} revealable={revealable} />
     </div>
   );
 }

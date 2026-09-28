@@ -16,7 +16,7 @@ import { cn } from '@/lib/cn';
  * per-state examples rather than one generic layout:
  *   open            — Pool / Bets / Closes, footer "Your bet" or "Place a bet"
  *   pending_sponsor — Proposed by / Waiting / Needs, footer "Endorse" or "waiting on someone else"
- *   proposed        — Called by / Says / Challenge, footer "Review the result"
+ *   proposed        — Called by / Says / Challenge, footer "Wrong call? Challenge it..."
  *   disputed        — same shape as proposed (a disputed market is still "awaiting resolution",
  *                      just past the challenge window into the secret ballot)
  *   resolved/voided — title + outcome only, no stat row (no explicit mock for the Settled tab
@@ -154,13 +154,18 @@ function MarketListCard({ market: m }: { market: MarketCardData }) {
       {m.status === 'pending_sponsor' &&
         (m.canEndorse ? <Footer tone="alert" left="Endorse" chevron /> : <Footer tone="muted" quiet left="Waiting on someone else to endorse" chevron={false} />)}
 
-      {(m.status === 'proposed' || m.status === 'disputed') &&
+      {/* Says what to do, not just "review": agree by doing nothing, or challenge while the
+          window is open; once challenged, vote. The caller themself has nothing to do. */}
+      {m.status === 'proposed' &&
         !m.mystery &&
-        (m.myBetLabel ? (
-          <Footer tone="signal" left={`Review the result · ${m.myBetLabel}`} chevron />
+        (m.calledByLabel === 'You' ? (
+          <Footer tone="muted" quiet left="You called it. It settles if nobody objects." chevron={false} />
         ) : (
-          <Footer tone="muted" left={m.status === 'disputed' ? 'See how the vote is going' : 'See the proposed result'} chevron />
+          <Footer tone="signal" left={`Wrong call? Challenge it before it settles${m.myBetLabel ? ` · ${m.myBetLabel}` : ''}`} chevron />
         ))}
+      {m.status === 'disputed' && !m.mystery && (
+        <Footer tone="signal" left={`Challenged. Vote on what happened${m.myBetLabel ? ` · ${m.myBetLabel}` : ''}`} chevron />
+      )}
     </Link>
   );
 }

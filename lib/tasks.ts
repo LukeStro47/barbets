@@ -1,10 +1,11 @@
 import type { createClient } from '@/lib/supabase/server';
 
 export interface GroupTask {
-  type: 'endorse' | 'vote';
+  type: 'endorse' | 'vote' | 'review';
   marketId: string;
   marketTitle: string;
-  /** ISO timestamp this task's window closes — sponsor deadline for endorse, vote-window close for vote. */
+  /** ISO timestamp this task's window closes — sponsor deadline for endorse, vote-window close for
+   *  vote, challenge-window close for review. */
   deadline: string;
 }
 
@@ -17,6 +18,10 @@ export interface GroupTask {
  *   - vote: a disputed market where the viewer isn't a hidden subject and hasn't already
  *     cast a ballot (mirrors cast_vote's own eligible-voter check in
  *     supabase/migrations/20260721130000_resolution_window_setting.sql).
+ *   - review: a proposed result still inside its challenge window, for anyone
+ *     challenge_resolution() would let object (not the proposer, not a hidden subject). Not
+ *     strictly blocked on you (silence means it stands), but it's the one moment a wrong call
+ *     can still be caught, so it belongs where people look for things waiting on them.
  * Shared by the group hub's "N waiting on you" card (full list), the all-groups page's
  * per-row "N need you" count, and BottomNav's Home-tab red dot (see ARCHITECTURE.md's note
  * that a cross-group "Inbox" aggregate was deliberately removed — this reintroduces just the
@@ -27,7 +32,7 @@ export async function getGroupTasks(
   groupId: string,
   userId: string
 ): Promise<{ count: number; tasks: GroupTask[] }> {
-  const [{ data: sponsorRows }, { data: disputedRows }] = await Promise.all([
+  const [{ data: sponsorRows }, { data: disputedRows }, { data: proposedRows }] = await Promise.all([
     supabase
       .from('markets')
       .select('id, title, created_at, closes_at')
@@ -39,6 +44,11 @@ export async function getGroupTasks(
       .select('id, title, challenges!inner(created_at)')
       .eq('group_id', groupId)
       .eq('status', 'disputed'),
+    supabase
+      .from('markets')
+      .select('id, title, resolution_proposals!inner(proposer_id, proposed_at)')
+      .eq('group_id', groupId)
+      .eq('status', 'proposed'),
   ]);
 
   const tasks: GroupTask[] = [];
@@ -49,7 +59,8 @@ export async function getGroupTasks(
     tasks.push({ type: 'endorse', marketId: m.id, marketTitle: m.title, deadline: new Date(Math.min(byAge, byClose)).toISOString() });
   }
 
-  const disputedMarketIds = (disputedRows ?? []).map((m) => m.id);
+  // Proposed markets ride along here too: the same subject lookup and window length apply.
+  const disputedMarketIds = [...(disputedRows ?? []).map((m) => m.id), ...(proposedRows ?? []).map((m) => m.id)];
   let subjectMarketIds = new Set<string>();
   let votedMarketIds = new Set<string>();
   let resolutionWindowHours = 8;
@@ -74,6 +85,15 @@ export async function getGroupTasks(
       marketTitle: m.title,
       deadline: new Date(new Date(challengedAt).getTime() + resolutionWindowHours * 3_600_000).toISOString(),
     });
+  }
+
+  for (const m of proposedRows ?? []) {
+    const raw = m.resolution_proposals as unknown as { proposer_id: string; proposed_at: string } | { proposer_id: string; proposed_at: string }[];
+    const p = Array.isArray(raw) ? raw[0] : raw;
+    if (!p || p.proposer_id === userId || subjectMarketIds.has(m.id)) continue;
+    const deadline = new Date(p.proposed_at).getTime() + resolutionWindowHours * 3_600_000;
+    if (deadline <= Date.now()) continue;
+    tasks.push({ type: 'review', marketId: m.id, marketTitle: m.title, deadline: new Date(deadline).toISOString() });
   }
 
   return { count: tasks.length, tasks };

@@ -331,6 +331,19 @@ export default async function MarketDetailPage({
       .order('created_at', { ascending: true });
 
     const comments = commentRows ?? [];
+    // Who the composer's @ picker offers: current members who can see this market. While it's
+    // unsettled that excludes whoever it's about (is_market_visible's rule), and the server
+    // applies the same rule before notifying anyone.
+    const settled = marketRow.status === 'resolved' || marketRow.status === 'voided';
+    const { data: memberRows } = await supabase
+      .from('memberships')
+      .select('user_id, nickname')
+      .eq('group_id', groupId)
+      .in('status', ['active', 'dormant'])
+      .order('nickname');
+    const mentionable = (memberRows ?? [])
+      .filter((m) => m.user_id !== user.id && (settled || !subjectUserIds.includes(m.user_id)))
+      .map((m) => m.nickname as string);
     const commenterIds = [...new Set([...comments.map((c) => c.user_id), user.id])];
     const [{ data: commenterRows }, { data: commenterUsers }] = await Promise.all([
       supabase.from('memberships').select('user_id, nickname').eq('group_id', groupId).in('user_id', commenterIds),
@@ -392,12 +405,13 @@ export default async function MarketDetailPage({
         <ScreenHeader title={marketRow.title} tone="context" href={`/groups/${groupId}`} right={headerRight}>
           <div className="px-[18px]">{tabs('comments')}</div>
         </ScreenHeader>
-        <main className="mx-auto max-w-[430px] px-[18px] pt-4 pb-[108px]">
+        <main className={cn('mx-auto max-w-[430px] px-[18px] pt-4', revealable ? 'pb-[160px]' : 'pb-[108px]')}>
           <CommentThread
             groupId={groupId}
             marketId={marketId}
             comments={rows}
             revealable={revealable}
+            mentionable={mentionable}
             endorsedBy={sponsorNickname ?? null}
             me={{
               userId: user.id,

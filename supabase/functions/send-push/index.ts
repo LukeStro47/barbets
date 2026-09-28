@@ -534,9 +534,9 @@ async function buildContent(event: NotificationEvent, isSubject: boolean, winnin
       return {
         title: group.name,
         body: commenter
-          ? `@${commenter.nickname} mentioned someone in the comments on "${market.title}".`
+          ? `@${commenter.nickname} mentioned you in the comments on "${market.title}".`
           : `You were mentioned in the comments on "${market.title}".`,
-        url,
+        url: `${url}?tab=comments`,
       };
     }
     case 'impressive_bet': {

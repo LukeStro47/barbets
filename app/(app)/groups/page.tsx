@@ -191,13 +191,13 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
                 <GroupAvatar name={t.group.name} avatarKey={t.group.avatar_key} className="h-[26px] w-[26px] text-[9px]" fallbackClassName="bg-ink text-on-ink" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13px] leading-[1.35] font-bold text-ink">
-                    {t.marketTitle}, {t.type === 'endorse' ? 'endorse it' : 'vote on the result'}
+                    {t.marketTitle}, {t.type === 'endorse' ? 'endorse it' : t.type === 'review' ? 'check the result' : 'vote on the result'}
                   </span>
                   <span className="mt-0.5 block truncate text-[11.5px] text-faint">
                     {t.group.name} · <CountdownTimer target={t.deadline} prefix="" /> left
                   </span>
                 </span>
-                <span className="shrink-0 rounded-[10px] bg-signal px-[11px] py-1.5 text-[12px] font-bold text-surface">{t.type === 'endorse' ? 'Endorse' : 'Vote'}</span>
+                <span className="shrink-0 rounded-[10px] bg-signal px-[11px] py-1.5 text-[12px] font-bold text-surface">{t.type === 'endorse' ? 'Endorse' : t.type === 'review' ? 'Review' : 'Vote'}</span>
               </Link>
             ))}
           </div>
