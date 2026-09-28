@@ -22,7 +22,7 @@ export default async function LandingPage() {
 
       <h1 className="mt-[26px] text-[34px] leading-[1.08] font-extrabold tracking-[-0.032em] text-ink text-pretty">Settle it properly.</h1>
       <p className="mt-3 text-[15px] leading-[1.5] text-muted text-pretty">
-        Your group, your arguments, on the record. Play credits. There is no cash in barbets and never will be.
+        Your group, your arguments, on the record.
       </p>
 
       <div aria-hidden className="mt-[26px] overflow-hidden rounded-[22px] border border-hairline bg-surface shadow-[0_1px_2px_rgba(12,16,24,0.04)]">
@@ -48,7 +48,7 @@ export default async function LandingPage() {
       <div className="mt-5 flex flex-col gap-[11px]">
         {[
           ['No odds while it’s open.', 'The pool sets the price when betting shuts.'],
-          ['You call the results', 'between you, no house, no referee.'],
+          ['You call the results', 'between your group, no house, no referee.'],
         ].map(([lead, rest]) => (
           <div key={lead} className="flex gap-[11px]">
             <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[7px] bg-signal-tint text-signal">
