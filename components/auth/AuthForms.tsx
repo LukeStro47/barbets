@@ -24,7 +24,7 @@ export function SignInForm({ next }: { next?: string }) {
     <form action={formAction} className="mt-[22px]">
       {next && <input type="hidden" name="next" value={next} />}
       <div className="flex flex-col gap-4">
-        <Field label="Email" name="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <Field label="Email" name="email" type="email" placeholder="you@example.com" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         <div>
           <Field label="Password" name="password" type="password" autoComplete="current-password" required />
           {/* 5p: a wrong password says so under the field, with the way out right there. */}
@@ -74,7 +74,7 @@ export function SignUpForm({ next }: { next?: string }) {
       {/* The action still double-checks the password; with Show on the field, one entry is enough. */}
       <input type="hidden" name="confirmPassword" value={password} />
       <div className="flex flex-col gap-4">
-        <Field label="Email" name="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <Field label="Email" name="email" type="email" placeholder="you@example.com" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         <div>
           <Field
             label="Password"

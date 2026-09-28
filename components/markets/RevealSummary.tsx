@@ -145,7 +145,7 @@ export function RevealSummary({
           </div>
           <Link href={commentsHref} className="mt-2.5 flex items-center justify-between gap-2.5 border-t border-rule pt-[9px]">
             <span className="text-[12px] font-bold text-signal">
-              Read all {commentCount} comment{commentCount === 1 ? '' : 's'}
+              Read all comments
             </span>
             <RowChevron className="text-signal" />
           </Link>

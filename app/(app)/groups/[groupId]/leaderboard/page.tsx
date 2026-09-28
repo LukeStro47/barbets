@@ -496,6 +496,6 @@ function PlayingFor({
       )}
     </div>
   );
-  return canEdit ? <Link href={`/groups/${groupId}/settings/stakes`}>{body}</Link> : body;
+  return canEdit ? <Link href={`/groups/${groupId}/settings/stakes?from=leaderboard`}>{body}</Link> : body;
 }
 

@@ -228,20 +228,21 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
           <GroupDeletionBanner groupId={groupId} deletionScheduledAt={group!.deletion_scheduled_at} isOwner={isOwner} />
         )}
 
-        {/* 4a's "Free to bet" card — a light card with the balance, a net-change pill, and a
-            bottom stat row (in play / standing / accuracy), replacing the old dark ink hero.
+        {/* 4a's "Free to bet" card, drawn as a flat ink card so the balance is the first thing the
+            eye lands on (4a draws it light; changed at the user's request). It carries a the balance, a net-change pill, and a
+            bottom stat row (in play / standing / accuracy).
             Invite access moved to Settings (InviteHeroCard/InviteQrButton are still there in
             full) since the design doesn't carry it on the hub at all — GroupBar's switcher
             button is the hub's only header affordance now. */}
-        <div className="rounded-[24px] border border-hairline bg-surface px-[18px] py-[17px] shadow-[0_1px_2px_rgba(12,16,24,0.04)]">
+        <div className="rounded-[24px] bg-ink px-[18px] py-[17px]">
           <p className="text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase">Free to bet</p>
           <div className="mt-1.5 flex items-end justify-between gap-3.5">
-            <p className="font-mono text-[42px] leading-none font-semibold tracking-[-0.03em] text-ink">{formatTokens(membership?.balance ?? 0)}</p>
+            <p className="font-mono text-[42px] leading-none font-semibold tracking-[-0.03em] text-surface">{formatTokens(membership?.balance ?? 0)}</p>
             {netHere !== 0 && (
               <span
                 className={cn(
                   'inline-flex shrink-0 items-center gap-[5px] rounded-[8px] px-[9px] py-[5px] font-mono text-[13px] font-semibold',
-                  netHere > 0 ? 'bg-gain-bg text-gain' : 'bg-alert-bg text-alert'
+                  netHere > 0 ? 'bg-gain text-surface' : 'bg-alert text-surface'
                 )}
               >
                 <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
@@ -251,19 +252,19 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
               </span>
             )}
           </div>
-          <div className="mt-3 flex items-center gap-[9px] border-t border-rule pt-[11px] font-mono text-xs text-faint">
+          <div className="mt-3 flex items-center gap-[9px] border-t border-white/10 pt-[11px] font-mono text-xs text-faint">
             <span>
-              <span className="font-semibold text-ink">{formatTokens(pendingTokens)}</span> in play
+              <span className="font-semibold text-surface">{formatTokens(pendingTokens)}</span> in play
             </span>
-            <span className="h-[3px] w-[3px] shrink-0 rounded-full bg-dash" />
+            <span className="h-[3px] w-[3px] shrink-0 rounded-full bg-white/25" />
             <span>
-              <span className="font-semibold text-ink">{yourStandingRank ? formatOrdinal(yourStandingRank) : '—'}</span> of {standings.length}
+              <span className="font-semibold text-surface">{yourStandingRank ? formatOrdinal(yourStandingRank) : '—'}</span> of {standings.length}
             </span>
             {accuracyPct != null && (
               <>
-                <span className="h-[3px] w-[3px] shrink-0 rounded-full bg-dash" />
+                <span className="h-[3px] w-[3px] shrink-0 rounded-full bg-white/25" />
                 <span>
-                  <span className="font-semibold text-ink">{accuracyPct}%</span> accuracy
+                  <span className="font-semibold text-surface">{accuracyPct}%</span> accuracy
                 </span>
               </>
             )}

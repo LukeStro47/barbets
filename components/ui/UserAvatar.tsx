@@ -2,12 +2,11 @@
 
 import { useState } from 'react';
 import { cn } from '@/lib/cn';
-import { initials } from '@/lib/initials';
 import { userAvatarSrc } from '@/lib/userAvatars';
 import { Modal } from '@/components/ui/Modal';
 
 /** The circular chip that stands in for a person, mirroring GroupAvatar's shape. Shows their
- * uploaded profile picture when they have one and falls back to initials otherwise, so a member
+ * uploaded profile picture when they have one and falls back to the first letter of their name otherwise, so a member
  * who never uploads a photo looks exactly as they always did. A plain <img>, not next/image: this
  * is a small fixed-size public Storage object, and the optimizer buys nothing here. */
 export function UserAvatar({
@@ -43,7 +42,7 @@ export function UserAvatar({
         className
       )}
     >
-      {src ? <img src={src} alt="" className="h-full w-full object-cover" /> : initials(nickname)}
+      {src ? <img src={src} alt="" className="h-full w-full object-cover" /> : (nickname.trim()[0] ?? '?').toUpperCase()}
     </span>
   );
 

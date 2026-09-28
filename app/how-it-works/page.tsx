@@ -1,7 +1,6 @@
 ﻿import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { Logo } from '@/components/ui/Logo';
-import { BackButton } from '@/components/ui/BackButton';
+import { ScreenHeader } from '@/components/ui/Screen';
 import { Mention } from '@/components/ui/Mention';
 import { cn } from '@/lib/cn';
 import { formatTokens } from '@/lib/formatNumber';
@@ -119,15 +118,9 @@ export default async function HowItWorksPage({ searchParams }: { searchParams: P
   ];
 
   return (
-    <main className="mx-auto flex max-w-lg flex-col gap-[26px] px-5 py-9 pt-[calc(env(safe-area-inset-top)+2.25rem)]">
-      <div className="flex items-center justify-between">
-        <BackButton
-          fallbackHref={groupId ? `/groups/${groupId}/settings` : user ? '/groups' : '/'}
-          label={groupId ? 'Settings' : 'Back'}
-        />
-        <Logo height={26} />
-      </div>
-
+    <>
+    <ScreenHeader title="How it works" fallbackHref={groupId ? `/groups/${groupId}/settings` : user ? '/groups' : '/'} />
+    <main className="mx-auto flex max-w-lg flex-col gap-[26px] px-5 pt-6 pb-9">
       <div>
         <h1 className="font-display text-[27px] font-extrabold tracking-[-0.025em] text-ink">How Barbets works</h1>
         <p className="mt-1.5 text-[14.5px] leading-[1.5] text-muted">
@@ -135,7 +128,7 @@ export default async function HowItWorksPage({ searchParams }: { searchParams: P
         </p>
       </div>
 
-      <div className="flex gap-1.5 rounded-full bg-rule p-1">
+      <div className="flex gap-1 rounded-[15px] bg-rule p-1">
         {tabs.map((t) => (
           <Link
             key={t.key}
@@ -143,8 +136,8 @@ export default async function HowItWorksPage({ searchParams }: { searchParams: P
             scroll={false}
             replace
             className={cn(
-              'flex-1 rounded-full px-1.5 py-2 text-center text-[12.5px]',
-              tab === t.key ? 'bg-surface font-bold text-ink' : 'font-semibold text-faint'
+              'flex-1 rounded-[11px] px-1.5 py-[9px] text-center text-[12.5px]',
+              tab === t.key ? 'bg-surface font-bold text-ink shadow-[0_1px_2px_rgba(12,16,24,0.07)]' : 'font-semibold text-muted'
             )}
           >
             {t.label}
@@ -302,5 +295,6 @@ export default async function HowItWorksPage({ searchParams }: { searchParams: P
         </div>
       </div>
     </main>
+    </>
   );
 }

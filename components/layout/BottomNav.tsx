@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { getActiveNavTab, getRouteGroupId, shouldHideBottomNav, type NavTab } from '@/lib/navRoute';
+import { getActiveNavTab, getRouteGroupId, shouldHideBottomNav, LAST_GROUP_COOKIE, type NavTab } from '@/lib/navRoute';
 import { formatTokenInputValue } from '@/lib/formatNumber';
 import { GROUP_NAME_MAX_LENGTH, TOKEN_ALLOCATION_MAX } from '@/lib/limits';
 import { useKeyboardState } from '@/lib/useKeyboardInset';
@@ -217,7 +217,20 @@ export function BottomNav({
   } else if (pathname === '/groups') {
     lastGroupIdRef.current = null;
   }
-  const effectiveGroupId = groupId ?? (pathname === '/profile' || pathname === '/inbox' ? lastGroupIdRef.current : null);
+  // The ref above is lost on a reload or a cold open straight onto /profile; the cookie isn't, and
+  // it's also what /profile reads server-side to pick its group.
+  const [cookieGroupId, setCookieGroupId] = useState<string | null>(null);
+  useEffect(() => {
+    if (groupId) {
+      document.cookie = `${LAST_GROUP_COOKIE}=${groupId}; path=/; max-age=31536000; samesite=lax`;
+      setCookieGroupId(groupId);
+    } else {
+      const match = document.cookie.match(new RegExp(`(?:^|; )${LAST_GROUP_COOKIE}=([^;]+)`));
+      setCookieGroupId(match ? match[1] : null);
+    }
+  }, [groupId]);
+  const effectiveGroupId =
+    groupId ?? (pathname === '/profile' || pathname === '/inbox' ? (lastGroupIdRef.current ?? cookieGroupId) : null);
   const currentGroup = effectiveGroupId ? groups.find((g) => g.id === effectiveGroupId) : undefined;
   const inGroup = !!currentGroup;
   const hideBar = shouldHideBottomNav(pathname);

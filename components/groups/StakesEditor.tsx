@@ -20,6 +20,7 @@ export function StakesEditor({
   canEdit,
   chrome = 'page',
   backLabel = 'Manage group',
+  backHref,
 }: {
   groupId: string;
   settings: GroupSettings;
@@ -27,7 +28,11 @@ export function StakesEditor({
   canEdit: boolean;
   chrome?: 'page' | 'modal';
   backLabel?: string;
+  /** Where Back (and a successful Save, on the page) goes: wherever the editor was opened from, so
+   *  adding stakes from the group page lands you back on the group page, not in Settings. */
+  backHref?: string;
 }) {
+  const returnHref = backHref ?? `/groups/${groupId}/settings`;
   const router = useRouter();
   const [committed, setCommitted] = useState(settings);
   const [prizeText, setPrizeText] = useState(settings.prize_text ?? '');
@@ -78,9 +83,10 @@ export function StakesEditor({
       punishmentRef.current = result.data.punishment_text ?? '';
       retryRef.current = null;
       setSaveState('saved');
+      if (chrome === 'page') router.push(returnHref);
       router.refresh();
     });
-  }, [groupId, isPublic, router]);
+  }, [groupId, isPublic, router, chrome, returnHref]);
 
   function retry() {
     if (retryRef.current) {
@@ -109,7 +115,7 @@ export function StakesEditor({
     }
     return (
       <>
-        <PageHeader title="Prize / Punishment" backHref={`/groups/${groupId}/settings`} backLabel={backLabel} />
+        <PageHeader title="Prize / Punishment" backHref={returnHref} backLabel={backLabel} />
         {body}
       </>
     );
@@ -196,7 +202,7 @@ export function StakesEditor({
 
   return (
     <>
-      <PageHeader title="Prize / Punishment" backHref={`/groups/${groupId}/settings`} backLabel={backLabel} />
+      <PageHeader title="Prize / Punishment" backHref={returnHref} backLabel={backLabel} />
       <SettingsCard>{fields}</SettingsCard>
       {saveControls}
     </>

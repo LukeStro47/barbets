@@ -1,5 +1,9 @@
 export type NavTab = 'home' | 'markets' | 'inbox' | 'group' | 'you';
 
+/** The last group the viewer was inside, written by BottomNav on every in-group route and read by
+ *  /profile, so You always has a group to be about (not only after an in-app visit to one). */
+export const LAST_GROUP_COOKIE = 'bb_last_group';
+
 /** Pure, framework-free pathname parsing shared by BottomNav (the fixed bar) and
  * BottomNavSpacer (the bottom scroll padding) — kept in one place so the two can't
  * silently disagree about which routes count as "in a group" or "hide the bar". */

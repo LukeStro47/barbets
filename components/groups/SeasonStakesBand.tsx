@@ -25,7 +25,7 @@ export function SeasonStakesBand({
 }) {
   if (!prizeText && !punishmentText && !canEdit) return null;
 
-  const editHref = `/groups/${groupId}/settings/stakes`;
+  const editHref = `/groups/${groupId}/settings/stakes?from=group`;
   const hoverClasses = canEdit ? 'transition-colors hover:bg-rule/60' : '';
 
   if (!prizeText && !punishmentText) {

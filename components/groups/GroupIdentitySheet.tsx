@@ -91,7 +91,7 @@ export function GroupIdentitySheet({
         onClick={() => setOpen(true)}
         className="shrink-0 rounded-[10px] border border-hairline bg-surface px-3 py-[7px] text-[12px] font-bold text-ink"
       >
-        Edit
+        Edit name
       </button>
 
       {open && (

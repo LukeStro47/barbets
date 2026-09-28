@@ -30,7 +30,7 @@ export function ForgotPasswordForm() {
   return (
     <form action={formAction} className="mt-[22px]">
       {state?.error && <p className="mb-4 text-[12px] font-semibold text-alert">{state.error}</p>}
-      <Field label="Email" name="email" type="email" autoComplete="email" autoFocus required />
+      <Field label="Email" name="email" type="email" placeholder="you@example.com" autoComplete="email" autoFocus required />
       <TurnstileField resetKey={state} />
       <Link href="/login" className="mt-[18px] block text-[12.5px] font-semibold text-faint">
         Remembered it? Log in

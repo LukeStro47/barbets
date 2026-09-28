@@ -122,7 +122,7 @@ export function GroupMarketSections({
       )}
 
       {effectiveFilter === 'open' && (
-        <Section label="Closing soonest" className="mt-2.5">
+        <Section label={openEmpty ? 'Markets' : 'Closing soonest'} className="mt-2.5">
           {openEmpty ? (
             allEmpty ? (
               <EmptyState icon="🎲" title="Nothing open right now" subtitle="Tap the + below to start one." />
