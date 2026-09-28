@@ -1,6 +1,4 @@
 ﻿import { createClient, requireUser } from '@/lib/supabase/server';
-import Link from 'next/link';
-import { RowChevron } from '@/components/ui/Screen';
 import { notFoundIfEmpty } from '@/lib/errors';
 import { getActiveMarkets, getSettledMarkets, type SettledCursor } from '@/lib/groupFeed';
 import { GroupDeletionBanner } from '@/components/groups/GroupDeletionBanner';
@@ -272,24 +270,6 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
             )}
           </div>
         </div>
-
-        {/* While a group is still small, the code people need to get in is right here rather than
-            only behind Settings. Private groups only: a public one has no code to share. */}
-        {!group!.is_public && standings.length < 4 && (
-          <Link
-            href={`/groups/${groupId}/invite`}
-            className="flex items-center gap-3 rounded-[18px] border border-hairline bg-surface px-4 py-3"
-          >
-            <span className="min-w-0 flex-1">
-              <span className="block text-[13.5px] font-bold text-ink">Invite people</span>
-              <span className="mt-px block text-[12px] text-faint">A market needs at least two people who can bet.</span>
-            </span>
-            <span className="shrink-0 rounded-lg border border-hairline bg-tile px-2.5 py-1 font-mono text-[13px] font-semibold tracking-[0.08em] text-ink">
-              {group!.invite_code}
-            </span>
-            <RowChevron className="text-faint" />
-          </Link>
-        )}
 
         <WaitingOnYouCard tasks={tasks} />
 
