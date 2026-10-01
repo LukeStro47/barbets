@@ -710,8 +710,18 @@ const reportedThisRun = new Set<string>();
 // Plain-English triage, same idea as lib/errorReporter.ts's. The failure surface here is much
 // narrower (read the queue, build copy, hand off to a push service), so a handful of cases
 // covers it.
-function triage(message: string): { meaning: string; fix: string } {
+function triage(label: string, message: string): { meaning: string; fix: string } {
   const t = message.toLowerCase();
+  if (['supabase gateway returned', 'bad gateway', 'gateway timeout', 'service unavailable', 'thread killed by timeout'].some((p) => t.includes(p))) {
+    const claim = label.startsWith('could not claim');
+    return {
+      meaning:
+        "Supabase's API did not answer this run (after 3 tries). That is an outage or a slow patch on Supabase's side, not something in this codebase.",
+      fix: claim
+        ? 'Nothing to do and nothing was lost: a failed claim takes nothing off the queue, so the next run that gets through sends everything. If it keeps arriving for more than a few minutes, check status.supabase.com.'
+        : 'If it keeps arriving for more than a few minutes, check status.supabase.com. The event this run was handling is skipped, so somebody may have missed one notification.',
+    };
+  }
   if (t.includes('does not exist') || t.includes('schema cache')) {
     return {
       meaning:
@@ -746,7 +756,22 @@ function triage(message: string): { meaning: string; fix: string } {
 // read "[object Object]" no matter what Postgres actually said. Pull `.message` (and, when
 // present, the code/details/hint that make a Postgrest error actually diagnosable) off the
 // object directly instead of relying on it being a real Error.
+//
+// The other unreadable shape: when Supabase's own gateway is down, Cloudflare answers in front of
+// it with a full HTML error page, and supabase-js passes that body through as `.message`. The
+// card then opened with 800 characters of <!DOCTYPE html> and IE conditional comments. Its
+// <title> ("supabase.co | 522: Connection timed out") is the only part that says anything.
+function summarizeHtml(message: string): string {
+  if (!/^\s*<(!doctype|html)/i.test(message)) return message;
+  const title = message.match(/<title>([^<]*)<\/title>/i)?.[1]?.trim();
+  return `Supabase gateway returned an HTML error page${title ? `: ${title}` : ''}`;
+}
+
 function errorMessage(err: unknown): string {
+  return summarizeHtml(rawErrorMessage(err));
+}
+
+function rawErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   if (err && typeof err === 'object') {
     const e = err as { message?: unknown; code?: unknown; details?: unknown; hint?: unknown };
@@ -791,8 +816,8 @@ async function reportToSlack(label: string, err: unknown, context?: Record<strin
               ...Object.entries(context ?? {}).map(([k, v]) => ({ type: 'mrkdwn', text: `*${k}:*\n${v}` })),
             ].slice(0, 10),
           },
-          { type: 'section', text: { type: 'mrkdwn', text: `*What's happening*\n${triage(message).meaning}` } },
-          { type: 'section', text: { type: 'mrkdwn', text: `*What to do*\n${triage(message).fix}` } },
+          { type: 'section', text: { type: 'mrkdwn', text: `*What's happening*\n${triage(label, message).meaning}` } },
+          { type: 'section', text: { type: 'mrkdwn', text: `*What to do*\n${triage(label, message).fix}` } },
           ...(stack ? [{ type: 'section', text: { type: 'mrkdwn', text: `\`\`\`${stack.slice(0, 2600)}\`\`\`` } }] : []),
           {
             type: 'context',

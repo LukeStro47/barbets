@@ -60,6 +60,15 @@ async function stableId(input: string): Promise<string> {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
 }
 
+// The Odds API explains a refusal in its JSON body ({ message, error_code }); a 401 in particular
+// means either a bad key or an exhausted monthly quota (OUT_OF_USAGE_CREDITS), which need opposite
+// fixes. The status code alone can't tell them apart, so the body goes into the Slack card.
+async function oddsApiFailure(endpoint: string, res: Response, sport: string): Promise<string> {
+  const body = (await res.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 300);
+  const remaining = res.headers.get('x-requests-remaining');
+  return `Odds API ${endpoint} request failed (${res.status}) for ${sport}${body ? `: ${body}` : ''}${remaining !== null ? ` [credits remaining: ${remaining}]` : ''}`;
+}
+
 async function recordFailure(subject: string, err: unknown) {
   const message = err instanceof Error ? err.message : String(err);
   const { error } = await admin.rpc('_record_sweep_failure', {
@@ -91,10 +100,33 @@ Deno.serve(async (req) => {
       continue;
     }
 
+    // /scores costs Odds API credits on every call (/events, which sports-weekly-prepare uses, is
+    // free). Calling it 4x a day for both leagues regardless of whether anything was waiting
+    // spent the whole monthly quota by 2026-09-20, after which every call came back 401 for the
+    // rest of the month. Only ask once a market's game has actually kicked off and the market
+    // is still unresolved, which is a few calls per league per week instead of ~480 a month.
+    // Bounded below by the same DAYS_FROM lookback /scores itself uses: a game older than that
+    // can never come back from the call, so a market stuck past it (needs a moderator's hand
+    // resolve) must not keep spending credits every run.
+    const { count: awaiting, error: awaitingErr } = await admin
+      .from('markets')
+      .select('id', { count: 'exact', head: true })
+      .eq('group_id', group.id)
+      .eq('is_system_market', true)
+      .in('status', ['open', 'closed'])
+      .lte('closes_at', new Date().toISOString())
+      .gte('closes_at', new Date(Date.now() - DAYS_FROM * 24 * 60 * 60 * 1000).toISOString());
+    if (awaitingErr) {
+      failed++;
+      await recordFailure(`${groupName}-awaiting-lookup`, new Error(awaitingErr.message));
+      continue;
+    }
+    if (!awaiting) continue;
+
     let games: OddsApiScore[];
     try {
       const res = await fetch(`https://api.the-odds-api.com/v4/sports/${oddsApiSport}/scores?apiKey=${ODDS_API_KEY}&daysFrom=${DAYS_FROM}`);
-      if (!res.ok) throw new Error(`Odds API scores request failed (${res.status}) for ${oddsApiSport}`);
+      if (!res.ok) throw new Error(await oddsApiFailure('scores', res, oddsApiSport));
       games = await res.json();
     } catch (err) {
       failed++;

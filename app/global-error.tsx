@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { Bricolage_Grotesque } from 'next/font/google';
 import './globals.css';
 import { reportClientError } from '@/lib/actions/errorReport';
+import { isNetworkError } from '@/lib/networkError';
 
 // Imported again rather than shared with the root layout: this file replaces that layout
 // outright, so anything it set up (the stylesheet, the display font's CSS variable) is simply
@@ -22,7 +23,15 @@ const bricolage = Bricolage_Grotesque({ subsets: ['latin'], variable: '--font-br
  * breaking.
  */
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  // The phone dropped the request (backgrounded PWA, lost signal), not a bug. See
+  // lib/networkError.ts. Not reported, and the copy says what actually happened instead of
+  // "something went wrong on our end." The button reloads rather than calling reset(): the
+  // request may have reached the server before the connection died, so the honest next step
+  // is to fetch the real state, not to re-render the same tree and let the user tap again.
+  const offline = isNetworkError(error);
+
   useEffect(() => {
+    if (isNetworkError(error)) return;
     // A digest means this error came from the server and was already reported
     // by onRequestError, with a real un-minified stack attached. Reporting it
     // again from here would only add a second, worse copy of the same bug.
@@ -44,17 +53,19 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
             !
           </span>
           <h1 className="mt-6 font-display text-[30px]/[34px] font-extrabold tracking-[-0.03em] text-espresso-900">
-            Something went wrong on our end.
+            {offline ? 'Lost connection.' : 'Something went wrong on our end.'}
           </h1>
           <p className="mt-3 max-w-[300px] text-base/6 text-espresso-500">
-            Nothing you did caused this, and no bets or balances are affected. We've been told about it.
+            {offline
+              ? "Your connection dropped before the app heard back. Reload to see where things stand, then try again if it didn't go through."
+              : "Nothing you did caused this, and no bets or balances are affected. We've been told about it."}
           </p>
           <button
             type="button"
-            onClick={reset}
+            onClick={offline ? () => window.location.reload() : reset}
             className="mt-9 w-full max-w-[330px] rounded-full bg-honey-500 px-6 py-4 text-[17px] font-bold whitespace-nowrap text-espresso-900 transition-colors hover:bg-honey-600"
           >
-            Try again
+            {offline ? 'Reload' : 'Try again'}
           </button>
         </main>
       </body>

@@ -160,7 +160,11 @@ Deno.serve(async (req) => {
       if (groupErr || !group) throw new Error(`${groupName} group not found: ${groupErr?.message ?? 'no row'}`);
 
       const res = await fetch(`https://api.the-odds-api.com/v4/sports/${oddsApiSport}/events?apiKey=${ODDS_API_KEY}`);
-      if (!res.ok) throw new Error(`Odds API events request failed (${res.status}) for ${oddsApiSport}`);
+      if (!res.ok) {
+        // Same reasoning as sports-resolve-markets' oddsApiFailure(): the body says why.
+        const body = (await res.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 300);
+        throw new Error(`Odds API events request failed (${res.status}) for ${oddsApiSport}${body ? `: ${body}` : ''}`);
+      }
       const events: OddsApiEvent[] = await res.json();
 
       const candidates = events

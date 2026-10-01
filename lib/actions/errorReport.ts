@@ -1,6 +1,7 @@
 'use server';
 
 import { reportError } from '@/lib/errorReporter';
+import { isNetworkError } from '@/lib/networkError';
 
 /**
  * The browser half of error reporting. `instrumentation.ts` covers everything
@@ -22,6 +23,13 @@ export async function reportClientError(input: {
   stack?: string;
   url?: string;
 }): Promise<void> {
+  // A dropped connection, not a bug (lib/networkError.ts). global-error.tsx already skips these,
+  // but tabs still running an older build don't, and those keep posting until they reload.
+  if (isNetworkError(input)) {
+    console.warn('[client] network error, not reported:', input.url ?? '', input.message);
+    return;
+  }
+
   const error = new Error(String(input.message ?? 'Unknown client error').slice(0, 1000));
   error.name = String(input.name ?? 'ClientError').slice(0, 100);
   error.stack = input.stack ? String(input.stack).slice(0, 4000) : undefined;
