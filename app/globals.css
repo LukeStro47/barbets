@@ -56,8 +56,14 @@
     color: var(--color-ink);
   }
   :root {
+    /* Every Modal/sheet locks scroll with body overflow:hidden, which on a desktop browser with
+       classic scrollbars removes the scrollbar and shifts the whole page sideways by its width
+       (most visible opening the market's three-dot menu). Reserving the gutter keeps the page
+       still. Phones use overlay scrollbars, so this changes nothing there. */
+    scrollbar-gutter: stable;
+
     /* BottomNav's own rendered height (60px row + its bottom safe-area padding) — shared so
-       any page-specific bottom bar (currently just BetslipBar) can stack itself flush above
+       any page-specific bottom bar (currently StickyFooter's `aboveNav`) can stack itself flush above
        the nav instead of underneath it, rather than duplicating this as a guessed magic number
        in more than one component. */
     --bottomnav-height: calc(58px + max(26px, env(safe-area-inset-bottom)));

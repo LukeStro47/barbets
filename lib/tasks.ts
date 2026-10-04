@@ -77,14 +77,17 @@ export async function getGroupTasks(
 
   for (const m of disputedRows ?? []) {
     if (subjectMarketIds.has(m.id) || votedMarketIds.has(m.id)) continue;
-    const challengedAt = (m.challenges as unknown as { created_at: string }[])[0]?.created_at;
+    // challenges.market_id is unique, so PostgREST embeds it as a single object, not an array.
+    // Reading it as an array silently dropped every vote task (the hub's count, the Inbox, the
+    // nav dot), so accept either shape the way the proposals loop below already does.
+    const rawChallenge = m.challenges as unknown as { created_at: string } | { created_at: string }[];
+    const challengedAt = (Array.isArray(rawChallenge) ? rawChallenge[0] : rawChallenge)?.created_at;
     if (!challengedAt) continue;
-    tasks.push({
-      type: 'vote',
-      marketId: m.id,
-      marketTitle: m.title,
-      deadline: new Date(new Date(challengedAt).getTime() + resolutionWindowHours * 3_600_000).toISOString(),
-    });
+    const deadline = new Date(challengedAt).getTime() + resolutionWindowHours * 3_600_000;
+    // Same lapse check as review below: cast_vote() rejects once the window passes, even though
+    // the market stays 'disputed' until expire_stale() next finalizes it.
+    if (deadline <= Date.now()) continue;
+    tasks.push({ type: 'vote', marketId: m.id, marketTitle: m.title, deadline: new Date(deadline).toISOString() });
   }
 
   for (const m of proposedRows ?? []) {

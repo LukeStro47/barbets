@@ -14,8 +14,12 @@ description: >
   token names below are the real `@theme` custom properties in `app/globals.css`,
   and every component named below is the real file. The brand mark is the 3ac
   "b" tile (components/ui/BrandMark.tsx: BrandTile, Wordmark, BrandLockup), used
-  in the app and in the PWA/favicon icon set. The native iOS/Android store icons
-  are regenerated separately and may still show the old mark.
+  in the app and in the PWA/favicon icon set. The native iOS/Android icons and
+  splash screens are generated from `assets/` (icon-only, icon-foreground,
+  icon-background, splash, splash-dark, all drawn from
+  `public/barbets-app-icon.png`, the full-bleed 1024px mark) by
+  `npm run cap:assets`, which is scoped to `--android --ios` because its PWA
+  pass would otherwise overwrite `public/manifest.json`.
 
 colors:
   canvas: "#f6f7f9"
@@ -179,7 +183,10 @@ them re-draw the chrome:
   fixed, because page transitions use a transform (see ARCHITECTURE.md).
 - **`StickyFooter` + `FooterButton`**: the frosted white bottom bar that
   holds a screen's one action. `FooterButton` is the 14px-radius, 15/700
-  CTA in `signal` (with the CTA glow), `ink`, or `outline`.
+  CTA in `signal` (with the CTA glow), `ink`, or `outline`. On a screen that
+  also shows `BottomNav` (the group hub, leaderboard, groups, inbox, profile),
+  pass `aboveNav`: both are fixed to the bottom at the same layer and the nav
+  wins, so a plain footer there is drawn but completely hidden.
 - **`Eyebrow`**, **`StatCell`** (the uppercase-label-over-mono-figure cell
   in a row of stats), **`RowChevron`** (the 7x12 chevron that ends every
   tappable row).

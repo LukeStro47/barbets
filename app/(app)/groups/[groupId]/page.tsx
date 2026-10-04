@@ -1,4 +1,5 @@
 ﻿import { createClient, requireUser } from '@/lib/supabase/server';
+import { standingOf } from '@/lib/standing';
 import { notFoundIfEmpty } from '@/lib/errors';
 import { getActiveMarkets, getSettledMarkets, type SettledCursor } from '@/lib/groupFeed';
 import { GroupDeletionBanner } from '@/components/groups/GroupDeletionBanner';
@@ -74,7 +75,6 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
     const sittingOut = roster.filter((m) => !playing.some((p) => p.user_id === m.user_id));
     const mine = roster.find((m) => m.user_id === user.id);
     const ownerNickname = roster.find((m) => m.user_id === group!.owner_id)?.nickname ?? '';
-    const sittingOutLabel = sittingOut.length === 0 ? null : sittingOut.length === 1 ? `@${sittingOut[0].nickname} out` : `${sittingOut.length} out`;
 
     const avatarIds = [...new Set([...seasonOver!.finalBalances.map((r) => r.user_id), ...(seasonOver!.champion ? [seasonOver!.champion.user_id] : [])])];
     const { data: avatarRows } =
@@ -101,7 +101,6 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
           settings={data as GroupSettings}
           members={rosterMembers}
           playingCount={playing.length}
-          sittingOutLabel={sittingOutLabel}
         />
       );
     } else if (mine) {
@@ -162,7 +161,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
     membership ? supabase.from('membership_ledger_net').select('net').eq('membership_id', membership.id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   const standings = standingsRows ?? [];
-  const yourStandingRank = standings.findIndex((m) => m.user_id === user.id) + 1 || null;
+  const yourStandingRank = standingOf(standings, user.id).rank;
   const settledBetsForAccuracy = (settledBetsRows ?? []) as unknown as { side: string | null; option_id: string | null; markets: { outcome: string | null; outcome_option_id: string | null } }[];
   const correctCount = settledBetsForAccuracy.filter((b) => (b.option_id ? b.option_id === b.markets.outcome_option_id : b.side === b.markets.outcome)).length;
   const accuracyPct = settledBetsForAccuracy.length > 0 ? Math.round((correctCount / settledBetsForAccuracy.length) * 100) : null;
@@ -198,7 +197,7 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
     const rows = standings ?? [];
     const leader = rows[0];
     const you = rows.find((m) => m.user_id === user.id);
-    const yourRank = you ? rows.findIndex((m) => m.user_id === user.id) + 1 : null;
+    const yourRank = standingOf(rows, user.id).rank;
     const youLead = !!you && yourRank === 1;
     const gapValue = youLead ? (leader?.balance ?? 0) - (rows[1]?.balance ?? leader?.balance ?? 0) : Math.max(0, (leader?.balance ?? 0) - (you?.balance ?? 0));
 
@@ -209,9 +208,12 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
         yourRank={yourRank}
         totalPlayers={rows.length}
         yourBalance={you?.balance ?? 0}
+        yourNet={netHere}
+        inPlay={pendingTokens}
         youLead={youLead}
         gapValue={gapValue}
         stillResolving={[...buckets.awaiting_resolution, ...buckets.challenged]}
+        yourTasks={tasks}
       />
     );
   }
@@ -228,54 +230,65 @@ export default async function GroupFeedPage({ params }: { params: Promise<{ grou
           <GroupDeletionBanner groupId={groupId} deletionScheduledAt={group!.deletion_scheduled_at} isOwner={isOwner} />
         )}
 
+        {/* Winding down leads the hub: the season closing is the news. */}
+        {windingDown}
+
         {/* 4a's "Free to bet" card, drawn as a flat ink card so the balance is the first thing the
             eye lands on (4a draws it light; changed at the user's request). It carries a the balance, a net-change pill, and a
             bottom stat row (in play / standing / accuracy).
             Invite access moved to Settings (InviteHeroCard/InviteQrButton are still there in
             full) since the design doesn't carry it on the hub at all — GroupBar's switcher
             button is the hub's only header affordance now. */}
-        <div className="rounded-[24px] bg-ink px-[18px] py-[17px]">
-          <p className="text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase">Free to bet</p>
-          <div className="mt-1.5 flex items-end justify-between gap-3.5">
-            <p className="font-mono text-[42px] leading-none font-semibold tracking-[-0.03em] text-surface">{formatTokens(membership?.balance ?? 0)}</p>
-            {netHere !== 0 && (
-              <span
-                className={cn(
-                  'inline-flex shrink-0 items-center gap-[5px] rounded-[8px] px-[9px] py-[5px] font-mono text-[13px] font-semibold',
-                  netHere > 0 ? 'bg-gain text-surface' : 'bg-alert text-surface'
-                )}
-              >
-                <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
-                  <path d={netHere > 0 ? 'M2 8.5 5 5l2 2 3-4' : 'M2 3.5 5 7l2-2 3 4'} />
-                </svg>
-                {formatSignedTokens(netHere)}
-              </span>
-            )}
-          </div>
-          <div className="mt-3 flex items-center gap-[9px] border-t border-white/10 pt-[11px] font-mono text-xs text-faint">
-            <span>
-              <span className="font-semibold text-surface">{formatTokens(pendingTokens)}</span> in play
-            </span>
-            <span className="h-[3px] w-[3px] shrink-0 rounded-full bg-white/25" />
-            <span>
-              <span className="font-semibold text-surface">{yourStandingRank ? formatOrdinal(yourStandingRank) : '—'}</span> of {standings.length}
-            </span>
-            {accuracyPct != null && (
-              <>
-                <span className="h-[3px] w-[3px] shrink-0 rounded-full bg-white/25" />
-                <span>
-                  <span className="font-semibold text-surface">{accuracyPct}%</span> accuracy
+        {/* Hidden while winding down: WindingDownCard leads with the same balance, net and in-play line. */}
+        {!windingDown && (
+          <div className="rounded-[24px] bg-ink px-[18px] py-[17px]">
+            <p className="text-[11.5px] font-bold tracking-[0.1em] text-faint uppercase">Free to bet</p>
+            <div className="mt-1.5 flex items-end justify-between gap-3.5">
+              <p className="font-mono text-[42px] leading-none font-semibold tracking-[-0.03em] text-surface">{formatTokens(membership?.balance ?? 0)}</p>
+              {netHere !== 0 && (
+                <span
+                  className={cn(
+                    'inline-flex shrink-0 items-center gap-[5px] rounded-[8px] px-[9px] py-[5px] font-mono text-[13px] font-semibold',
+                    netHere > 0 ? 'bg-gain text-surface' : 'bg-alert text-surface'
+                  )}
+                >
+                  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                    <path d={netHere > 0 ? 'M2 8.5 5 5l2 2 3-4' : 'M2 3.5 5 7l2-2 3 4'} />
+                  </svg>
+                  {formatSignedTokens(netHere)}
                 </span>
-              </>
-            )}
+              )}
+            </div>
+            <div className="mt-3 flex items-center gap-[9px] border-t border-white/10 pt-[11px] font-mono text-xs text-faint">
+              <span>
+                <span className="font-semibold text-surface">{formatTokens(pendingTokens)}</span> in play
+              </span>
+              {/* No standing until balances have actually moved (see lib/standing.ts). */}
+              {yourStandingRank != null && (
+                <>
+                  <span className="h-[3px] w-[3px] shrink-0 rounded-full bg-white/25" />
+                  <span>
+                    <span className="font-semibold text-surface">{formatOrdinal(yourStandingRank)}</span> of {standings.length}
+                  </span>
+                </>
+              )}
+              {accuracyPct != null && (
+                <>
+                  <span className="h-[3px] w-[3px] shrink-0 rounded-full bg-white/25" />
+                  <span>
+                    <span className="font-semibold text-surface">{accuracyPct}%</span> accuracy
+                  </span>
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
-        <WaitingOnYouCard tasks={tasks} />
+        {/* While winding down, the only things left to act on are the in-flight results, and
+            WindingDownCard's "Still resolving" list already shows each one with its own action. */}
+        {!windingDown && <WaitingOnYouCard tasks={tasks} />}
 
         {group!.pending_bonus_pool > 0 && <PendingBonusPoolNote amount={group!.pending_bonus_pool} />}
-
-        {windingDown}
 
         {season && season.status === 'active' && !season.betting_open && isOwner && (
           <OpenSeasonBettingButton groupId={groupId} seasonId={season.id} />

@@ -13,8 +13,8 @@ import { cn } from '@/lib/cn';
 type Step = 'closed' | 'menu' | 'cropping';
 
 /**
- * The one place a profile picture gets edited — its trigger lives on /profile/account now,
- * alongside email/password/delete, rather than as its own row on the main /profile page.
+ * The one place a profile picture gets edited. Its trigger lives on /profile/edit now, next to
+ * the per-group handle, so the screen can say that the picture shows in every group.
  *
  * `trigger` is whatever's tappable to open this (the avatar itself, sized however the caller
  * needs), passed as an already-rendered element rather than a render-prop function: a function

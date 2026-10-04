@@ -189,7 +189,7 @@ export function ClarificationRequests({
               <circle cx="12" cy="12" r="9" />
               <path d="M9.7 9.3a2.4 2.4 0 1 1 3.3 2.2c-.7.35-1 .9-1 1.6v.4M12 16.7h.01" />
             </svg>
-            Question this
+            Ask for clarification
           </button>
 
           {askModal}

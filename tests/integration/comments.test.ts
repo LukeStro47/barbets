@@ -190,6 +190,21 @@ describe('market comments', () => {
     expect(stillSealed).toEqual([]);
   });
 
+  test('revealing shows the whole stake on the biggest pick: top-ups are summed, a smaller hedge is left out', async () => {
+    const market = await openMarket(users.owner, users.sponsor, group.id);
+    for (const [side, amount] of [['no', 30], ['yes', 25], ['yes', 20]] as const) {
+      const { error } = await users.bettor.client.rpc('place_bet', { p_market_id: market.id, p_side: side, p_amount: amount });
+      expect(error).toBeNull();
+    }
+
+    const { data, error } = await users.bettor.client.rpc('reveal_bet_in_comment', { p_market_id: market.id, p_body: 'All in, mostly.' });
+    expect(error).toBeNull();
+    const revealed = unwrapComment(data);
+    // yes holds 45 across two rows, no holds 30: the reveal is the 45 on yes, not the first row.
+    expect(revealed.revealed_side).toBe('yes');
+    expect(revealed.revealed_amount).toBe(45);
+  });
+
   test('revealing with no bet on the market is rejected', async () => {
     const market = await openMarket(users.owner, users.sponsor, group.id);
     const { error } = await users.sponsor.client.rpc('reveal_bet_in_comment', { p_market_id: market.id, p_body: 'I have nothing riding on this.' });

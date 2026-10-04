@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { standingOf } from '@/lib/standing';
 import { redirect } from 'next/navigation';
 import { createClient, requireUser } from '@/lib/supabase/server';
 import { StartGroupButton } from '@/components/groups/StartGroupButton';
@@ -212,7 +213,7 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
             const playing = (g.memberships ?? [])
               .filter((m: { status: string }) => m.status === 'active' || m.status === 'dormant')
               .sort((a: { balance: number }, b: { balance: number }) => b.balance - a.balance);
-            const rank = playing.findIndex((m: { user_id: string }) => m.user_id === user.id) + 1;
+            const rank = standingOf(playing, user.id).rank ?? 0;
             const net = netByGroup.get(g.id) ?? 0;
             const waiting = (tasks.get(g.id) ?? []).length;
             const open = openCount.get(g.id) ?? 0;
@@ -233,7 +234,7 @@ export default async function GroupsHubPage({ searchParams }: { searchParams: Pr
                 </span>
                 <span className="shrink-0 text-right">
                   <span className={cn('block font-mono text-[14px] font-semibold', net > 0 ? 'text-gain' : net < 0 ? 'text-alert' : 'text-ink')}>{formatSignedTokens(net)}</span>
-                  <span className="mt-[3px] block font-mono text-[11px] text-faint">{rank > 0 ? `${formatOrdinal(rank)} / ${playing.length}` : `— / ${playing.length}`}</span>
+                  <span className="mt-[3px] block font-mono text-[11px] text-faint">{rank > 0 ? formatOrdinal(rank) : '—'}</span>
                 </span>
                 <RowChevron className="text-dash" />
               </Link>

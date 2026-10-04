@@ -8,7 +8,7 @@ import { UserAvatar } from '@/components/ui/UserAvatar';
 import { RowChevron, StatCell } from '@/components/ui/Screen';
 import { formatSignedTokens, formatTokens } from '@/lib/formatNumber';
 import { sideTitle } from '@/components/markets/MarketScreen';
-import { LAST_GROUP_COOKIE } from '@/lib/navRoute';
+import { LAST_GROUP_COOKIE, pickCurrentMembership } from '@/lib/navRoute';
 
 interface OpenBetRow {
   id: string;
@@ -48,7 +48,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   ]);
 
   const rows = memberships ?? [];
-  const current = rows.find((m) => m.group_id === groupParam) ?? rows.find((m) => m.group_id === lastGroup) ?? rows[0] ?? null;
+  const current = pickCurrentMembership(rows, groupParam, lastGroup);
   const handle = current?.nickname ?? user.email?.split('@')[0] ?? 'you';
   const since = rows[0] ? new Date(rows[0].joined_at).toLocaleDateString('en-GB', { month: 'long' }) : null;
   const tenure =
@@ -113,7 +113,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
             <span className="mt-0.5 block text-[12.5px] text-faint">{tenure}</span>
           </span>
           <Link
-            href="/profile/account"
+            href={current ? `/profile/edit?group=${current.group_id}` : '/profile/edit'}
             aria-label="Edit profile"
             className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] border border-hairline bg-surface text-ink"
           >
@@ -208,15 +208,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
         )}
 
         <div className="mt-5 overflow-hidden rounded-[18px] border border-hairline bg-surface">
-          {current && currentGroup && (
-            <ListRow
-              href={`/groups/${current.group_id}/settings/you?from=profile`}
-              label={`Your name in ${currentGroup.name}`}
-              hint={`@${current.nickname}`}
-            />
-          )}
           <ListRow href="/profile/account" label="Account" />
-          <ListRow href="/profile/notifications" label="Notifications" hint="All groups" />
+          <ListRow href="/profile/notifications" label="Notifications" />
           <ListRow href="/feedback" label="Help and feedback" />
           <ListRow href="/privacy" label="Privacy policy" />
           <ListRow href="/terms" label="Terms" />
@@ -231,11 +224,10 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   );
 }
 
-function ListRow({ href, label, hint }: { href: string; label: string; hint?: string }) {
+function ListRow({ href, label }: { href: string; label: string }) {
   return (
     <Link href={href} className="flex items-center gap-[11px] border-b border-row-rule px-4 py-[13px]">
       <span className="min-w-0 flex-1 truncate text-[13.5px] font-bold text-ink">{label}</span>
-      {hint && <span className="max-w-[40%] truncate font-mono text-[12px] text-faint">{hint}</span>}
       <RowChevron className="text-faint" />
     </Link>
   );

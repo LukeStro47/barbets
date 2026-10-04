@@ -132,14 +132,20 @@ export function ScreenHeader({
 /**
  * Sticky footer holding exactly one primary action (README pattern 4): 96% white with an 8px
  * blur, a hairline on top, 12px 18px 28px padding. Fixed to the viewport; the page reserves room
- * for it with `pb-[116px]` on its scroller. Sits above BottomNav only on the few screens that
- * show both — drill-in screens hide the nav (lib/navRoute.ts).
+ * for it with `pb-[116px]` on its scroller. Drill-in screens hide BottomNav (lib/navRoute.ts),
+ * so this normally owns the bottom edge alone.
+ *
+ * `aboveNav`: for a screen that also shows BottomNav (the group hub). Both are fixed to the
+ * bottom at z-30 and the nav renders later, so without it the nav covers this footer entirely;
+ * with it the footer stacks flush on top of the nav (--bottomnav-height) and drops the
+ * safe-area padding the nav already carries.
  */
-export function StickyFooter({ children, className }: { children: ReactNode; className?: string }) {
+export function StickyFooter({ children, className, aboveNav = false }: { children: ReactNode; className?: string; aboveNav?: boolean }) {
   return (
     <div
       className={cn(
-        'fixed inset-x-0 bottom-0 z-30 border-t border-hairline bg-surface/[0.96] px-[18px] pt-3 pb-[max(28px,env(safe-area-inset-bottom))] backdrop-blur-[8px]',
+        'fixed inset-x-0 z-30 border-t border-hairline bg-surface/[0.96] px-[18px] pt-3 backdrop-blur-[8px]',
+        aboveNav ? 'bottom-[var(--bottomnav-height)] pb-3' : 'bottom-0 pb-[max(28px,env(safe-area-inset-bottom))]',
         className
       )}
     >

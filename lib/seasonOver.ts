@@ -27,6 +27,7 @@ export interface SeasonOverData {
   marketsSettled: number;
   champion: (SeasonOverRow & { accuracy: number | null }) | null;
   loserNickname: string | null;
+  loserUserId: string | null;
   prizeText: string | null;
   punishmentText: string | null;
   finalBalances: SeasonOverRow[];
@@ -141,6 +142,7 @@ export async function loadSeasonOver(supabase: Supabase, groupId: string, userId
     marketsSettled: snap.markets_settled ?? 0,
     champion: snap.champion ? { ...snap.champion, accuracy: accuracyOf(snap.champion.user_id) } : null,
     loserNickname: snap.loser?.nickname ?? null,
+    loserUserId: snap.loser?.user_id ?? null,
     prizeText: snap.prize_text,
     punishmentText: snap.punishment_text,
     finalBalances,

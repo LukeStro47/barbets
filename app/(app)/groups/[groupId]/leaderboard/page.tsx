@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { standingOf } from '@/lib/standing';
 import { createClient, requireUser } from '@/lib/supabase/server';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { RowChevron } from '@/components/ui/Screen';
@@ -125,7 +126,7 @@ export default async function LeaderboardPage({
   const yourTitleCount = ((titleRows ?? []) as GroupTitleRow[]).filter((r) => r.user_id === user.id).length;
 
   const you = members.find((m) => m.user_id === user.id);
-  const yourRank = members.findIndex((m) => m.user_id === user.id) + 1;
+  const yourRank = standingOf(members, user.id).rank;
   const leader = members[0];
   // "net, all season": this season's balance against what everyone was seeded with. A seasons-off
   // group has one continuous history, so it's the all-time net instead.
@@ -146,7 +147,7 @@ export default async function LeaderboardPage({
   const currentPane = (
     <div className="flex flex-col gap-3.5">
       <div className="flex gap-2">
-        <Tile value={you ? formatOrdinal(yourRank) : '—'} label={`of ${members.length} playing`} />
+        <Tile value={you && yourRank ? formatOrdinal(yourRank) : '—'} label={`of ${members.length} playing`} />
         <Tile value={formatSignedTokens(yourNet)} label={settings?.seasons_enabled ? 'net, all season' : 'net, all time'} tone={yourNet > 0 ? 'gain' : yourNet < 0 ? 'alert' : undefined} />
         <Tile value={accuracy.has(user.id) ? `${accuracy.get(user.id)}%` : '—'} label="accuracy" />
       </div>

@@ -6,7 +6,7 @@
   "scripts": {
     "test": "vitest run",
     "cap:sync": "cap sync",
-    "cap:assets": "capacitor-assets generate",
+    "cap:assets": "capacitor-assets generate --android --ios",
     "cap:android": "cap open android",
     "cap:ios": "cap open ios"
   },

@@ -81,3 +81,15 @@ export function getActiveNavTab(pathname: string): NavTab | null {
     return 'group';
   return 'markets';
 }
+
+/** Which of the viewer's memberships a group-scoped page that isn't under /groups/[id] (You, Edit
+ *  profile) is about: `?group=` when the nav passes it, else the last group they were in (the
+ *  LAST_GROUP_COOKIE BottomNav writes), else their earliest. One rule for both pages, so the
+ *  pencil on You always opens Edit profile on the same group You was showing. */
+export function pickCurrentMembership<T extends { group_id: string }>(
+  rows: T[],
+  groupParam: string | null | undefined,
+  lastGroup: string | null | undefined
+): T | null {
+  return rows.find((m) => m.group_id === groupParam) ?? rows.find((m) => m.group_id === lastGroup) ?? rows[0] ?? null;
+}

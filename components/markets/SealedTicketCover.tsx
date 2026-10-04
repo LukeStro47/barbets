@@ -1,4 +1,5 @@
 ﻿import { cn } from '@/lib/cn';
+import { BrandTile } from '@/components/ui/BrandMark';
 import { ClockIcon, LockIcon, UnlockIcon } from '@/components/ui/icons';
 
 const CAPTION_STATIC = "Someone started a market about you. The question, the options, and who's betting stay hidden until it resolves.";
@@ -7,7 +8,7 @@ const CAPTION_OVERLAY = "This market about you has resolved. The question, the o
 function Wordmark() {
   return (
     <div className="flex items-center gap-[7px]">
-      <img src="/barbets-mono-white.png" alt="" width={18} height={18} className="block" />
+      <BrandTile size={18} />
       <span className="text-xs font-extrabold tracking-[0.08em] text-on-ink uppercase">Barbets</span>
     </div>
   );

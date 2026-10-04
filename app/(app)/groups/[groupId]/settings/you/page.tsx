@@ -5,20 +5,21 @@ import { LeaveGroupButton } from '@/components/groups/LeaveGroupButton';
 import { ForfeitModeratorButton } from '@/components/groups/ForfeitModeratorButton';
 import { loadGroupManageContext } from '@/lib/groupManageLoad';
 
-/** Your name in one group. Reached from Settings, or from You's "Your name in {group}" row
- *  (`?from=profile`, so Back goes back there). A nickname is per group by design. */
+/** Your name in one group. Reached from Settings, or from Edit profile's "Your name in other
+ *  groups" list (`?from=edit&editGroup=<the group Edit profile was showing>`, so Back returns to
+ *  that same screen). A nickname is per group by design. */
 export default async function YouInThisGroupPage({
   params,
   searchParams,
 }: {
   params: Promise<{ groupId: string }>;
-  searchParams: Promise<{ from?: string }>;
+  searchParams: Promise<{ from?: string; editGroup?: string }>;
 }) {
   const { groupId } = await params;
-  const { from } = await searchParams;
+  const { from, editGroup } = await searchParams;
   const ctx = await loadGroupManageContext(groupId);
   const { group, isOwner, isPublic, isModerator, myMembership } = ctx;
-  const backHref = from === 'profile' ? `/profile?group=${groupId}` : `/groups/${groupId}/settings`;
+  const backHref = from === 'edit' ? `/profile/edit?group=${editGroup || groupId}` : `/groups/${groupId}/settings`;
 
   return (
     <>

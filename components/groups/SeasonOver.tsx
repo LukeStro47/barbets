@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { RowChevron, StatCell } from '@/components/ui/Screen';
 import { AwardGlyph } from '@/components/groups/AwardGlyph';
-import { formatTokens, formatOrdinal, formatSignedTokens, numberWordCapitalized } from '@/lib/formatNumber';
+import { formatTokens, formatOrdinal, formatSignedTokens } from '@/lib/formatNumber';
 import { cn } from '@/lib/cn';
 import type { SeasonOverData } from '@/lib/seasonOver';
 
@@ -31,13 +31,15 @@ export function SeasonOver({
 }) {
   const { season, champion, you } = data;
   const weeks = season.endedAt ? Math.max(1, Math.round((new Date(season.endedAt).getTime() - new Date(season.startedAt).getTime()) / (7 * 86_400_000))) : null;
-  const headline = `${weeks ? `${numberWordCapitalized(weeks)} week${weeks === 1 ? '' : 's'}, ` : ''}${data.marketsSettled} market${data.marketsSettled === 1 ? '' : 's'}, one winner.`;
-  const stakesLine = [
-    data.prizeText && champion ? `Prize: ${data.prizeText}` : null,
-    data.punishmentText && data.loserNickname ? `${data.loserNickname}: ${data.punishmentText}` : null,
-  ]
-    .filter(Boolean)
-    .join(' ');
+  // Digits, not words, for every count in the headline ("4 weeks, 12 markets, 1 winner.").
+  const headline = `${weeks ? `${weeks} week${weeks === 1 ? '' : 's'}, ` : ''}${data.marketsSettled} market${data.marketsSettled === 1 ? '' : 's'}, 1 winner.`;
+  // The prize rides in the champion card (the champion is who won it), and the punishment gets
+  // its own card under it, led by the loser's face and name, so both halves of the stakes read
+  // as the headline they are rather than a caption.
+  const punishment =
+    data.punishmentText && data.loserUserId && data.loserNickname
+      ? { userId: data.loserUserId, nickname: data.loserNickname, text: data.punishmentText }
+      : null;
 
   // The final table shows the top three, with the viewer's own row added if they finished lower.
   const top = data.finalBalances.slice(0, 3);
@@ -94,11 +96,48 @@ export function SeasonOver({
               {champion.accuracy != null && <span className="mt-0.5 block text-[11px] text-faint">{champion.accuracy}% accuracy</span>}
             </span>
           </div>
-          {stakesLine && (
-            <p className="mt-4 border-t border-white/12 pt-3.5 text-[12.5px] leading-[1.45] text-[#a8b0bd] text-pretty">{stakesLine}</p>
+          {data.prizeText && (
+            <div className="mt-4 border-t border-white/12 pt-3.5">
+              <p className="text-[11px] font-bold tracking-[0.1em] text-faint uppercase">
+                {champion.user_id === viewerId ? 'Your prize' : 'Wins the prize'}
+              </p>
+              <p className="mt-1.5 text-[16px] leading-[1.35] font-bold tracking-[-0.01em] text-surface text-pretty">{data.prizeText}</p>
+            </div>
           )}
         </div>
       )}
+
+      {punishment && (() => {
+        const mine = punishment.userId === viewerId;
+        const av = avatarFor(punishment.userId);
+        return (
+          <div className={cn('mt-3 rounded-[22px] border px-5 py-[18px]', mine ? 'border-signal-line bg-signal-wash' : 'border-hairline bg-surface')}>
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="text-[11px] font-bold tracking-[0.1em] text-faint uppercase">Punishment</p>
+              <p className="font-mono text-[11px] text-faint">Last place</p>
+            </div>
+            <div className="mt-3 flex items-center gap-[13px]">
+              <UserAvatar
+                userId={punishment.userId}
+                nickname={punishment.nickname}
+                avatarUpdatedAt={av?.avatar_updated_at}
+                avatarPresetKey={av?.avatar_preset_key}
+                className="h-[46px] w-[46px] text-[15px]"
+                fallbackClassName="bg-tile text-muted"
+              />
+              <span className="min-w-0 flex-1">
+                <span className={cn('block truncate text-[22px] font-extrabold tracking-[-0.02em]', mine ? 'text-signal' : 'text-ink')}>
+                  {mine ? 'You' : `@${punishment.nickname}`}
+                </span>
+                <span className="mt-0.5 block text-[12.5px] text-muted">{mine ? 'owe the punishment' : 'owes the punishment'}</span>
+              </span>
+            </div>
+            <p className={cn('mt-3.5 border-t pt-3.5 text-[16px] leading-[1.35] font-bold tracking-[-0.01em] text-ink text-pretty', mine ? 'border-signal-line' : 'border-rule')}>
+              {punishment.text}
+            </p>
+          </div>
+        );
+      })()}
 
       {you && (
         <div className="mt-3 rounded-[22px] border border-hairline bg-surface px-5 py-[18px] shadow-[0_1px_2px_rgba(12,16,24,0.04)]">
@@ -129,24 +168,32 @@ export function SeasonOver({
 
       {(data.awards.length > 0 || data.lostTitles.length > 0) && (
         <>
-          <p className="mt-5 text-[10.5px] font-bold tracking-[0.1em] text-faint uppercase">Awards, as the season closed</p>
+          <p className="mt-5 text-[10.5px] font-bold tracking-[0.1em] text-faint uppercase">Awards at Season Close</p>
           <div className="mt-[9px] flex flex-col gap-[9px]">
-            {data.awards.map((a) => {
-              const mine = a.holderUserId === viewerId;
-              return (
-                <div key={a.key} className="rounded-[20px] bg-ink p-4">
-                  <div className="flex items-start justify-between gap-2.5">
-                    <span className="text-[10px] font-extrabold tracking-[0.1em] text-on-ink uppercase">{mine ? 'Yours' : `@${a.holderNickname}`}</span>
-                    <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-on-ink/45 bg-signal/18">
-                      <AwardGlyph iconKey={a.iconKey} stroke="var(--color-on-ink)" size={17} />
-                    </span>
-                  </div>
-                  <p className="mt-2.5 text-[17px] leading-[1.15] font-extrabold tracking-[-0.01em] text-surface">{a.label}</p>
-                  {a.stat && <p className="mt-1 font-mono text-[12.5px] font-semibold text-on-ink">{a.stat}</p>}
-                  <p className="mt-[11px] border-t border-white/12 pt-[11px] text-[12px] leading-[1.45] text-[#a8b0bd] text-pretty">{a.description}</p>
-                </div>
-              );
-            })}
+            {data.awards.length > 0 && (
+              <div className="rounded-[18px] border border-hairline bg-surface px-[15px] py-0.5">
+                {data.awards.map((a, i) => {
+                  const mine = a.holderUserId === viewerId;
+                  return (
+                    <div key={a.key} className={cn('flex items-start gap-[11px] py-[11px]', i < data.awards.length - 1 && 'border-b border-rule')}>
+                      <span className="mt-px flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-rule">
+                        <AwardGlyph iconKey={a.iconKey} stroke="var(--color-muted)" size={15} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        {/* Wraps rather than truncates: a description cut off mid-word ("in the g...")
+                            loses the one line that says what the award is for. */}
+                        <span className="block text-[13.5px] font-bold text-ink text-pretty">{a.label}</span>
+                        <span className="mt-0.5 block text-[11.5px] leading-[1.4] text-faint text-pretty">{a.description}</span>
+                      </span>
+                      <span className="shrink-0 text-right">
+                        <span className={cn('block text-[12px] font-bold', mine ? 'text-signal' : 'text-muted')}>{mine ? 'You' : `@${a.holderNickname}`}</span>
+                        {a.stat && <span className="mt-0.5 block font-mono text-[11.5px] text-faint">{a.stat}</span>}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             {data.lostTitles.map((t) => (
               <div key={t.label} className="flex items-center gap-[11px] rounded-2xl border border-dashed border-dash bg-surface px-[15px] py-3.5">
                 <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full border border-dashed border-dash">
