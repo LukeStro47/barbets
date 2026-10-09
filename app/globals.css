@@ -312,30 +312,7 @@
   }
 }
 
-/* Mystery markets (a hidden subject can't see a market exists until it
-   resolves): a shimmering redacted placeholder for the sealed ticket's
-   redacted question lines, on the dark ticket gradient. Signal-blue sweep
-   instead of the old honey one (rgba(45,85,245,.28) = --color-signal at
-   28% — kept as a literal rgba() rather than var() since background-image
-   gradients can't currently pull alpha-composited CSS custom properties in
-   this codebase's build). */
-@keyframes mystery-shimmer {
-  from { background-position: 130% 0; }
-  to { background-position: -30% 0; }
-}
-.animate-mystery-shimmer-dark {
-  background-image: linear-gradient(100deg, rgba(255, 255, 255, 0.09) 30%, rgba(45, 85, 245, 0.28) 50%, rgba(255, 255, 255, 0.09) 70%);
-  background-size: 220% 100%;
-  animation: mystery-shimmer 3s linear infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .animate-mystery-shimmer-dark {
-    animation: none;
-    background-position: 0 0;
-  }
-}
-
-/* SealedTicketCover: the wax-seal idle glow (sealed ticket page), and the
+/* SealedTicketCover: the wax-seal idle glow (the tappable seal only), and the
    one-shot tear sequence (RevealTicket's first-open-since-resolution cover,
    for a subject only) — seal shudders, both cover halves fly off with a
    signal-blue flash at the tear, the ticket underneath pops in, then its

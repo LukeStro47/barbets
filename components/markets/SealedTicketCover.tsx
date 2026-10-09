@@ -14,16 +14,16 @@ function Wordmark() {
   );
 }
 
+/** Two static bars where the question would be. Deliberately still: a shimmer here read as
+ * "loading", which promised content that is not coming until the market resolves. */
 function RedactedLines() {
   return (
     <div className="mb-4 flex flex-col gap-2.5">
-      <span className="h-[17px] w-[88%] rounded-md animate-mystery-shimmer-dark" />
-      <span className="h-[17px] w-[64%] rounded-md animate-mystery-shimmer-dark" style={{ animationDelay: '350ms' }} />
+      <span className="h-[17px] w-[88%] rounded-md bg-white/10" />
+      <span className="h-[17px] w-[64%] rounded-md bg-white/10" />
     </div>
   );
 }
-
-const HATCH = 'opacity-[0.14] bg-[repeating-linear-gradient(-45deg,#2d55f5_0_2px,transparent_2px_13px)]';
 
 /** The perforation line + punch holes + wax seal, all centered on the exact boundary between the
  * two cover halves. An explicit z-index (rather than DOM order) is what keeps it painting above
@@ -35,18 +35,17 @@ const HATCH = 'opacity-[0.14] bg-[repeating-linear-gradient(-45deg,#2d55f5_0_2px
  * The seal shows a closed LockIcon pre-resolution (mode="static" — genuinely nothing to open
  * yet), or an UnlockIcon post-resolution (mode="overlay" — the market's already resolved, this
  * cover is just gating the reveal until tapped). Only the overlay, not-yet-tearing case is
- * actually clickable — everything else renders inert. */
+ * actually clickable — everything else renders inert, and only that clickable seal pulses: the
+ * glow marks the one thing you can do, so a seal you can't press stays flat. */
 function Seam({ mode, tearing, onOpen }: { mode: 'static' | 'overlay'; tearing?: boolean; onOpen?: () => void }) {
   const clickable = mode === 'overlay' && !tearing && !!onOpen;
   const sealClasses = cn(
-    'flex h-[108px] w-[108px] items-center justify-center rounded-full border-[3px] border-[rgba(12,16,24,0.35)]',
-    !tearing && 'animate-mystery-seal-glow',
-    clickable && 'cursor-pointer transition-transform duration-150 hover:scale-[1.04] active:scale-95'
+    'flex h-[108px] w-[108px] items-center justify-center rounded-full border-[3px] border-ink bg-signal',
+    clickable && 'animate-mystery-seal-glow cursor-pointer transition-transform duration-150 hover:scale-[1.04] hover:bg-signal-deep active:scale-95'
   );
-  const sealStyle = { background: 'radial-gradient(circle at 34% 28%, #6b8cff, #2d55f5 46%, #1f3fc4)' };
   const sealInner = (
     <>
-      <span className="absolute inset-[9px] rounded-full border-[1.5px] border-dashed border-[rgba(12,16,24,0.28)]" />
+      <span className="absolute inset-[9px] rounded-full border-[1.5px] border-dashed border-white/35" />
       {mode === 'static' ? (
         <LockIcon className="h-[42px] w-[42px] text-surface" />
       ) : (
@@ -57,7 +56,7 @@ function Seam({ mode, tearing, onOpen }: { mode: 'static' | 'overlay'; tearing?:
 
   return (
     <div className={cn('z-10', mode === 'overlay' ? 'absolute inset-x-0 top-[53%]' : 'relative', !clickable && 'pointer-events-none')}>
-      <div className="relative border-t-2 border-dashed border-[rgba(107,140,255,0.45)]">
+      <div className="relative border-t-2 border-dashed border-on-ink/45">
         <span className="absolute top-0 -left-2.5 h-5 w-5 -translate-y-1/2 rounded-full bg-canvas" />
         <span className="absolute top-0 -right-2.5 h-5 w-5 -translate-y-1/2 rounded-full bg-canvas" />
       </div>
@@ -66,13 +65,12 @@ function Seam({ mode, tearing, onOpen }: { mode: 'static' | 'overlay'; tearing?:
           type="button"
           onClick={onOpen}
           aria-label="Open the resolved market"
-          className={cn('absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 border-0 p-0', sealClasses)}
-          style={sealStyle}
+          className={cn('absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 p-0', sealClasses)}
         >
           {sealInner}
         </button>
       ) : (
-        <div className={cn('absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2', sealClasses)} style={sealStyle}>
+        <div className={cn('absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2', sealClasses)}>
           {sealInner}
         </div>
       )}
@@ -83,8 +81,6 @@ function Seam({ mode, tearing, onOpen }: { mode: 'static' | 'overlay'; tearing?:
 export interface SealedTicketCoverProps {
   /** "[Group name] · About you" eyebrow text. */
   groupLabel: string;
-  /** Optional "what you can see" 3-chip row (bets/volume/closes) — sealed ticket page only, omitted for the brief reveal-page tear overlay. */
-  stats?: { label: string; value: React.ReactNode }[];
   /** 'static': a full self-contained sealed-ticket card (the pre-resolution page). 'overlay': absolutely fills a positioned parent, for covering an already-rendered RevealTicket. */
   mode: 'static' | 'overlay';
   /** overlay mode only: plays the shake+fly-off sequence once instead of the idle seal glow. */
@@ -95,12 +91,11 @@ export interface SealedTicketCoverProps {
   onTornComplete?: () => void;
 }
 
-export function SealedTicketCover({ groupLabel, stats, mode, tearing, onOpen, onTornComplete }: SealedTicketCoverProps) {
+export function SealedTicketCover({ groupLabel, mode, tearing, onOpen, onTornComplete }: SealedTicketCoverProps) {
   const topHalf = (
     <div className={cn('overflow-hidden', mode === 'static' ? 'relative rounded-t-[28px]' : 'absolute inset-x-0 top-0 h-[53%] rounded-t-[28px]')}>
       <div
-        className={cn(mode === 'overlay' ? 'absolute inset-0' : 'relative', tearing && 'animate-mystery-cover-top')}
-        style={{ background: '#0c1018' }}
+        className={cn('bg-ink', mode === 'overlay' ? 'absolute inset-0' : 'relative', tearing && 'animate-mystery-cover-top')}
         onAnimationEnd={
           tearing
             ? (e) => {
@@ -111,17 +106,16 @@ export function SealedTicketCover({ groupLabel, stats, mode, tearing, onOpen, on
             : undefined
         }
       >
-        <div className={cn('absolute inset-0', HATCH)} />
         <div className="relative px-6 pt-6 pb-[78px]">
           <div className="mb-5 flex items-center justify-between">
             <Wordmark />
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-signal/[0.16] px-2.5 py-1 text-[10.5px] font-extrabold tracking-[0.09em] text-on-ink uppercase">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-[10.5px] font-extrabold tracking-[0.09em] text-on-ink uppercase">
               {mode === 'static' ? 'Sealed' : 'Tap to open'}
             </span>
           </div>
-          <p className="mb-3.5 text-[11.5px] font-bold tracking-[0.1em] text-signal uppercase">{groupLabel}</p>
+          <p className="mb-3.5 text-[11.5px] font-bold tracking-[0.1em] text-on-ink uppercase">{groupLabel}</p>
           <RedactedLines />
-          <p className="text-[13.5px] leading-[1.5] text-surface/[0.62]">{mode === 'static' ? CAPTION_STATIC : CAPTION_OVERLAY}</p>
+          <p className="text-[13.5px] leading-[1.5] text-surface">{mode === 'static' ? CAPTION_STATIC : CAPTION_OVERLAY}</p>
         </div>
       </div>
     </div>
@@ -129,29 +123,15 @@ export function SealedTicketCover({ groupLabel, stats, mode, tearing, onOpen, on
 
   const bottomHalf = (
     <div className={cn('overflow-hidden', mode === 'static' ? 'relative rounded-b-[28px]' : 'absolute inset-x-0 bottom-0 top-[53%] rounded-b-[28px]')}>
-      <div
-        className={cn(mode === 'overlay' ? 'absolute inset-0' : 'relative', tearing && 'animate-mystery-cover-bottom')}
-        style={{ background: '#0c1018' }}
-      >
-        <div className={cn('absolute inset-0', HATCH)} />
-        {stats && stats.length > 0 && (
-          <div className="relative px-6 pt-[78px] pb-5">
-            <p className="mb-2.5 text-[11px] font-bold tracking-[0.1em] text-signal uppercase">About the Market</p>
-            <div className="mb-4 grid grid-cols-3 gap-2">
-              {stats.map((s) => (
-                <div key={s.label} className="rounded-[14px] bg-white/[0.07] px-3 py-2.5">
-                  <p className="text-[10.5px] font-bold tracking-[0.07em] text-surface/45 uppercase">{s.label}</p>
-                  <p className="mt-0.5 text-[17px] font-extrabold text-surface">{s.value}</p>
-                </div>
-              ))}
-            </div>
-            <p className="flex items-center gap-1.5 text-xs font-bold text-surface/50">
-              <ClockIcon className="h-[13px] w-[13px] shrink-0" />
-              Tap to open once it resolves.
-            </p>
-          </div>
+      <div className={cn('bg-ink', mode === 'overlay' ? 'absolute inset-0' : 'relative', tearing && 'animate-mystery-cover-bottom')}>
+        {mode === 'static' ? (
+          <p className="flex items-center justify-center gap-1.5 px-6 pt-[72px] pb-5 text-xs font-bold text-on-ink">
+            <ClockIcon className="h-[13px] w-[13px] shrink-0" />
+            Tap to open once it resolves.
+          </p>
+        ) : (
+          <div className="pt-[38px]" />
         )}
-        {!stats && <div className="pt-[38px]" />}
       </div>
     </div>
   );

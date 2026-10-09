@@ -75,7 +75,8 @@ export function MarketTitleBlock({
   title: string;
   subtitle?: ReactNode;
   size?: 22 | 23;
-  tabs: ReactNode;
+  /** Omitted only by the subject's sealed view, which has no Comments tab to offer. */
+  tabs?: ReactNode;
 }) {
   return (
     <div>
@@ -86,7 +87,7 @@ export function MarketTitleBlock({
         {title}
       </h1>
       {subtitle && <p className="mt-1.5 text-[12.5px] text-faint">{subtitle}</p>}
-      <div className="mt-[13px] border-b border-hairline">{tabs}</div>
+      {tabs && <div className="mt-[13px] border-b border-hairline">{tabs}</div>}
     </div>
   );
 }

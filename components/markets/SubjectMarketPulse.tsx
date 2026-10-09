@@ -1,5 +1,6 @@
 import { ScreenHeader } from '@/components/ui/Screen';
-import { StatusChip } from '@/components/markets/MarketScreen';
+import { StatusChip, MarketTitleBlock, NextStepsCard, type NextStep } from '@/components/markets/MarketScreen';
+import { PoolStrip } from '@/components/markets/PoolStrip';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { SealedTicketCover } from '@/components/markets/SealedTicketCover';
 import type { MarketStatus } from '@/lib/marketStatus';
@@ -13,14 +14,16 @@ export interface SubjectMarketPulseData {
   pool_amount: number;
 }
 
-/** What a subject sees instead of the real market page — a wax-sealed ticket, matching the
- * reveal ticket's visual language but with both halves opaque. get_subject_market_pulse
+/** What a subject sees instead of the real market page. Assembled from the same pieces as every
+ * other market state (title block, PoolStrip, the one ticket, What happens next) so it reads as
+ * the same screen with the content withheld, not a separate world. get_subject_market_pulse
  * deliberately hands back nothing that could identify what the market is about (no title, no
- * description, no other members involved, and — as of this redesign — no odds either, since
- * that's now judged not worth the crack it would otherwise be fine to make): just the coarse
- * shape of the action (bet count, total volume, time to close) surfaced in the "what you can
- * see" panel below the seal. It really does tear open the moment the market resolves —
- * see RevealTicket's `sealedForSubject` prop for that half of the story. */
+ * description, no other members involved, no odds): just the coarse shape of the action (bet
+ * count, total staked, time to close). The ticket really does tear open the moment the market
+ * resolves; see RevealTicket's `sealedForSubject` prop for that half of the story.
+ *
+ * Status is folded to Open/Closed on purpose: called and challenged are both "closed" from where
+ * the subject stands, and saying which would leak that someone has called it. */
 export function SubjectMarketPulse({
   groupId,
   groupName,
@@ -30,9 +33,34 @@ export function SubjectMarketPulse({
   groupName: string;
   pulse: SubjectMarketPulseData;
 }) {
-  const stats: { label: string; value: React.ReactNode }[] = [{ label: 'Bets', value: pulse.bet_count }];
-  if (pulse.pool_amount > 0) stats.push({ label: 'Volume', value: formatTokens(pulse.pool_amount) });
-  if (pulse.status === 'open') stats.push({ label: 'Closes', value: <CountdownTimer target={pulse.closes_at} prefix="" /> });
+  const isOpen = pulse.status === 'open';
+
+  const cells: React.ComponentProps<typeof PoolStrip>['cells'] = [
+    { label: 'Staked', value: formatTokens(pulse.pool_amount) },
+    { label: 'Bets', value: pulse.bet_count, flex: 0.8 },
+  ];
+  if (isOpen) cells.push({ label: 'Closes in', value: <CountdownTimer target={pulse.closes_at} prefix="" />, tone: 'signal', flex: 1.2 });
+
+  const revealStep: NextStep = { title: 'It opens for you', sub: 'The question, the result, and who bet what.', state: 'upcoming' };
+  const steps: NextStep[] = isOpen
+    ? [
+        {
+          title: 'Betting closes',
+          sub: (
+            <>
+              In <CountdownTimer target={pulse.closes_at} prefix="" />. You can&apos;t bet on a market about you.
+            </>
+          ),
+          state: 'current',
+        },
+        { title: 'The group settles it', sub: 'Someone calls the result, and anyone can challenge it.', state: 'upcoming' },
+        revealStep,
+      ]
+    : [
+        { title: 'Betting closed', sub: 'Nobody can add to the pool now.', state: 'done' },
+        { title: 'The group settles it', sub: 'Someone calls the result, and anyone can challenge it.', state: 'current' },
+        revealStep,
+      ];
 
   return (
     <>
@@ -40,11 +68,13 @@ export function SubjectMarketPulse({
         title={groupName}
         tone="context"
         href={`/groups/${groupId}`}
-        right={<StatusChip label={pulse.status === 'open' ? 'Open' : 'Closed'} tone={pulse.status === 'open' ? 'quiet' : 'ink'} />}
+        right={<StatusChip label={isOpen ? 'Open' : 'Closed'} tone={isOpen ? 'quiet' : 'ink'} />}
       />
-      <main className="mx-auto flex max-w-[430px] flex-col gap-[13px] px-[18px] pt-[13px] pb-10">
-        <h1 className="text-[22px] leading-[1.2] font-extrabold tracking-[-0.022em] text-ink">A market about you</h1>
-        <SealedTicketCover groupLabel={`${groupName} · About you`} stats={stats} mode="static" />
+      <main className="mx-auto flex max-w-[430px] flex-col gap-[11px] px-[18px] pt-[13px] pb-10">
+        <MarketTitleBlock title="A market about you" subtitle="Sealed until it resolves" />
+        <PoolStrip className="mt-[3px]" cells={cells} />
+        <SealedTicketCover groupLabel={`${groupName} · About you`} mode="static" />
+        <NextStepsCard steps={steps} />
       </main>
     </>
   );
