@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { getResolutionProofUrl } from '@/lib/actions/resolution';
@@ -19,7 +19,8 @@ export function ResolutionProofButton({
   className,
 }: {
   marketId: string;
-  variant: 'action' | 'icon' | 'chip';
+  /** 'view' — 4m's small "View" button at the end of the photo-proof row. */
+  variant: 'action' | 'icon' | 'chip' | 'view';
   /** 'action' variant only -- merged onto the Button so a lone caller (e.g. RevealTicket when
    * SHARE_BUTTONS_ENABLED is off) can stretch it full-width instead of leaving it content-sized. */
   className?: string;
@@ -56,6 +57,15 @@ export function ResolutionProofButton({
           <CameraIcon className="h-4 w-4" />
           {loading ? 'Loading…' : 'Proof'}
         </Button>
+      ) : variant === 'view' ? (
+        <button
+          type="button"
+          onClick={open}
+          disabled={loading}
+          className="shrink-0 rounded-[10px] border border-hairline bg-tile px-[11px] py-[7px] text-[11.5px] font-bold text-ink disabled:opacity-50"
+        >
+          {loading ? 'Loading' : 'View'}
+        </button>
       ) : variant === 'chip' ? (
         // Sits inline beside the proposed outcome itself, so it reads as an attribute of the
         // call ("here's what backs it") rather than a second action competing with Challenge.
@@ -63,7 +73,7 @@ export function ResolutionProofButton({
           type="button"
           onClick={open}
           disabled={loading}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-espresso-50 px-[13px] py-[7px] text-[12.5px] font-bold whitespace-nowrap text-espresso-600 transition-colors hover:bg-espresso-100 disabled:opacity-50"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-rule px-[13px] py-[7px] text-[12.5px] font-bold whitespace-nowrap text-muted transition-colors hover:bg-hairline disabled:opacity-50"
         >
           <ImageIcon className="h-3.5 w-3.5" />
           {loading ? 'Loading…' : 'See the proof'}
@@ -74,7 +84,7 @@ export function ResolutionProofButton({
           onClick={open}
           disabled={loading}
           aria-label="View proof photo"
-          className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-paper-white text-espresso-500 shadow-sm hover:text-espresso-800 disabled:opacity-50"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-surface text-muted hover:text-ink disabled:opacity-50"
         >
           <CameraIcon className="h-3.5 w-3.5" />
         </button>
@@ -84,13 +94,13 @@ export function ResolutionProofButton({
         <Modal onClose={close}>
           {url ? (
             <>
-              <p className="font-display font-bold text-espresso-900">Proof photo</p>
+              <p className="font-display font-bold text-ink">Proof photo</p>
               <img src={url} alt="Resolution proof" className="max-h-[70vh] w-full rounded-xl object-contain" />
             </>
           ) : (
             <>
-              <p className="font-display font-bold text-espresso-900">Couldn't load photo</p>
-              <p className="text-sm text-espresso-500">{error}</p>
+              <p className="font-display font-bold text-ink">Couldn't load photo</p>
+              <p className="text-sm text-muted">{error}</p>
             </>
           )}
           <Button className="w-full" onClick={close}>

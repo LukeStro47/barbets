@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useRef, useState } from 'react';
 
@@ -22,12 +22,14 @@ export function ConfirmCodeBoxes({ onChange }: { onChange?: (code: string) => vo
 
   function setChar(i: number, value: string) {
     const clean = value.slice(-1).replace(/[^0-9]/g, '');
-    setChars((prev) => {
-      const next = [...prev];
-      next[i] = clean;
-      onChange?.(next.join(''));
-      return next;
-    });
+    // Compute `next` and call onChange outside the setChars updater, same as handlePaste below —
+    // calling a parent setState from inside a useState updater runs it during this component's
+    // own render/commit, which is what "Cannot update a component while rendering a different
+    // component" was flagging.
+    const next = [...chars];
+    next[i] = clean;
+    setChars(next);
+    onChange?.(next.join(''));
     if (clean && i < CONFIRM_CODE_LENGTH - 1) inputRefs.current[i + 1]?.focus();
   }
 
@@ -52,9 +54,9 @@ export function ConfirmCodeBoxes({ onChange }: { onChange?: (code: string) => vo
   }
 
   return (
-    <div className="space-y-2.5">
+    <div>
       <input type="hidden" name="token" value={chars.join('')} />
-      <div className="flex gap-1.5">
+      <div className="flex gap-[9px]">
         {chars.map((c, i) => (
           <input
             key={i}
@@ -68,17 +70,14 @@ export function ConfirmCodeBoxes({ onChange }: { onChange?: (code: string) => vo
             maxLength={1}
             autoFocus={i === 0}
             aria-label={`Digit ${i + 1} of confirmation code`}
-            className="h-[46px] w-0 min-w-0 flex-1 rounded-xl border-[1.5px] border-espresso-200 bg-paper-white text-center font-display text-lg font-extrabold text-espresso-900 focus:border-honey-500 focus:bg-honey-50 focus:outline-none"
+            onPaste={(e) => {
+              e.preventDefault();
+              void handlePaste();
+            }}
+            className="h-16 w-0 min-w-0 flex-1 rounded-[15px] border border-hairline bg-surface text-center font-mono text-[26px] font-semibold text-ink caret-signal focus:border-[1.5px] focus:border-signal focus:shadow-[0_0_0_4px_rgba(45,85,245,0.08)] focus:outline-none"
           />
         ))}
       </div>
-      <button
-        type="button"
-        onClick={handlePaste}
-        className="shrink-0 rounded-full border-[1.5px] border-espresso-200 px-4 py-[9px] text-[13px] font-bold text-espresso-700"
-      >
-        Paste
-      </button>
     </div>
   );
 }

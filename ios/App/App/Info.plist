@@ -48,7 +48,7 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Used to attach a proof photo when proposing how a market resolved.</string>
+	<string>Used to scan a friend's group QR code, and to attach a proof photo when proposing how a market resolved.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Used to attach a proof photo when proposing how a market resolved.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

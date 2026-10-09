@@ -1,24 +1,26 @@
-import { redirect } from 'next/navigation';
+﻿import { redirect } from 'next/navigation';
 import { createClient, requireUser } from '@/lib/supabase/server';
+import { cn } from '@/lib/cn';
 import { notFoundIfEmpty } from '@/lib/errors';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { Badge } from '@/components/ui/Badge';
-import { Card } from '@/components/ui/Card';
+import { ScreenHeader } from '@/components/ui/Screen';
 import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { PoolStrip } from '@/components/markets/PoolStrip';
 import { ClosesInValue } from '@/components/markets/ClosesInValue';
 import { BonusPoolValue } from '@/components/markets/BonusPoolValue';
-import { FinalOddsCard } from '@/components/markets/FinalOddsCard';
+import { computePositions, computeStakedPositions, type PositionTicketRow } from '@/components/markets/PositionPayouts';
 import {
-  YourPositionCard,
-  PositionTicket,
-  computePositions,
-  computeStakedPositions,
-  type PositionTicketRow,
-} from '@/components/markets/PositionPayouts';
-import { SettlementCard } from '@/components/markets/SettlementCard';
-import { HowItSettlesCard } from '@/components/markets/HowItSettlesCard';
-import { ResolutionTimeline } from '@/components/markets/ResolutionTimeline';
+  StatusChip,
+  MarketTabs,
+  MarketTitleBlock,
+  PositionBox,
+  CriteriaCard,
+  NextStepsCard,
+  ClosedOddsCard,
+  ClosedBetBox,
+  sideTitle,
+  type NextStep,
+  type ClosedOddsSide,
+} from '@/components/markets/MarketScreen';
 import { MarketOverflowMenu } from '@/components/markets/MarketOverflowMenu';
 import { EndorseActionBar } from '@/components/markets/EndorseAction';
 import { MarketActions } from '@/components/markets/MarketActions';
@@ -27,15 +29,16 @@ import { ClarificationRequests, type Clarification } from '@/components/markets/
 import { ProposeResolutionCard } from '@/components/markets/ProposeResolutionCard';
 import { BetslipBar } from '@/components/markets/BetslipBar';
 import { BetslipProvider } from '@/components/markets/BetslipContext';
-import { LineTicket, OptionsTicket } from '@/components/markets/MarketExplainer';
 import { VouchingTicket } from '@/components/markets/VouchingTicket';
 import { ProposedOutcomeTicket } from '@/components/markets/ProposedOutcomeTicket';
 import { SubjectMarketPulse, type SubjectMarketPulseData } from '@/components/markets/SubjectMarketPulse';
-import { STATUS_LABEL, STATUS_TONE } from '@/lib/marketStatus';
+import { CommentThread } from '@/components/markets/CommentThread';
+import type { CommentRowData } from '@/components/markets/CommentRow';
 import { formatTokens } from '@/lib/formatNumber';
-import { formatLine } from '@/lib/units';
+import { formatRelativeTime } from '@/lib/formatRelativeTime';
+import { formatLine, isLineFormatUnit, isPrefixedUnit } from '@/lib/units';
 import type { Market, MarketOption } from '@/lib/actions/markets';
-
+import type { ReactionEmoji } from '@/lib/reactions';
 /** An unendorsed market dies at the earlier of its own close time and 24h after creation — the
  * same pair expire_stale() sweeps on, surfaced as one deadline so an endorser sees the real one. */
 function endorseDeadline(market: Market): string {
@@ -46,10 +49,14 @@ function endorseDeadline(market: Market): string {
 
 export default async function MarketDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ groupId: string; marketId: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { groupId, marketId } = await params;
+  const { tab } = await searchParams;
+  const activeTab = tab === 'comments' ? 'comments' : 'market';
   const supabase = await createClient();
 
   const { data: market } = await supabase.from('visible_markets').select('*').eq('id', marketId).single();
@@ -72,7 +79,8 @@ export default async function MarketDetailPage({
   const marketRow = notFoundIfEmpty<Market>(market);
   const isMultipleChoice = marketRow.market_type === 'multiple_choice';
 
-  if (marketRow.status === 'resolved' || marketRow.status === 'voided') {
+  // A settled market's Market tab is the reveal page; its Comments tab still renders here.
+  if ((marketRow.status === 'resolved' || marketRow.status === 'voided') && activeTab !== 'comments') {
     redirect(`/groups/${groupId}/markets/${marketId}/reveal`);
   }
 
@@ -88,13 +96,14 @@ export default async function MarketDetailPage({
     { data: clarificationRows },
     { data: groupSettings },
     { count: tableSize },
+    { count: commentCount },
   ] = await Promise.all([
     supabase.from('memberships').select('balance, role').eq('group_id', groupId).eq('user_id', user.id).single(),
     supabase.from('market_subjects').select('user_id').eq('market_id', marketId),
     isMultipleChoice
       ? supabase.from('market_options').select('id, market_id, label, sort_order').eq('market_id', marketId).order('sort_order')
       : Promise.resolve({ data: null }),
-    supabase.from('groups').select('owner_id, name, is_public').eq('id', groupId).single(),
+    supabase.from('groups').select('owner_id, name, is_public, avatar_key').eq('id', groupId).single(),
     supabase
       .from('resolution_clarifications')
       .select('id, requester_id, question, created_at')
@@ -106,6 +115,7 @@ export default async function MarketDetailPage({
     isPendingSponsor
       ? supabase.from('memberships').select('user_id', { count: 'exact', head: true }).eq('group_id', groupId).eq('status', 'active')
       : Promise.resolve({ count: null }),
+    supabase.from('market_comments').select('id', { count: 'exact', head: true }).eq('market_id', marketId).is('deleted_at', null),
   ]);
   const isOwner = group?.owner_id === user?.id;
   const groupName = group?.name ?? 'Group';
@@ -209,6 +219,17 @@ export default async function MarketDetailPage({
   if (marketRow.status === 'disputed') {
     const { data } = await supabase.from('challenges').select('challenger_id, created_at').eq('market_id', marketId).single();
     challenge = data;
+    // 5k names who challenged ("Gaz challenged the call"); the challenger usually isn't among the
+    // names already fetched above, so look them up on their own.
+    if (data && !nicknameByUserId.has(data.challenger_id)) {
+      const { data: challenger } = await supabase
+        .from('memberships')
+        .select('nickname')
+        .eq('group_id', groupId)
+        .eq('user_id', data.challenger_id)
+        .maybeSingle();
+      if (challenger?.nickname) nicknameByUserId.set(data.challenger_id, challenger.nickname);
+    }
     const { data: vote } = await supabase
       .from('votes')
       .select('outcome, voted_option_id')
@@ -233,8 +254,6 @@ export default async function MarketDetailPage({
   }
 
   const [sideA, sideB] = marketRow.market_type === 'yes_no' ? ['yes', 'no'] : ['over', 'under'];
-  const oddsA = odds?.find((o) => o.side === sideA);
-  const oddsB = odds?.find((o) => o.side === sideB);
   const closedVolume = odds
     ? odds.reduce((sum, o) => sum + o.pool_amount, 0)
     : optionOdds
@@ -250,15 +269,24 @@ export default async function MarketDetailPage({
     : null;
   const optionLabelById = (id: string) => marketOptions?.find((o) => o.id === id)?.label ?? '?';
   const lineLabel = marketRow.market_type === 'over_under' ? formatLine(marketRow.line, marketRow.unit) : undefined;
+  // "Over 4.5" (4n) names the side with the line's number; the unit is stated once on the Line chip.
+  const lineNumber =
+    marketRow.market_type === 'over_under' && marketRow.line != null
+      ? isLineFormatUnit(marketRow.unit) || isPrefixedUnit(marketRow.unit)
+        ? (lineLabel ?? '')
+        : String(marketRow.line)
+      : '';
+  const sideName = (side: string) => `${sideTitle(side)}${lineNumber ? ` ${lineNumber}` : ''}`;
 
   const isClosed = marketRow.status === 'closed';
   const isDisputed = marketRow.status === 'disputed';
   const isOpen = marketRow.status === 'open';
   const isProposed = marketRow.status === 'proposed';
 
-  /** The ticket header band's right-hand meta: what kind of choice this market is. Doubles as
-   * the reason the explainer card can disappear once someone has a position — the line and the
-   * option count both survive here. */
+  const windowLabel = resolutionWindowHours < 1 ? `${Math.round(resolutionWindowHours * 60)} minutes` : `${resolutionWindowHours} hours`;
+  const payoutStep: NextStep = { title: 'The pool pays out', sub: 'Straight into your balance, and onto the leaderboard.', state: 'upcoming' };
+  const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
   const kindLabel =
     marketRow.market_type === 'yes_no'
       ? 'Yes / No'
@@ -269,247 +297,432 @@ export default async function MarketDetailPage({
   const overflowMenu = (
     <MarketOverflowMenu groupId={groupId} marketId={marketId} isOwner={isOwner} isCreator={isCreator} ownerIsSubject={ownerIsSubject} />
   );
-
-  const header = (
-    <PageHeader
-      title={marketRow.title}
-      backHref={`/groups/${groupId}`}
-      backLabel={groupName}
-      backAction={
-        <div className="flex items-center gap-1.5">
-          {isCreator && clarificationList.length > 0 && (
-            <span
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-danger-100 text-sm font-bold text-danger-700"
-              title="Needs clarification"
-            >
-              !
-            </span>
-          )}
-          <Badge tone={STATUS_TONE[marketRow.status]}>{STATUS_LABEL[marketRow.status]}</Badge>
-          {overflowMenu}
-        </div>
-      }
-    />
+  const statusChip = <StatusChip label={SHORT_STATUS[marketRow.status]} tone={isOpen ? 'quiet' : 'ink'} />;
+  const headerRight = (
+    <span className="flex shrink-0 items-center gap-1.5">
+      {isCreator && clarificationList.length > 0 && (
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-alert-bg text-[13px] font-bold text-alert" title="Needs clarification">
+          !
+        </span>
+      )}
+      {statusChip}
+      {overflowMenu}
+    </span>
   );
+  const tabs = (active: 'market' | 'comments') => (
+    <MarketTabs groupId={groupId} marketId={marketId} active={active} commentCount={commentCount ?? 0} />
+  );
+  const attribution = creatorNickname ? (
+    <>
+      Started by @{creatorNickname}
+      {sponsorNickname && <> · Endorsed by @{sponsorNickname}</>}
+    </>
+  ) : null;
 
-  // Says who can actually void *this* market, not the general rule. The creator-fallback only
-  // exists when the owner is themself a subject here (void_market_by_owner is unreachable for
-  // them), so mentioning it on every other market was small print about a case that didn't apply.
-  const ownerVoidNote = ownerIsSubject
-    ? "The group owner is hidden as a subject here, so only the market's creator can void it and refund every stake."
-    : 'Only the group owner can void this market and refund every stake, at any time.';
+  // ── 4e: Comments ──────────────────────────────────────────────────────────────────────────
+  // The question moves up into the header (muted) and the tabs ride inside it, so the thread
+  // starts right under the fixed bar; the composer is pinned to the bottom edge.
+  if (activeTab === 'comments') {
+    const { data: commentRows } = await supabase
+      .from('market_comments')
+      .select('id, user_id, body, revealed_side, revealed_option_id, revealed_amount, created_at')
+      .eq('market_id', marketId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true });
 
-  // ── Endorsement (1a) ──────────────────────────────────────────────────────────────────────
-  // One thing to judge, one thing to do. The creator can't endorse their own market, so they get
-  // the same page without the action bar and with the full roadmap rather than "after you
-  // endorse" — they're waiting on someone else, not deciding.
-  if (isPendingSponsor) {
+    const comments = commentRows ?? [];
+    // Who the composer's @ picker offers: current members who can see this market. While it's
+    // unsettled that excludes whoever it's about (is_market_visible's rule), and the server
+    // applies the same rule before notifying anyone.
+    const settled = marketRow.status === 'resolved' || marketRow.status === 'voided';
+    const { data: memberRows } = await supabase
+      .from('memberships')
+      .select('user_id, nickname')
+      .eq('group_id', groupId)
+      .in('status', ['active', 'dormant'])
+      .order('nickname');
+    const mentionable = (memberRows ?? [])
+      .filter((m) => m.user_id !== user.id && (settled || !subjectUserIds.includes(m.user_id)))
+      .map((m) => m.nickname as string);
+    const commenterIds = [...new Set([...comments.map((c) => c.user_id), user.id])];
+    const [{ data: commenterRows }, { data: commenterUsers }] = await Promise.all([
+      supabase.from('memberships').select('user_id, nickname').eq('group_id', groupId).in('user_id', commenterIds),
+      supabase.from('users').select('id, avatar_updated_at, avatar_preset_key').in('id', commenterIds),
+    ]);
+    const commenterNickname = new Map((commenterRows ?? []).map((m) => [m.user_id, m.nickname]));
+    const avatarByUser = new Map((commenterUsers ?? []).map((u) => [u.id, u]));
+
+    const commentIds = comments.map((c) => c.id);
+    const { data: reactionRows } =
+      commentIds.length > 0
+        ? await supabase.from('comment_reactions').select('comment_id, user_id, emoji').in('comment_id', commentIds)
+        : { data: [] };
+    const reactionsByComment = new Map<string, { emoji: ReactionEmoji; userId: string }[]>();
+    for (const r of reactionRows ?? []) {
+      const list = reactionsByComment.get(r.comment_id) ?? [];
+      list.push({ emoji: r.emoji as ReactionEmoji, userId: r.user_id });
+      reactionsByComment.set(r.comment_id, list);
+    }
+
+    const revealedOptionLabel = (optionId: string | null) =>
+      optionId ? (marketOptions?.find((o) => o.id === optionId)?.label ?? null) : null;
+    const sideLabel = (side: string | null) => (side ? sideTitle(side) : null);
+
+    const rows: CommentRowData[] = comments.map((c) => {
+      const reactions = reactionsByComment.get(c.id) ?? [];
+      const counts: Partial<Record<ReactionEmoji, number>> = {};
+      let myReaction: ReactionEmoji | null = null;
+      for (const r of reactions) {
+        counts[r.emoji] = (counts[r.emoji] ?? 0) + 1;
+        if (r.userId === user.id) myReaction = r.emoji;
+      }
+      const av = avatarByUser.get(c.user_id);
+      return {
+        id: c.id,
+        userId: c.user_id,
+        nickname: commenterNickname.get(c.user_id) ?? '?',
+        avatarUpdatedAt: av?.avatar_updated_at ?? null,
+        avatarPresetKey: av?.avatar_preset_key ?? null,
+        body: c.body,
+        createdAt: c.created_at,
+        isMine: c.user_id === user.id,
+        revealedLabel: sideLabel(c.revealed_side) ?? revealedOptionLabel(c.revealed_option_id),
+        revealedAmount: c.revealed_amount,
+        counts,
+        myReaction,
+      };
+    });
+
+    const alreadyRevealed = comments.some((c) => c.user_id === user.id && c.revealed_amount != null);
+    const myBet = !alreadyRevealed ? myBets[0] : undefined;
+    const revealable = myBet
+      ? { label: sideLabel(myBet.side) ?? revealedOptionLabel(myBet.option_id) ?? '?', amount: myBet.amount }
+      : null;
+    const me = avatarByUser.get(user.id);
+
     return (
-      <main className="mx-auto max-w-lg space-y-4 px-5 py-8">
-        {header}
-
-        <PoolStrip
-          cells={[
-            { label: 'Endorse by', value: <CountdownTimer target={endorseDeadline(marketRow)} prefix="" /> },
-            { label: 'Betting runs', value: <CountdownTimer target={marketRow.closes_at} prefix="" /> },
-            { label: 'Table', value: tableSize ?? '—' },
-          ]}
-        />
-
-        <VouchingTicket
-          kindLabel={kindLabel}
-          description={marketRow.description}
-          creatorNickname={creatorNickname}
-          subjectNicknames={subjectNicknames}
-          options={marketOptions}
-        />
-
-        <ClarificationRequests
-          groupId={groupId}
-          marketId={marketId}
-          status={marketRow.status}
-          description={marketRow.description}
-          isCreator={isCreator}
-          clarifications={clarificationList}
-          variant="panel"
-          creatorNickname={creatorNickname}
-        />
-
-        <Card>
-          <ResolutionTimeline
-            resolutionWindowHours={resolutionWindowHours}
-            stage={isCreator ? 'pending_sponsor' : 'endorsing'}
-            bettingRunsUntil={marketRow.closes_at}
+      <>
+        <ScreenHeader title={marketRow.title} tone="context" href={`/groups/${groupId}`} right={headerRight}>
+          <div className="px-[18px]">{tabs('comments')}</div>
+        </ScreenHeader>
+        <main className={cn('mx-auto max-w-[430px] px-[18px] pt-4', revealable ? 'pb-[160px]' : 'pb-[108px]')}>
+          <CommentThread
+            groupId={groupId}
+            marketId={marketId}
+            comments={rows}
+            revealable={revealable}
+            mentionable={mentionable}
+            endorsedBy={sponsorNickname ?? null}
+            me={{
+              userId: user.id,
+              nickname: commenterNickname.get(user.id) ?? 'you',
+              avatarUpdatedAt: me?.avatar_updated_at ?? null,
+              avatarPresetKey: me?.avatar_preset_key ?? null,
+            }}
           />
-        </Card>
-
-        {isCreator ? (
-          <p className="text-xs text-espresso-400">
-            Waiting for another member to endorse this market. It expires automatically if nobody does before betting
-            would close, or after 24 hours, whichever comes first.
-          </p>
-        ) : (
-          <EndorseActionBar groupId={groupId} marketId={marketId} />
-        )}
-      </main>
+        </main>
+      </>
     );
   }
 
-  // ── Open market (2a–2f) ───────────────────────────────────────────────────────────────────
-  // Fixed section order for every market type: your position if you have one, otherwise the card
-  // explaining what you're choosing between; then how it settles; then what happens next; then
-  // the bet slip. Odds stay sealed throughout, so the position card carries no payout column.
+  const ownerVoidNote = ownerIsSubject
+    ? "The group owner is hidden as a subject here, so only the market's creator can void it and refund every stake."
+    : null;
+
+  // ── Endorsement ───────────────────────────────────────────────────────────────────────────
+  // No artboard draws this state, so it's assembled from the same pieces as 4d: the stat strip,
+  // the one ticket (what you're vouching for), the steps, and the footer's one action.
+  if (isPendingSponsor) {
+    return (
+      <>
+        <ScreenHeader title={groupName} tone="context" href={`/groups/${groupId}`} right={headerRight} />
+        <main className={cn('mx-auto flex max-w-[430px] flex-col gap-[11px] px-[18px] pt-[13px]', isCreator ? 'pb-10' : 'pb-[140px]')}>
+          <MarketTitleBlock title={marketRow.title} subtitle={attribution} size={23} tabs={tabs('market')} />
+
+          <PoolStrip
+            className="mt-[3px]"
+            cells={[
+              { label: 'Endorse by', value: <CountdownTimer target={endorseDeadline(marketRow)} prefix="" />, tone: 'signal' },
+              { label: 'Betting runs', value: <CountdownTimer target={marketRow.closes_at} prefix="" /> },
+              { label: 'Table', value: tableSize ?? '—' },
+            ]}
+          />
+
+          <VouchingTicket
+            kindLabel={kindLabel}
+            description={marketRow.description}
+            creatorNickname={creatorNickname}
+            subjectNicknames={subjectNicknames}
+            options={marketOptions}
+          />
+
+          <ClarificationRequests
+            groupId={groupId}
+            marketId={marketId}
+            status={marketRow.status}
+            description={marketRow.description}
+            isCreator={isCreator}
+            clarifications={clarificationList}
+            variant="panel"
+            creatorNickname={creatorNickname}
+          />
+
+          <NextStepsCard
+            heading={isCreator ? 'What happens next' : 'After you endorse'}
+            steps={[
+              ...(isCreator
+                ? [{ title: 'Someone endorses it', sub: 'Another member has to back it before anyone can bet.', state: 'current' as const }]
+                : []),
+              {
+                title: 'Betting opens',
+                sub: (
+                  <>
+                    Runs for <CountdownTimer target={marketRow.closes_at} prefix="" />. Odds are set when it closes, from the final pool.
+                  </>
+                ),
+                state: isCreator ? 'upcoming' : 'current',
+              },
+              { title: 'Anyone calls the result', sub: `Anyone in the group can challenge it for ${windowLabel}.`, state: 'upcoming' },
+              payoutStep,
+            ]}
+          />
+
+          {isCreator ? (
+            <p className="text-[12px] leading-[1.5] text-faint">
+              Waiting for another member to endorse this market. It expires if nobody does before betting would close, or after 24 hours, whichever comes first.
+            </p>
+          ) : (
+            <EndorseActionBar groupId={groupId} marketId={marketId} />
+          )}
+        </main>
+      </>
+    );
+  }
+
+  // ── 4d / 4h / 4h2 / 4h3: open ─────────────────────────────────────────────────────────────
   if (isOpen) {
-    const stakedRows: PositionTicketRow[] = computeStakedPositions(myBets, optionLabelById);
+    const stakedRows = computeStakedPositions(myBets, optionLabelById);
     const hasPosition = stakedRows.length > 0;
     const staked = openBetVolume ?? 0;
-
-    // A bonus pool takes the strip's one exception to three cells. get_open_bet_volume sums bets
-    // and nothing else, so the Pool figure has to add the bonus in here — and once the strip
-    // states the true total, the note that used to sit under it explaining the difference has
-    // nothing left to explain. The Bonus cell's own figure carries that story instead.
     const hasBonus = marketRow.bonus_pool > 0;
+    const pool = staked + marketRow.bonus_pool;
+
+    const openSteps: NextStep[] = [
+      {
+        title: 'Betting closes',
+        sub: (
+          <>
+            In <CountdownTimer target={marketRow.closes_at} prefix="" />. Odds are set then, from the final pool.
+          </>
+        ),
+        state: 'current',
+      },
+      { title: 'Anyone calls the result', sub: `Anyone in the group can challenge it for ${windowLabel}.`, state: 'upcoming' },
+      payoutStep,
+    ];
+
+    const clarifications = (
+      <ClarificationRequests
+        groupId={groupId}
+        marketId={marketId}
+        status={marketRow.status}
+        description={marketRow.description}
+        isCreator={isCreator}
+        clarifications={clarificationList}
+      />
+    );
+
+    const proposeEarly = (
+      <ProposeResolutionCard
+        groupId={groupId}
+        market={marketRow}
+        options={marketOptions}
+        resolutionWindowHours={resolutionWindowHours}
+        canResolve={canResolve}
+      />
+    );
+
+    const betslip = (
+      <BetslipBar
+        groupId={groupId}
+        groupName={groupName}
+        groupAvatarKey={group?.avatar_key ?? null}
+        market={marketRow}
+        balance={balance}
+        options={marketOptions}
+        existingBets={myBets}
+        allowHedgedBets={groupSettings?.allow_hedged_bets ?? true}
+        seedAmount={groupSettings?.seed_amount ?? 1000}
+        betVolume={openBetVolume}
+        bonusPool={marketRow.bonus_pool}
+      />
+    );
 
     return (
       <BetslipProvider>
-        <main className="mx-auto max-w-lg space-y-4 px-5 py-8">
-          {header}
-
-          <PoolStrip
-            cells={
-              hasBonus
-                ? [
-                    { label: 'Pool', value: formatTokens(staked + marketRow.bonus_pool), flex: 1.15 },
-                    {
-                      label: 'Bonus',
-                      value: <BonusPoolValue bonusPool={marketRow.bonus_pool} staked={staked} />,
-                      tone: 'honey',
-                      highlight: true,
-                      flex: 1,
-                    },
-                    { label: 'Bets', value: openBetCount ?? 0, flex: 0.85 },
-                    { label: 'Closes', value: <ClosesInValue closesAt={marketRow.closes_at} />, flex: 1.25 },
-                  ]
-                : [
-                    { label: 'Pool', value: formatTokens(staked) },
-                    { label: 'Bets', value: openBetCount ?? 0 },
-                    { label: 'Closes in', value: <ClosesInValue closesAt={marketRow.closes_at} /> },
-                  ]
-            }
-          />
-
+        <ScreenHeader title={groupName} tone="context" href={`/groups/${groupId}`} right={headerRight} />
+        <main className={cn('mx-auto flex max-w-[430px] flex-col gap-[11px] px-[18px] pt-[13px]', hasPosition ? 'pb-[132px]' : 'pb-6')}>
           {hasPosition ? (
-            <PositionTicket
-              rows={stakedRows}
-              meta={kindLabel}
-              showProjection={false}
-              footer={
-                openBetCount !== null
-                  ? `${myBets.length} of ${openBetCount} ${openBetCount === 1 ? 'bet' : 'bets'} on this market`
-                  : undefined
-              }
-            />
-          ) : marketRow.market_type === 'over_under' && lineLabel ? (
-            <LineTicket lineLabel={lineLabel} />
-          ) : isMultipleChoice && marketOptions && marketOptions.length > 0 ? (
-            <OptionsTicket options={marketOptions} />
-          ) : null}
-
-          <HowItSettlesCard
-            description={marketRow.description}
-            people={{ creator: creatorNickname, sponsor: sponsorNickname, subjects: subjectNicknames }}
-            note={ownerVoidNote}
-          >
-            <ClarificationRequests
-              groupId={groupId}
-              marketId={marketId}
-              status={marketRow.status}
-              description={marketRow.description}
-              isCreator={isCreator}
-              clarifications={clarificationList}
-            />
-          </HowItSettlesCard>
-
-          <Card>
-            <ResolutionTimeline resolutionWindowHours={resolutionWindowHours} stage="open">
-              <ProposeResolutionCard
-                groupId={groupId}
-                market={marketRow}
-                options={marketOptions}
-                resolutionWindowHours={resolutionWindowHours}
-                canResolve={canResolve}
+            // 4d: attribution under the title, the stat strip, the dark position box; adding to
+            // the bet happens from the sticky footer BetslipBar renders in this state.
+            <>
+              <MarketTitleBlock title={marketRow.title} subtitle={attribution} size={23} tabs={tabs('market')} />
+              <PoolStrip
+                className="mt-[3px]"
+                cells={
+                  hasBonus
+                    ? [
+                        { label: 'Pool', value: formatTokens(pool), flex: 1.15 },
+                        { label: 'Bonus', value: <BonusPoolValue bonusPool={marketRow.bonus_pool} staked={staked} />, tone: 'signal', highlight: true, flex: 1 },
+                        { label: 'Bets', value: openBetCount ?? 0, flex: 0.85 },
+                        { label: 'Closes in', value: <ClosesInValue closesAt={marketRow.closes_at} />, tone: 'signal', flex: 1.25 },
+                      ]
+                    : [
+                        { label: 'Pool', value: formatTokens(pool) },
+                        { label: 'Bets', value: openBetCount ?? 0, flex: 0.8 },
+                        { label: 'Closes in', value: <ClosesInValue closesAt={marketRow.closes_at} />, tone: 'signal', flex: 1.2 },
+                      ]
+                }
               />
-            </ResolutionTimeline>
-          </Card>
-
-          <BetslipBar
-            groupId={groupId}
-            groupName={groupName}
-            market={marketRow}
-            balance={balance}
-            options={marketOptions}
-            existingBets={myBets}
-            allowHedgedBets={groupSettings?.allow_hedged_bets ?? true}
-            seedAmount={groupSettings?.seed_amount ?? 1000}
-            betCount={openBetCount}
-            betVolume={openBetVolume}
-          />
+              <PositionBox rows={stakedRows} />
+              <CriteriaCard label="Resolution criteria" description={marketRow.description} subjects={subjectNicknames} note={ownerVoidNote}>
+                {clarifications}
+              </CriteriaCard>
+              <NextStepsCard steps={openSteps}>{proposeEarly}</NextStepsCard>
+              {betslip}
+            </>
+          ) : (
+            // 4h: pool and closing time fold into the line under the title; the bet card leads.
+            <>
+              <MarketTitleBlock
+                title={marketRow.title}
+                subtitle={
+                  <>
+                    Pool {formatTokens(pool)} · <CountdownTimer target={marketRow.closes_at} prefix="closes in" />
+                    {creatorNickname && <> · started by @{creatorNickname}</>}
+                  </>
+                }
+                tabs={tabs('market')}
+              />
+              <div className="mt-px">{betslip}</div>
+              <CriteriaCard label="How it settles" description={marketRow.description} subjects={subjectNicknames} note={ownerVoidNote} compact>
+                {clarifications}
+              </CriteriaCard>
+              <NextStepsCard steps={openSteps}>{proposeEarly}</NextStepsCard>
+            </>
+          )}
         </main>
       </BetslipProvider>
     );
   }
 
-  // ── Proposed outcome (2g) ─────────────────────────────────────────────────────────────────
-  // The call is the hero; challenging is the exception, so it sits under a divider in the
-  // timeline card and there is no bottom bar competing with it.
+  // ── 4n: closed, no result yet ─────────────────────────────────────────────────────────────
+  if (isClosed) {
+    const positions = computePositions(myBets, odds ?? undefined, optionOdds ?? undefined);
+    const mine = positions[0];
+    // A fixed reading order (No/Yes, Under/Over — 4n's own left/right) rather than sorting by
+    // share, so a side never swaps position as the pool moves.
+    const oddsSides: ClosedOddsSide[] = odds
+      ? [sideB, sideA]
+          .map((s) => odds!.find((o) => o.side === s))
+          .filter((o): o is NonNullable<typeof o> => !!o)
+          .map((o) => ({ key: o.side, label: sideName(o.side), percent: o.pool_percent, staked: o.pool_amount }))
+      : (optionOdds ?? []).map((o) => ({ key: o.option_id, label: o.label, percent: o.pool_percent, staked: o.pool_amount }));
+    const minePct = mine ? oddsSides.find((s) => s.key === mine.key)?.percent : undefined;
+    const mineLabel = mine ? (odds ? sideName(mine.key) : mine.label) : '';
+    const mineShort = mine ? (odds ? sideTitle(mine.key) : mine.label) : '';
+    const oddsNote =
+      mine && minePct != null
+        ? `The pool decides the price. ${mineShort} is the ${minePct < 50 ? 'less' : 'more'} popular side, so it pays ${minePct < 50 ? 'more' : 'less'}: your ${formatTokens(mine.amount)} returns ${formatTokens(mine.projected)}.`
+        : 'The pool decides the price. The less popular side pays more.';
+    const closedAgo = marketRow.closed_at ? formatRelativeTime(marketRow.closed_at) : 'just now';
+
+    return (
+      <>
+        <ScreenHeader title={groupName} tone="context" href={`/groups/${groupId}`} right={headerRight} />
+        <main className={cn('mx-auto flex max-w-[430px] flex-col gap-[11px] px-[18px] pt-[13px]', canResolve ? 'pb-[120px]' : 'pb-10')}>
+          <MarketTitleBlock title={marketRow.title} subtitle={`Betting closed ${closedAgo}`} tabs={tabs('market')} />
+          {mine && <div className="mt-0.5"><ClosedBetBox amount={mine.amount} label={mineLabel} pays={mine.projected} /></div>}
+          <ClosedOddsCard sides={oddsSides} pool={closedVolume ?? 0} lineLabel={lineLabel} mySideKey={mine?.key} note={oddsNote} />
+          <NextStepsCard
+            steps={[
+              { title: 'Betting closed', sub: `${capitalize(closedAgo)}. The final pool set the price above.`, state: 'done' },
+              { title: 'Nobody has called it yet', sub: `Anyone in the group can. You get ${windowLabel} to challenge whatever they call.`, state: 'current' },
+              payoutStep,
+            ]}
+          />
+          <p className="mt-px text-[12.5px] leading-[1.5] text-faint text-pretty">
+            <span className="font-bold text-muted">Settles on:</span> {marketRow.description}
+          </p>
+          <ProposeResolutionCard
+            groupId={groupId}
+            market={marketRow}
+            options={marketOptions}
+            resolutionWindowHours={resolutionWindowHours}
+            canResolve={canResolve}
+            trigger="footer"
+          />
+        </main>
+      </>
+    );
+  }
+
+  // ── Called, inside the challenge window ───────────────────────────────────────────────────
   if (isProposed && proposal) {
     const proposedKey = proposal.proposed_option_id ?? proposal.proposed_outcome;
-    // VOID refunds everyone, so neither "wins" nor "loses" describes it — the column drops back
-    // to the neutral "if it lands" reading rather than telling someone a stake they'd get back
-    // in full is lost.
     const proposedVoid = proposal.proposed_outcome === 'void';
     const rows: PositionTicketRow[] = computePositions(
       myBets,
       !isMultipleChoice ? (odds ?? undefined) : undefined,
       isMultipleChoice ? (optionOdds ?? undefined) : undefined
     ).map((p) => ({ ...p, standsToWin: proposedVoid ? undefined : p.key === proposedKey }));
+    const finalAt = new Date(new Date(proposal.proposed_at).getTime() + resolutionWindowHours * 3_600_000).toISOString();
+    const calledAgo = formatRelativeTime(proposal.proposed_at);
 
     return (
-      <main className="mx-auto max-w-lg space-y-4 px-5 py-8">
-        {header}
-
-        <PoolStrip
-          cells={[
-            { label: 'Pool', value: formatTokens(closedVolume ?? 0) },
-            { label: 'Bets', value: closedBetCount ?? 0 },
-            {
-              label: 'Final in',
-              value: (
-                <CountdownTimer
-                  target={new Date(new Date(proposal.proposed_at).getTime() + resolutionWindowHours * 3_600_000).toISOString()}
-                  prefix=""
-                />
-              ),
-            },
-          ]}
-        />
-
-        <ProposedOutcomeTicket
-          marketId={marketId}
-          outcomeLabel={(proposedOptionLabel ?? proposal.proposed_outcome ?? '').toUpperCase()}
-          proposerNickname={proposerNickname}
-          justification={proposal.justification}
-          hasPhoto={!!proposal.photo_path}
-          positionRows={rows}
-          sideOdds={!isMultipleChoice ? (odds ?? undefined) : undefined}
-          optionOdds={isMultipleChoice ? (optionOdds ?? undefined) : undefined}
-          lineLabel={lineLabel}
-        />
-
-        <SettlementCard description={marketRow.description} />
-
-        <Card>
-          <ResolutionTimeline resolutionWindowHours={resolutionWindowHours} stage="proposed" proposerNickname={proposerNickname}>
+      <>
+        <ScreenHeader title={groupName} tone="context" href={`/groups/${groupId}`} right={headerRight} />
+        <main className="mx-auto flex max-w-[430px] flex-col gap-[11px] px-[18px] pt-[13px] pb-10">
+          <MarketTitleBlock
+            title={marketRow.title}
+            subtitle={proposerNickname ? `Called by @${proposerNickname}, ${calledAgo}` : `Called ${calledAgo}`}
+            tabs={tabs('market')}
+          />
+          <PoolStrip
+            className="mt-[3px]"
+            cells={[
+              { label: 'Pool', value: formatTokens(closedVolume ?? 0) },
+              { label: 'Bets', value: closedBetCount ?? 0, flex: 0.8 },
+              { label: 'Final in', value: <CountdownTimer target={finalAt} prefix="" />, tone: 'signal', flex: 1.2 },
+            ]}
+          />
+          <ProposedOutcomeTicket
+            marketId={marketId}
+            outcomeLabel={proposedOptionLabel ?? (proposal.proposed_outcome ? sideName(proposal.proposed_outcome) : '')}
+            proposerNickname={proposerNickname}
+            justification={proposal.justification}
+            hasPhoto={!!proposal.photo_path}
+            positionRows={rows}
+            sideOdds={!isMultipleChoice ? (odds ?? undefined) : undefined}
+            optionOdds={isMultipleChoice ? (optionOdds ?? undefined) : undefined}
+            lineLabel={lineLabel}
+          />
+          <CriteriaCard label="How it settles" description={marketRow.description} compact />
+          <NextStepsCard
+            steps={[
+              { title: proposerNickname ? `@${proposerNickname} called it` : 'The result was called', sub: `${capitalize(calledAgo)}.`, state: 'done' },
+              {
+                title: 'Anyone can challenge',
+                sub: (
+                  <>
+                    For <CountdownTimer target={finalAt} prefix="" />. A challenge goes to a sealed vote.
+                  </>
+                ),
+                state: 'current',
+              },
+              payoutStep,
+            ]}
+          >
             <ChallengeAction
               groupId={groupId}
               marketId={marketId}
@@ -517,68 +730,18 @@ export default async function MarketDetailPage({
               resolutionWindowHours={resolutionWindowHours}
               iAmProposer={proposal.proposer_id === user.id}
             />
-          </ResolutionTimeline>
-        </Card>
-      </main>
+          </NextStepsCard>
+        </main>
+      </>
     );
   }
 
-  // ── Betting closed, and the secret ballot ─────────────────────────────────────────────────
-  // Not covered by the market-template designs; these keep their existing composition and just
-  // inherit the shared chrome above.
+  // ── 5k: challenged, the sealed ballot ─────────────────────────────────────────────────────
   return (
-    <main className="mx-auto max-w-lg space-y-4 px-5 py-8">
-      {header}
-
-      {isClosed && (
-        <>
-          <PoolStrip
-            cells={[
-              { label: 'Pool', value: formatTokens(closedVolume ?? 0) },
-              { label: 'Bets', value: closedBetCount ?? 0 },
-              { label: 'Status', value: 'Closed' },
-            ]}
-          />
-          <FinalOddsCard
-            sideOdds={!isMultipleChoice ? (odds ?? undefined) : undefined}
-            optionOdds={isMultipleChoice ? (optionOdds ?? undefined) : undefined}
-            lineLabel={lineLabel}
-            myBets={myBets}
-          />
-          <SettlementCard description={marketRow.description} />
-          <Card>
-            <ResolutionTimeline resolutionWindowHours={resolutionWindowHours}>
-              <ProposeResolutionCard
-                groupId={groupId}
-                market={marketRow}
-                options={marketOptions}
-                resolutionWindowHours={resolutionWindowHours}
-                canResolve={canResolve}
-              />
-            </ResolutionTimeline>
-          </Card>
-        </>
-      )}
-
-      {isDisputed && (
-        <>
-          {/* Pool/bets/vote-clock sits above the ballot, not under it: it's the context you read
-              before deciding how to vote (and the clock you're racing), so burying it below a card
-              tall enough to push it off-screen made it easy to miss entirely. */}
-          <PoolStrip
-            cells={[
-              { label: 'Pool', value: formatTokens(closedVolume ?? 0) },
-              { label: 'Bets', value: closedBetCount ?? 0 },
-              {
-                label: 'Vote ends',
-                value: challenge ? (
-                  <CountdownTimer target={new Date(new Date(challenge.created_at).getTime() + resolutionWindowHours * 3_600_000).toISOString()} prefix="" />
-                ) : (
-                  '—'
-                ),
-              },
-            ]}
-          />
+    <>
+      <ScreenHeader title="Challenged" href={`/groups/${groupId}`} right={overflowMenu} />
+      <main className="mx-auto flex max-w-[430px] flex-col px-[22px] pt-5 pb-[132px]">
+        {isDisputed && (
           <MarketActions
             groupId={groupId}
             market={marketRow}
@@ -587,32 +750,27 @@ export default async function MarketDetailPage({
             myVote={myVote}
             currentUserId={user.id}
             proposerNickname={proposerNickname}
+            challengerNickname={challenge ? nicknameByUserId.get(challenge.challenger_id) : undefined}
             options={marketOptions}
             resolutionWindowHours={resolutionWindowHours}
             votesCast={votesCast}
             eligibleVoters={eligibleVoters}
+            myStake={myBets.reduce((sum, b) => sum + b.amount, 0)}
+            lineNumber={lineNumber}
           />
-          <YourPositionCard
-            myBets={myBets}
-            sideOdds={!isMultipleChoice ? (odds ?? undefined) : undefined}
-            optionOdds={isMultipleChoice ? (optionOdds ?? undefined) : undefined}
-          />
-          <SettlementCard
-            moneySplit={
-              !isMultipleChoice && oddsA && oddsB
-                ? [
-                    { label: sideA.toUpperCase(), percent: oddsA.pool_percent },
-                    { label: sideB.toUpperCase(), percent: oddsB.pool_percent },
-                  ]
-                : undefined
-            }
-            description={marketRow.description}
-          />
-          <Card>
-            <ResolutionTimeline resolutionWindowHours={resolutionWindowHours} stage="disputed" />
-          </Card>
-        </>
-      )}
-    </main>
+        )}
+      </main>
+    </>
   );
 }
+
+/** The header chip's short form of each status (4d "Open", 4n "Closed", 4m "Settled"). */
+const SHORT_STATUS: Record<Market['status'], string> = {
+  pending_sponsor: 'Needs a second',
+  open: 'Open',
+  closed: 'Closed',
+  proposed: 'Called',
+  disputed: 'In dispute',
+  resolved: 'Settled',
+  voided: 'Void',
+};

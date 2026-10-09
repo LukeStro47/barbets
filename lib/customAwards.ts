@@ -12,7 +12,6 @@ export type CustomTitleMetric =
   | 'resolutions_proposed'
   | 'challenges_raised'
   | 'votes_cast'
-  | 'reactions_given'
   | 'times_subject';
 
 export type CustomTitleDirection = 'asc' | 'desc';
@@ -32,11 +31,13 @@ export interface CustomAwardShape {
 const tokens = (v: number) => Math.round(v).toLocaleString();
 
 /**
- * The full shape menu, 18 named options over 15 metrics — three metrics (win_rate, net,
+ * The full shape menu, 17 named options over 14 metrics — three metrics (win_rate, net,
  * avg_bet_size) offer both directions since "the worst at this too" is genuinely a different, fun
  * fact; everything else only makes sense one way ("most" bets/votes/challenges, "biggest" single
  * win/loss). Deliberately excludes streak-based and "matches the market favorite" shapes — see the
- * migration's comment for why those don't parameterize into this pattern.
+ * migration's comment for why those don't parameterize into this pattern. Also excludes
+ * reactions_given: market-level reactions (react_to_market/market_reactions) were removed outright
+ * (see the removal migration's comment), taking this shape with them.
  */
 export const CUSTOM_AWARD_SHAPES: CustomAwardShape[] = [
   {
@@ -166,14 +167,6 @@ export const CUSTOM_AWARD_SHAPES: CustomAwardShape[] = [
     menuLabel: 'Most votes cast',
     description: 'Voted in the most disputes.',
     format: (v) => (v == null ? '' : `${Math.round(v)} votes`),
-  },
-  {
-    key: 'reactions_given_desc',
-    metric: 'reactions_given',
-    direction: 'desc',
-    menuLabel: 'Most reactions given',
-    description: 'Reacted to the most resolved markets.',
-    format: (v) => (v == null ? '' : `${Math.round(v)} reactions`),
   },
   {
     key: 'times_subject_desc',

@@ -1,59 +1,72 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  /* Plus Jakarta Sans for anything you read, IBM Plex Mono for anything you
+     compare (balances, odds, countdowns, invite codes) — see DESIGN.md.
+     Mono must never leak into prose and sans must never carry a figure. */
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, 'SFMono-Regular', monospace;
 
-  /* Paper — warm off-white background, the canvas everywhere. */
-  --color-paper: #faf6ef;
-  --color-paper-dim: #f3ecdf; /* card/section contrast against paper */
-  --color-paper-white: #fffdf9; /* cards that need to pop off paper */
+  /* Ledger palette — see DESIGN.md. Canvas/surface are the near-white ground,
+     ink is the only text colour that matters, signal blue is the single
+     accent (the live/actionable thing), gain/alert are realised-gain and
+     needs-you-now respectively and never used decoratively. */
+  --color-canvas: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-rule: #eef0f4; /* subtle tinted backgrounds, section contrast against canvas */
+  --color-hairline: #e7eaef; /* the one separator: 1px borders instead of shadows */
+  --color-dash: #cfd6e2; /* dashed/empty-state borders, disabled dots */
+  --color-faint: #8a929f; /* eyebrows, timestamps, chevrons only — never body copy */
+  --color-muted: #5a6373; /* supporting sentences */
+  --color-ink: #0c1018; /* body text, headings, primary button fill */
 
-  /* Espresso — deep warm brown, text + primary buttons + a muted ramp for borders/secondary text. */
-  --color-espresso-950: #1c130d;
-  --color-espresso-900: #2c1f17;
-  --color-espresso-800: #3b2a20; /* base: body text, primary button fill */
-  --color-espresso-700: #4a3629;
-  --color-espresso-600: #5c4335;
-  --color-espresso-500: #705441;
-  --color-espresso-400: #8c6f5c;
-  --color-espresso-300: #ab9078;
-  --color-espresso-200: #cbb6a2; /* borders */
-  --color-espresso-100: #e4d8cc; /* dividers */
-  --color-espresso-50: #f2eae1; /* subtle tinted backgrounds */
+  --color-signal: #2d55f5; /* the one accent: primary CTA, live countdowns, selected tab, odds you can still take */
+  --color-signal-deep: #1f3fc4; /* pressed state */
+  --color-signal-tint: #eef2ff; /* light chip/badge backgrounds on a light ground */
+  --color-on-ink: #6b8cff; /* signal blue lifted for use on the ink background only */
 
-  /* Honey — warm golden amber accent: CTAs, odds bars, highlights. */
-  --color-honey-900: #7a4f0f;
-  --color-honey-800: #925e13;
-  --color-honey-700: #ac6f18;
-  --color-honey-600: #c7841f;
-  --color-honey-500: #e8a33d; /* base accent */
-  --color-honey-400: #edb35c;
-  --color-honey-300: #f1c480;
-  --color-honey-200: #f6d8a8;
-  --color-honey-100: #fae7cb;
-  --color-honey-50: #fdf3e6;
+  --color-gain: #0b8a5b; /* a realised gain, nothing else */
+  --color-gain-bg: #e8f6ef;
+  --color-gain-line: #cbe8da;
 
-  /* Muted warm success/danger that sit naturally in this palette. */
-  --color-success-700: #4f6b41;
-  --color-success-500: #6b8f5a;
-  --color-success-100: #e9f0e3;
-  --color-danger-700: #96392a;
-  --color-danger-500: #c1503d;
-  --color-danger-100: #f7e6e1;
+  --color-alert: #c8392c; /* something needs you, or a destructive action, nothing else */
+  --color-alert-bg: #fff6f5;
+  --color-alert-line: #f6d9d5;
+
+  --color-disabled-bg: #eef0f4;
+  --color-disabled-ink: #a8b0bd;
+
+  /* Secondary shades the screen mockups use repeatedly but DESIGN.md's token list never named.
+     Matching the artboards exactly needs them, and a raw hex at every call site is how a system
+     drifts, so they live here. */
+  --color-tile: #f1f3f7; /* icon tiles, secondary chips, the header back tile */
+  --color-wash: #fafbfc; /* a card's footer strip / table header row */
+  --color-row-rule: #f4f6f8; /* divider between rows inside one card */
+  --color-edge: #dfe4ee; /* a heavier outline: unselected option, secondary outlined button */
+  --color-signal-wash: #f7f9ff; /* a selected row / "your" row: the lightest blue ground */
+  --color-signal-line: #e3e9ff; /* hairline on a signal-wash strip */
+  --color-signal-edge: #d9e1ff; /* border of a signal-tint chip */
+  --color-signal-ink: #3b4a6b; /* body text sitting on signal-wash */
 }
 
 @layer base {
   body {
-    background-color: var(--color-paper);
-    color: var(--color-espresso-800);
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
   }
   :root {
+    /* Every Modal/sheet locks scroll with body overflow:hidden, which on a desktop browser with
+       classic scrollbars removes the scrollbar and shifts the whole page sideways by its width
+       (most visible opening the market's three-dot menu). Reserving the gutter keeps the page
+       still. Phones use overlay scrollbars, so this changes nothing there. */
+    scrollbar-gutter: stable;
+
     /* BottomNav's own rendered height (60px row + its bottom safe-area padding) — shared so
-       any page-specific bottom bar (currently just BetslipBar) can stack itself flush above
+       any page-specific bottom bar (currently StickyFooter's `aboveNav`) can stack itself flush above
        the nav instead of underneath it, rather than duplicating this as a guessed magic number
        in more than one component. */
-    --bottomnav-height: calc(60px + max(20px, env(safe-area-inset-bottom)));
+    --bottomnav-height: calc(58px + max(26px, env(safe-area-inset-bottom)));
 
     /* The height a full-screen flow (the two create wizards) can fill without pushing the page
        into a scroll. The layout already spends env(safe-area-inset-top) as in-flow padding above
@@ -66,7 +79,7 @@
   }
 }
 
-/* Bet-confirmed overlay: a honey checkmark popping in, then drawing its
+/* Bet-confirmed overlay: a signal-blue checkmark popping in, then drawing its
    stroke — kept out of @theme and scoped to these two classes rather than
    a general-purpose animation utility. */
 @keyframes bet-check-pop {
@@ -94,7 +107,7 @@
   }
 }
 
-/* The splash (app/page.tsx): a honey glow breathing behind the mark, and the
+/* The splash (app/page.tsx): a signal-blue glow breathing behind the mark, and the
    logo/headline/subhead rising in together on first paint. The glow is the only
    thing on that screen that moves, so under reduced motion it holds at a middling
    opacity rather than disappearing — it's part of the composition, not decoration. */
@@ -121,13 +134,13 @@
 }
 
 /* The stat strip's "closing soon" state (ClosesInValue): the figure itself breathes
-   between its resting colour and danger. Deliberately not honey — honey is already
-   this app's one accent (money, the committing action), so reusing it here to mean
-   "hurry up" would make one colour carry two different meanings. Reduced motion
+   between its resting colour and alert. Deliberately not signal blue — signal is
+   already this app's one accent (the live/actionable thing), so reusing it here to
+   mean "hurry up" would make one colour carry two different meanings. Reduced motion
    still gets the signal, just held rather than animated. */
 @keyframes stat-urgent-breathe {
   0%, 100% { color: inherit; }
-  50% { color: var(--color-danger-500); }
+  50% { color: var(--color-alert); }
 }
 .animate-urgent-breathe {
   animation: stat-urgent-breathe 2.4s ease-in-out infinite;
@@ -135,7 +148,7 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-urgent-breathe {
     animation: none;
-    color: var(--color-danger-500);
+    color: var(--color-alert);
   }
 }
 
@@ -174,53 +187,53 @@
   }
 }
 
-/* LoadingAnimation (splash + route loading states): a die/coin tumbling and
-   hopping in place, shadow squashing on each hop, "LOADING" dots blinking in
-   sequence. Four hops per 2.6s cycle, all four keyframes share the same
-   0%,12% / 25%,37% / 50%,62% / 75%,87% beat so the rotate/hop/shadow stay
-   perfectly in sync. */
-@keyframes die-tumble {
-  0%, 12% { transform: rotate(0deg); }
-  25%, 37% { transform: rotate(90deg); }
-  50%, 62% { transform: rotate(180deg); }
-  75%, 87% { transform: rotate(270deg); }
-  100% { transform: rotate(360deg); }
+/* LoadingAnimation (splash + route loading states) and any other "waiting"
+   surface: two bars pushing against each other on one track, the split never
+   quite resting — no spinner anywhere in the app, waiting always looks like
+   a market finding its price. bb-settle/bb-settle-b share one duration and
+   easing so the seam between them always moves together; bb-fade is the
+   loader's caption and the live-market dot; bb-pulse is for a stacked-dot
+   "still working" indicator if one's ever needed; bb-shimmer is the skeleton-
+   row sweep. Values are the finalized design spec's exact curve. */
+@keyframes bb-settle {
+  0%, 100% { transform: scaleX(0.34); }
+  30% { transform: scaleX(0.74); }
+  56% { transform: scaleX(0.44); }
+  80% { transform: scaleX(0.62); }
 }
-@keyframes die-hop {
-  0%, 12% { transform: translateY(0); }
-  18.5% { transform: translateY(-18px); }
-  25%, 37% { transform: translateY(0); }
-  43.5% { transform: translateY(-18px); }
-  50%, 62% { transform: translateY(0); }
-  68.5% { transform: translateY(-18px); }
-  75%, 87% { transform: translateY(0); }
-  93.5% { transform: translateY(-18px); }
-  100% { transform: translateY(0); }
+@keyframes bb-settle-b {
+  0%, 100% { transform: scaleX(0.66); }
+  30% { transform: scaleX(0.26); }
+  56% { transform: scaleX(0.56); }
+  80% { transform: scaleX(0.38); }
 }
-@keyframes die-shadow {
-  0%, 12% { transform: scaleX(1); opacity: 0.22; }
-  18.5% { transform: scaleX(0.55); opacity: 0.1; }
-  25%, 37% { transform: scaleX(1); opacity: 0.22; }
-  43.5% { transform: scaleX(0.55); opacity: 0.1; }
-  50%, 62% { transform: scaleX(1); opacity: 0.22; }
-  68.5% { transform: scaleX(0.55); opacity: 0.1; }
-  75%, 87% { transform: scaleX(1); opacity: 0.22; }
-  93.5% { transform: scaleX(0.55); opacity: 0.1; }
-  100% { transform: scaleX(1); opacity: 0.22; }
+@keyframes bb-fade {
+  0%, 100% { opacity: 0.62; }
+  50% { opacity: 1; }
 }
-@keyframes dot-blink {
-  0%, 60%, 100% { opacity: 0.25; }
-  30% { opacity: 1; }
+@keyframes bb-pulse {
+  0%, 100% { opacity: 0.22; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-3px); }
 }
-.animate-die-tumble { animation: die-tumble 2.6s cubic-bezier(0.45, -0.1, 0.3, 1.15) infinite; }
-.animate-die-hop { animation: die-hop 2.6s cubic-bezier(0.35, 0.05, 0.3, 1) infinite; }
-.animate-die-shadow { animation: die-shadow 2.6s cubic-bezier(0.35, 0.05, 0.3, 1) infinite; }
-.animate-dot-blink { animation: dot-blink 1.3s infinite; }
+@keyframes bb-shimmer {
+  from { background-position: 180% 0; }
+  to { background-position: -180% 0; }
+}
+.animate-bb-settle { animation: bb-settle 2.4s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
+.animate-bb-settle-b { animation: bb-settle-b 2.4s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
+.animate-bb-fade { animation: bb-fade 2.4s ease-in-out infinite; }
+.animate-bb-pulse { animation: bb-pulse 1.1s ease-in-out infinite; }
+.animate-bb-shimmer {
+  background-image: linear-gradient(90deg, transparent 0%, currentcolor 50%, transparent 100%);
+  background-size: 180% 100%;
+  animation: bb-shimmer 1.5s linear infinite;
+}
 @media (prefers-reduced-motion: reduce) {
-  .animate-die-tumble,
-  .animate-die-hop { animation: none; }
-  .animate-die-shadow { animation: none; opacity: 0.22; }
-  .animate-dot-blink { animation: none; opacity: 1; }
+  .animate-bb-settle,
+  .animate-bb-settle-b { animation: none; transform: scaleX(0.5); }
+  .animate-bb-fade,
+  .animate-bb-pulse { animation: none; opacity: 1; transform: none; }
+  .animate-bb-shimmer { animation: none; background-image: none; }
 }
 
 /* PageTransition: a subtle directional slide-in on route change, so back/forward
@@ -299,36 +312,17 @@
   }
 }
 
-/* Mystery markets (a hidden subject can't see a market exists until it
-   resolves): a shimmering redacted placeholder for the sealed ticket's
-   redacted question lines, on the dark ticket gradient. */
-@keyframes mystery-shimmer {
-  from { background-position: 130% 0; }
-  to { background-position: -30% 0; }
-}
-.animate-mystery-shimmer-dark {
-  background-image: linear-gradient(100deg, rgba(255, 253, 249, 0.09) 30%, rgba(232, 163, 61, 0.28) 50%, rgba(255, 253, 249, 0.09) 70%);
-  background-size: 220% 100%;
-  animation: mystery-shimmer 3s linear infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .animate-mystery-shimmer-dark {
-    animation: none;
-    background-position: 0 0;
-  }
-}
-
-/* SealedTicketCover: the wax-seal idle glow (sealed ticket page), and the
+/* SealedTicketCover: the wax-seal idle glow (the tappable seal only), and the
    one-shot tear sequence (RevealTicket's first-open-since-resolution cover,
    for a subject only) — seal shudders, both cover halves fly off with a
-   honey flash at the tear, the ticket underneath pops in, then its content
-   (question/badge/detail/odds/callers) stagger-fades in. Durations/easings
-   are the finalized design spec's exact values. Reuses demo-fade-up/
+   signal-blue flash at the tear, the ticket underneath pops in, then its
+   content (question/badge/detail/odds/callers) stagger-fades in. Durations/
+   easings are the finalized design spec's exact values. Reuses demo-fade-up/
    demo-fade-left above for the plain fade-ins rather than re-declaring
    near-identical keyframes. */
 @keyframes mystery-seal-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(232, 163, 61, 0.35), 0 10px 26px -10px rgba(0, 0, 0, 0.6); }
-  50% { box-shadow: 0 0 0 12px rgba(232, 163, 61, 0), 0 10px 26px -10px rgba(0, 0, 0, 0.6); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(45, 85, 245, 0.35), 0 10px 26px -10px rgba(0, 0, 0, 0.6); }
+  50% { box-shadow: 0 0 0 12px rgba(45, 85, 245, 0), 0 10px 26px -10px rgba(0, 0, 0, 0.6); }
 }
 @keyframes mystery-seal-shake {
   0%, 100% { transform: translateX(0); }
@@ -388,7 +382,7 @@
   }
 }
 
-/* LiveRulesForm challenge-window slider: 6px track, honey fill driven by --fill, 20px thumb. */
+/* LiveRulesForm challenge-window slider: 6px track, signal-blue fill driven by --fill, 20px thumb. */
 .challenge-window-slider {
   -webkit-appearance: none;
   appearance: none;
@@ -396,30 +390,30 @@
   border-radius: 999px;
   background: linear-gradient(
     to right,
-    var(--color-honey-500) 0%,
-    var(--color-honey-500) var(--fill, 0%),
-    var(--color-espresso-100) var(--fill, 0%),
-    var(--color-espresso-100) 100%
+    var(--color-signal) 0%,
+    var(--color-signal) var(--fill, 0%),
+    var(--color-rule) var(--fill, 0%),
+    var(--color-rule) 100%
   );
 }
 .challenge-window-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  height: 20px;
-  width: 20px;
+  height: 18px;
+  width: 18px;
   border-radius: 999px;
-  background: var(--color-paper-white);
-  border: 1.5px solid var(--color-honey-600);
-  box-shadow: 0 1px 3px rgba(28, 19, 13, 0.3);
+  background: var(--color-surface);
+  border: 2px solid var(--color-signal);
+  box-shadow: 0 1px 3px rgba(12, 16, 24, 0.2);
   cursor: pointer;
 }
 .challenge-window-slider::-moz-range-thumb {
-  height: 20px;
-  width: 20px;
+  height: 18px;
+  width: 18px;
   border-radius: 999px;
-  background: var(--color-paper-white);
-  border: 1.5px solid var(--color-honey-600);
-  box-shadow: 0 1px 3px rgba(28, 19, 13, 0.3);
+  background: var(--color-surface);
+  border: 2px solid var(--color-signal);
+  box-shadow: 0 1px 3px rgba(12, 16, 24, 0.2);
   cursor: pointer;
 }
 .challenge-window-slider::-moz-range-track {

@@ -1,8 +1,10 @@
 # Barbets — instructions for agents
 
-## Read ARCHITECTURE.md first
+## Read ARCHITECTURE.md first, and DESIGN.md for anything UI-facing
 
 `ARCHITECTURE.md` at the repo root is the canonical description of how this app works — data model, the privacy choke point, every Postgres function, money rules, notifications, PWA/push, deployment, and a "notable design decisions" section explaining *why* the non-obvious choices were made. Read it before any non-trivial change. It is actively maintained and is more current than any summary of it.
+
+`DESIGN.md` at the repo root is the canonical visual system: the real `@theme` token names in `app/globals.css`, the five rules the UI follows, and the shared primitives (`components/ui/Button.tsx`, `Card.tsx`, `Field.tsx`, `Badge.tsx`, `PageHeader.tsx`) everything else is built from. Read it before touching any component's styling, adding a new one, or introducing a new color/shadow/radius — the whole point of that file existing is that a new screen should never need to invent a token.
 
 ## Keep ARCHITECTURE.md current — this is part of the change, not a chore
 

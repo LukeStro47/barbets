@@ -1,5 +1,5 @@
 import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 
@@ -29,6 +29,29 @@ export async function createClient() {
         }
       },
     },
+  });
+}
+
+/**
+ * A no-session client for the app's rare anon-callable RPCs (invite_code_exists,
+ * get_invite_code_preview, log_qr_scan) that forwards the *visitor's own* IP as
+ * `x-forwarded-for`, rather than letting Supabase's gateway see only this Next.js server's own
+ * outbound address. Without this, every anonymous visitor calling one of these from our server
+ * would share one rate-limit bucket keyed to Vercel's IP, and one person's mistyped codes could
+ * lock out everyone else — see 20260814110000_anon_invite_code_exists.sql's own comment on why
+ * this matters and how weak the resulting limiter still is (a forged header is trivial for
+ * anyone hitting PostgREST directly; this is friction against casual guessing, not a hard
+ * guarantee). `x-forwarded-for` may carry a comma-separated chain (proxy, then Vercel's own
+ * edge) — `_client_ip()` in Postgres reads only the first entry, which this sets to the real
+ * visitor's address specifically so that stays true.
+ */
+export async function createAnonClientWithVisitorIp() {
+  const headerList = await headers();
+  const visitorIp = headerList.get('x-forwarded-for')?.split(',')[0]?.trim();
+
+  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    cookies: { getAll: () => [], setAll: () => {} },
+    global: visitorIp ? { headers: { 'x-forwarded-for': visitorIp } } : undefined,
   });
 }
 

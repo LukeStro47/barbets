@@ -6,10 +6,10 @@
 
 // The offline fallback's artwork is precached by raw path because that page renders it as a plain
 // <img> (next/image's optimizer endpoint is a network request that isn't cached, so it would break
-// offline). It's the coin, not the lockup, since the redesign — bump CACHE_NAME whenever this list
+// offline). Since the 3ac mark it's just the b-tile icon (the offline page draws the mark as type) — bump CACHE_NAME whenever this list
 // changes or an already-installed worker keeps serving the old set.
-const CACHE_NAME = 'barbets-shell-v7';
-const SHELL_URLS = ['/', '/offline', '/icon-192.png', '/icon-512.png', '/barbets-coin.png', '/badge-mono.png'];
+const CACHE_NAME = 'barbets-shell-v8';
+const SHELL_URLS = ['/', '/offline', '/icon-192.png', '/icon-512.png', '/badge-mono.png'];
 
 // A guaranteed last resort for a failed navigation when even the precached `/offline` page isn't
 // available (the precache is Promise.allSettled - one failed asset can't block install, but that

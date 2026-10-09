@@ -1,18 +1,14 @@
-import Image from 'next/image';
+import { BrandTile, Wordmark } from '@/components/ui/BrandMark';
 import { cn } from '@/lib/cn';
 
-/** Coin over wordmark, stacked vertically — for a big centered hero mark (landing page), as opposed to <Logo />'s horizontal nav lockup. */
+/** The stacked lock-up (6a): tile over wordmark, for square/centred hero placements. `height` is
+ *  the overall height; the tile takes a bit under half of it. */
 export function StackedLogo({ height = 140, className }: { height?: number; className?: string }) {
-  const width = Math.round(height * (1527 / 1911));
+  const tile = Math.round(height * 0.46);
   return (
-    <Image
-      src="/barbets-stacked.png"
-      alt="Barbets"
-      width={width}
-      height={height}
-      priority
-      className={cn('mx-auto', className)}
-      style={{ height, width: 'auto' }}
-    />
+    <span className={cn('mx-auto inline-flex flex-col items-center gap-[9px]', className)} aria-label="barbets">
+      <BrandTile size={tile} />
+      <Wordmark size={Math.round(tile * 0.43)} />
+    </span>
   );
 }

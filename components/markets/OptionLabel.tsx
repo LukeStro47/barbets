@@ -1,7 +1,6 @@
-import { cn } from '@/lib/cn';
-
-/** Renders a multiple_choice option label, italicizing and subtly recoloring a leading "@nickname" so a mention reads as a person, not plain text. */
-export function OptionLabel({ label, className }: { label: string; className?: string }) {
-  if (!label.startsWith('@')) return <>{label}</>;
-  return <span className={cn('italic text-honey-700', className)}>{label}</span>;
+/** Renders a multiple_choice option label. The mockups (4h2, 4i) set an "@nickname" option in the
+ *  same ink weight as any other option, so this is a plain pass-through now; kept as a component
+ *  so every option label still routes through one place. */
+export function OptionLabel({ label }: { label: string; className?: string }) {
+  return <>{label}</>;
 }

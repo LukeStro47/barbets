@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAnonClientWithVisitorIp } from '@/lib/supabase/server';
 import { runRpc, type ActionResult } from '@/lib/errors';
 import { normalizeInviteCode } from '@/lib/inviteCode';
 import type { JoinSource } from '@/lib/inviteLink';
@@ -86,6 +86,34 @@ export async function joinGroup(
   if (!result.data) return { error: "That invite code doesn't match a group." };
   revalidatePath('/groups');
   return result;
+}
+
+/** 5f/5p: checks a typed code before leaving the boxes, so a wrong one is flagged right under
+ *  them ("No group with that code") instead of on a dead-end page. Goes through the same
+ *  rate-limited lookups /join/[code] uses: the account-based one when signed in, the IP-based
+ *  invite_code_exists when not. A rate-limit hit comes back as `error` with the wait in it. */
+export async function checkInviteCode(inviteCode: string): Promise<ActionResult<boolean>> {
+  const code = normalizeInviteCode(inviteCode);
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) {
+    const result = await runRpc<{ id: string }[]>(await supabase.rpc('get_group_by_invite_code', { p_invite_code: code }));
+    if (result.error) return result;
+    return { data: (result.data ?? []).length > 0 };
+  }
+  const anon = await createAnonClientWithVisitorIp();
+  return runRpc<boolean>(await anon.rpc('invite_code_exists', { p_invite_code: code }));
+}
+
+/** 5d's live "Free / Taken" pill. `null` means "can't say" (malformed nickname, unknown code, or
+ *  the lookup failed): the pill just hides, and join_group() still has the final word on Join. */
+export async function checkInviteNickname(inviteCode: string, nickname: string): Promise<ActionResult<boolean | null>> {
+  const supabase = await createClient();
+  return runRpc<boolean | null>(
+    await supabase.rpc('is_invite_nickname_free', { p_invite_code: normalizeInviteCode(inviteCode), p_nickname: nickname })
+  );
 }
 
 export async function renameGroup(groupId: string, name: string): Promise<ActionResult<Group>> {

@@ -6,7 +6,7 @@
   "scripts": {
     "test": "vitest run",
     "cap:sync": "cap sync",
-    "cap:assets": "capacitor-assets generate",
+    "cap:assets": "capacitor-assets generate --android --ios",
     "cap:android": "cap open android",
     "cap:ios": "cap open ios"
   },
@@ -15,6 +15,7 @@
     "@capacitor-firebase/messaging": "^8.3.0",
     "@capacitor/android": "^8.4.2",
     "@capacitor/app": "^8.1.1",
+    "@capacitor/barcode-scanner": "^3.1.2",
     "@capacitor/camera": "^8.2.1",
     "@capacitor/core": "^8.4.2",
     "@capacitor/filesystem": "^8.1.2",

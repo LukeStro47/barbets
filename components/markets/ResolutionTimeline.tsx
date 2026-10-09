@@ -1,5 +1,6 @@
-import { CountdownTimer } from '@/components/ui/CountdownTimer';
+﻿import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { Mention } from '@/components/ui/Mention';
+import { cn } from '@/lib/cn';
 
 export type ResolutionStage = 'pending_sponsor' | 'endorsing' | 'open' | 'closed' | 'proposed' | 'disputed';
 
@@ -32,12 +33,12 @@ export function ResolutionTimeline({
 
   const proposeStep = (
     <>
-      <strong className="text-espresso-900">Someone proposes</strong> what happened, with proof if they have it.
+      <strong className="text-ink">Someone proposes</strong> what happened, with proof if they have it.
     </>
   );
   const challengeStep = (
     <>
-      Everyone gets <strong className="text-espresso-700">{windowLabel} to challenge</strong> it. A challenge goes to a secret vote.
+      Everyone gets <strong className="text-muted">{windowLabel} to challenge</strong> it. A challenge goes to a secret vote.
     </>
   );
   const payoutStep = <>The pool pays out and the ticket unseals.</>;
@@ -49,7 +50,7 @@ export function ResolutionTimeline({
     case 'pending_sponsor':
       steps = [
         <>
-          <strong className="text-espresso-900">A second member endorses</strong> this market before betting can open.
+          <strong className="text-ink">A second member endorses</strong> this market before betting can open.
         </>,
         <>Betting opens and stays open until it closes, or someone proposes early.</>,
         proposeStep,
@@ -63,7 +64,7 @@ export function ResolutionTimeline({
     case 'endorsing':
       steps = [
         <>
-          Betting opens right away and runs for <strong className="text-espresso-900">{bettingWindowLabel}</strong>, unless
+          Betting opens right away and runs for <strong className="text-ink">{bettingWindowLabel}</strong>, unless
           someone calls it early.
         </>,
         <>Someone proposes what happened, with proof if they have it.</>,
@@ -91,7 +92,7 @@ export function ResolutionTimeline({
       steps = [
         <>Someone proposed what happened.</>,
         <>
-          A challenge moved it to a <strong className="text-espresso-700">secret vote</strong>. Ballots stay hidden until it closes.
+          A challenge moved it to a <strong className="text-muted">secret vote</strong>. Ballots stay hidden until it closes.
         </>,
         payoutStep,
       ];
@@ -104,7 +105,7 @@ export function ResolutionTimeline({
 
   return (
     <div>
-      <p className="mb-2.5 text-[11.5px] font-extrabold tracking-[0.08em] text-espresso-400 uppercase">
+      <p className="mb-2.5 text-[11.5px] font-extrabold tracking-[0.08em] text-faint uppercase">
         {stage === 'endorsing' ? 'After you endorse' : 'What happens next'}
       </p>
       <div className="flex flex-col">
@@ -113,29 +114,22 @@ export function ResolutionTimeline({
           const isCurrent = i === currentIndex;
           const isLast = i === steps.length - 1;
           return (
-            <div key={i} className="flex gap-3">
-              <div className="flex flex-col items-center pt-[3px]">
+            <div key={i} className="flex gap-2.5">
+              <div className="flex flex-col items-center pt-[5px]">
                 <span
-                  className={
-                    isDone || isCurrent
-                      ? 'h-[9px] w-[9px] shrink-0 rounded-full bg-espresso-800'
-                      : 'h-[9px] w-[9px] shrink-0 rounded-full border-[1.5px] border-espresso-200 bg-paper'
-                  }
+                  className={cn(
+                    'h-[7px] w-[7px] shrink-0 rounded-full',
+                    isCurrent ? 'bg-signal' : isDone ? 'bg-ink' : 'border-[1.5px] border-dash bg-canvas'
+                  )}
                 />
-                {!isLast && <span className="w-[1.5px] flex-1 bg-espresso-100" />}
+                {!isLast && <span className="w-[1.5px] flex-1 bg-hairline" />}
               </div>
-              <p
-                className={`text-[13.5px] leading-[1.4] ${isLast ? '' : 'mb-3'} ${
-                  isCurrent ? 'text-espresso-700' : isDone ? 'text-espresso-600' : 'text-espresso-500'
-                }`}
-              >
-                {step}
-              </p>
+              <p className={cn('text-[13.5px] leading-[1.4] text-muted', !isLast && 'mb-2.5')}>{step}</p>
             </div>
           );
         })}
       </div>
-      {children && <div className="mt-3 border-t border-espresso-50 pt-3.5">{children}</div>}
+      {children && <div className="mt-3 border-t border-rule pt-3.5">{children}</div>}
     </div>
   );
 }

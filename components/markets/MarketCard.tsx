@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+﻿import type { ComponentType } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Badge, TONE_CLASSES } from '@/components/ui/Badge';
@@ -18,8 +18,16 @@ export interface MarketCardData {
   status: MarketStatus;
   marketType: 'yes_no' | 'over_under' | 'multiple_choice';
   closesAt: string;
+  createdAt?: string;
   /** pending_sponsor only: the sooner of 24h-since-creation or 5-minutes-before-closes_at — the actual deadline to endorse before it auto-voids. */
   sponsorDeadline?: string;
+  /** pending_sponsor only: "You" for the viewer's own market, else the creator's nickname (or
+   * null if the account was since deleted — markets.creator_id is on delete set null). */
+  proposerLabel?: string | null;
+  /** pending_sponsor only: false when the viewer is the market's own creator (create_market's
+   * own rule: a creator can never endorse their own market), so the card shows "waiting on
+   * someone else" instead of an actionable Endorse footer. */
+  canEndorse?: boolean;
   /** When a market actually resolved (resolved/voided only) — used to order the resolved list. */
   resolvedAt?: string | null;
   outcome: string | null;
@@ -31,7 +39,21 @@ export interface MarketCardData {
   outcomeLabel?: string | null;
   /** proposed/disputed only: the resolution that's currently on the table. */
   proposedOutcomeLabel?: string;
+  /** proposed only: "You" or the proposer's nickname (null if the account's since gone) — the
+   * awaiting-resolution card's "Called by" column. Undefined once challenged (4b's disputed
+   * example doesn't repeat it, the ballot screen is where that identity stops mattering). */
+  calledByLabel?: string | null;
+  /** proposed only: when the challenge window (group_settings.resolution_window_hours after
+   * the proposal) closes — challenge_resolution() itself can't succeed after this. */
+  challengeDeadline?: string;
+  /** closed/proposed/disputed only: "you bet 200" style label built from the viewer's own
+   * position, reusing the exact bet data the 'open' bucket's myBets already carries (bets stay
+   * queryable under bets_select's own-rows-only policy regardless of market status). */
+  myBetLabel?: string;
   openBetCount?: number;
+  /** open only: total tokens staked so far (get_open_bet_volume) plus any carried bonus_pool —
+   * same "what will actually pay out" figure the market detail page's Pool cell already uses. */
+  openPool?: number;
   /** Total bets across all sides/options, once betting has closed. */
   closedBetCount?: number;
   odds?: { side: string; percent: number }[];
@@ -40,8 +62,6 @@ export interface MarketCardData {
   groupName?: string;
   /** True when the viewer has something blocking on them specifically for this market (currently: an open clarification request they created the market for) — renders a small exclamation badge. */
   needsAttention?: boolean;
-  /** Distinct reaction glyphs present on a resolved/voided market, in REACTIONS canonical order — renders a compact view-only facepile. Mutually exclusive with needsAttention in practice (only open markets can need attention; only resolved/voided ones can have reactions), so they share the same badge slot. */
-  reactionGlyphs?: string[];
   /** resolved/voided only: the viewer's own total payout minus total stake across every bet they placed on this market (summed, in case of a hedge — same convention the "Resolved" push copy uses). Undefined when the viewer never bet on it; always 0 for a void (refund = stake back), so it never renders a won/lost suffix. */
   myNet?: number;
   /** open only: every bet the viewer has placed on this market so far (more than one entry means a hedge across sides/options). Undefined/empty when they haven't bet on it yet. */
@@ -53,23 +73,10 @@ export interface MarketCardData {
 function AttentionBadge() {
   return (
     <span
-      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-danger-100 text-xs font-bold text-danger-700"
+      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-alert-bg text-xs font-bold text-alert"
       title="Needs clarification"
     >
       !
-    </span>
-  );
-}
-
-/** Compact, view-only reaction facepile for market list rows/cards — same overlapping-glyph treatment as the interactive ReactionBar trigger, just smaller and non-clickable. */
-function ReactionFacepile({ glyphs }: { glyphs: string[] }) {
-  return (
-    <span className="flex shrink-0 items-center">
-      {glyphs.map((glyph, i) => (
-        <span key={i} className="-ml-1.5 flex h-5 w-5 items-center justify-center text-xs first:ml-0" style={{ zIndex: glyphs.length - i }}>
-          {glyph}
-        </span>
-      ))}
     </span>
   );
 }
@@ -81,9 +88,9 @@ function ReactionFacepile({ glyphs }: { glyphs: string[] }) {
 function MyNetLabel({ myNet }: { myNet?: number }) {
   if (!myNet) return null;
   return myNet > 0 ? (
-    <span className="text-success-700"> · {formatTokens(myNet)} won</span>
+    <span className="text-gain"> · {formatTokens(myNet)} won</span>
   ) : (
-    <span className="text-danger-700"> · {formatTokens(Math.abs(myNet))} lost</span>
+    <span className="text-alert"> · {formatTokens(Math.abs(myNet))} lost</span>
   );
 }
 
@@ -98,7 +105,7 @@ function MyBetsChips({ myBets }: { myBets?: { label: string; amount: number }[] 
   return (
     <div className="mt-1 flex flex-wrap items-center gap-1">
       {myBets.map((b, i) => (
-        <span key={i} className="rounded-full bg-honey-100 px-2 py-0.5 text-[11px] font-bold text-honey-800">
+        <span key={i} className="rounded-full bg-signal-tint px-2 py-0.5 text-[11px] font-bold text-signal-deep">
           {formatTokens(b.amount)} {b.label}
         </span>
       ))}
@@ -116,23 +123,22 @@ export function MarketCard({ market }: { market: MarketCardData }) {
 
   return (
     <Link href={href}>
-      <Card className="space-y-3 transition-shadow hover:shadow-md">
+      <Card className="space-y-3 transition-colors hover:border-dash">
         <div className="flex items-start justify-between gap-3">
           <div>
-            {market.groupName && <p className="text-xs font-semibold uppercase tracking-wide text-honey-700">{market.groupName}</p>}
-            <p className="font-display font-bold leading-snug text-espresso-900">{market.title}</p>
+            {market.groupName && <p className="text-xs font-semibold uppercase tracking-wide text-signal-deep">{market.groupName}</p>}
+            <p className="font-display font-bold leading-snug text-ink">{market.title}</p>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             {market.needsAttention && <AttentionBadge />}
-            {market.reactionGlyphs && market.reactionGlyphs.length > 0 && <ReactionFacepile glyphs={market.reactionGlyphs} />}
             <Badge tone={STATUS_TONE[market.status]}>{STATUS_LABEL[market.status]}</Badge>
           </div>
         </div>
 
         {market.status === 'pending_sponsor' && (
-          <div className="flex items-center justify-between text-sm text-espresso-500">
+          <div className="flex items-center justify-between text-sm text-muted">
             {isMultipleChoice ? (
-              <span className="inline-block rounded-full bg-espresso-100 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-espresso-600">
+              <span className="inline-block rounded-full bg-hairline px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-muted">
                 Multiple choice
               </span>
             ) : (
@@ -144,7 +150,7 @@ export function MarketCard({ market }: { market: MarketCardData }) {
 
         {market.status === 'open' && (
           <div>
-            <div className="flex items-center justify-between text-sm text-espresso-500">
+            <div className="flex items-center justify-between text-sm text-muted">
               <span>🤫 {market.openBetCount ?? 0} bets placed</span>
               <CountdownTimer target={market.closesAt} />
             </div>
@@ -155,10 +161,10 @@ export function MarketCard({ market }: { market: MarketCardData }) {
         {['closed', 'proposed', 'disputed'].includes(market.status) && (
           <>
             {market.closedBetCount !== undefined && (
-              <p className="text-xs text-espresso-400">{market.closedBetCount} bets placed</p>
+              <p className="text-xs text-faint">{market.closedBetCount} bets placed</p>
             )}
             {market.proposedOutcomeLabel && (
-              <p className="text-sm font-semibold text-espresso-700">
+              <p className="text-sm font-semibold text-muted">
                 Proposed: <OptionLabel label={market.proposedOutcomeLabel.toUpperCase()} />
               </p>
             )}
@@ -173,7 +179,7 @@ export function MarketCard({ market }: { market: MarketCardData }) {
         )}
 
         {['resolved', 'voided'].includes(market.status) && (
-          <p className="text-sm font-semibold text-espresso-600">
+          <p className="text-sm font-semibold text-muted">
             {market.outcome === 'void' ? (
               'Voided, everyone refunded'
             ) : (
@@ -210,7 +216,7 @@ function MarketRowMeta({ market }: { market: MarketCardData }) {
   // no proposed outcome, nothing to show beyond that it exists and roughly when it closes.
   if (market.mystery) {
     return (
-      <p className="mt-0.5 text-xs text-espresso-400">
+      <p className="mt-0.5 text-xs text-faint">
         {market.openBetCount ?? market.closedBetCount ?? 0} bets · <CountdownTimer target={market.closesAt} />
       </p>
     );
@@ -218,7 +224,7 @@ function MarketRowMeta({ market }: { market: MarketCardData }) {
 
   if (market.status === 'pending_sponsor') {
     return (
-      <p className="mt-0.5 text-xs text-espresso-400">
+      <p className="mt-0.5 text-xs text-faint">
         <CountdownTimer target={market.sponsorDeadline ?? market.closesAt} prefix="Time to endorse:" />
       </p>
     );
@@ -230,7 +236,7 @@ function MarketRowMeta({ market }: { market: MarketCardData }) {
     const showChips = (market.myBets?.length ?? 0) > 1;
     return (
       <>
-        <p className="mt-0.5 text-xs text-espresso-400">
+        <p className="mt-0.5 text-xs text-faint">
           {market.openBetCount ?? 0} bets · <CountdownTimer target={market.closesAt} />
         </p>
         {showChips && <MyBetsChips myBets={market.myBets} />}
@@ -242,7 +248,7 @@ function MarketRowMeta({ market }: { market: MarketCardData }) {
     const betCountPrefix = market.closedBetCount !== undefined ? `${market.closedBetCount} bets · ` : '';
     if (market.proposedOutcomeLabel) {
       return (
-        <p className="mt-0.5 truncate text-xs text-espresso-400">
+        <p className="mt-0.5 truncate text-xs text-faint">
           {betCountPrefix}Proposed: <OptionLabel label={market.proposedOutcomeLabel.toUpperCase()} />
         </p>
       );
@@ -251,7 +257,7 @@ function MarketRowMeta({ market }: { market: MarketCardData }) {
       const top = [...(market.optionOdds ?? [])].sort((a, b) => b.percent - a.percent)[0];
       if (!top) return null;
       return (
-        <p className="mt-0.5 truncate text-xs text-espresso-400">
+        <p className="mt-0.5 truncate text-xs text-faint">
           {betCountPrefix}
           <OptionLabel label={top.label} /> leading · {top.percent}%
         </p>
@@ -261,7 +267,7 @@ function MarketRowMeta({ market }: { market: MarketCardData }) {
     const oddsB = market.odds?.find((o) => o.side === sideB);
     if (!oddsA || !oddsB) return null;
     return (
-      <p className="mt-0.5 text-xs text-espresso-400">
+      <p className="mt-0.5 text-xs text-faint">
         {betCountPrefix}
         {sideA.toUpperCase()} {oddsA.percent}% · {sideB.toUpperCase()} {oddsB.percent}%
       </p>
@@ -270,10 +276,10 @@ function MarketRowMeta({ market }: { market: MarketCardData }) {
 
   if (market.status === 'resolved' || market.status === 'voided') {
     if (market.outcome === 'void') {
-      return <p className="mt-0.5 text-xs text-espresso-400">Voided, everyone refunded</p>;
+      return <p className="mt-0.5 text-xs text-faint">Voided, everyone refunded</p>;
     }
     return (
-      <p className="mt-0.5 truncate text-xs text-espresso-400">
+      <p className="mt-0.5 truncate text-xs text-faint">
         {isMultipleChoice ? <OptionLabel label={market.outcomeLabel ?? ''} /> : market.outcome?.toUpperCase()}
         <MyNetLabel myNet={market.myNet} />
       </p>
@@ -297,39 +303,38 @@ function MarketRow({ market, isLast }: { market: MarketCardData; isLast: boolean
     <Link
       href={href}
       className={cn(
-        'flex items-center gap-3 px-4 py-[14px] transition-colors hover:bg-espresso-50/25',
-        market.mystery && 'bg-honey-50',
-        !isLast && 'border-b border-espresso-50'
+        'flex items-center gap-3 px-4 py-[14px] transition-colors hover:bg-rule/25',
+        market.mystery && 'bg-signal-tint',
+        !isLast && 'border-b border-rule'
       )}
     >
       <span
         className={cn(
           'flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px]',
-          market.mystery ? 'bg-espresso-900 text-honey-300' : TONE_CLASSES[STATUS_TONE[market.status]]
+          market.mystery ? 'bg-ink text-on-ink' : TONE_CLASSES[STATUS_TONE[market.status]]
         )}
       >
         {market.mystery ? <span className="text-[17px] font-extrabold leading-none">?</span> : <Icon className="h-4 w-4" />}
       </span>
       <span className="min-w-0 flex-1">
-        <p className="font-display text-[15.5px] font-bold leading-[1.25] text-espresso-950">
+        <p className="font-display text-[15.5px] font-bold leading-[1.25] text-ink">
           {market.mystery ? 'A market about you' : market.title}
         </p>
         <MarketRowMeta market={market} />
       </span>
       {market.needsAttention && <AttentionBadge />}
-      {market.reactionGlyphs && market.reactionGlyphs.length > 0 && <ReactionFacepile glyphs={market.reactionGlyphs} />}
       {showBetPill ? (
         singleBet ? (
-          <span className="max-w-[96px] shrink-0 truncate rounded-full bg-honey-100 px-3 py-[5px] text-xs font-bold text-honey-800">
+          <span className="max-w-[96px] shrink-0 truncate rounded-full bg-signal-tint px-3 py-[5px] text-xs font-bold text-signal-deep">
             {formatTokens(singleBet.amount)} {singleBet.label}
           </span>
         ) : (
-          <span className="shrink-0 rounded-full border-[1.5px] border-espresso-200 px-3 py-[5px] text-xs font-bold text-espresso-800">
+          <span className="shrink-0 rounded-full border-[1.5px] border-dash px-3 py-[5px] text-xs font-bold text-ink">
             {market.myBets && market.myBets.length > 0 ? 'Add' : 'Bet'}
           </span>
         )
       ) : (
-        <ChevronRightIcon className="h-3.5 w-2 shrink-0 text-espresso-200" />
+        <ChevronRightIcon className="h-3.5 w-2 shrink-0 text-dash" />
       )}
     </Link>
   );
@@ -338,7 +343,7 @@ function MarketRow({ market, isLast }: { market: MarketCardData; isLast: boolean
 /** The 1b redesign's grouped-list variant: one rounded container per status bucket, each market a row inside it instead of its own card. */
 export function MarketRowList({ markets }: { markets: MarketCardData[] }) {
   return (
-    <div className="overflow-hidden rounded-[22px] border border-espresso-100 bg-paper-white">
+    <div className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
       {markets.map((m, i) => (
         <MarketRow key={m.id} market={m} isLast={i === markets.length - 1} />
       ))}
