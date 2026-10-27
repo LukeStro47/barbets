@@ -174,7 +174,11 @@ export default async function MarketDetailPage({
     const { data: bets } = await supabase.from('bets').select('side, option_id, amount').eq('market_id', marketId).eq('user_id', user.id);
     myBets = bets ?? [];
   }
-  if (marketRow.status === 'open') {
+  // Everything from here to the Comments branch only feeds the Market tab (odds, volume, the
+  // proposal, the vote). Each is its own round trip, several in sequence, and the Comments tab
+  // used to wait on all of them before fetching a single comment.
+  const onMarketTab = activeTab === 'market';
+  if (onMarketTab && marketRow.status === 'open') {
     const [{ data: countData }, { data: volumeData }] = await Promise.all([
       supabase.rpc('get_open_bet_count', { p_market_id: marketId }),
       supabase.rpc('get_open_bet_volume', { p_market_id: marketId }),
@@ -182,7 +186,7 @@ export default async function MarketDetailPage({
     openBetCount = countData as number;
     openBetVolume = volumeData as number;
   }
-  if (['closed', 'proposed', 'disputed'].includes(marketRow.status)) {
+  if (onMarketTab && ['closed', 'proposed', 'disputed'].includes(marketRow.status)) {
     if (isMultipleChoice) {
       const { data } = await supabase.rpc('get_closed_odds_options', { p_market_id: marketId });
       optionOdds = data;
@@ -191,7 +195,7 @@ export default async function MarketDetailPage({
       odds = data;
     }
   }
-  if (['proposed', 'disputed'].includes(marketRow.status)) {
+  if (onMarketTab && ['proposed', 'disputed'].includes(marketRow.status)) {
     const { data } = await supabase
       .from('resolution_proposals')
       .select('proposer_id, proposed_outcome, proposed_option_id, justification, proposed_at, photo_path')
@@ -216,7 +220,7 @@ export default async function MarketDetailPage({
 
   let votesCast: number | undefined;
   let eligibleVoters: number | undefined;
-  if (marketRow.status === 'disputed') {
+  if (onMarketTab && marketRow.status === 'disputed') {
     const { data } = await supabase.from('challenges').select('challenger_id, created_at').eq('market_id', marketId).single();
     challenge = data;
     // 5k names who challenged ("Gaz challenged the call"); the challenger usually isn't among the
@@ -323,40 +327,37 @@ export default async function MarketDetailPage({
   // The question moves up into the header (muted) and the tabs ride inside it, so the thread
   // starts right under the fixed bar; the composer is pinned to the bottom edge.
   if (activeTab === 'comments') {
-    const { data: commentRows } = await supabase
-      .from('market_comments')
-      .select('id, user_id, body, revealed_side, revealed_option_id, revealed_amount, created_at')
-      .eq('market_id', marketId)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: true });
+    // Two round trips in all: the comments and the member list together, then everything keyed
+    // off the comments (who wrote them, their avatars, the reactions) together.
+    const [{ data: commentRows }, { data: memberRows }] = await Promise.all([
+      supabase
+        .from('market_comments')
+        .select('id, user_id, body, revealed_side, revealed_option_id, revealed_amount, created_at')
+        .eq('market_id', marketId)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: true }),
+      supabase.from('memberships').select('user_id, nickname').eq('group_id', groupId).in('status', ['active', 'dormant']).order('nickname'),
+    ]);
 
     const comments = commentRows ?? [];
     // Who the composer's @ picker offers: current members who can see this market. While it's
     // unsettled that excludes whoever it's about (is_market_visible's rule), and the server
     // applies the same rule before notifying anyone.
     const settled = marketRow.status === 'resolved' || marketRow.status === 'voided';
-    const { data: memberRows } = await supabase
-      .from('memberships')
-      .select('user_id, nickname')
-      .eq('group_id', groupId)
-      .in('status', ['active', 'dormant'])
-      .order('nickname');
     const mentionable = (memberRows ?? [])
       .filter((m) => m.user_id !== user.id && (settled || !subjectUserIds.includes(m.user_id)))
       .map((m) => m.nickname as string);
     const commenterIds = [...new Set([...comments.map((c) => c.user_id), user.id])];
-    const [{ data: commenterRows }, { data: commenterUsers }] = await Promise.all([
+    const commentIds = comments.map((c) => c.id);
+    const [{ data: commenterRows }, { data: commenterUsers }, { data: reactionRows }] = await Promise.all([
       supabase.from('memberships').select('user_id, nickname').eq('group_id', groupId).in('user_id', commenterIds),
       supabase.from('users').select('id, avatar_updated_at, avatar_preset_key').in('id', commenterIds),
+      commentIds.length > 0
+        ? supabase.from('comment_reactions').select('comment_id, user_id, emoji').in('comment_id', commentIds)
+        : Promise.resolve({ data: [] as { comment_id: string; user_id: string; emoji: string }[] }),
     ]);
     const commenterNickname = new Map((commenterRows ?? []).map((m) => [m.user_id, m.nickname]));
     const avatarByUser = new Map((commenterUsers ?? []).map((u) => [u.id, u]));
-
-    const commentIds = comments.map((c) => c.id);
-    const { data: reactionRows } =
-      commentIds.length > 0
-        ? await supabase.from('comment_reactions').select('comment_id, user_id, emoji').in('comment_id', commentIds)
-        : { data: [] };
     const reactionsByComment = new Map<string, { emoji: ReactionEmoji; userId: string }[]>();
     for (const r of reactionRows ?? []) {
       const list = reactionsByComment.get(r.comment_id) ?? [];

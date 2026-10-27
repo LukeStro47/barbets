@@ -138,10 +138,13 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
                 <StatCell label="Settled" value={String(stats?.settled_bet_count ?? 0)} />
               </div>
               {stats?.best_call_title && stats.best_call_multiple != null && (
-                <p className="mt-3 border-t border-row-rule pt-2.5 text-[12px] leading-[1.45] text-muted">
-                  Best call: <span className="font-semibold text-ink">{stats.best_call_title}</span>{' '}
-                  <span className="font-mono font-semibold text-gain">{Number(stats.best_call_multiple).toFixed(1)}x</span>
-                </p>
+                <div className="mt-3.5 flex items-center gap-3 border-t border-row-rule pt-3">
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[11.5px] text-faint">Best call</span>
+                    <span className="mt-1 block text-[13.5px] leading-[1.4] font-semibold text-ink">{stats.best_call_title}</span>
+                  </span>
+                  <span className="shrink-0 font-mono text-[14px] font-semibold text-gain">{Number(stats.best_call_multiple).toFixed(1)}x</span>
+                </div>
               )}
             </div>
 
@@ -171,12 +174,10 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[13.5px] font-bold text-ink">{b.markets!.title}</span>
                         <span className="mt-0.5 block text-[12px] text-faint">
-                          {pick}
+                          <span className="font-mono font-semibold text-ink">{formatTokens(b.amount)}</span> on {pick}
                           {line}
-                          {b.markets!.status !== 'open' && ' · betting closed'}
                         </span>
                       </span>
-                      <span className="shrink-0 font-mono text-[13px] font-semibold text-ink">{formatTokens(b.amount)}</span>
                       <RowChevron className="text-faint" />
                     </Link>
                   );
@@ -186,9 +187,23 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           </>
         )}
 
+        <p className="mt-8 text-[10.5px] font-bold tracking-[0.1em] text-faint uppercase">Settings</p>
+        <div className="mt-[9px] overflow-hidden rounded-[18px] border border-hairline bg-surface">
+          <ListRow href="/profile/account" label="Account" />
+          <ListRow href="/profile/notifications" label="Notifications" />
+          <ListRow href="/feedback" label="Help and feedback" />
+          <ListRow href="/privacy" label="Privacy policy" />
+          <ListRow href="/terms" label="Terms" />
+          <form action={signOut}>
+            <button type="submit" className="flex w-full items-center gap-[11px] px-4 py-[13px] text-left">
+              <span className="min-w-0 flex-1 text-[13.5px] font-bold text-muted">Sign out</span>
+            </button>
+          </form>
+        </div>
+
         {isAdmin && (
           <>
-            <p className="mt-5 text-[10.5px] font-bold tracking-[0.1em] text-faint uppercase">Admin</p>
+            <p className="mt-8 text-[10.5px] font-bold tracking-[0.1em] text-faint uppercase">Admin</p>
             <Link href="/admin" className="mt-[9px] flex items-center gap-[11px] rounded-[18px] bg-ink px-4 py-3.5">
               <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[10px] bg-white/12 text-surface">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">
@@ -203,22 +218,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
               </span>
               <RowChevron className="text-surface/60" />
             </Link>
-            <p className="mt-[7px] text-[11.5px] leading-[1.45] text-faint">Only system admins see this row.</p>
           </>
         )}
-
-        <div className="mt-5 overflow-hidden rounded-[18px] border border-hairline bg-surface">
-          <ListRow href="/profile/account" label="Account" />
-          <ListRow href="/profile/notifications" label="Notifications" />
-          <ListRow href="/feedback" label="Help and feedback" />
-          <ListRow href="/privacy" label="Privacy policy" />
-          <ListRow href="/terms" label="Terms" />
-          <form action={signOut}>
-            <button type="submit" className="flex w-full items-center gap-[11px] px-4 py-[13px] text-left">
-              <span className="min-w-0 flex-1 text-[13.5px] font-bold text-muted">Sign out</span>
-            </button>
-          </form>
-        </div>
       </main>
     </>
   );

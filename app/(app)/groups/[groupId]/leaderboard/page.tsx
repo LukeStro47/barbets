@@ -16,22 +16,6 @@ function formatShortDate(iso: string): string {
   return `${d.getDate()} ${d.toLocaleDateString('en-GB', { month: 'short' })}`;
 }
 
-type BetRow = { user_id: string; side: string | null; option_id: string | null; markets: { outcome: string | null; outcome_option_id: string | null } };
-
-/** Correct / resolved, per member, from bets on resolved markets (void excluded — those markets
- *  resolve to status 'voided', not 'resolved'). Other members' bets are readable once a market
- *  has resolved, same read the reveal page makes. */
-function accuracyByUser(rows: BetRow[]): Map<string, number> {
-  const tally = new Map<string, { right: number; total: number }>();
-  for (const b of rows) {
-    const t = tally.get(b.user_id) ?? { right: 0, total: 0 };
-    t.total += 1;
-    if (b.option_id ? b.option_id === b.markets.outcome_option_id : b.side === b.markets.outcome) t.right += 1;
-    tally.set(b.user_id, t);
-  }
-  return new Map([...tally].map(([id, t]) => [id, Math.round((t.right / t.total) * 100)]));
-}
-
 const SEASON_HISTORY_PAGE_SIZE = 10;
 
 /**
@@ -99,29 +83,13 @@ export default async function LeaderboardPage({
   const { data: endedSeason } = isIntermission
     ? await supabase.from('seasons').select('id, number, name').eq('group_id', groupId).eq('number', latestSeason!.number - 1).maybeSingle()
     : { data: null };
-  const scopeSeasonId = activeSeason?.id ?? endedSeason?.id ?? null;
 
-  // Scoped bets on resolved markets — the Acc column and your accuracy tile.
-  const resolvedBetsQuery = scopeSeasonId
-    ? supabase
-        .from('bets')
-        .select('user_id, side, option_id, markets!inner(season_id, status, outcome, outcome_option_id)')
-        .eq('markets.season_id', scopeSeasonId)
-        .eq('markets.status', 'resolved')
-    : supabase
-        .from('bets')
-        .select('user_id, side, option_id, markets!inner(group_id, status, outcome, outcome_option_id)')
-        .eq('markets.group_id', groupId)
-        .eq('markets.status', 'resolved');
-
-  const [{ data: resolvedBets }, { data: avatarRows }, { data: titleRows }, { data: netRow }] = await Promise.all([
-    resolvedBetsQuery,
+  const [{ data: avatarRows }, { data: titleRows }, { data: netRow }] = await Promise.all([
     // No profile pictures in a public group, for anyone.
     isPublic ? Promise.resolve({ data: [] }) : supabase.from('users').select('id, avatar_updated_at, avatar_preset_key').in('id', members.map((m) => m.user_id)),
     supabase.from('group_titles').select('title_key, user_id, stat_value').eq('group_id', groupId),
     supabase.from('membership_ledger_net').select('net').eq('group_id', groupId).eq('user_id', user.id).maybeSingle(),
   ]);
-  const accuracy = accuracyByUser((resolvedBets ?? []) as unknown as BetRow[]);
   const avatarByUser = new Map((avatarRows ?? []).map((r: any) => [r.id, r]));
   const yourTitleCount = ((titleRows ?? []) as GroupTitleRow[]).filter((r) => r.user_id === user.id).length;
 
@@ -149,14 +117,12 @@ export default async function LeaderboardPage({
       <div className="flex gap-2">
         <Tile value={you && yourRank ? formatOrdinal(yourRank) : '—'} label={`of ${members.length} playing`} />
         <Tile value={formatSignedTokens(yourNet)} label={settings?.seasons_enabled ? 'net, all season' : 'net, all time'} tone={yourNet > 0 ? 'gain' : yourNet < 0 ? 'alert' : undefined} />
-        <Tile value={accuracy.has(user.id) ? `${accuracy.get(user.id)}%` : '—'} label="accuracy" />
       </div>
 
       <div className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
         <div className="flex items-center gap-2.5 border-b border-rule bg-wash px-4 py-2.5">
           <span className="w-5 text-[10.5px] font-bold tracking-[0.08em] text-faint uppercase">#</span>
           <span className="flex-1 text-[10.5px] font-bold tracking-[0.08em] text-faint uppercase">Player</span>
-          <span className="w-[46px] text-right text-[10.5px] font-bold tracking-[0.08em] text-faint uppercase">Acc</span>
           <span className="w-[60px] text-right text-[10.5px] font-bold tracking-[0.08em] text-faint uppercase">Tokens</span>
         </div>
         {members.map((m, i) => {
@@ -192,7 +158,6 @@ export default async function LeaderboardPage({
                   {sub && <span className={cn('block text-[11px] text-faint', isMe && 'font-mono')}>{sub}</span>}
                 </span>
               </span>
-              <span className="w-[46px] text-right font-mono text-[12.5px] text-muted">{accuracy.has(m.user_id) ? `${accuracy.get(m.user_id)}%` : '—'}</span>
               <span className="w-[60px] text-right font-mono text-[14px] font-semibold text-ink">{formatTokens(m.balance)}</span>
             </Link>
           );
@@ -233,16 +198,10 @@ export default async function LeaderboardPage({
     const page = Math.max(1, Number(pageParam) || 1);
     const from = (page - 1) * SEASON_HISTORY_PAGE_SIZE;
 
-    const [{ data: standingsRows }, { data: mySettledBets }, { count: myBetCount }, { data: seasonRows }, { data: resultRows }] = await Promise.all([
+    const [{ data: standingsRows }, { count: myBetCount }, { data: seasonRows }, { data: resultRows }] = await Promise.all([
       // Every member's real all-time net, computed under elevated privilege (membership_ledger_net
       // is own-rows-only, so a plain select would show everyone else as 0).
       supabase.rpc('get_group_all_time_standings', { p_group_id: groupId }),
-      supabase
-        .from('bets')
-        .select('user_id, side, option_id, markets!inner(group_id, status, outcome, outcome_option_id)')
-        .eq('user_id', user.id)
-        .eq('markets.group_id', groupId)
-        .eq('markets.status', 'resolved'),
       supabase.from('bets').select('id, markets!inner(group_id)', { count: 'exact', head: true }).eq('markets.group_id', groupId).eq('user_id', user.id),
       supabase
         .from('seasons')
@@ -257,7 +216,6 @@ export default async function LeaderboardPage({
     const standings = (standingsRows ?? []) as { user_id: string; nickname: string; net: number; seasons_won: number }[];
     const mine = standings.find((s) => s.user_id === user.id);
     const myNet = Number(mine?.net ?? 0);
-    const myAccuracy = accuracyByUser((mySettledBets ?? []) as unknown as BetRow[]).get(user.id);
     const snapshotBySeason = new Map(
       (resultRows ?? []).map((r) => [r.season_id, r.snapshot as { champion?: { user_id: string; nickname: string }; final_balances?: { user_id: string }[] }])
     );
@@ -288,7 +246,6 @@ export default async function LeaderboardPage({
           <div className="mt-[11px] flex gap-3.5">
             <RecordStat value={formatSignedTokens(myNet)} label="net" accent />
             <RecordStat value={String(mine?.seasons_won ?? 0)} label={(mine?.seasons_won ?? 0) === 1 ? 'season won' : 'seasons won'} />
-            <RecordStat value={myAccuracy == null ? '—' : `${myAccuracy}%`} label="accuracy" />
             <RecordStat value={String(myBetCount ?? 0)} label="bets" />
           </div>
         </div>
@@ -402,7 +359,7 @@ export default async function LeaderboardPage({
   // Rendered here for both lenses and handed over as two finished headers: LeaderboardLenses is a
   // client component, and a function prop can't be passed to one from a server page.
   const header = (lens: 'current' | 'alltime') => (
-    <div className="flex items-start justify-between gap-3">
+    <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-3">
       <span className="min-w-0">
         <h1 className="text-[25px] font-extrabold tracking-[-0.022em] text-ink">Leaderboard</h1>
         <p className="mt-1.5 text-[13px] text-faint">{lens === 'alltime' && allTimeSubtitle ? allTimeSubtitle : seasonLine}</p>
@@ -425,11 +382,18 @@ export default async function LeaderboardPage({
           href={`/groups/${groupId}/settings`}
           className="flex shrink-0 items-center gap-[7px] rounded-[11px] border border-hairline bg-surface px-3 py-2"
         >
+          {isOwner ? (
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-ink">
             <circle cx="12" cy="12" r="3.1" />
             <path d="M19.1 14.4a1.5 1.5 0 0 0 .3 1.65l.05.06a1.8 1.8 0 1 1-2.55 2.55l-.06-.05a1.5 1.5 0 0 0-1.65-.3 1.5 1.5 0 0 0-.9 1.37V20a1.8 1.8 0 1 1-3.6 0v-.1a1.5 1.5 0 0 0-.98-1.37 1.5 1.5 0 0 0-1.65.3l-.06.05A1.8 1.8 0 1 1 5.45 16.3l.05-.06a1.5 1.5 0 0 0 .3-1.65 1.5 1.5 0 0 0-1.37-.9H4a1.8 1.8 0 1 1 0-3.6h.1a1.5 1.5 0 0 0 1.37-.98 1.5 1.5 0 0 0-.3-1.65l-.05-.06A1.8 1.8 0 1 1 7.67 4.85l.06.05a1.5 1.5 0 0 0 1.65.3h.07a1.5 1.5 0 0 0 .9-1.37V3.7a1.8 1.8 0 1 1 3.6 0v.1a1.5 1.5 0 0 0 .9 1.37 1.5 1.5 0 0 0 1.65-.3l.06-.05a1.8 1.8 0 1 1 2.55 2.55l-.05.06a1.5 1.5 0 0 0-.3 1.65v.07a1.5 1.5 0 0 0 1.37.9H20a1.8 1.8 0 1 1 0 3.6h-.1a1.5 1.5 0 0 0-1.37.9z" />
           </svg>
-          <span className="text-[12.5px] font-bold text-ink">Settings</span>
+          ) : (
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-ink">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 11v5.5M12 7.6v.1" />
+          </svg>
+          )}
+          <span className="text-[12.5px] font-bold text-ink">{isOwner ? 'Settings' : 'Info'}</span>
         </Link>
         </span>
       )}

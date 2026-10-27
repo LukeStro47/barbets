@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { formatTokens } from '@/lib/formatNumber';
@@ -27,43 +26,9 @@ export function StatusChip({ label, tone }: { label: string; tone: 'quiet' | 'in
   );
 }
 
-/** The Market / Comments tab pair: 13.5px, a 2px ink underline on the active one. */
-export function MarketTabs({
-  groupId,
-  marketId,
-  active,
-  commentCount,
-  className,
-}: {
-  groupId: string;
-  marketId: string;
-  active: 'market' | 'comments';
-  commentCount: number;
-  className?: string;
-}) {
-  const base = `/groups/${groupId}/markets/${marketId}`;
-  return (
-    <div className={cn('flex gap-[22px]', className)}>
-      <Link
-        href={base}
-        replace
-        className={cn('pb-2.5 text-[13.5px]', active === 'market' ? 'font-bold text-ink shadow-[inset_0_-2px_0_var(--color-ink)]' : 'font-semibold text-faint')}
-      >
-        Market
-      </Link>
-      <Link
-        href={`${base}?tab=comments`}
-        replace
-        className={cn(
-          'inline-flex items-center gap-1.5 pb-2.5 text-[13.5px]',
-          active === 'comments' ? 'font-bold text-ink shadow-[inset_0_-2px_0_var(--color-ink)]' : 'font-semibold text-faint'
-        )}
-      >
-        Comments <span className="font-mono text-[12px] text-faint">{commentCount}</span>
-      </Link>
-    </div>
-  );
-}
+// Lives in its own client file so the underline can move on tap; re-exported so callers keep
+// importing every market-page piece from here.
+export { MarketTabs } from '@/components/markets/MarketTabs';
 
 /** Title, one grey line under it, then the tabs on a hairline — the top of 4d/4h/4m/4n. */
 export function MarketTitleBlock({
