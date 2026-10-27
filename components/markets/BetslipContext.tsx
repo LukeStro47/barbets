@@ -1,52 +1,72 @@
 'use client';
 
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import type { ReactNode, RefObject } from 'react';
 
-/** What the drawer opens primed with: a side for yes_no/over_under, an option id for
+/** What the inline bet card is primed with: a side for yes_no/over_under, an option id for
  * multiple_choice. An **empty object** is meaningful and distinct from omitting the argument: it
- * says "open with nothing chosen," which is what "Pick a side" on the line ticket wants. */
+ * says "clear to nothing chosen," which is what "Pick a side" on the line ticket wants. */
 export interface BetslipPick {
   side?: string;
   optionId?: string;
 }
 
 interface BetslipState {
-  isOpen: boolean;
   pick: BetslipPick | null;
-  /** Open the drawer primed with a pick, cleared (`{}`), or on whatever was last selected (no argument). */
+  /** Set a pick and scroll the inline "Your bet" card into view — the design's own bet screens
+   * (4d/4h) put the bet form directly on the page rather than behind a drawer, so "open" now
+   * means "bring it into view already primed," not "reveal a hidden sheet." */
   open: (pick?: BetslipPick) => void;
-  close: () => void;
+  /** The DOM node BetslipBar's inline card registers itself under, so `open()` has something to
+   * scroll to. A ref object rather than a callback ref: BetslipBar needs to both read and set it. */
+  slipRef: RefObject<HTMLDivElement | null>;
+  /** The 5j ticket for a bet just placed. Held here, not in BetslipBar, because placing the bet
+   *  refreshes the page into its "you have a position" layout, which mounts a fresh BetslipBar:
+   *  local state would vanish and the ticket would flash and disappear. */
+  confirmed: ConfirmedBet | null;
+  setConfirmed: (c: ConfirmedBet | null) => void;
+}
+
+export interface ConfirmedBet {
+  amount: number;
+  label: string;
+  betId: string;
+  placedAt: string;
+  /** Pool and balance as of placing, so the ticket doesn't shift under the refresh. */
+  pool: number;
+  balanceAfter: number;
 }
 
 const BetslipCtx = createContext<BetslipState | null>(null);
 
 /**
- * Lets anything on the market page open the bet drawer primed with a specific pick, without
- * that control having to live inside `BetslipBar`. The drawer is pinned to the viewport and the
- * things that open it (the option rows in "What you can back", the two sides in the slip, the
- * Bet pill) are scattered across the page and the fixed bar, so the alternative was hoisting
- * half the page into one client component. Provider holds only the selection; `BetslipBar` still
- * owns the stake, the submit, and every piece of market data.
+ * Lets anything on the market page prime the inline bet card with a specific pick and scroll it
+ * into view, without that control having to live inside `BetslipBar` itself — currently just the
+ * sticky footer's amount pill (no pick, a plain scroll-back), but kept generic since a future
+ * caller elsewhere on the page (an odds row, a card summarizing "what you can back") is a real
+ * candidate to prime a specific side/option the same way the pre-Ledger explainer cards used to,
+ * before the bet form itself moved inline and made a separate "browse your options" card
+ * redundant. Provider holds only the selection and a scroll target; `BetslipBar` still owns the
+ * stake, the submit, and every piece of market data.
  */
 export function BetslipProvider({ children }: { children: ReactNode }) {
-  const [isOpen, setIsOpen] = useState(false);
   const [pick, setPick] = useState<BetslipPick | null>(null);
+  const [confirmed, setConfirmed] = useState<ConfirmedBet | null>(null);
+  const slipRef = useRef<HTMLDivElement | null>(null);
 
   const open = useCallback((next?: BetslipPick) => {
     if (next) setPick(next);
-    setIsOpen(true);
+    slipRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, []);
-  const close = useCallback(() => setIsOpen(false), []);
 
-  const value = useMemo(() => ({ isOpen, pick, open, close }), [isOpen, pick, open, close]);
+  const value = useMemo(() => ({ pick, open, slipRef, confirmed, setConfirmed }), [pick, open, confirmed]);
   return <BetslipCtx.Provider value={value}>{children}</BetslipCtx.Provider>;
 }
 
 /**
  * Returns null outside a provider rather than throwing: the explainer cards render on market
- * states where there is no betslip at all (a closed market's line still needs displaying), and
- * a hard throw would make an unrelated screen crash for want of a drawer nobody can open.
+ * states where there is no bet slip at all (a closed market's line still needs displaying), and
+ * a hard throw would make an unrelated screen crash for want of a bet card nobody can open.
  */
 export function useBetslip(): BetslipState | null {
   return useContext(BetslipCtx);

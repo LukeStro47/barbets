@@ -1,33 +1,40 @@
-import type { InputHTMLAttributes } from 'react';
+'use client';
+
+import { useState, type InputHTMLAttributes } from 'react';
 import { cn } from '@/lib/cn';
 
 /**
- * The underlined text field used by every pre-group form (sign in, sign up, forgot password,
- * reset password). Replaces the boxed `inputClasses` string that used to be copy-pasted into
- * AuthForms, ForgotPasswordForm and JoinFlow independently.
- *
- * The label sits above the input but comes *after* it in the DOM (`flex-col-reverse`), which is
- * what lets it react to focus with a plain `peer-focus:` variant instead of making this a client
- * component just to hold an isFocused boolean. The focus state thickens the rule from 1px to 2px
- * and takes a matching 1px off the bottom padding, so nothing below the field shifts.
+ * The bordered field every pre-group form uses (5b, 5c, 5f...): an uppercase caption above a
+ * 56px box, 16px radius, hairline border; focus goes to a 1.5px signal border with the soft
+ * signal glow. A password field gets 5b's "Show" toggle inside the box.
  */
 export function Field({
   label,
   className,
+  type,
   ...props
 }: { label: string } & InputHTMLAttributes<HTMLInputElement>) {
+  const [revealed, setRevealed] = useState(false);
+  const isPassword = type === 'password';
   return (
-    <label className="flex flex-col-reverse gap-2">
-      <input
+    <label className="flex flex-col">
+      <span className="text-[10.5px] font-bold tracking-[0.1em] text-faint uppercase">{label}</span>
+      <span
         className={cn(
-          'peer w-full border-b border-espresso-200 bg-transparent px-0.5 pt-1.5 pb-3 text-lg text-espresso-900',
-          'placeholder:text-espresso-500 focus:border-b-2 focus:border-honey-500 focus:pb-[11px] focus:outline-none',
-          className
+          'mt-2 flex h-14 items-center gap-3 rounded-2xl border border-hairline bg-surface px-[15px]',
+          'focus-within:border-[1.5px] focus-within:border-signal focus-within:px-[14.5px] focus-within:shadow-[0_0_0_4px_rgba(45,85,245,0.08)]'
         )}
-        {...props}
-      />
-      <span className="text-xs font-bold tracking-[1.4px] text-espresso-400 uppercase peer-focus:text-honey-700">
-        {label}
+      >
+        <input
+          type={isPassword && revealed ? 'text' : type}
+          className={cn('min-w-0 flex-1 border-0 bg-transparent p-0 text-[16px] font-semibold text-ink placeholder:font-normal placeholder:text-disabled-ink focus:outline-none', className)}
+          {...props}
+        />
+        {isPassword && (
+          <button type="button" onClick={() => setRevealed((r) => !r)} className="shrink-0 text-[12.5px] font-bold text-signal">
+            {revealed ? 'Hide' : 'Show'}
+          </button>
+        )}
       </span>
     </label>
   );

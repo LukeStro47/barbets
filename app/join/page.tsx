@@ -1,22 +1,16 @@
-import { AuthScreen } from '@/components/auth/AuthScreen';
-import { InviteCodeBoxes } from '@/components/groups/InviteCodeBoxes';
+import { createClient } from '@/lib/supabase/server';
+import { JoinWithCode } from '@/components/groups/JoinWithCode';
 
 /**
- * The splash's "I have an invite code" entry point, for someone holding a code but not a link.
- * Deliberately does no lookup of its own: submitting pushes to /join/[code], which is already the
- * one route that resolves a code, and which already bounces a signed-out visitor through
- * /login?next=/join/XXXX and lands them back on the invite afterward. Nothing about invite codes
- * is checked before an account exists, so this page needs no auth of its own either way.
+ * 5f, the "Got a group code?" entry point, for someone holding a code but not a link. The code is
+ * checked here before moving on (see JoinWithCode), then /join/[code] does the real work,
+ * including bouncing a signed-out visitor through sign-up and back to the invite.
  */
-export default function JoinCodePage() {
-  return (
-    <AuthScreen
-      title="Punch in your code."
-      subtitle="Four characters, from whoever invited you. We'll take you straight to their group."
-    >
-      <div className="mt-10">
-        <InviteCodeBoxes tone="paper" />
-      </div>
-    </AuthScreen>
-  );
+export default async function JoinCodePage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const startGroupHref = user ? '/groups/new' : `/login?mode=signup&next=${encodeURIComponent('/groups/new')}`;
+  return <JoinWithCode startGroupHref={startGroupHref} />;
 }

@@ -12,7 +12,7 @@ export default async function OwnerToolsPage({ params }: { params: Promise<{ gro
   const { group, settings, activeSeasonRow, roster, isPublic } = ctx;
 
   return (
-    <main className="mx-auto flex max-w-lg flex-col gap-5 px-5 pb-7 pt-[30px]">
+    <main className="mx-auto flex max-w-lg flex-col gap-5 px-5 pb-7 pt-8">
       <PageHeader title="Owner tools" backHref={`/groups/${groupId}/settings`} backLabel={groupSetupTitle(true)} />
 
       <OwnerOnlySection

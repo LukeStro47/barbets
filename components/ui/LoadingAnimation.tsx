@@ -1,38 +1,39 @@
-/** The die/coin tumble-and-hop animation used by BootSplash and every route
-    loading.tsx. Plain inline SVG + CSS keyframes (see globals.css) — no
-    external fetch, no iframe, so it's always instant and self-contained. */
-export function LoadingAnimation({ label = 'LOADING' }: { label?: string }) {
+import { cn } from '@/lib/cn';
+
+/**
+ * 5i: "The loader, a book settling." Two stakes pushing against each other on one bar, the split
+ * never quite resting — no spinner anywhere in the app, waiting always looks like a market finding
+ * its price. Both halves run the same 2.4s curve (bb-settle/bb-settle-b in globals.css) so the
+ * seam always moves together.
+ *
+ * Three sizes, per the spec card: `lg` full screen on ink (10px, blue against white), `sm` on
+ * light (6px, blue against ink), `inline` a 26x4 sliver beside a label.
+ */
+export function SettleBar({ size = 'sm', dark = false, className }: { size?: 'lg' | 'sm' | 'inline'; dark?: boolean; className?: string }) {
   return (
-    <div className="flex flex-col items-center gap-[26px]">
-      <div className="animate-die-hop">
-        <div className="h-[88px] w-[88px] animate-die-tumble">
-          <svg width="88" height="88" viewBox="0 0 120 120" aria-hidden="true">
-            <rect x="2" y="2" width="116" height="116" rx="26" fill="#33291E" />
-            <circle cx="27" cy="27" r="8" fill="#D8A55C" />
-            <circle cx="93" cy="93" r="8" fill="#D8A55C" />
-            <text
-              x="60"
-              y="80"
-              textAnchor="middle"
-              fontFamily="var(--font-bricolage), sans-serif"
-              fontWeight="800"
-              fontSize="56"
-              fill="#FBF6EA"
-            >
-              B
-            </text>
-          </svg>
-        </div>
-      </div>
-      <div className="h-3 w-[76px] rounded-full bg-[#33291E] animate-die-shadow" />
-      <div className="mt-1.5 flex items-center gap-2">
-        <span className="text-[15px] font-bold tracking-[4px] text-[#8A7E6C]">{label}</span>
-        <span className="flex gap-[5px]">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#D8A55C] animate-dot-blink" />
-          <span className="h-1.5 w-1.5 rounded-full bg-[#D8A55C] animate-dot-blink [animation-delay:0.2s]" />
-          <span className="h-1.5 w-1.5 rounded-full bg-[#D8A55C] animate-dot-blink [animation-delay:0.4s]" />
-        </span>
-      </div>
+    <div
+      aria-hidden
+      className={cn(
+        'relative overflow-hidden rounded-full',
+        size === 'lg' ? 'h-[10px] w-full' : size === 'sm' ? 'h-[6px] w-full' : 'h-1 w-[26px] shrink-0',
+        dark ? 'bg-white/[0.13]' : size === 'lg' ? 'bg-rule' : 'bg-rule',
+        className
+      )}
+    >
+      <span className="absolute inset-0 origin-left animate-bb-settle bg-signal" />
+      <span className={cn('absolute inset-0 origin-right animate-bb-settle-b', dark ? 'bg-surface' : 'bg-ink')} />
+    </div>
+  );
+}
+
+/** The bar plus its caption, for route loading states and the boot splash. `size="sm"` drops to
+ *  the 6px light bar with no caption, for inside a card (5j). */
+export function LoadingAnimation({ label = 'Loading', dark = false, size }: { label?: string; dark?: boolean; size?: 'sm' }) {
+  if (size === 'sm') return <SettleBar size="sm" dark={dark} />;
+  return (
+    <div className="flex w-[220px] flex-col items-center gap-[18px]">
+      <SettleBar size="lg" dark={dark} />
+      <span className={cn('animate-bb-fade font-mono text-xs tracking-[0.06em]', dark ? 'text-[#a8b0bd]' : 'text-faint')}>{label}</span>
     </div>
   );
 }

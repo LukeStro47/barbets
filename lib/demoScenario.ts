@@ -7,7 +7,7 @@
  */
 
 export const DEMO_QUESTION = 'Will Jake finish the marathon in under 4 hours?';
-export const DEMO_STARTING_BALANCE = 500;
+export const DEMO_STARTING_BALANCE = 1000;
 
 export type DemoSide = 'yes' | 'no';
 

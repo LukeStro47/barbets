@@ -9,7 +9,7 @@ export default async function NewGroupPage({ searchParams }: { searchParams: Pro
   const parsedSeedAmount = Number(seedAmount);
 
   return (
-    <main className="mx-auto flex min-h-[var(--flow-height)] max-w-lg flex-col px-5 pt-5 pb-8">
+    <main className="mx-auto flex min-h-[var(--flow-height)] max-w-[430px] flex-col px-[22px] pt-6 pb-[140px]">
       <CreateGroupForm
         initialName={name}
         initialSeedAmount={Number.isFinite(parsedSeedAmount) && parsedSeedAmount > 0 ? parsedSeedAmount : undefined}

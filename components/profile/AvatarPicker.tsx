@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { cloneElement, isValidElement, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
@@ -13,8 +13,8 @@ import { cn } from '@/lib/cn';
 type Step = 'closed' | 'menu' | 'cropping';
 
 /**
- * The one place a profile picture gets edited — its trigger lives on /profile/account now,
- * alongside email/password/delete, rather than as its own row on the main /profile page.
+ * The one place a profile picture gets edited. Its trigger lives on /profile/edit now, next to
+ * the per-group handle, so the screen can say that the picture shows in every group.
  *
  * `trigger` is whatever's tappable to open this (the avatar itself, sized however the caller
  * needs), passed as an already-rendered element rather than a render-prop function: a function
@@ -103,8 +103,8 @@ export function AvatarPicker({
 
       {step === 'menu' && (
         <Modal onClose={close}>
-          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">Profile picture</p>
-          {error && <p className="text-sm text-danger-700">{error}</p>}
+          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-ink">Profile picture</p>
+          {error && <p className="text-sm text-alert">{error}</p>}
 
           <div className="flex justify-center py-1">
             <UserAvatar
@@ -113,7 +113,7 @@ export function AvatarPicker({
               avatarUpdatedAt={avatarUpdatedAt}
               avatarPresetKey={avatarPresetKey}
               className="h-20 w-20 text-2xl"
-              fallbackClassName="bg-espresso-50 text-honey-700"
+              fallbackClassName="bg-rule text-signal-deep"
             />
           </div>
 
@@ -122,7 +122,7 @@ export function AvatarPicker({
           </Button>
 
           <div className="space-y-2">
-            <p className="text-xs font-bold text-espresso-500">Or pick an icon</p>
+            <p className="text-xs font-bold text-muted">Or pick an icon</p>
             <div className="flex flex-wrap gap-2.5">
               {GROUP_AVATARS.map((a) => (
                 <button
@@ -134,7 +134,7 @@ export function AvatarPicker({
                   title={a.label}
                   className={cn(
                     'flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-[1.5px] transition-colors',
-                    avatarPresetKey === a.key ? 'border-honey-500 bg-honey-50' : 'border-espresso-200 bg-paper-white'
+                    avatarPresetKey === a.key ? 'border-signal bg-signal-tint' : 'border-dash bg-surface'
                   )}
                 >
                   <img src={`/avatars/${a.key}.png`} alt={a.label} className="h-full w-full object-cover" />
@@ -148,7 +148,7 @@ export function AvatarPicker({
               type="button"
               disabled={isPending}
               onClick={remove}
-              className="w-full text-center text-[12.5px] font-semibold text-danger-700 hover:underline"
+              className="w-full text-center text-[12.5px] font-semibold text-alert hover:underline"
             >
               Remove and use initials
             </button>

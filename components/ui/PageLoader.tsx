@@ -27,7 +27,7 @@ export function PageLoader() {
   // along with the incoming page instead of sitting still — a portal sidesteps the whole
   // ancestor chain, landing this as a true sibling of the transformed wrapper, not a child of it.
   return createPortal(
-    <div className="fixed inset-0 z-20 flex items-center justify-center bg-[#EDE9E0]">
+    <div className="fixed inset-0 z-20 flex items-center justify-center bg-canvas">
       <LoadingAnimation />
     </div>,
     document.body

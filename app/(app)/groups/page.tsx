@@ -1,273 +1,260 @@
 import Link from 'next/link';
+import { standingOf } from '@/lib/standing';
 import { redirect } from 'next/navigation';
 import { createClient, requireUser } from '@/lib/supabase/server';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { Button } from '@/components/ui/Button';
-import { InviteCodeBoxes } from '@/components/groups/InviteCodeBoxes';
 import { StartGroupButton } from '@/components/groups/StartGroupButton';
 import { DiscoverGroupCard } from '@/components/groups/DiscoverGroupCard';
 import { PublicGroupsShelfRow } from '@/components/groups/PublicGroupsShelfRow';
-import { ChevronRightIcon } from '@/components/ui/icons';
+import { Greeting } from '@/components/groups/Greeting';
+import { GroupAvatar } from '@/components/ui/GroupAvatar';
+import { UserAvatar } from '@/components/ui/UserAvatar';
+import { BrandTile } from '@/components/ui/BrandMark';
+import { RowChevron } from '@/components/ui/Screen';
+import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { cn } from '@/lib/cn';
 import { formatSignedTokens, formatOrdinal, numberWordCapitalized } from '@/lib/formatNumber';
-import { GroupAvatar } from '@/components/ui/GroupAvatar';
-import { getGroupTaskCounts } from '@/lib/tasks';
+import { getGroupTasks, type GroupTask } from '@/lib/tasks';
 import { listPublicGroups } from '@/lib/actions/discover';
 import { isHomeSurfacePublicGroup } from '@/lib/publicGroups';
 
+/**
+ * 4q (you have groups) and 5h (you don't). 4q: the wordmark header with your own avatar, a
+ * greeting, everything across your groups that needs you, your groups with net and standing,
+ * the public-groups shelf, then New group / Join with code. 5h: an empty card, the two ways in
+ * (start one, join with a code), then the public groups open to anyone.
+ */
 export default async function GroupsHubPage({ searchParams }: { searchParams: Promise<{ all?: string }> }) {
   const { all } = await searchParams;
   const supabase = await createClient();
   const user = await requireUser(supabase);
-  const { data: groups } = await supabase
-    .from('groups')
-    .select('id, name, avatar_key, deletion_scheduled_at, is_public, memberships(user_id, balance, status)')
-    .order('created_at', { ascending: false });
+  const [{ data: groups }, { data: profile }] = await Promise.all([
+    supabase
+      .from('groups')
+      .select('id, name, avatar_key, deletion_scheduled_at, is_public, memberships(user_id, balance, status, nickname, joined_at)')
+      .order('created_at', { ascending: false }),
+    supabase.from('users').select('avatar_preset_key, avatar_updated_at').eq('id', user.id).single(),
+  ]);
 
-  // Net tokens per group — same definition the leaderboard page's "All-time net" card uses
-  // (every ledger entry except the seed itself, so reseeding for a new season doesn't count as
-  // "winning" tokens back). One row per group from membership_ledger_net, rather than every
-  // ledger row the viewer has ever had across every group summed here: this page renders one
-  // figure per card, and the raw rows behind it grow for the life of the group.
-  const { data: netRows } = await supabase.from('membership_ledger_net').select('group_id, net').eq('user_id', user.id);
-  const netByGroup = new Map<string, number>((netRows ?? []).map((r: { group_id: string; net: number }) => [r.group_id, Number(r.net)]));
-
-  // Which groups are currently sitting in intermission — a net-tokens figure there is stale
-  // (nothing's being wagered), so those cards show "Season ended" instead. Batched across every
-  // group, not queried per card, same reasoning the ledger query above already uses.
-  const groupIds = (groups ?? []).map((g) => g.id);
-  const { data: seasonsEnabledRows } =
-    groupIds.length > 0
-      ? await supabase.from('group_settings').select('group_id, seasons_enabled').in('group_id', groupIds)
-      : { data: [] };
-  const seasonsEnabledGroupIds = (seasonsEnabledRows ?? []).filter((r) => r.seasons_enabled).map((r) => r.group_id);
-  const { data: intermissionSeasonRows } =
-    seasonsEnabledGroupIds.length > 0
-      ? await supabase.from('seasons').select('group_id').in('group_id', seasonsEnabledGroupIds).eq('status', 'intermission')
-      : { data: [] };
-  const intermissionGroupIds = new Set((intermissionSeasonRows ?? []).map((r) => r.group_id));
-
-  // "N need you" / "N open" per row — same task definition the group hub's own waiting-on-you
-  // card uses, plus a plain count of currently-open markets.
-  const taskCounts = user ? await getGroupTaskCounts(supabase, groupIds, user.id) : new Map<string, number>();
-  const { data: openMarketRows } =
-    groupIds.length > 0 ? await supabase.from('markets').select('group_id').eq('status', 'open').in('group_id', groupIds) : { data: [] };
-  const openCountByGroup = new Map<string, number>();
-  for (const m of openMarketRows ?? []) {
-    openCountByGroup.set(m.group_id, (openCountByGroup.get(m.group_id) ?? 0) + 1);
-  }
-
-  // With exactly one group, skip straight to it — the hub is still reachable
-  // via ?all=1 (e.g. to join or start a second group).
+  // With exactly one group, skip straight to it — the hub is still reachable via ?all=1.
   if (!all && (groups ?? []).length === 1) {
     redirect(`/groups/${groups![0].id}`);
   }
 
-  // Groups whose current season has ended sink to the bottom — nothing to act on there right
-  // now, so they shouldn't compete with groups still being actively played for the top of the
-  // list. Public groups sink beneath the ones you actually started or were invited to as well
-  // (a directory join is a lighter commitment than a real friend group), but still above the
-  // between-seasons partition below, since a public group never has one. A stable sort (native
-  // Array#sort in every engine this app ships to) preserves the existing newest-first order
-  // within each of the resulting partitions.
-  const sortedGroups = [...(groups ?? [])].sort((a, b) => {
-    const intermissionDelta = (intermissionGroupIds.has(a.id) ? 1 : 0) - (intermissionGroupIds.has(b.id) ? 1 : 0);
-    if (intermissionDelta !== 0) return intermissionDelta;
-    return (a.is_public ? 1 : 0) - (b.is_public ? 1 : 0);
-  });
+  const groupIds = (groups ?? []).map((g) => g.id);
+  const [{ data: netRows }, { data: seasonsEnabledRows }, { data: openMarketRows }, publicGroupsResult, tasksByGroup] = await Promise.all([
+    supabase.from('membership_ledger_net').select('group_id, net').eq('user_id', user.id),
+    groupIds.length > 0 ? supabase.from('group_settings').select('group_id, seasons_enabled').in('group_id', groupIds) : Promise.resolve({ data: [] }),
+    groupIds.length > 0 ? supabase.from('markets').select('group_id').eq('status', 'open').in('group_id', groupIds) : Promise.resolve({ data: [] }),
+    listPublicGroups(),
+    Promise.all(groupIds.map((id) => getGroupTasks(supabase, id, user.id).then((r) => [id, r.tasks] as const))),
+  ]);
+  const netByGroup = new Map<string, number>((netRows ?? []).map((r: { group_id: string; net: number }) => [r.group_id, Number(r.net)]));
+  const seasonsEnabledIds = (seasonsEnabledRows ?? []).filter((r) => r.seasons_enabled).map((r) => r.group_id);
+  const { data: intermissionRows } =
+    seasonsEnabledIds.length > 0
+      ? await supabase.from('seasons').select('group_id').in('group_id', seasonsEnabledIds).eq('status', 'intermission')
+      : { data: [] };
+  const intermissionIds = new Set((intermissionRows ?? []).map((r) => r.group_id));
+  const openCount = new Map<string, number>();
+  for (const m of openMarketRows ?? []) openCount.set(m.group_id, (openCount.get(m.group_id) ?? 0) + 1);
+  const tasks = new Map<string, GroupTask[]>(tasksByGroup);
 
-  const hasGroups = (groups ?? []).length > 0;
+  const publicGroups = (publicGroupsResult.data ?? []).filter(isHomeSurfacePublicGroup);
+  const totalPublicOpen = publicGroups.reduce((sum, g) => sum + g.open_market_count, 0);
 
-  // The "Open to anyone" section (2A, zero-group user) / collapsed shelf row (2B, everyone
-  // else) — both scoped to the sports pipeline groups only, never 'campus'. See
-  // isHomeSurfacePublicGroup() for why.
-  const publicGroupsResult = await listPublicGroups();
-  const homeSurfacePublicGroups = (publicGroupsResult.data ?? []).filter(isHomeSurfacePublicGroup);
-  const hasPublicGroups = homeSurfacePublicGroups.length > 0;
-  const totalPublicOpenMarkets = homeSurfacePublicGroups.reduce((sum, g) => sum + g.open_market_count, 0);
-
-  // A group between seasons isn't a table you can sit down at right now, so it's counted (and
-  // listed) separately from the ones that are actually running.
-  const activeGroups = sortedGroups.filter((g: any) => !intermissionGroupIds.has(g.id));
-  const intermissionGroups = sortedGroups.filter((g: any) => intermissionGroupIds.has(g.id));
-  const groupsWantingYou = activeGroups.filter((g: any) => (taskCounts.get(g.id) ?? 0) > 0).length;
-
-  const headerCaption = [
-    `${numberWordCapitalized(activeGroups.length)} ${activeGroups.length === 1 ? 'table' : 'tables'}`,
-    // Dropped entirely at zero rather than rendered as "none want something from you" — an
-    // all-clear stated out loud reads as a reminder that there could have been something.
-    groupsWantingYou > 0 &&
-      `${numberWordCapitalized(groupsWantingYou)} want${groupsWantingYou === 1 ? 's' : ''} something from you`,
-  ]
-    .filter(Boolean)
-    .join(' · ');
-
-  return (
-    <main className="mx-auto max-w-lg space-y-[18px] px-5 py-8">
-      <PageHeader
-        title="Your groups"
-        subtitle={hasGroups ? <span className="text-[12.5px] text-espresso-400">{headerCaption}</span> : undefined}
+  const avatar = (
+    <Link href="/profile" aria-label="You">
+      <UserAvatar
+        userId={user.id}
+        nickname="you"
+        avatarUpdatedAt={profile?.avatar_updated_at ?? null}
+        avatarPresetKey={profile?.avatar_preset_key ?? null}
+        className="h-[30px] w-[30px] text-xs"
+        fallbackClassName="bg-tile text-muted"
       />
+    </Link>
+  );
 
-      {!hasGroups ? (
-        hasPublicGroups ? (
-          <div className="flex flex-col gap-2">
-            <div className="flex items-baseline justify-between gap-3 px-1">
-              <p className="text-[10.5px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">Open to anyone</p>
-              <span className="text-[11px] font-bold text-honey-700">No code needed</span>
+  // ── 5h: signed in, no groups ──────────────────────────────────────────────────────────────
+  if ((groups ?? []).length === 0) {
+    return (
+      <>
+        <header className="sticky top-0 z-40 -mt-[env(safe-area-inset-top)] border-b border-hairline bg-surface pt-[calc(env(safe-area-inset-top)+12px)]">
+          <div className="mx-auto flex max-w-[430px] items-center gap-[11px] px-3.5 pb-[11px]">
+            <span className="min-w-0 flex-1 text-[16px] font-extrabold tracking-[-0.015em] text-ink">Your groups</span>
+            {avatar}
+          </div>
+        </header>
+        <main className="mx-auto max-w-[430px] px-[22px] pt-9 pb-10">
+          <div className="rounded-[24px] border border-dashed border-dash bg-surface px-[22px] py-[30px] text-center">
+            <div className="mx-auto flex h-2.5 w-[132px] overflow-hidden rounded-full bg-rule">
+              <span className="h-full flex-1 bg-edge" />
+              <span className="h-full w-px bg-surface" />
+              <span className="h-full flex-1 bg-edge" />
             </div>
-            <div className="flex flex-col gap-2.5">
-              {homeSurfacePublicGroups.slice(0, 2).map((g) => (
-                <DiscoverGroupCard
-                  key={g.id}
-                  variant="compact"
-                  groupId={g.id}
-                  name={g.name}
-                  avatarKey={g.avatar_key}
-                  memberCount={g.member_count}
-                  openMarketCount={g.open_market_count}
-                  featuredMarketTitle={g.featured_market_title}
-                  featuredMarketBetCount={g.featured_market_bet_count}
-                />
-              ))}
-            </div>
-            <Link href="/groups/discover" className="flex items-center justify-center gap-1.5 py-1 pt-0.5 text-center text-[12.5px] font-bold">
-              See all public groups
-              <ChevronRightIcon className="h-[11px] w-[6px]" />
+            <h1 className="mt-[18px] text-[21px] leading-[1.2] font-extrabold tracking-[-0.02em] text-ink">Nothing to bet on yet</h1>
+            <p className="mt-2 text-[13px] leading-[1.5] text-muted text-pretty">
+              Barbets only works with people you know. Start a group, or join one you&apos;ve been told about.
+            </p>
+          </div>
+
+          <div className="mt-3.5 flex flex-col gap-[9px]">
+            <StartGroupButton variant="row" />
+            <Link href="/join" className="flex items-center gap-3 rounded-[18px] border border-hairline bg-surface p-4">
+              <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] bg-tile text-muted">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                  <path d="M4 12h16M14 6l6 6-6 6" />
+                </svg>
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[14.5px] font-bold text-ink">Join with a code</span>
+                <span className="mt-0.5 block text-[12px] text-faint">Four characters from a mate</span>
+              </span>
+              <RowChevron className="text-faint" />
             </Link>
           </div>
-        ) : (
-          <div className="space-y-3">
-            <EmptyState
-              title="No groups yet"
-              subtitle="Start one, or join with a friend's invite code below."
-              action={
-                <Link href="/demo" className="block">
-                  <Button size="lg" variant="accent" className="w-full">
-                    Try a live demo
-                  </Button>
-                </Link>
-              }
-            />
-          </div>
-        )
-      ) : (
-        <>
-          {activeGroups.length > 0 && (
-            <div className="flex flex-col gap-2.5">
-              {activeGroups.map((g: any) => {
-                // Same rank definition the leaderboard page uses: currently-playing members
-                // (active or dormant, i.e. not removed or left) sorted by balance descending,
-                // rank = array index + 1 — no RPC/window function needed for a row badge.
-                const ranked = (g.memberships ?? [])
-                  .filter((m: { status: string }) => m.status === 'active' || m.status === 'dormant')
-                  .sort((a: { balance: number }, b: { balance: number }) => b.balance - a.balance);
-                const myIndex = ranked.findIndex((m: { user_id: string }) => m.user_id === user?.id);
-                const myRank = myIndex + 1;
-                const myNet = netByGroup.get(g.id) ?? 0;
-                const needsYou = taskCounts.get(g.id) ?? 0;
-                const openCount = openCountByGroup.get(g.id) ?? 0;
 
-                return (
-                  <Link
+          {publicGroups.length > 0 && (
+            <>
+              <p className="mt-[22px] text-[10.5px] font-bold tracking-[0.1em] text-faint uppercase">Open to anyone</p>
+              <p className="mt-[5px] text-[12px] leading-[1.45] text-faint">Public groups are open for anyone. Join instantly, no invite needed.</p>
+              <div className="mt-2.5 flex flex-col gap-[9px]">
+                {publicGroups.map((g) => (
+                  <DiscoverGroupCard
                     key={g.id}
-                    href={`/groups/${g.id}`}
-                    className={cn(
-                      // The lift is the whole signal: a card asking for something sits slightly
-                      // proud of the ones that aren't, without needing a second accent colour.
-                      'flex items-center gap-3 rounded-[20px] border border-espresso-100 bg-paper-white p-3.5 transition-colors hover:border-espresso-200',
-                      needsYou > 0 && 'shadow-sm shadow-espresso-900/5'
-                    )}
-                  >
-                    <GroupAvatar
-                      name={g.name}
-                      avatarKey={g.avatar_key}
-                      className="h-12 w-12 text-[14px]"
-                      fallbackClassName={needsYou > 0 ? 'bg-espresso-900 text-honey-300' : 'bg-espresso-50 text-espresso-500'}
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="flex min-w-0 items-start gap-1.5">
-                        <p className="line-clamp-2 font-display text-[15.5px] leading-[1.15] font-extrabold tracking-[-0.01em] text-espresso-950">
-                          {g.name}
-                        </p>
-                        {g.is_public && (
-                          <span className="shrink-0 rounded-full bg-honey-100 px-1.5 py-[1px] text-[9.5px] font-extrabold tracking-[0.04em] text-honey-700 uppercase">
-                            Public
-                          </span>
-                        )}
-                      </span>
-                      <p className="mt-[3px] flex items-center gap-1.5 text-[12.5px] text-espresso-500">
-                        {needsYou > 0 && (
-                          <>
-                            <span className="inline-flex items-center gap-[5px] font-extrabold text-danger-700">
-                              <span className="h-1.5 w-1.5 rounded-full bg-danger-500" />
-                              {needsYou} need{needsYou === 1 ? 's' : ''} you
-                            </span>
-                            <span className="text-espresso-200">·</span>
-                          </>
-                        )}
-                        <span>{openCount > 0 ? `${openCount} open` : 'Nothing open right now'}</span>
-                      </p>
-                      {g.deletion_scheduled_at && <p className="mt-0.5 text-xs font-semibold text-danger-700">Being deleted</p>}
-                    </span>
-                    <span className="shrink-0 text-right">
-                      <span className={cn('block text-[15px] font-extrabold tabular-nums', myNet >= 0 ? 'text-success-700' : 'text-danger-700')}>
-                        {formatSignedTokens(myNet)}
-                      </span>
-                      <span className="mt-0.5 block text-[11px] text-espresso-400">
-                        {formatOrdinal(myRank)} of {ranked.length}
-                      </span>
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-
-          {hasPublicGroups && (
-            <PublicGroupsShelfRow
-              groups={homeSurfacePublicGroups.map((g) => ({ name: g.name, avatarKey: g.avatar_key }))}
-              totalOpenMarkets={totalPublicOpenMarkets}
-            />
-          )}
-
-          {intermissionGroups.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <p className="ml-1 text-[10.5px] font-extrabold tracking-[0.09em] text-espresso-400 uppercase">Between seasons</p>
-              {intermissionGroups.map((g: any) => (
-                <Link
-                  key={g.id}
-                  href={`/groups/${g.id}`}
-                  className="flex items-center gap-[11px] rounded-2xl bg-paper-dim px-3.5 py-[11px]"
-                >
-                  <GroupAvatar
+                    variant="compact"
+                    groupId={g.id}
                     name={g.name}
                     avatarKey={g.avatar_key}
-                    className="h-[34px] w-[34px] text-[11.5px]"
-                    fallbackClassName="bg-espresso-100 text-espresso-400"
+                    memberCount={g.member_count}
+                    openMarketCount={g.open_market_count}
+                    featuredMarketTitle={g.featured_market_title}
+                    featuredMarketBetCount={g.featured_market_bet_count}
                   />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13.5px] font-extrabold text-espresso-700">{g.name}</span>
-                    <span className="block text-[11.5px] text-espresso-400">Season ended · champion crowned</span>
-                  </span>
-                  <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-espresso-300" />
-                </Link>
-              ))}
-            </div>
+                ))}
+              </div>
+            </>
           )}
+        </main>
+      </>
+    );
+  }
 
-          <StartGroupButton />
-        </>
-      )}
+  // ── 4q: all groups ────────────────────────────────────────────────────────────────────────
+  // Groups between seasons sink to the bottom (nothing to act on), public groups beneath the
+  // ones you were actually invited to. Stable sort keeps newest-first within each.
+  const sorted = [...groups!].sort((a, b) => {
+    const d = (intermissionIds.has(a.id) ? 1 : 0) - (intermissionIds.has(b.id) ? 1 : 0);
+    return d !== 0 ? d : (a.is_public ? 1 : 0) - (b.is_public ? 1 : 0);
+  });
 
-      <div className="rounded-[22px] bg-gradient-to-br from-espresso-900 to-espresso-700 p-[18px]">
-        <p className="text-[15.5px] font-extrabold text-paper-white">Got an invite code?</p>
-        <p className="mt-0.5 text-[12.5px] text-paper-white/55">Four characters from whoever runs the group.</p>
-        <div className="mt-3.5">
-          <InviteCodeBoxes />
+  const needsYou = sorted.flatMap((g) => (tasks.get(g.id) ?? []).map((t) => ({ ...t, group: g }))).sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
+  const groupsNeedingYou = sorted.filter((g) => (tasks.get(g.id) ?? []).length > 0).length;
+  const myNickname =
+    [...groups!]
+      .flatMap((g) => (g.memberships ?? []).filter((m: { user_id: string }) => m.user_id === user.id))
+      .sort((a: { joined_at: string }, b: { joined_at: string }) => new Date(b.joined_at).getTime() - new Date(a.joined_at).getTime())[0]?.nickname ?? 'you';
+  const greetingName = myNickname.charAt(0).toUpperCase() + myNickname.slice(1);
+
+  return (
+    <>
+      <header className="sticky top-0 z-40 -mt-[env(safe-area-inset-top)] border-b border-hairline bg-surface pt-[calc(env(safe-area-inset-top)+12px)]">
+        <div className="mx-auto flex max-w-[430px] items-center gap-[9px] px-3.5 pb-[11px]">
+          <BrandTile size={22} />
+          <span className="min-w-0 flex-1 text-[16px] font-extrabold tracking-[-0.03em] text-ink">barbets</span>
+          {avatar}
         </div>
-      </div>
-    </main>
+      </header>
+      <main className="mx-auto max-w-[430px] px-[18px] pt-5 pb-10">
+        <Greeting name={greetingName} />
+        <p className="mt-1.5 text-[13px] text-faint">
+          {numberWordCapitalized(sorted.length)} group{sorted.length === 1 ? '' : 's'}
+          {groupsNeedingYou > 0 && (
+            <>
+              {' · '}
+              <span className="font-bold text-alert">{groupsNeedingYou} need{groupsNeedingYou === 1 ? 's' : ''} you</span>
+            </>
+          )}
+        </p>
+
+        {needsYou.length > 0 && (
+          <div className="mt-[15px] overflow-hidden rounded-[22px] border border-alert-line bg-surface">
+            <div className="flex items-center gap-2.5 border-b border-alert-line bg-alert-bg px-4 py-[11px]">
+              <span className="flex h-5 w-5 items-center justify-center rounded-md bg-alert text-[11px] font-bold text-surface">{needsYou.length}</span>
+              <span className="flex-1 text-[10.5px] font-bold tracking-[0.08em] text-alert uppercase">Needs you</span>
+            </div>
+            {needsYou.map((t) => (
+              <Link
+                key={`${t.group.id}:${t.marketId}:${t.type}`}
+                href={`/groups/${t.group.id}/markets/${t.marketId}`}
+                className="flex items-center gap-[11px] border-b border-row-rule px-4 py-3 last:border-b-0"
+              >
+                <GroupAvatar name={t.group.name} avatarKey={t.group.avatar_key} className="h-[26px] w-[26px] text-[9px]" fallbackClassName="bg-ink text-on-ink" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px] leading-[1.35] font-bold text-ink">
+                    {t.marketTitle}, {t.type === 'endorse' ? 'endorse it' : t.type === 'review' ? 'check the result' : 'vote on the result'}
+                  </span>
+                  <span className="mt-0.5 block truncate text-[11.5px] text-faint">
+                    {t.group.name} · <CountdownTimer target={t.deadline} prefix="" /> left
+                  </span>
+                </span>
+                <span className="shrink-0 rounded-[10px] bg-signal px-[11px] py-1.5 text-[12px] font-bold text-surface">{t.type === 'endorse' ? 'Endorse' : t.type === 'review' ? 'Review' : 'Vote'}</span>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-[13px] overflow-hidden rounded-[22px] border border-hairline bg-surface">
+          <div className="flex items-center justify-between gap-2.5 border-b border-rule bg-wash px-4 py-[11px]">
+            <span className="text-[10.5px] font-bold tracking-[0.08em] text-faint uppercase">Your groups</span>
+            <span className="text-[10.5px] font-bold tracking-[0.08em] text-faint uppercase">Net · standing</span>
+          </div>
+          {sorted.map((g) => {
+            const playing = (g.memberships ?? [])
+              .filter((m: { status: string }) => m.status === 'active' || m.status === 'dormant')
+              .sort((a: { balance: number }, b: { balance: number }) => b.balance - a.balance);
+            const rank = standingOf(playing, user.id).rank ?? 0;
+            const net = netByGroup.get(g.id) ?? 0;
+            const waiting = (tasks.get(g.id) ?? []).length;
+            const open = openCount.get(g.id) ?? 0;
+            const between = intermissionIds.has(g.id);
+            return (
+              <Link key={g.id} href={`/groups/${g.id}`} className="flex items-center gap-3 border-b border-row-rule px-4 py-[13px] last:border-b-0">
+                <GroupAvatar name={g.name} avatarKey={g.avatar_key} className="h-[38px] w-[38px] text-[12px]" fallbackClassName="bg-ink text-on-ink" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[14.5px] font-bold tracking-[-0.01em] text-ink">{g.name}</span>
+                  <span className="mt-1 flex items-center gap-1.5">
+                    {waiting > 0 && (
+                      <span className="shrink-0 rounded-lg bg-alert-bg px-1.5 py-0.5 text-[10.5px] font-bold text-alert">{waiting} need you</span>
+                    )}
+                    <span className="min-w-0 truncate text-[11.5px] text-faint">
+                      {g.deletion_scheduled_at ? 'Being deleted' : between ? 'Season ended' : open > 0 ? `${open} open` : 'Nothing open'}
+                    </span>
+                  </span>
+                </span>
+                <span className="shrink-0 text-right">
+                  <span className={cn('block font-mono text-[14px] font-semibold', net > 0 ? 'text-gain' : net < 0 ? 'text-alert' : 'text-ink')}>{formatSignedTokens(net)}</span>
+                  <span className="mt-[3px] block font-mono text-[11px] text-faint">{rank > 0 ? formatOrdinal(rank) : '—'}</span>
+                </span>
+                <RowChevron className="text-dash" />
+              </Link>
+            );
+          })}
+        </div>
+
+        {publicGroups.length > 0 && (
+          <div className="mt-[13px]">
+            <PublicGroupsShelfRow totalOpenMarkets={totalPublicOpen} />
+          </div>
+        )}
+
+        <div className="mt-[13px] flex gap-[9px]">
+          <StartGroupButton variant="button" />
+          <Link href="/join" className="flex h-12 flex-1 items-center justify-center rounded-[14px] border border-hairline bg-surface text-[13.5px] font-bold text-ink">
+            Join with code
+          </Link>
+        </div>
+      </main>
+    </>
   );
 }

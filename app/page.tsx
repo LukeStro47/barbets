@@ -1,18 +1,13 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { StackedLogo } from '@/components/ui/StackedLogo';
-import { Button } from '@/components/ui/Button';
-import { InfoIcon } from '@/components/ui/icons';
+import { Wordmark } from '@/components/ui/BrandMark';
 
 /**
- * First touch: pick between making an account, redeeming an invite, and signing in. Deliberately
- * a splash rather than a marketing page — most arrivals are on a friend's invite link and already
- * know what this is, so the screen's whole job is to route them, not to sell.
- *
- * "How it works" moved out of the button stack and into the corner pill: as the third full-width
- * button it competed with Sign in for the same glance, and it's the one thing here nobody needs
- * in order to proceed.
+ * 5a2: the signed-out front door. The wordmark, the pitch, a sample market drawn exactly like a
+ * real one (an illustration, not live data — nobody signed out may see a real group's markets),
+ * the two rules that make barbets different, then Create an account / Log in / Got a group code?
+ * A cold invite link never lands here (/join/[code] has its own preview, 5o).
  */
 export default async function LandingPage() {
   const supabase = await createClient();
@@ -22,57 +17,64 @@ export default async function LandingPage() {
   if (user) redirect('/groups');
 
   return (
-    <main className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-paper px-6 py-11 pt-[calc(env(safe-area-inset-top)+2.75rem)] text-center">
-      <div
-        aria-hidden
-        className="animate-splash-glow pointer-events-none absolute top-[120px] left-1/2 -ml-[210px] h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,rgba(232,163,61,0.35)_0%,rgba(232,163,61,0)_68%)]"
-      />
+    <main className="mx-auto min-h-dvh max-w-[430px] bg-canvas px-[22px] pt-[calc(env(safe-area-inset-top)+58px)] pb-[200px]">
+      <Wordmark size={22} />
 
-      <Link
-        href="/how-it-works"
-        className="absolute top-[calc(env(safe-area-inset-top)+1.5rem)] right-5 inline-flex items-center gap-1.5 rounded-full border border-espresso-100 bg-paper-white py-2 pr-3.5 pl-3 text-[13px] font-semibold whitespace-nowrap text-espresso-700"
-      >
-        <InfoIcon className="h-[15px] w-[15px] text-honey-700" />
-        How it works
-      </Link>
+      <h1 className="mt-[26px] text-[34px] leading-[1.08] font-extrabold tracking-[-0.032em] text-ink text-pretty">Settle it properly.</h1>
+      <p className="mt-3 text-[15px] leading-[1.5] text-muted text-pretty">
+        Your group, your arguments, on the record.
+      </p>
 
-      <div className="animate-splash-rise relative flex flex-col items-center">
-        <StackedLogo height={190} />
-        <h1 className="mt-[26px] max-w-[320px] font-display text-[26px]/[30px] font-extrabold tracking-[-0.02em] text-pretty text-espresso-900">
-          Bet on your friends, and everything else.
-        </h1>
-        <p className="mt-3.5 max-w-[290px] text-base/[23px] text-espresso-500">
-          Private prediction markets about anything. Play money, real odds.
-        </p>
+      <div aria-hidden className="mt-[26px] overflow-hidden rounded-[22px] border border-hairline bg-surface shadow-[0_1px_2px_rgba(12,16,24,0.04)]">
+        <div className="flex items-center gap-[9px] px-4 pt-[13px]">
+          <img src="/avatars/beer.png" alt="" className="h-5 w-5 rounded-full object-cover" />
+          <span className="text-[11.5px] font-bold text-faint">Wednesday Wagers</span>
+          <span className="ml-auto font-mono text-[11.5px] font-semibold text-signal">2h 15m</span>
+        </div>
+        <p className="px-4 pt-[9px] pb-[13px] text-[18px] leading-[1.28] font-bold tracking-[-0.015em] text-ink text-pretty">Will Jake finish the marathon?</p>
+        <div className="flex gap-2 px-4 pb-3.5">
+          <span className="flex-1 rounded-xl bg-ink py-[11px] text-center text-[14px] font-bold text-surface">Yes</span>
+          <span className="flex-1 rounded-xl border border-hairline bg-tile py-[11px] text-center text-[14px] font-bold text-muted">No</span>
+        </div>
+        <div className="flex items-center gap-[9px] border-t border-rule px-4 py-[11px] font-mono text-[12px] text-faint">
+          <span className="font-semibold text-ink">1,240</span>
+          <span>pooled</span>
+          <span className="h-[3px] w-[3px] rounded-full bg-dash" />
+          <span className="font-semibold text-ink">7</span>
+          <span>in</span>
+        </div>
       </div>
 
-      <div className="relative mt-11 flex w-full max-w-[330px] flex-col gap-3">
-        <Link href="/login?mode=signup" className="w-full">
-          <Button
-            variant="accent"
-            size="xl"
-            className="w-full shadow-[0_8px_22px_-10px_rgba(172,111,24,0.5)]"
-          >
-            Start betting
-          </Button>
-        </Link>
-        <Link
-          href="/join"
-          className="w-full rounded-full border border-espresso-200 px-6 py-[15px] text-base font-semibold text-espresso-900"
-        >
-          I have an invite code
-        </Link>
+      <div className="mt-5 flex flex-col gap-[11px]">
+        {[
+          ['No odds while it’s open.', 'The pool sets the price when betting shuts.'],
+          ['You call the results', 'between your group, no house, no referee.'],
+        ].map(([lead, rest]) => (
+          <div key={lead} className="flex gap-[11px]">
+            <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[7px] bg-signal-tint text-signal">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                <path d="M2 6.3 4.6 9 10 3.2" />
+              </svg>
+            </span>
+            <span className="min-w-0 flex-1 text-[13px] leading-[1.45] text-muted text-pretty">
+              <span className="font-bold text-ink">{lead}</span> {rest}
+            </span>
+          </div>
+        ))}
       </div>
 
-      <div className="relative mt-[26px] flex w-full max-w-[330px] items-center gap-2.5">
-        <span className="h-px flex-1 bg-espresso-100" />
-        <span className="text-base text-espresso-500">
-          Been here before?{' '}
-          <Link href="/login" className="font-bold text-espresso-900 underline underline-offset-4">
-            Sign in
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-hairline bg-surface/[0.96] px-[18px] pt-3 pb-[max(28px,env(safe-area-inset-bottom))] backdrop-blur-[8px]">
+        <div className="mx-auto flex max-w-[430px] flex-col gap-[9px]">
+          <Link href="/login?mode=signup" className="block rounded-[14px] bg-signal py-[15px] text-center text-[15px] font-bold text-surface shadow-[0_10px_20px_-10px_rgba(45,85,245,0.7)]">
+            Create an account
           </Link>
-        </span>
-        <span className="h-px flex-1 bg-espresso-100" />
+          <Link href="/login" className="block rounded-[14px] border border-hairline bg-surface py-[14px] text-center text-[15px] font-bold text-ink">
+            Log in
+          </Link>
+          <Link href="/join" className="pt-0.5 text-center text-[13px] font-semibold text-faint">
+            Got a group code?
+          </Link>
+        </div>
       </div>
     </main>
   );

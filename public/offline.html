@@ -24,25 +24,40 @@
         align-items: center;
         justify-content: center;
         text-align: center;
-        background: #faf6ef;
-        color: #705441;
+        background: #f6f7f9;
+        color: #5a6373;
         font-family:
           ui-sans-serif, system-ui, -apple-system, sans-serif;
         padding: 40px 20px calc(env(safe-area-inset-bottom) + 40px);
         padding-top: calc(env(safe-area-inset-top) + 40px);
       }
-      img {
-        height: 96px;
-        width: auto;
+      /* The 3ac "b" tile drawn as type, same as BrandTile size={64} on app/offline/page.tsx, so
+         there's no image to bundle. Greyed out, like the web page's opacity-50 grayscale. */
+      .tile {
+        width: 64px;
+        height: 64px;
+        border-radius: 15px;
+        background: #2d55f5;
+        color: #ffffff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 37px;
+        font-weight: 800;
+        letter-spacing: -0.05em;
+        line-height: 1;
         opacity: 0.5;
         filter: grayscale(1);
+      }
+      .tile span {
+        margin-top: -3px;
       }
       h1 {
         font-size: 30px;
         line-height: 34px;
         font-weight: 800;
         letter-spacing: -0.03em;
-        color: #2c1f17;
+        color: #0c1018;
         margin: 28px 0 0;
       }
       p {
@@ -58,22 +73,22 @@
         width: 100%;
         max-width: 330px;
         padding: 16px 24px;
-        border: 1px solid #cbb6a2;
-        border-radius: 999px;
+        border: 1px solid #cfd6e2;
+        border-radius: 14px;
         background: transparent;
-        color: #2c1f17;
+        color: #0c1018;
         font-size: 17px;
         font-weight: 700;
         font-family: inherit;
         cursor: pointer;
       }
       button:active {
-        background: #f2eae1;
+        background: #eef0f4;
       }
     </style>
   </head>
   <body>
-    <img src="/barbets-coin.png" alt="" />
+    <div class="tile" aria-hidden="true"><span>b</span></div>
     <h1 id="headline">You're offline.</h1>
     <p id="body">
       Odds and balances move too fast to show you a guess. Reconnect and we'll pick up where you left off.

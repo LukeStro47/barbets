@@ -1,486 +1,516 @@
 import Link from 'next/link';
+import { standingOf } from '@/lib/standing';
 import { createClient, requireUser } from '@/lib/supabase/server';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { Card } from '@/components/ui/Card';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { Mention } from '@/components/ui/Mention';
 import { UserAvatar } from '@/components/ui/UserAvatar';
+import { RowChevron } from '@/components/ui/Screen';
 import { LeaderboardLenses } from '@/components/groups/LeaderboardLenses';
-import { SeasonStakesBand } from '@/components/groups/SeasonStakesBand';
 import { AwardGlyph } from '@/components/groups/AwardGlyph';
-import { ChevronRightIcon } from '@/components/ui/icons';
-import { formatTokens, formatOrdinal, numberWord } from '@/lib/formatNumber';
+import { getGroupBarSwitcherState } from '@/lib/groupBar';
+import { GroupBar } from '@/components/layout/GroupBar';
+import { formatTokens, formatOrdinal, formatSignedTokens, numberWord } from '@/lib/formatNumber';
 import { TITLE_ORDER, type GroupTitleRow } from '@/lib/titles';
 import { cn } from '@/lib/cn';
 
-/** No medals (or a "winner") while nobody's actually bet yet — every balance still tied at the
- * seed amount makes rank 0 an artifact of query order, not a result. */
-function medal(rank: number, noBetsPlaced: boolean): string {
-  if (noBetsPlaced) return `${rank + 1}.`;
-  return rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : `${rank + 1}.`;
+function formatShortDate(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getDate()} ${d.toLocaleDateString('en-GB', { month: 'short' })}`;
 }
 
-/** "Aug 1, '26" — short enough to sit next to the season number without wrapping. */
-function formatSeasonDate(iso: string): string {
-  const d = new Date(iso);
-  return `${d.toLocaleDateString('en-US', { month: 'short' })} ${d.getDate()}, '${String(d.getFullYear()).slice(2)}`;
+type BetRow = { user_id: string; side: string | null; option_id: string | null; markets: { outcome: string | null; outcome_option_id: string | null } };
+
+/** Correct / resolved, per member, from bets on resolved markets (void excluded — those markets
+ *  resolve to status 'voided', not 'resolved'). Other members' bets are readable once a market
+ *  has resolved, same read the reveal page makes. */
+function accuracyByUser(rows: BetRow[]): Map<string, number> {
+  const tally = new Map<string, { right: number; total: number }>();
+  for (const b of rows) {
+    const t = tally.get(b.user_id) ?? { right: 0, total: 0 };
+    t.total += 1;
+    if (b.option_id ? b.option_id === b.markets.outcome_option_id : b.side === b.markets.outcome) t.right += 1;
+    tally.set(b.user_id, t);
+  }
+  return new Map([...tally].map(([id, t]) => [id, Math.round((t.right / t.total) * 100)]));
 }
 
 const SEASON_HISTORY_PAGE_SIZE = 10;
 
+/**
+ * 4f / 4r. The Group tab lands here: the leaderboard for this season, with the whole history one
+ * tap away on All time. Settings' one entry point is the button beside the title (the group bar
+ * opens the switcher rather than linking here).
+ */
 export default async function LeaderboardPage({
   params,
   searchParams,
 }: {
   params: Promise<{ groupId: string }>;
-  searchParams: Promise<{ page?: string; lens?: string }>;
+  searchParams: Promise<{ page?: string; lens?: string; all?: string }>;
 }) {
   const { groupId } = await params;
-  const { page: pageParam, lens: lensParam } = await searchParams;
+  const { page: pageParam, lens: lensParam, all: allParam } = await searchParams;
   const supabase = await createClient();
-
   const user = await requireUser(supabase);
 
-  const { data: settings } = await supabase
-    .from('group_settings')
-    .select('seasons_enabled, awards_enabled, prize_text, punishment_text')
-    .eq('group_id', groupId)
-    .single();
-  const { data: group } = await supabase.from('groups').select('is_public, owner_id').eq('id', groupId).single();
+  const [{ data: settings }, { data: group }, switcherState, { data: activeMembers }, { data: leftMembers }] = await Promise.all([
+    supabase.from('group_settings').select('seasons_enabled, awards_enabled, prize_text, punishment_text, seed_amount').eq('group_id', groupId).single(),
+    supabase.from('groups').select('name, avatar_key, is_public, owner_id').eq('id', groupId).single(),
+    getGroupBarSwitcherState(supabase, groupId, user.id),
+    supabase.from('memberships').select('id, user_id, balance, status, nickname, role').eq('group_id', groupId).in('status', ['active', 'dormant']),
+    supabase.from('memberships').select('id, user_id, balance, status, nickname').eq('group_id', groupId).eq('status', 'left'),
+  ]);
 
-  const { data: activeMembers } = await supabase
-    .from('memberships')
-    .select('id, user_id, balance, status, nickname, role')
-    .eq('group_id', groupId)
-    .in('status', ['active', 'dormant']);
-
-  // A member who's left only stays on the leaderboard if they actually played — otherwise
-  // leaving is clean, with no trace anywhere. "Played" means a real bet, or a non-seed ledger
-  // entry (covers e.g. a zero-winner-pool creator/endorser cut with no bet of their own).
-  const { data: leftMembers } = await supabase
-    .from('memberships')
-    .select('id, user_id, balance, status, nickname')
-    .eq('group_id', groupId)
-    .eq('status', 'left');
-
+  // A member who's left only stays on the board if they actually played (a real bet, or a
+  // non-seed ledger entry) — group_members_who_played answers that without disclosing amounts.
   let members: any[] = activeMembers ?? [];
   if (leftMembers && leftMembers.length > 0) {
     const leftUserIds = leftMembers.map((m) => m.user_id);
     const leftMembershipIds = leftMembers.map((m) => m.id);
     const [{ data: leftBetRows }, { data: leftPlayedRows }] = await Promise.all([
       supabase.from('bets').select('user_id, markets!inner(group_id)').eq('markets.group_id', groupId).in('user_id', leftUserIds),
-      // Not a direct `ledger` read, and not membership_ledger_net either: both are own-rows-only
-      // for the caller, so asking either about someone *else* silently answers "no" and this whole
-      // half of the OR does nothing. group_members_who_played is SECURITY DEFINER and returns
-      // membership ids only, never amounts (see its migration for why that disclosure is the
-      // narrow one). It also answers as soon as a bet is placed, where the `bets` half above has
-      // to wait for the market to resolve before other members can see it.
       supabase.rpc('group_members_who_played', { p_group_id: groupId, p_membership_ids: leftMembershipIds }),
     ]);
     const membershipIdToUserId = new Map(leftMembers.map((m) => [m.id, m.user_id]));
-    const activeLeftUserIds = new Set([
+    const played = new Set([
       ...(leftBetRows ?? []).map((b: any) => b.user_id),
       ...((leftPlayedRows ?? []) as { played_membership_id: string }[])
         .map((r) => membershipIdToUserId.get(r.played_membership_id))
         .filter((id): id is string => !!id),
     ]);
-    members = [...members, ...leftMembers.filter((m) => activeLeftUserIds.has(m.user_id))];
+    members = [...members, ...leftMembers.filter((m) => played.has(m.user_id))];
   }
   members.sort((a, b) => b.balance - a.balance);
 
-  const isOwner = group?.owner_id === user?.id;
-  const canEditStakes = isOwner && !group?.is_public;
+  const isPublic = !!group?.is_public;
+  const isOwner = group?.owner_id === user.id;
 
-  // One batched lookup for every member's avatar rather than a query inside the row loop below
-  // (see lib/groupFeed.ts's "no query inside a per-market loop" rule, same idea applied here).
-  // No profile pictures in a public group, for anyone — an empty map means every UserAvatar below
-  // falls back to initials, same as a member who never uploaded a photo.
-  const { data: avatarRows } = group?.is_public
-    ? { data: [] }
-    : await supabase
-        .from('users')
-        .select('id, avatar_updated_at, avatar_preset_key')
-        .in(
-          'id',
-          members.map((m) => m.user_id)
-        );
-  const avatarByUser = new Map((avatarRows ?? []).map((r) => [r.id, r]));
-
-  const { data: titleRows } = await supabase.from('group_titles').select('title_key, user_id, stat_value').eq('group_id', groupId);
-  const yourTitleCount = ((titleRows ?? []) as GroupTitleRow[]).filter((r) => r.user_id && r.user_id === user?.id).length;
-
-  // ---- The hero: who's in front, and where you are relative to them. Both figures already exist
-  // in `members`; the only extra read is the season this is all happening in.
-  //
-  // There used to be a "up N this week" trend line beside the leader's total, built from their
-  // last seven days of `ledger`. It was removed rather than fixed: `ledger_select_own` is
-  // own-rows-only, so that query returned zero rows for every viewer except the leader
-  // themselves, and the fallback branch confidently told everyone else "level this week" no
-  // matter what had actually happened. Restoring it means a SECURITY DEFINER function and a
-  // deliberate decision that one member's weekly swing is another's to see, which is a product
-  // question rather than a bug fix. Don't re-add it by reading `ledger` directly; that is the
-  // version that silently doesn't work.
-  // Any status, not just active — this is how the hero and lens label know to switch into their
-  // season-over framing. Note `latestSeason` is the *next* season's row once intermission starts
-  // (see _finalize_season), so the season this page is actually recapping is number - 1.
+  // Any status, so the page knows when it's showing a season's frozen final. `latestSeason` is the
+  // *next* season's row once intermission starts, so the season being recapped is number - 1.
   const { data: latestSeason } = settings?.seasons_enabled
-    ? await supabase.from('seasons').select('id, number, name, started_at, status').eq('group_id', groupId).order('number', { ascending: false }).limit(1).maybeSingle()
+    ? await supabase
+        .from('seasons')
+        .select('id, number, name, started_at, ends_at, status')
+        .eq('group_id', groupId)
+        .order('number', { ascending: false })
+        .limit(1)
+        .maybeSingle()
     : { data: null };
   const isIntermission = latestSeason?.status === 'intermission';
-  const heroSeason = latestSeason?.status === 'active' ? latestSeason : null;
-
+  const activeSeason = latestSeason?.status === 'active' || latestSeason?.status === 'winding_down' ? latestSeason : null;
   const { data: endedSeason } = isIntermission
     ? await supabase.from('seasons').select('id, number, name').eq('group_id', groupId).eq('number', latestSeason!.number - 1).maybeSingle()
     : { data: null };
+  const scopeSeasonId = activeSeason?.id ?? endedSeason?.id ?? null;
 
-  // Scoped to whichever season the standings below actually reflect — an active season's own
-  // bets, or the just-ended one during intermission's frozen final view — not the group's whole
-  // history, since a brand-new season starts everyone tied again regardless of how many seasons
-  // came before it. Off entirely (seasons disabled), there's only the one continuous history.
-  const scopeSeasonId = heroSeason?.id ?? endedSeason?.id ?? null;
-  const { count: totalBetCount } = scopeSeasonId
-    ? await supabase.from('bets').select('id, markets!inner(season_id)', { count: 'exact', head: true }).eq('markets.season_id', scopeSeasonId)
-    : await supabase.from('bets').select('id, markets!inner(group_id)', { count: 'exact', head: true }).eq('markets.group_id', groupId);
-  // Every member is still tied at the seed amount, so "leader" is just whoever the query happened
-  // to sort first — the hero and the standings list both soften their language for it below.
-  const noBetsPlaced = (totalBetCount ?? 0) === 0;
+  // Scoped bets on resolved markets — the Acc column and your accuracy tile.
+  const resolvedBetsQuery = scopeSeasonId
+    ? supabase
+        .from('bets')
+        .select('user_id, side, option_id, markets!inner(season_id, status, outcome, outcome_option_id)')
+        .eq('markets.season_id', scopeSeasonId)
+        .eq('markets.status', 'resolved')
+    : supabase
+        .from('bets')
+        .select('user_id, side, option_id, markets!inner(group_id, status, outcome, outcome_option_id)')
+        .eq('markets.group_id', groupId)
+        .eq('markets.status', 'resolved');
 
-  // members is sorted by live balance, which during intermission is exactly the frozen final
-  // standing — nothing touches it again until start_season reseeds everyone — so the "final
-  // table" here needs no separate season_results read of its own.
-  const you = members.find((m: any) => m.user_id === user?.id);
-  const yourRank = members.findIndex((m: any) => m.user_id === user?.id) + 1;
-  // Everyone's still tied at the seed amount, so members[0] is just whoever the query happened to
-  // sort first (in practice, often the newest joiner) — showing the viewer their own profile in
-  // that slot reads as "you" instead of an arbitrary stranger before there's any real standing to show.
-  const leader = noBetsPlaced ? (you ?? members[0]) : members[0];
+  const [{ data: resolvedBets }, { data: avatarRows }, { data: titleRows }, { data: netRow }] = await Promise.all([
+    resolvedBetsQuery,
+    // No profile pictures in a public group, for anyone.
+    isPublic ? Promise.resolve({ data: [] }) : supabase.from('users').select('id, avatar_updated_at, avatar_preset_key').in('id', members.map((m) => m.user_id)),
+    supabase.from('group_titles').select('title_key, user_id, stat_value').eq('group_id', groupId),
+    supabase.from('membership_ledger_net').select('net').eq('group_id', groupId).eq('user_id', user.id).maybeSingle(),
+  ]);
+  const accuracy = accuracyByUser((resolvedBets ?? []) as unknown as BetRow[]);
+  const avatarByUser = new Map((avatarRows ?? []).map((r: any) => [r.id, r]));
+  const yourTitleCount = ((titleRows ?? []) as GroupTitleRow[]).filter((r) => r.user_id === user.id).length;
 
-  const seasonLine = heroSeason
-    ? `${heroSeason.name ?? `Season ${heroSeason.number}`} · Day ${Math.max(
-        1,
-        Math.floor((Date.now() - new Date(heroSeason.started_at).getTime()) / (24 * 60 * 60_000)) + 1
-      )}`
+  const you = members.find((m) => m.user_id === user.id);
+  const yourRank = standingOf(members, user.id).rank;
+  const leader = members[0];
+  // "net, all season": this season's balance against what everyone was seeded with. A seasons-off
+  // group has one continuous history, so it's the all-time net instead.
+  const yourNet = settings?.seasons_enabled ? (you?.balance ?? 0) - (settings?.seed_amount ?? 0) : Number((netRow as { net: number } | null)?.net ?? 0);
+
+  const dayOf = (s: { started_at: string; ends_at: string | null }) => {
+    const day = Math.max(1, Math.floor((Date.now() - new Date(s.started_at).getTime()) / 86_400_000) + 1);
+    const total = s.ends_at ? Math.max(day, Math.round((new Date(s.ends_at).getTime() - new Date(s.started_at).getTime()) / 86_400_000)) : null;
+    return total ? `Day ${day} of ${total}` : `Day ${day}`;
+  };
+  const seasonLine = activeSeason
+    ? `${activeSeason.name ?? `Season ${activeSeason.number}`} · ${dayOf(activeSeason)}`
     : isIntermission
       ? `${endedSeason?.name ?? `Season ${endedSeason?.number ?? ''}`} · final`
-      : null;
+      : `${members.length} playing`;
 
-  // Leading the board makes "behind the leader" a zero that says nothing, so the third stat flips
-  // to the lead you're actually defending.
-  const youLead = !!you && yourRank === 1;
-  const gapValue = youLead
-    ? leader.balance - (members[1]?.balance ?? leader.balance)
-    : Math.max(0, (leader?.balance ?? 0) - (you?.balance ?? 0));
-
-  const hero = leader && (
-    <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-espresso-900 to-espresso-700 p-[18px]">
-      <div className="pointer-events-none absolute inset-0 opacity-50 [background:radial-gradient(circle_at_90%_0%,rgba(232,163,61,0.3),rgba(232,163,61,0)_60%)]" />
-      <Link href={`/groups/${groupId}/members/${leader.id}`} className="relative flex items-center gap-3.5">
-        {/* Not even an initials placeholder in a public group — no avatar chip at all, not just no
-            photo, since the empty circle still reads as "a person's picture goes here". */}
-        {!group?.is_public && (
-          <UserAvatar
-            userId={leader.user_id}
-            nickname={leader.nickname}
-            avatarUpdatedAt={avatarByUser.get(leader.user_id)?.avatar_updated_at}
-            avatarPresetKey={avatarByUser.get(leader.user_id)?.avatar_preset_key}
-            className="h-[52px] w-[52px] border-[1.5px] border-honey-300/50 text-[15px]"
-            fallbackClassName="bg-honey-500/[0.18] text-honey-300"
-          />
-        )}
-        <span className="min-w-0 flex-1">
-          <span className="block text-[10px] font-extrabold tracking-[0.1em] text-honey-300 uppercase">
-            {noBetsPlaced ? "Nobody's bet yet" : isIntermission ? 'Took the season' : 'Out in front'}
-          </span>
-          <Mention nickname={leader.nickname} className="mt-0.5 block truncate text-[19px] font-extrabold tracking-[-0.015em] text-paper-white" />
-          <span className="mt-0.5 block text-xs text-paper-white/55">{formatTokens(leader.balance)} tokens</span>
-        </span>
-        <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-paper-white/40" />
-      </Link>
-      <div className="relative mt-[15px] flex gap-3 border-t border-white/10 pt-3.5">
-        <span className="flex-1">
-          <span className="block text-xl font-extrabold tabular-nums text-paper-white">
-            {noBetsPlaced ? '—' : you ? formatOrdinal(yourRank) : '—'}
-          </span>
-          <span className="mt-px block text-[10px] font-extrabold tracking-[0.07em] text-paper-white/45 uppercase">
-            {noBetsPlaced ? 'not ranked yet' : you ? `you, of ${members.length}` : `${members.length} playing`}
-          </span>
-        </span>
-        <span className="flex-1">
-          <span className="block text-xl font-extrabold tabular-nums text-honey-300">{formatTokens(you?.balance ?? 0)}</span>
-          <span className="mt-px block text-[10px] font-extrabold tracking-[0.07em] text-paper-white/45 uppercase">
-            {isIntermission ? 'your final' : 'your tokens'}
-          </span>
-        </span>
-        <span className="flex-1">
-          <span className="block text-xl font-extrabold tabular-nums text-paper-white">{noBetsPlaced ? '—' : formatTokens(gapValue)}</span>
-          <span className="mt-px block text-[10px] font-extrabold tracking-[0.07em] text-paper-white/45 uppercase">
-            {noBetsPlaced ? 'no bets yet' : youLead ? 'clear of 2nd' : isIntermission ? 'off the win' : 'behind the leader'}
-          </span>
-        </span>
+  // ── This season (4f) ──
+  const currentPane = (
+    <div className="flex flex-col gap-3.5">
+      <div className="flex gap-2">
+        <Tile value={you && yourRank ? formatOrdinal(yourRank) : '—'} label={`of ${members.length} playing`} />
+        <Tile value={formatSignedTokens(yourNet)} label={settings?.seasons_enabled ? 'net, all season' : 'net, all time'} tone={yourNet > 0 ? 'gain' : yourNet < 0 ? 'alert' : undefined} />
+        <Tile value={accuracy.has(user.id) ? `${accuracy.get(user.id)}%` : '—'} label="accuracy" />
       </div>
-    </div>
-  );
 
-  const standingsSection = (
-    <Card className="space-y-2">
-      {(() => {
-        const top = members?.[0]?.balance || 1;
-        return (members ?? []).map((m: any, i: number) => {
-          const isMe = m.user_id === user?.id;
-          const pct = Math.max(9, Math.round((m.balance / top) * 100));
+      <div className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+        <div className="flex items-center gap-2.5 border-b border-rule bg-wash px-4 py-2.5">
+          <span className="w-5 text-[10.5px] font-bold tracking-[0.08em] text-faint uppercase">#</span>
+          <span className="flex-1 text-[10.5px] font-bold tracking-[0.08em] text-faint uppercase">Player</span>
+          <span className="w-[46px] text-right text-[10.5px] font-bold tracking-[0.08em] text-faint uppercase">Acc</span>
+          <span className="w-[60px] text-right text-[10.5px] font-bold tracking-[0.08em] text-faint uppercase">Tokens</span>
+        </div>
+        {members.map((m, i) => {
+          const isMe = m.user_id === user.id;
+          const off = leader ? leader.balance - m.balance : 0;
+          const sub = isMe && i > 0 ? `${formatTokens(off)} off the top` : m.status === 'dormant' ? 'sitting out' : m.status === 'left' ? 'left' : m.balance === 0 ? 'broke' : null;
           return (
-            <div
+            <Link
               key={m.user_id}
-              className={`relative h-[54px] overflow-hidden rounded-2xl bg-espresso-50 ${
-                isMe ? 'border-[1.5px] border-honey-500' : 'border-[1.5px] border-transparent'
-              }`}
+              href={`/groups/${groupId}/members/${m.id}`}
+              className={cn(
+                'flex items-center gap-2.5 border-b border-row-rule px-4 py-3 last:border-b-0',
+                isMe && 'bg-signal-wash shadow-[inset_3px_0_0_var(--color-signal)]'
+              )}
             >
-              <span
-                className={`absolute inset-y-0 left-0 ${isMe ? 'bg-honey-500' : 'bg-honey-500/30'}`}
-                style={{ width: `${pct}%` }}
-              />
-              <Link href={`/groups/${groupId}/members/${m.id}`} className="absolute inset-0 flex items-center gap-2.5 px-3">
-                <span className="w-5 shrink-0 text-center text-xs font-extrabold text-espresso-500">{medal(i, noBetsPlaced)}</span>
-                {!group?.is_public && (
+              <span className={cn('w-5 font-mono text-[13px]', isMe ? 'text-signal' : 'text-faint')}>{i + 1}</span>
+              <span className="flex min-w-0 flex-1 items-center gap-[9px]">
+                {!isPublic && (
                   <UserAvatar
                     userId={m.user_id}
                     nickname={m.nickname}
                     avatarUpdatedAt={avatarByUser.get(m.user_id)?.avatar_updated_at}
                     avatarPresetKey={avatarByUser.get(m.user_id)?.avatar_preset_key}
-                    className={cn('h-9 w-9 text-xs', isMe ? 'border-2 border-honey-500' : 'border-[1.5px] border-espresso-100')}
-                    fallbackClassName="bg-paper-white text-espresso-700"
+                    className="h-[30px] w-[30px] text-[11px]"
+                    fallbackClassName="bg-tile text-muted"
                   />
                 )}
-                <span className="min-w-0 flex-1">
-                  <Mention nickname={m.nickname} className="block truncate text-[13.5px] font-bold text-espresso-900" />
-                  {(m.balance === 0 || m.status !== 'active') && (
-                    <span className="block text-[10.5px] font-semibold text-espresso-400">
-                      {m.balance === 0 && 'Broke'}
-                      {m.balance === 0 && m.status !== 'active' && ' · '}
-                      {m.status === 'dormant' && 'Sitting out'}
-                      {m.status === 'left' && 'Left'}
-                    </span>
-                  )}
+                <span className="min-w-0">
+                  <span className="block truncate text-[13.5px] font-bold text-ink">
+                    @{m.nickname}
+                    {isMe && <span className="font-semibold text-signal"> · you</span>}
+                  </span>
+                  {sub && <span className={cn('block text-[11px] text-faint', isMe && 'font-mono')}>{sub}</span>}
                 </span>
-                <span className="shrink-0 font-display text-[15px] font-extrabold tabular-nums text-espresso-900">
-                  {formatTokens(m.balance)}
-                </span>
-                <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-espresso-300" />
-              </Link>
-            </div>
+              </span>
+              <span className="w-[46px] text-right font-mono text-[12.5px] text-muted">{accuracy.has(m.user_id) ? `${accuracy.get(m.user_id)}%` : '—'}</span>
+              <span className="w-[60px] text-right font-mono text-[14px] font-semibold text-ink">{formatTokens(m.balance)}</span>
+            </Link>
           );
-        });
-      })()}
-      <p className="pt-1 text-[11.5px] text-espresso-400">
-        {noBetsPlaced
-          ? "Nobody's placed a bet yet, so this order doesn't mean anything. It'll shuffle once betting starts."
-          : isIntermission
-            ? 'Frozen when the season ended. The next season starts everyone level.'
-            : "Bar length is share of the group's tokens. Your row is outlined."}
-      </p>
-    </Card>
+        })}
+      </div>
+
+      {(settings?.prize_text || settings?.punishment_text || (isOwner && !isPublic)) && (
+        <PlayingFor
+          groupId={groupId}
+          prizeText={settings?.prize_text ?? null}
+          punishmentText={settings?.punishment_text ?? null}
+          lastPlace={members.length}
+          canEdit={isOwner && !isPublic}
+        />
+      )}
+
+      {settings?.awards_enabled && (
+        <Link href={`/groups/${groupId}/awards`} className="flex items-center gap-3 rounded-[18px] border border-hairline bg-surface px-4 py-3.5">
+          <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] bg-signal-tint">
+            <AwardGlyph iconKey="target" stroke="var(--color-signal)" size={18} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13.5px] font-bold text-ink">Awards</span>
+            <span className="mt-0.5 block text-[11.5px] text-faint">
+              {yourTitleCount > 0 ? `You hold ${numberWord(yourTitleCount)} of ${numberWord(TITLE_ORDER.length)} titles` : 'Who holds each standing title'}
+            </span>
+          </span>
+          <RowChevron className="text-faint" />
+        </Link>
+      )}
+    </div>
   );
 
-  let allTimeSection: React.ReactNode = null;
+  // ── All time (4r) ──
+  let allTimePane: React.ReactNode = null;
+  let allTimeSubtitle: string | null = null;
   if (settings?.seasons_enabled) {
     const page = Math.max(1, Number(pageParam) || 1);
     const from = (page - 1) * SEASON_HISTORY_PAGE_SIZE;
-    const to = from + SEASON_HISTORY_PAGE_SIZE; // fetch one extra to know whether a Next page exists
 
-    const { data: myMembership } = await supabase
-      .from('memberships')
-      .select('id')
-      .eq('group_id', groupId)
-      .eq('user_id', user.id)
-      .single();
-
-    const [{ data: netRow }, { data: settledBets }, { data: resultsPage }] = await Promise.all([
-      myMembership
-        ? supabase.from('membership_ledger_net').select('net').eq('membership_id', myMembership.id).maybeSingle()
-        : Promise.resolve({ data: null }),
+    const [{ data: standingsRows }, { data: mySettledBets }, { count: myBetCount }, { data: seasonRows }, { data: resultRows }] = await Promise.all([
+      // Every member's real all-time net, computed under elevated privilege (membership_ledger_net
+      // is own-rows-only, so a plain select would show everyone else as 0).
+      supabase.rpc('get_group_all_time_standings', { p_group_id: groupId }),
       supabase
         .from('bets')
-        .select('side, option_id, markets!inner(group_id, status, outcome, outcome_option_id)')
+        .select('user_id, side, option_id, markets!inner(group_id, status, outcome, outcome_option_id)')
         .eq('user_id', user.id)
         .eq('markets.group_id', groupId)
         .eq('markets.status', 'resolved'),
+      supabase.from('bets').select('id, markets!inner(group_id)', { count: 'exact', head: true }).eq('markets.group_id', groupId).eq('user_id', user.id),
       supabase
-        .from('season_results')
-        .select('snapshot, seasons(number, started_at, ended_at, name)')
+        .from('seasons')
+        .select('id, number, name, started_at, ends_at, ended_at, status')
         .eq('group_id', groupId)
-        .order('created_at', { ascending: false })
-        .range(from, to),
+        .in('status', ['active', 'winding_down', 'archived'])
+        .order('number', { ascending: false })
+        .range(from, from + SEASON_HISTORY_PAGE_SIZE),
+      supabase.from('season_results').select('season_id, snapshot').eq('group_id', groupId),
     ]);
 
-    const myNet = Number((netRow as { net: number } | null)?.net ?? 0);
-    const correctCount = (settledBets ?? []).filter((b: any) =>
-      b.option_id ? b.option_id === b.markets.outcome_option_id : b.side === b.markets.outcome
-    ).length;
-    const myAccuracy = (settledBets?.length ?? 0) > 0 ? Math.round((correctCount / settledBets!.length) * 100) : null;
-
-    const hasNextPage = (resultsPage ?? []).length > SEASON_HISTORY_PAGE_SIZE;
-    const results = (resultsPage ?? []).slice(0, SEASON_HISTORY_PAGE_SIZE);
+    const standings = (standingsRows ?? []) as { user_id: string; nickname: string; net: number; seasons_won: number }[];
+    const mine = standings.find((s) => s.user_id === user.id);
+    const myNet = Number(mine?.net ?? 0);
+    const myAccuracy = accuracyByUser((mySettledBets ?? []) as unknown as BetRow[]).get(user.id);
+    const snapshotBySeason = new Map(
+      (resultRows ?? []).map((r) => [r.season_id, r.snapshot as { champion?: { user_id: string; nickname: string }; final_balances?: { user_id: string }[] }])
+    );
+    const seasons = (seasonRows ?? []).slice(0, SEASON_HISTORY_PAGE_SIZE);
+    const hasNextPage = (seasonRows ?? []).length > SEASON_HISTORY_PAGE_SIZE;
     const pageLink = (p: number) => `/groups/${groupId}/leaderboard?lens=alltime&page=${p}`;
 
-    allTimeSection = (
-      <div className="space-y-6">
-        <Card>
-          <h2 className="mb-3 font-display font-bold text-espresso-800">Your all-time</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className={`font-display text-2xl font-bold tabular-nums ${myNet >= 0 ? 'text-honey-600' : 'text-espresso-400'}`}>
-                {myNet >= 0 ? '+' : '−'}
-                {formatTokens(Math.abs(myNet))}
-              </p>
-              <p className="mt-0.5 text-xs font-semibold text-espresso-400">Net across every season</p>
-            </div>
-            <div>
-              <p className="font-display text-2xl font-bold tabular-nums text-espresso-900">{myAccuracy == null ? '—' : `${myAccuracy}%`}</p>
-              <p className="mt-0.5 text-xs font-semibold text-espresso-400">Accuracy</p>
-            </div>
+    const { data: firstSeason } = await supabase.from('seasons').select('started_at').eq('group_id', groupId).order('number').limit(1).maybeSingle();
+    const { count: seasonCount } = await supabase.from('seasons').select('id', { count: 'exact', head: true }).eq('group_id', groupId).neq('status', 'intermission');
+    allTimeSubtitle = firstSeason
+      ? `${seasonCount ?? 0} season${seasonCount === 1 ? '' : 's'} since ${new Date(firstSeason.started_at).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}`
+      : null;
+
+    const standingAvatarIds = standings.map((s) => s.user_id).filter((id) => !avatarByUser.has(id));
+    const { data: moreAvatars } =
+      standingAvatarIds.length > 0 && !isPublic
+        ? await supabase.from('users').select('id, avatar_updated_at, avatar_preset_key').in('id', standingAvatarIds)
+        : { data: [] };
+    for (const r of moreAvatars ?? []) avatarByUser.set(r.id, r);
+
+    const showAll = allParam === '1';
+    const shownStandings = showAll ? standings : standings.slice(0, 3);
+
+    allTimePane = (
+      <div className="flex flex-col gap-[11px]">
+        <div className="rounded-[22px] bg-ink px-[18px] py-[13px]">
+          <p className="text-[10.5px] font-bold tracking-[0.1em] text-surface/50 uppercase">Your record here</p>
+          <div className="mt-[11px] flex gap-3.5">
+            <RecordStat value={formatSignedTokens(myNet)} label="net" accent />
+            <RecordStat value={String(mine?.seasons_won ?? 0)} label={(mine?.seasons_won ?? 0) === 1 ? 'season won' : 'seasons won'} />
+            <RecordStat value={myAccuracy == null ? '—' : `${myAccuracy}%`} label="accuracy" />
+            <RecordStat value={String(myBetCount ?? 0)} label="bets" />
           </div>
-        </Card>
-
-        <div>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-espresso-400">Season history</h2>
-          {(results ?? []).length === 0 && page === 1 ? (
-            <EmptyState icon="🏆" title="No seasons in the books yet" subtitle="History shows up here once a season ends." />
-          ) : (
-            <div className="space-y-4">
-              {(results ?? []).map((r: any, i: number) => (
-                <Card key={i}>
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-display font-bold text-espresso-800">{r.seasons?.name ?? `Season ${r.seasons?.number}`}</h3>
-                    <span className="text-xs text-espresso-400">
-                      {r.seasons?.started_at && formatSeasonDate(r.seasons.started_at)} –{' '}
-                      {r.seasons?.ended_at && formatSeasonDate(r.seasons.ended_at)}
-                    </span>
-                  </div>
-
-                  {r.snapshot.champion && (
-                    <div className="mt-3.5 flex items-center gap-3.5 rounded-2xl bg-honey-50 px-4 py-3.5">
-                      <span className="flex h-12 w-12 shrink-0 -rotate-6 items-center justify-center rounded-full border-2 border-honey-500 bg-espresso-900 text-2xl shadow-[0_8px_16px_-6px_rgba(232,163,61,0.55)]">
-                        🏆
-                      </span>
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-bold tracking-[0.1em] text-honey-700 uppercase">Champion</p>
-                        <p className="truncate font-display text-lg font-bold text-espresso-900">
-                          <Mention nickname={r.snapshot.champion.nickname} />
-                        </p>
-                        <p className="text-sm font-semibold text-honey-700">{formatTokens(r.snapshot.champion.balance)} tokens</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Perforated ticket-stub divider, same punch-hole trick RevealTicket uses between
-                      its header and odds sections. */}
-                  <div className="relative -mx-5 mt-4 border-t-2 border-dashed border-espresso-100">
-                    <span className="absolute top-1/2 -left-2.5 h-5 w-5 -translate-y-1/2 rounded-full bg-paper" />
-                    <span className="absolute top-1/2 -right-2.5 h-5 w-5 -translate-y-1/2 rounded-full bg-paper" />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 pt-4 text-sm">
-                    {r.snapshot.biggest_single_win && (
-                      <div>
-                        <p className="font-semibold text-espresso-700">Biggest win</p>
-                        <p className="text-espresso-500">
-                          <Mention nickname={r.snapshot.biggest_single_win.nickname} /> +
-                          {formatTokens(r.snapshot.biggest_single_win.amount)}
-                        </p>
-                      </div>
-                    )}
-                    {r.snapshot.worst_beat && (
-                      <div>
-                        <p className="font-semibold text-espresso-700">Worst beat</p>
-                        <p className="text-espresso-500">
-                          <Mention nickname={r.snapshot.worst_beat.nickname} /> −{formatTokens(r.snapshot.worst_beat.amount)}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {(page > 1 || hasNextPage) && (
-            <div className="mt-4 flex items-center justify-between text-sm font-semibold">
-              {page > 1 ? (
-                <Link href={pageLink(page - 1)} className="text-honey-700 hover:text-honey-800">
-                  ← Newer
-                </Link>
-              ) : (
-                <span />
-              )}
-              {hasNextPage && (
-                <Link href={pageLink(page + 1)} className="text-honey-700 hover:text-honey-800">
-                  Older →
-                </Link>
-              )}
-            </div>
-          )}
         </div>
+
+        {standings.length > 0 && (
+          <div className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+            <div className="flex items-center gap-2.5 border-b border-rule bg-wash px-4 py-2.5">
+              <span className="w-[18px] text-[10.5px] font-bold tracking-[0.08em] text-faint uppercase">#</span>
+              <span className="flex-1 text-[10.5px] font-bold tracking-[0.08em] text-faint uppercase">Player</span>
+              <span className="w-10 text-right text-[10.5px] font-bold tracking-[0.08em] text-faint uppercase">Won</span>
+              <span className="w-[62px] text-right text-[10.5px] font-bold tracking-[0.08em] text-faint uppercase">Net</span>
+            </div>
+            {shownStandings.map((s) => {
+              const isYou = s.user_id === user.id;
+              const rank = standings.indexOf(s) + 1;
+              const av = avatarByUser.get(s.user_id);
+              return (
+                <div
+                  key={s.user_id}
+                  className={cn('flex items-center gap-2.5 border-b border-row-rule px-4 py-[11px]', isYou && 'bg-signal-wash shadow-[inset_3px_0_0_var(--color-signal)]')}
+                >
+                  <span className={cn('w-[18px] font-mono text-[13px]', isYou ? 'text-signal' : 'text-faint')}>{rank}</span>
+                  {!isPublic && (
+                    <UserAvatar
+                      userId={s.user_id}
+                      nickname={s.nickname}
+                      avatarUpdatedAt={av?.avatar_updated_at}
+                      avatarPresetKey={av?.avatar_preset_key}
+                      className="h-7 w-7 text-[10px]"
+                      fallbackClassName="bg-tile text-muted"
+                    />
+                  )}
+                  <span className="min-w-0 flex-1 truncate text-[13.5px] font-bold text-ink">
+                    @{s.nickname}
+                    {isYou && <span className="font-semibold text-signal"> · you</span>}
+                  </span>
+                  <span className="w-10 text-right font-mono text-[12.5px] text-muted">{s.seasons_won}</span>
+                  <span className={cn('w-[62px] text-right font-mono text-[13.5px] font-semibold', s.net >= 0 ? 'text-gain' : 'text-alert')}>
+                    {formatSignedTokens(Number(s.net))}
+                  </span>
+                </div>
+              );
+            })}
+            {!showAll && standings.length > shownStandings.length && (
+              <Link href={`/groups/${groupId}/leaderboard?lens=alltime&all=1`} className="flex items-center justify-between gap-2.5 border-t border-rule bg-wash px-4 py-[11px]">
+                <span className="text-[12px] font-bold text-signal">All {standings.length} who have played · full ledger</span>
+                <RowChevron className="text-signal" />
+              </Link>
+            )}
+          </div>
+        )}
+
+        {seasons.length > 0 && (
+          <>
+            <p className="mt-px text-[10.5px] font-bold tracking-[0.1em] text-faint uppercase">Recent seasons</p>
+            <div className="overflow-hidden rounded-[22px] border border-hairline bg-surface">
+              {seasons.map((s) => {
+                const snap = snapshotBySeason.get(s.id);
+                const running = s.status !== 'archived';
+                const myFinal = snap?.final_balances ? snap.final_balances.findIndex((r) => r.user_id === user.id) + 1 : 0;
+                const title = `Season ${s.number}${s.name ? ` · ${s.name}` : ''}`;
+                const sub = running
+                  ? `${dayOf(s)}${yourRank ? ` · you are ${formatOrdinal(yourRank)}` : ''}`
+                  : `Ended ${s.ended_at ? formatShortDate(s.ended_at) : ''}${myFinal > 0 ? ` · you were ${formatOrdinal(myFinal)}` : ''}`;
+                const champ = snap?.champion;
+                const champAvatar = champ ? avatarByUser.get(champ.user_id) : undefined;
+                return (
+                  <Link
+                    key={s.id}
+                    href={running ? `/groups/${groupId}/leaderboard` : `/groups/${groupId}/recap?season=${s.number}`}
+                    className="flex items-center gap-[11px] border-b border-row-rule px-4 py-[11px] last:border-b-0"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13.5px] font-bold text-ink">{title}</span>
+                      <span className="mt-px block truncate text-[11.5px] text-faint">{sub}</span>
+                    </span>
+                    {running ? (
+                      <span className="shrink-0 rounded-lg border border-signal-edge bg-signal-tint px-[9px] py-1 text-[10.5px] font-bold text-signal">Running</span>
+                    ) : champ ? (
+                      <span className="inline-flex shrink-0 items-center gap-1.5">
+                        {!isPublic && (
+                          <UserAvatar
+                            userId={champ.user_id}
+                            nickname={champ.nickname}
+                            avatarUpdatedAt={champAvatar?.avatar_updated_at}
+                            avatarPresetKey={champAvatar?.avatar_preset_key}
+                            className="h-[22px] w-[22px] text-[8px]"
+                            fallbackClassName="bg-tile text-muted"
+                          />
+                        )}
+                        <span className="text-[12px] font-bold text-muted">won</span>
+                      </span>
+                    ) : null}
+                    <RowChevron className="text-faint" />
+                  </Link>
+                );
+              })}
+            </div>
+            {(page > 1 || hasNextPage) && (
+              <div className="flex items-center justify-between text-[12.5px] font-bold text-signal">
+                {page > 1 ? <Link href={pageLink(page - 1)}>Newer</Link> : <span />}
+                {hasNextPage && <Link href={pageLink(page + 1)}>Older</Link>}
+              </div>
+            )}
+          </>
+        )}
       </div>
     );
   }
 
-  return (
-    <main className="mx-auto max-w-lg space-y-3.5 px-5 py-8">
-      <PageHeader
-        title="Leaderboard"
-        action={seasonLine && <span className="shrink-0 text-[11.5px] font-extrabold text-espresso-400">{seasonLine}</span>}
-      />
-
-      {hero}
-
-      {settings?.seasons_enabled ? (
-        <LeaderboardLenses
-          initialLens={lensParam === 'alltime' ? 'alltime' : 'current'}
-          currentLabel={isIntermission ? `${endedSeason?.name ?? `Season ${endedSeason?.number ?? ''}`} final` : 'Current standings'}
-          current={
-            <div className="space-y-3.5">
-              <SeasonStakesBand
-                groupId={groupId}
-                prizeText={settings?.prize_text ?? null}
-                punishmentText={settings?.punishment_text ?? null}
-                canEdit={canEditStakes}
-              />
-              {standingsSection}
-            </div>
-          }
-          allTime={allTimeSection}
-        />
-      ) : (
-        <>
-          <SeasonStakesBand
-            groupId={groupId}
-            prizeText={settings?.prize_text ?? null}
-            punishmentText={settings?.punishment_text ?? null}
-            canEdit={canEditStakes}
-          />
-          {standingsSection}
-        </>
-      )}
-
-      {settings?.awards_enabled && (
+  // Rendered here for both lenses and handed over as two finished headers: LeaderboardLenses is a
+  // client component, and a function prop can't be passed to one from a server page.
+  const header = (lens: 'current' | 'alltime') => (
+    <div className="flex items-start justify-between gap-3">
+      <span className="min-w-0">
+        <h1 className="text-[25px] font-extrabold tracking-[-0.022em] text-ink">Leaderboard</h1>
+        <p className="mt-1.5 text-[13px] text-faint">{lens === 'alltime' && allTimeSubtitle ? allTimeSubtitle : seasonLine}</p>
+      </span>
+      {lens === 'current' && (
+        <span className="flex shrink-0 items-center gap-1.5">
+        {!isPublic && (
+          <Link
+            href={`/groups/${groupId}/invite`}
+            className="flex shrink-0 items-center gap-[7px] rounded-[11px] border border-hairline bg-surface px-3 py-2"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" className="text-ink">
+              <circle cx="10" cy="8" r="3.6" />
+              <path d="M3.5 19.5c1.2-3.2 3.6-4.8 6.5-4.8s5.3 1.6 6.5 4.8M19 8v6M16 11h6" />
+            </svg>
+            <span className="text-[12.5px] font-bold text-ink">Invite</span>
+          </Link>
+        )}
         <Link
-          href={`/groups/${groupId}/awards`}
-          className="flex items-center gap-3 rounded-[18px] border border-espresso-100 bg-paper-white px-3.5 py-3"
+          href={`/groups/${groupId}/settings`}
+          className="flex shrink-0 items-center gap-[7px] rounded-[11px] border border-hairline bg-surface px-3 py-2"
         >
-          <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-honey-50">
-            <AwardGlyph iconKey="target" stroke="var(--color-honey-700)" size={20} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[13.5px] font-extrabold text-espresso-950">Awards</span>
-            <span className="mt-0.5 block text-[11.5px] text-espresso-400">
-              {yourTitleCount > 0
-                ? `You hold ${numberWord(yourTitleCount)} of ${numberWord(TITLE_ORDER.length)} titles`
-                : 'See who holds each standing title'}
-            </span>
-          </span>
-          <ChevronRightIcon className="h-3 w-[7px] shrink-0 text-espresso-300" />
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-ink">
+            <circle cx="12" cy="12" r="3.1" />
+            <path d="M19.1 14.4a1.5 1.5 0 0 0 .3 1.65l.05.06a1.8 1.8 0 1 1-2.55 2.55l-.06-.05a1.5 1.5 0 0 0-1.65-.3 1.5 1.5 0 0 0-.9 1.37V20a1.8 1.8 0 1 1-3.6 0v-.1a1.5 1.5 0 0 0-.98-1.37 1.5 1.5 0 0 0-1.65.3l-.06.05A1.8 1.8 0 1 1 5.45 16.3l.05-.06a1.5 1.5 0 0 0 .3-1.65 1.5 1.5 0 0 0-1.37-.9H4a1.8 1.8 0 1 1 0-3.6h.1a1.5 1.5 0 0 0 1.37-.98 1.5 1.5 0 0 0-.3-1.65l-.05-.06A1.8 1.8 0 1 1 7.67 4.85l.06.05a1.5 1.5 0 0 0 1.65.3h.07a1.5 1.5 0 0 0 .9-1.37V3.7a1.8 1.8 0 1 1 3.6 0v.1a1.5 1.5 0 0 0 .9 1.37 1.5 1.5 0 0 0 1.65-.3l.06-.05a1.8 1.8 0 1 1 2.55 2.55l-.05.06a1.5 1.5 0 0 0-.3 1.65v.07a1.5 1.5 0 0 0 1.37.9H20a1.8 1.8 0 1 1 0 3.6h-.1a1.5 1.5 0 0 0-1.37.9z" />
+          </svg>
+          <span className="text-[12.5px] font-bold text-ink">Settings</span>
         </Link>
+        </span>
       )}
-    </main>
+    </div>
+  );
+
+  return (
+    <>
+      <GroupBar groupName={group!.name} avatarKey={group!.avatar_key} {...switcherState} />
+      <main className="mx-auto flex max-w-[430px] flex-col px-[18px] pt-5 pb-10">
+        <LeaderboardLenses
+          initialLens={lensParam === 'alltime' && allTimePane ? 'alltime' : 'current'}
+          currentHeader={header('current')}
+          allTimeHeader={header('alltime')}
+          currentLabel={isIntermission ? 'Final table' : 'This season'}
+          current={currentPane}
+          allTime={allTimePane}
+        />
+      </main>
+    </>
   );
 }
+
+function Tile({ value, label, tone }: { value: string; label: string; tone?: 'gain' | 'alert' }) {
+  return (
+    <div className="min-w-0 flex-1 rounded-[18px] border border-hairline bg-surface px-3.5 py-[13px]">
+      <p className={cn('truncate font-mono text-[21px] font-semibold', tone === 'gain' ? 'text-gain' : tone === 'alert' ? 'text-alert' : 'text-ink')}>{value}</p>
+      <p className="mt-0.5 text-[11px] font-semibold text-faint">{label}</p>
+    </div>
+  );
+}
+
+function RecordStat({ value, label, accent }: { value: string; label: string; accent?: boolean }) {
+  return (
+    <span className="min-w-0 flex-1">
+      <span className={cn('block truncate font-mono text-[22px] leading-none font-semibold', accent ? 'text-on-ink' : 'text-surface')}>{value}</span>
+      <span className="mt-1 block text-[11px] font-semibold text-surface/55">{label}</span>
+    </span>
+  );
+}
+
+/** 4f's "Playing for": 1st in an ink chip with the prize, last place in an alert chip with the
+ *  punishment. For the owner the card links to the stakes editor, including an empty prompt. */
+function PlayingFor({
+  groupId,
+  prizeText,
+  punishmentText,
+  lastPlace,
+  canEdit,
+}: {
+  groupId: string;
+  prizeText: string | null;
+  punishmentText: string | null;
+  lastPlace: number;
+  canEdit: boolean;
+}) {
+  const body = (
+    <div className="rounded-[22px] border border-hairline bg-surface px-[18px] pt-[15px] pb-1.5">
+      <p className="mb-1 text-[10.5px] font-bold tracking-[0.1em] text-faint uppercase">Playing for</p>
+      {prizeText && (
+        <div className="flex items-center gap-3 border-t border-rule py-3">
+          <span className="flex h-[30px] w-[34px] shrink-0 items-center justify-center rounded-[9px] bg-ink font-mono text-[12px] font-semibold text-surface">1st</span>
+          <span className="min-w-0 flex-1 text-[13.5px] leading-[1.4] font-bold text-ink">{prizeText}</span>
+        </div>
+      )}
+      {punishmentText && (
+        <div className="flex items-center gap-3 border-t border-rule py-3">
+          <span className="flex h-[30px] w-[34px] shrink-0 items-center justify-center rounded-[9px] border border-alert-line bg-alert-bg font-mono text-[12px] font-semibold text-alert">
+            {formatOrdinal(Math.max(lastPlace, 2))}
+          </span>
+          <span className="min-w-0 flex-1 text-[13.5px] leading-[1.4] font-bold text-ink">{punishmentText}</span>
+        </div>
+      )}
+      {!prizeText && !punishmentText && (
+        <div className="flex items-center gap-3 border-t border-rule py-3">
+          <span className="min-w-0 flex-1 text-[13px] font-semibold text-muted">Add a prize and a punishment</span>
+          <RowChevron className="text-faint" />
+        </div>
+      )}
+    </div>
+  );
+  return canEdit ? <Link href={`/groups/${groupId}/settings/stakes?from=leaderboard`}>{body}</Link> : body;
+}
+

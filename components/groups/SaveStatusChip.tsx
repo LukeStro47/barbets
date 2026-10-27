@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { CheckIcon } from '@/components/ui/icons';
@@ -33,7 +33,7 @@ export function SaveStatusChip({ state, onRetry }: { state: SaveState; onRetry: 
 
   if (shown === 'error') {
     return (
-      <button type="button" onClick={onRetry} className="inline-flex items-center gap-[5px] text-[11.5px] font-bold text-[#8c3b2a]">
+      <button type="button" onClick={onRetry} className="inline-flex items-center gap-[5px] rounded-full border border-alert-line bg-alert-bg px-2.5 py-1 text-[11px] font-bold text-alert">
         Not saved, retry
       </button>
     );
@@ -42,11 +42,11 @@ export function SaveStatusChip({ state, onRetry }: { state: SaveState; onRetry: 
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-[5px] text-[11.5px] font-bold text-success-700 transition-opacity duration-150',
+        'inline-flex items-center gap-[5px] rounded-full border border-gain-line bg-gain-bg px-2.5 py-1 text-[11px] font-bold text-gain transition-opacity duration-150',
         opaque ? 'opacity-100' : 'opacity-0'
       )}
     >
-      <CheckIcon className="h-[13px] w-[13px]" />
+      <CheckIcon className="h-2.5 w-2.5" />
       Saved
     </span>
   );

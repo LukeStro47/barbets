@@ -9,7 +9,7 @@ export default async function MarketTemplatesPage({ params }: { params: Promise<
   const user = await requireUser(supabase);
 
   const [{ data: group }, { data: members }, { data: templates }] = await Promise.all([
-    supabase.from('groups').select('name, is_public').eq('id', groupId).single(),
+    supabase.from('groups').select('name, is_public, avatar_key').eq('id', groupId).single(),
     supabase.from('memberships').select('user_id, nickname').eq('group_id', groupId).eq('status', 'active'),
     supabase
       .from('market_templates')
@@ -29,10 +29,11 @@ export default async function MarketTemplatesPage({ params }: { params: Promise<
     .sort((a, b) => a.nickname.localeCompare(b.nickname));
 
   return (
-    <main className="mx-auto flex min-h-[var(--flow-height)] max-w-lg flex-col px-5 pt-5 pb-8">
+    <main className="mx-auto flex min-h-[var(--flow-height)] max-w-[430px] flex-col px-[18px] pt-6 pb-[120px]">
       <TemplateGallery
         groupId={groupId}
         groupName={group.name}
+        groupAvatarKey={group.avatar_key}
         isPublic={group.is_public}
         members={memberOptions}
         templates={(templates ?? []) as MarketTemplate[]}

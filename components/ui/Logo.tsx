@@ -1,20 +1,7 @@
-import Image from 'next/image';
-import { cn } from '@/lib/cn';
+import { BrandLockup } from '@/components/ui/BrandMark';
 
-/** The horizontal coin + wordmark lockup — for persistent nav/header placements, not centered hero art (use <Coin /> for those). */
+/** The horizontal lock-up (3ac/6a): the "b" tile beside the wordmark. For persistent header
+ *  placements; `height` is the tile's height, the wordmark scales with it. */
 export function Logo({ className, height = 32 }: { className?: string; height?: number }) {
-  const width = Math.round(height * (1284 / 368));
-  return (
-    <span className={cn('inline-flex items-center', className)}>
-      <Image
-        src="/barbets-lockup-tall.png"
-        alt="Barbets"
-        width={width}
-        height={height}
-        priority
-        className="block"
-        style={{ height, width: 'auto' }}
-      />
-    </span>
-  );
+  return <BrandLockup tile={height} word={Math.round(height * 0.66)} className={className} />;
 }

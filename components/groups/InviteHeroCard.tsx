@@ -1,117 +1,62 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Capacitor } from '@capacitor/core';
-import { Share } from '@capacitor/share';
 import { regenerateInviteCode } from '@/lib/actions/groups';
-import { inviteUrl } from '@/lib/inviteLink';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { LinkIcon, RefreshIcon } from '@/components/ui/icons';
-import { InviteQrIconButton } from '@/components/groups/InviteQrButton';
 
-const ghostBtn =
-  'flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full border border-paper-white/30 text-paper-white transition-colors hover:bg-white/10';
-
-async function shareInviteLink(groupName: string, inviteCode: string): Promise<'shared' | 'copied'> {
-  const url = inviteUrl(inviteCode, 'link');
-  const title = `Join ${groupName}`;
-  const text = `Join ${groupName} on Barbets. Invite code ${inviteCode}`;
-
-  if (Capacitor.isNativePlatform()) {
-    try {
-      await Share.share({ title, text, url });
-      return 'shared';
-    } catch (err) {
-      if (isDismissal(err)) return 'shared';
-    }
-  }
-
-  if (typeof navigator.share === 'function') {
-    try {
-      await navigator.share({ title, text, url });
-      return 'shared';
-    } catch (err) {
-      if ((err as { name?: string }).name === 'AbortError') return 'shared';
-    }
-  }
-
-  await navigator.clipboard.writeText(url);
-  return 'copied';
-}
-
-function isDismissal(err: unknown): boolean {
-  const e = err as { name?: string; message?: string } | null;
-  if (e?.name === 'AbortError') return true;
-  const message = String(e?.message ?? '').toLowerCase();
-  return message.includes('cancel') || message.includes('abort') || message.includes('dismiss');
-}
-
+/**
+ * 4l/4o's invite card: "Invite code" over the code in mono, the owner's "New code" beside an ink
+ * "Share" (which opens the full 5m invite screen: QR, code, link), and a wash footer saying
+ * whether the group is taking new members.
+ */
 export function InviteHeroCard({
   groupId,
-  groupName,
   inviteCode,
   footer,
   canRegenerate,
 }: {
   groupId: string;
-  groupName: string;
+  groupName?: string;
   inviteCode: string;
   footer: string;
   canRegenerate: boolean;
 }) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  async function share() {
-    try {
-      const result = await shareInviteLink(groupName, inviteCode);
-      if (result === 'copied') {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }
-    } catch {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  }
-
   return (
-    <div className="rounded-[20px] bg-gradient-to-br from-espresso-900 to-espresso-700 px-5 py-[18px]">
-      <p className="text-[10.5px] font-bold tracking-[0.12em] text-honey-400 uppercase">Invite code</p>
-      <p className="mt-1 font-display text-[34px] leading-none font-extrabold tracking-[0.08em] text-paper-white">{inviteCode}</p>
-
-      {error && <p className="mt-2 text-xs text-honey-300">{error}</p>}
-
-      <div className="mt-3.5 flex gap-2">
-        <button
-          type="button"
-          onClick={() => void share()}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-honey-500 px-3 py-[9px] text-[12.5px] font-extrabold text-espresso-900 transition-colors hover:bg-[#d4912f]"
-        >
-          <LinkIcon className="h-[15px] w-[15px]" />
-          {copied ? 'Copied' : 'Share link'}
-        </button>
-        <InviteQrIconButton inviteCode={inviteCode} groupName={groupName} className={ghostBtn} />
+    <div className="overflow-hidden rounded-[18px] border border-hairline bg-surface">
+      <div className="flex items-center gap-[11px] px-4 py-3.5">
+        <span className="min-w-0 flex-1">
+          <span className="block text-[10.5px] font-bold tracking-[0.1em] text-faint uppercase">Invite code</span>
+          <span className="mt-1 block font-mono text-[20px] font-semibold tracking-[0.12em] text-ink">{inviteCode}</span>
+        </span>
         {canRegenerate && (
-          <button type="button" className={ghostBtn} disabled={isPending} onClick={() => setConfirming(true)} aria-label="Regenerate invite code">
-            <RefreshIcon className="h-[17px] w-[17px]" />
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => setConfirming(true)}
+            className="shrink-0 rounded-[10px] border border-hairline bg-surface px-3 py-[9px] text-[12px] font-bold text-muted"
+          >
+            New code
           </button>
         )}
+        <Link href={`/groups/${groupId}/invite`} className="shrink-0 rounded-[11px] bg-ink px-3.5 py-2.5 text-[12.5px] font-bold text-surface">
+          Share
+        </Link>
       </div>
-
-      <p className="mt-3 text-[11.5px] text-paper-white/55">{footer}</p>
+      {error && <p className="px-4 pb-2 text-[12px] font-semibold text-alert">{error}</p>}
+      <p className="border-t border-rule bg-wash px-4 py-[9px] text-[11.5px] text-faint">{footer}</p>
 
       {confirming && (
         <Modal onClose={() => setConfirming(false)}>
-          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-espresso-950">Regenerate the invite code?</p>
-          <p className="text-sm leading-[1.5] text-espresso-600">
-            The old code stops working. Anyone already in the group stays in.
-          </p>
+          <p className="font-display text-lg font-extrabold tracking-[-0.015em] text-ink">Get a new invite code?</p>
+          <p className="text-sm leading-[1.5] text-muted">The old code stops working. Anyone already in the group stays in.</p>
           <div className="flex gap-2 pt-1">
             <Button type="button" variant="outline" className="flex-1" onClick={() => setConfirming(false)}>
               Cancel
@@ -123,17 +68,13 @@ export function InviteHeroCard({
               onClick={() =>
                 startTransition(async () => {
                   const result = await regenerateInviteCode(groupId);
-                  if (result.error) {
-                    setError(result.error);
-                    setConfirming(false);
-                  } else {
-                    setConfirming(false);
-                    router.refresh();
-                  }
+                  setConfirming(false);
+                  if (result.error) setError(result.error);
+                  else router.refresh();
                 })
               }
             >
-              Regenerate
+              New code
             </Button>
           </div>
         </Modal>

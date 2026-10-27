@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/ui/PageHeader';
+﻿import { PageHeader } from '@/components/ui/PageHeader';
 import { SettingsCard } from '@/components/ui/SettingsList';
 import { MemberSearchBan } from '@/components/groups/MemberSearchBan';
 import { MemberRosterList } from '@/components/groups/MemberRosterList';
@@ -24,12 +24,12 @@ export default async function GroupMembersPage({ params }: { params: Promise<{ g
   const avatarByUser = new Map((avatarRows ?? []).map((r) => [r.id, r]));
 
   return (
-    <main className="mx-auto flex max-w-lg flex-col gap-5 px-5 pb-7 pt-[30px]">
+    <main className="mx-auto flex max-w-lg flex-col gap-5 px-5 pb-7 pt-8">
       <PageHeader
         title="Members"
         backHref={`/groups/${groupId}/settings`}
         backLabel={groupSetupTitle(isOwner)}
-        action={!isPublic ? <span className="shrink-0 text-[11.5px] font-extrabold text-espresso-400">{roster.length}</span> : undefined}
+        action={!isPublic ? <span className="shrink-0 text-[11.5px] font-extrabold text-faint">{roster.length}</span> : undefined}
       />
 
       {isPublic ? (
