@@ -17,7 +17,13 @@ type Details = {
 const BOGUS = 'Z0ZZ';
 
 async function forceStatus(marketId: string, status: 'open' | 'resolved') {
-  const { error } = await adminClient.from('markets').update({ status }).eq('id', marketId);
+  // markets_resolved_requires_outcome: a resolved row must carry an outcome and resolved_at.
+  // Reopening clears both, since it may follow leave_group's void of a subject market.
+  const patch =
+    status === 'resolved'
+      ? { status, outcome: 'yes', resolved_at: new Date().toISOString() }
+      : { status, outcome: null, resolved_at: null };
+  const { error } = await adminClient.from('markets').update(patch).eq('id', marketId);
   if (error) throw new Error(`forceStatus: ${error.message}`);
 }
 
@@ -40,6 +46,9 @@ describe('get_invite_details / is_invite_nickname_free (5d/5e)', () => {
 
     const { error } = await users.leaver.client.rpc('leave_group', { p_group_id: group.id });
     if (error) throw new Error(`leave_group: ${error.message}`);
+    // leave_group voids every market the leaver is a subject of. Reopen it so the
+    // hidden-subject filter in the open count is what's actually under test.
+    await forceStatus(aboutLeaver, 'open');
   });
 
   afterAll(async () => {
