@@ -85,7 +85,7 @@ const CREATE_TYPES: { type: MarketType; title: string; sub: string; icon: React.
   },
   {
     type: 'over_under',
-    title: 'A number',
+    title: 'Over/Under',
     sub: 'How many, how long, how much',
     icon: <path d="M4 18h16M7 18V9M12 18V5M17 18v-6" />,
   },

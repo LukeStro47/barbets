@@ -212,7 +212,7 @@ const TYPE_TILES: { type: MarketType; label: string; icon: React.ReactNode }[] =
       </>
     ),
   },
-  { type: 'over_under', label: 'A number', icon: <path d="M4 18h16M7 18V9M12 18V5M17 18v-6" /> },
+  { type: 'over_under', label: 'Over/Under', icon: <path d="M4 18h16M7 18V9M12 18V5M17 18v-6" /> },
 ];
 
 /** "Tonight" (today 9pm, or tomorrow's if that's already gone) and the next Saturday 2pm — the
