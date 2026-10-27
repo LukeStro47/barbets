@@ -145,7 +145,9 @@ export function SeasonOver({
           <div className="mt-2 flex items-end justify-between gap-3.5">
             <span className="text-[32px] font-extrabold tracking-[-0.03em] text-ink">
               {formatOrdinal(you.rank)}
-              <span className="text-[17px] font-bold text-faint"> of {you.of}</span>
+              {/* Margin, not a leading space: at this size and the -0.03em tracking above, a
+                  space collapsed to nothing and "8th of 9" read as "8thof9". */}
+              <span className="ml-2 text-[17px] font-bold tracking-normal text-faint">of {you.of}</span>
             </span>
             {you.net !== 0 && (
               <span
