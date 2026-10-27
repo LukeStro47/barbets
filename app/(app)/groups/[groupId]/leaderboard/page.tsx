@@ -28,10 +28,10 @@ export default async function LeaderboardPage({
   searchParams,
 }: {
   params: Promise<{ groupId: string }>;
-  searchParams: Promise<{ page?: string; lens?: string; all?: string }>;
+  searchParams: Promise<{ page?: string; lens?: string }>;
 }) {
   const { groupId } = await params;
-  const { page: pageParam, lens: lensParam, all: allParam } = await searchParams;
+  const { page: pageParam, lens: lensParam } = await searchParams;
   const supabase = await createClient();
   const user = await requireUser(supabase);
 
@@ -236,9 +236,6 @@ export default async function LeaderboardPage({
         : { data: [] };
     for (const r of moreAvatars ?? []) avatarByUser.set(r.id, r);
 
-    const showAll = allParam === '1';
-    const shownStandings = showAll ? standings : standings.slice(0, 3);
-
     allTimePane = (
       <div className="flex flex-col gap-[11px]">
         <div className="rounded-[22px] bg-ink px-[18px] py-[13px]">
@@ -258,14 +255,14 @@ export default async function LeaderboardPage({
               <span className="w-10 text-right text-[10.5px] font-bold tracking-[0.08em] text-faint uppercase">Won</span>
               <span className="w-[62px] text-right text-[10.5px] font-bold tracking-[0.08em] text-faint uppercase">Net</span>
             </div>
-            {shownStandings.map((s) => {
+            {standings.map((s, i) => {
               const isYou = s.user_id === user.id;
-              const rank = standings.indexOf(s) + 1;
+              const rank = i + 1;
               const av = avatarByUser.get(s.user_id);
               return (
                 <div
                   key={s.user_id}
-                  className={cn('flex items-center gap-2.5 border-b border-row-rule px-4 py-[11px]', isYou && 'bg-signal-wash shadow-[inset_3px_0_0_var(--color-signal)]')}
+                  className={cn('flex items-center gap-2.5 border-b border-row-rule px-4 py-[11px] last:border-b-0', isYou && 'bg-signal-wash shadow-[inset_3px_0_0_var(--color-signal)]')}
                 >
                   <span className={cn('w-[18px] font-mono text-[13px]', isYou ? 'text-signal' : 'text-faint')}>{rank}</span>
                   {!isPublic && (
@@ -289,12 +286,6 @@ export default async function LeaderboardPage({
                 </div>
               );
             })}
-            {!showAll && standings.length > shownStandings.length && (
-              <Link href={`/groups/${groupId}/leaderboard?lens=alltime&all=1`} className="flex items-center justify-between gap-2.5 border-t border-rule bg-wash px-4 py-[11px]">
-                <span className="text-[12px] font-bold text-signal">All {standings.length} who have played · full ledger</span>
-                <RowChevron className="text-signal" />
-              </Link>
-            )}
           </div>
         )}
 
