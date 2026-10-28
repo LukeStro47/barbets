@@ -255,8 +255,7 @@ export function SettlementLedger({
                               , here <Mention nickname={dustBet.nickname} />
                             </>
                           ) : null}
-                          . That is what makes the payouts add up to the pool exactly, with nothing created and
-                          nothing lost.
+                          .
                         </>
                       ) : (
                         <>Nothing was left over this time, so the payouts add up to the pool exactly.</>
@@ -369,10 +368,12 @@ export function SettlementLedger({
                             {won && winnings > 0 && (
                               <>
                                 <p className="text-gain">+{formatTokens(winnings)} won</p>
-                                <p className="text-[11px] font-semibold text-faint">
-                                  {formatTokens(b.payout ?? 0)} back total
-                                  {dust > 0 && dustBet && sameLine(dustBet, b) ? `, incl. ${formatTokens(dust)} rounding` : ''}
-                                </p>
+                                <p className="text-[11px] font-semibold text-faint">{formatTokens(b.payout ?? 0)} back total</p>
+                                {/* Its own line: on the same one it pushed the bet's own "Bet 400 on YES" to the
+                                    left of it down to "Bet 400 on …". */}
+                                {dust > 0 && dustBet && sameLine(dustBet, b) && (
+                                  <p className="text-[11px] font-semibold text-faint">incl. {formatTokens(dust)} rounding</p>
+                                )}
                               </>
                             )}
                             {lost && <span className="font-bold text-faint">−{formatTokens(b.amount)} lost</span>}
