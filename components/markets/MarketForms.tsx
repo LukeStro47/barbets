@@ -212,8 +212,49 @@ const TYPE_TILES: { type: MarketType; label: string; icon: React.ReactNode }[] =
       </>
     ),
   },
-  { type: 'over_under', label: 'A number', icon: <path d="M4 18h16M7 18V9M12 18V5M17 18v-6" /> },
+  { type: 'over_under', label: 'Over/Under', icon: <path d="M4 18h16M7 18V9M12 18V5M17 18v-6" /> },
 ];
+
+/** The question field's placeholder, one picked at random per visit. Every list must be the same
+ *  length, since one index is shared across all three. Over/Under ones always ask for a number. */
+const EXAMPLE_QUESTIONS: Record<MarketType, string[]> = {
+  yes_no: [
+    'Will Sean wear the flamingo shirt tonight?',
+    "Will Ciara turn up before the first round's bought?",
+    'Will the quiz team finish in the top three?',
+    'Will Dave actually go to the gym this week?',
+    'Will it rain at the barbecue on Saturday?',
+    'Will Priya order first at dinner?',
+    'Will anyone leave the group chat this month?',
+    'Will Tom stay out until midnight on Friday?',
+    'Will the karaoke machine come out at the party?',
+    'Will Sean remember his own anniversary?',
+  ],
+  multiple_choice: [
+    "Who's buying the first round?",
+    "Who'll be last to arrive at the bar?",
+    "Who's winning the pick-up game?",
+    "Who'll be first to leave the party?",
+    'Which bar do we end the night in?',
+    "Who'll arrive first at the wedding?",
+    'What will Marcus order for dinner?',
+    "Who's the first to order a drink?",
+    'What will be the group trip destination?',
+    'Where do we end up for dinner?',
+  ],
+  over_under: [
+    'How many pints does Sam get through at the quiz?',
+    'How many minutes late will Ciara be?',
+    'How many points in the basketball game?',
+    'How many times will Dave mention his new car tonight?',
+    "How long will the best man's speech last?",
+    'How many people turn up to practice?',
+    'How early will Jake leave the club?',
+    'How many messages in the group chat before noon?',
+    'How many rounds of shots get ordered tonight?',
+    'How much will the ride home cost?',
+  ],
+};
 
 /** "Tonight" (today 9pm, or tomorrow's if that's already gone) and the next Saturday 2pm — the
  *  two presets 4i offers ahead of "Pick a time". */
@@ -310,6 +351,13 @@ export function CreateMarketForm({
       setAboutSomeone(false);
     }
   }, [hasOptionSubject]);
+
+  // One random example question per visit. Picked after mount rather than in the initial state,
+  // so the server-rendered placeholder and the first client render agree (a random initial
+  // state would differ between the two and trip a hydration mismatch). The same index is reused
+  // across types, so switching type swaps the example without reshuffling.
+  const [exampleIndex, setExampleIndex] = useState(0);
+  useEffect(() => setExampleIndex(Math.floor(Math.random() * EXAMPLE_QUESTIONS.yes_no.length)), []);
 
   const isOverUnder = marketType === 'over_under';
   const displayUnit = lineFormat === 'number' ? unit.trim() || null : lineFormat;
@@ -412,13 +460,7 @@ export function CreateMarketForm({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             maxLength={MARKET_TITLE_MAX_LENGTH}
-            placeholder={
-              marketType === 'multiple_choice'
-                ? "Who's buying the first round?"
-                : isOverUnder
-                  ? 'How many pints does Sam get through at the quiz?'
-                  : 'Will Gaz wear the shirt to the wedding?'
-            }
+            placeholder={EXAMPLE_QUESTIONS[marketType][exampleIndex]}
             rows={2}
             onInput={(e) => {
               const el = e.currentTarget;
